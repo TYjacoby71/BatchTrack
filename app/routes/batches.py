@@ -330,24 +330,6 @@ def edit_batch_notes(batch_id):
 
     return render_template("edit_batch_notes.html", batch=batch)
 
-@batches_bp.route('/batches/<batch_id>/favorite')
-def toggle_favorite(batch_id):
-    data = load_data()
-    batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
-    
-    if not batch:
-        return "Batch not found", 404
-        
-    if 'favorite' in batch.get('tags', []):
-        batch['tags'].remove('favorite')
-    else:
-        if 'tags' not in batch:
-            batch['tags'] = []
-        batch['tags'].append('favorite')
-    
-    save_data(data)
-    return redirect('/batches')
-
 @batches_bp.route('/batches/<batch_id>/repeat')
 def repeat_batch(batch_id):
     from datetime import datetime
