@@ -110,7 +110,18 @@ def start_batch(recipe_id):
 @batches_bp.route('/batches')
 def view_batches():
     data = load_data()
-    return render_template('batches.html', batches=data.get('batches', []))
+    batches = data.get('batches', [])
+    
+    tag_filter = request.args.get("tag", "").lower()
+    recipe_filter = request.args.get("recipe", "").lower()
+
+    if tag_filter:
+        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
+
+    if recipe_filter:
+        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    return render_template('batches.html', batches=batches)
 
 @batches_bp.route('/download-purchase-list')
 def download_purchase_list():
