@@ -1,7 +1,7 @@
-
 from flask import Blueprint, render_template, request, redirect
 from datetime import datetime
 from app.routes.utils import load_data, save_data
+import json
 
 ingredients_bp = Blueprint('ingredients', __name__)
 
@@ -16,8 +16,8 @@ def index():
     }
     return render_template('home.html', stats=stats)
 
-@ingredients_bp.route('/ingredients', methods=['GET'])
-def list_ingredients():
+@ingredients_bp.route('/ingredients')
+def ingredients():
     data = load_data()
     return render_template('ingredients.html', ingredients=data['ingredients'])
 

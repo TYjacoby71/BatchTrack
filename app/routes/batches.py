@@ -1,8 +1,6 @@
-
-from flask import Blueprint, render_template, request, redirect, jsonify
-from datetime import datetime
+from flask import Blueprint, render_template, request
 from app.routes.utils import load_data, save_data, generate_qr_for_batch
-from unit_converter import convert_units
+from datetime import datetime
 
 batches_bp = Blueprint('batches', __name__)
 
@@ -11,54 +9,40 @@ def check_stock_bulk():
     data = load_data()
     result = []
 
+    def to_float(val):
+        try:
+            return float(val.strip())
+        except:
+            return 0.0
+
     if request.method == 'POST':
-        demand = {}
+        recipe_ids = request.form.getlist('recipe_id')
+        batch_counts = request.form.getlist('batch_count')
+        usage = {}
 
-        for recipe in data['recipes']:
-            count = int(request.form.get(f"recipe_{recipe['id']}", 0))
-            if count <= 0:
-                continue
-            for ing in recipe['ingredients']:
-                name = ing['name']
-                qty = float(ing['quantity']) * count
-                unit = ing.get('unit', '')
-                if name not in demand:
-                    demand[name] = {'qty': 0, 'unit': unit}
-                if unit == demand[name]['unit']:
-                    demand[name]['qty'] += qty
-                else:
-                    converted_qty = convert_units(qty, unit, demand[name]['unit'])
-                    if converted_qty is not None:
-                        demand[name]['qty'] += converted_qty
-                    else:
-                        demand[name]['qty'] += qty
+        for r_id, count in zip(recipe_ids, batch_counts):
+            recipe = next((r for r in data['recipes'] if str(r['id']) == r_id), None)
+            if recipe:
+                for item in recipe['ingredients']:
+                    qty = to_float(item['quantity']) * to_float(count)
+                    usage[item['name']] = usage.get(item['name'], 0) + qty
 
-        for name, details in demand.items():
-            match = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
-            if match and match.get('quantity'):
-                available = float(match['quantity'])
-                qty = details['qty']
-                if match.get('unit') and details['unit'] and match['unit'] != details['unit']:
-                    converted_qty = convert_units(qty, details['unit'], match['unit'])
-                    if converted_qty is not None:
-                        qty = converted_qty
-                to_order = round(max(qty - available, 0.0), 2)
-            else:
-                available = 0.0
-                to_order = details['qty']
-            result.append({
+        stock_report = []
+        for name, needed in usage.items():
+            current = next((i for i in data['ingredients'] if i['name'] == name), {"quantity": "0"})
+            current_qty = to_float(current['quantity'])
+            stock_report.append({
                 "name": name,
-                "needed": round(details['qty'], 2),
-                "available": round(available, 2),
-                "status": "Insufficient" if to_order > 0 else "OK",
-                "unit": match['unit'] if match and match.get('unit') else details['unit']
+                "needed": round(needed, 2),
+                "available": round(current_qty, 2),
+                "status": "OK" if current_qty >= needed else "LOW"
             })
 
-    if result:
-        return render_template('stock_bulk_result.html', stock_report=result)
+        return render_template('stock_bulk_result.html', stock_report=stock_report)
+
     return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
-@batches_bp.route('/batches', methods=['GET'])
-def view_batches():
+@batches_bp.route('/batches')
+def batches():
     data = load_data()
-    return render_template('batches.html', batches=data.get('batches', []))
+    return render_template('batches.html', batches=data['batches'])
