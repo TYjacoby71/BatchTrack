@@ -113,11 +113,12 @@
             row.classList.add("ingredient-row");
             row.innerHTML = `
                 <select name="ingredient_name[]">
+                    <option value="">-- Select Ingredient --</option>
                     {% for ing in ingredients %}
                     <option value="{{ ing.name }}">{{ ing.name }}</option>
                     {% endfor %}
+                    <option value="__add_new__" style="background-color: #4CAF50; color: white;">➕ Add new ingredient</option>
                 </select>
-                <a href="/add-ingredient" class="btn btn-sm" style="font-size: 12px; margin-left: 10px; text-decoration: none; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 4px;">➕ Add new ingredient</a>
                 <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
                 <select name="ingredient_unit[]">
                     {% for category in units %}
@@ -140,6 +141,14 @@
             const customField = document.getElementById(targetId);
             customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
         }
+        
+    document.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
+            if (e.target.value === '__add_new__') {
+                window.location.href = '/add-ingredient';
+            }
+        }
+    });
     </script>
 </body>
 </html>
