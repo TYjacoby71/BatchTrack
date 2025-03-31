@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -15,9 +16,9 @@
         {% for item in stock_report %}
         <tr>
             <td>{{ item.name }}</td>
-            <td>{{ item.needed }} {{ item.unit }}</td>
-            <td>{{ item.available }} {{ item.unit }}</td>
-            <td>{{ item.status }}</td>
+            <td>{{ item.needed }} {{ item.unit if item.unit else 'units' }}</td>
+            <td>{{ item.available }} {{ item.unit if item.unit else 'units' }}</td>
+            <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
         </tr>
         {% endfor %}
     </table>

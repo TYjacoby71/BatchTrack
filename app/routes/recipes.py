@@ -67,6 +67,35 @@ def edit_recipe(recipe_id):
         units = json.load(f)
     return render_template('recipe_edit.html', recipe=recipe, ingredients=data['ingredients'], units=units)
 
+@recipes_bp.route('/check-stock/<int:recipe_id>')
+def check_stock(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
+    if not recipe:
+        return "Recipe not found", 404
+
+    stock_check = []
+    for item in recipe['ingredients']:
+        ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
+        if not ing or float(ing.get('quantity', 0)) < float(item['quantity']):
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": item['quantity'],
+                "available": ing['quantity'] if ing else '0',
+                "unit": item.get('unit', 'units'),
+                "status": "LOW"
+            })
+        else:
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": item['quantity'],
+                "available": ing['quantity'],
+                "unit": item.get('unit', 'units'),
+                "status": "OK"
+            })
+
+    return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
+
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
 def delete_recipe(recipe_id):
     data = load_data()
