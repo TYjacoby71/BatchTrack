@@ -37,7 +37,15 @@ def dashboard():
     from datetime import datetime
 
     data = load_data()
-    low_stock = [i for i in data['ingredients'] if not i.get('quantity') or (i.get('quantity') and float(i.get('quantity', 0)) < 10)]
+    low_stock = []
+    for i in data['ingredients']:
+        try:
+            qty = i.get('quantity', '')
+            if not qty or (qty and float(qty) < 10):
+                low_stock.append(i)
+        except ValueError:
+            # If quantity can't be converted to float, consider it as low stock
+            low_stock.append(i)
     recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
 
     # Format timestamps
