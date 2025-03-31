@@ -1,0 +1,107 @@
+✅ Batch View + Filtering Upgrade (/batches)
+This makes your batch history more useful for:
+
+Searching what was made and when
+
+Filtering by recipe name or tag (e.g. "lavender", "balm", "face")
+
+Seeing production trends or ingredients used
+
+🛠 What This Batch Adds:
+Feature	✅ Status After
+/batches filters by recipe name	✅
+Filter by tags (contains)	✅
+Optional: show tags and timestamp formatted	✅
+Still shows most recent first	✅
+Clean table layout	✅
+✅ Instructions for Replit Assistant
+🧾 Step 1: Update /batches Route Logic
+Ask Replit to replace your @batches_bp.route('/batches') function in batches.py with:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches')
+def view_batches():
+    data = load_data()
+    batches = data.get('batches', [])
+
+    # Filters
+    tag_filter = request.args.get("tag", "").lower()
+    recipe_filter = request.args.get("recipe", "").lower()
+
+    if tag_filter:
+        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
+
+    if recipe_filter:
+        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    # Sort newest first
+    batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)
+
+    # Format timestamps
+    for batch in batches:
+        if batch.get("timestamp"):
+            batch["timestamp"] = datetime.fromisoformat(batch["timestamp"]).strftime("%b %d, %Y at %I:%M %p")
+
+    return render_template('batches.html', batches=batches)
+🧾 Step 2: Add Filtering Form to batches.html
+Ask Replit to add this near the top of templates/batches.html:
+
+html
+Copy
+Edit
+<h2>Batches</h2>
+
+<form method="get" style="margin-bottom: 20px;">
+  <label>Filter by tag:</label>
+  <input type="text" name="tag" value="{{ request.args.get('tag', '') }}">
+  <label>Recipe name:</label>
+  <input type="text" name="recipe" value="{{ request.args.get('recipe', '') }}">
+  <button type="submit">Apply</button>
+  <a href="/batches">Clear</a>
+</form>
+🧾 Step 3: Render Batches as Table
+Ask Replit to replace the batch listing below the form with:
+
+html
+Copy
+Edit
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Recipe</th>
+      <th>Date</th>
+      <th>Total Cost</th>
+      <th>Tags</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for batch in batches %}
+      <tr>
+        <td>{{ batch.recipe_name }}</td>
+        <td>{{ batch.timestamp }}</td>
+        <td>${{ batch.total_cost }}</td>
+        <td>{{ batch.tags | join(', ') }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+🧠 Bonus Option Later
+If you'd like:
+
+🧾 Export filtered results to CSV
+
+📊 Chart batches by week/month
+
+🧬 Show ingredient usage breakdown
+
+Just say the word and I’ll queue that up next.
+
+Let me know when you're ready for:
+
+📦 Printable batch summary page with QR preview
+or
+🔎 Recipe search + filter enhancements
+
+You're in a great flow — keep going strong!

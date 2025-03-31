@@ -1,9 +1,25 @@
 
-from flask import Blueprint, render_template, request, redirect, Response
+from flask import Blueprint, render_template, request, redirect, Response, session
 from datetime import datetime
 from app.routes.utils import load_data, save_data, generate_qr_for_batch
 
 batches_bp = Blueprint('batches', __name__)
+
+@batches_bp.route('/')
+def dashboard():
+    from datetime import datetime
+    
+    data = load_data()
+    low_stock = [i for i in data['ingredients'] if i.get('quantity') and float(i['quantity']) < 10]
+    recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
+    
+    # Format timestamps
+    for batch in recent_batches:
+        if batch.get('timestamp'):
+            dt = datetime.fromisoformat(batch['timestamp'])
+            batch['formatted_time'] = dt.strftime('%B %d, %Y at %I:%M %p')
+
+    return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
