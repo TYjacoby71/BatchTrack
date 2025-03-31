@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -17,7 +16,9 @@
     <form method="POST">
         <div>
             <label>Name:</label><br>
-            <input type="text" name="name" value="{{ recipe.name }}" required>
+            <input type="text" name="name" value="{{ recipe.name }}" required><br>
+                <label for="tags">Tags (comma-separated):</label>
+                <input type="text" name="tags" value="{{ recipe.tags | join(', ') if recipe.tags else '' }}" placeholder="e.g. face, calming, night-use"><br>
         </div>
         <div>
             <label>Description:</label><br>
@@ -141,7 +142,7 @@
             const customField = document.getElementById(targetId);
             customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
         }
-        
+
     document.addEventListener('change', function(e) {
         if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
             if (e.target.value === '__add_new__') {
