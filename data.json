@@ -32,6 +32,18 @@
             "quantity": "40",
             "unit": "g",
             "cost_per_unit": "40"
+        },
+        {
+            "name": "test5",
+            "quantity": "5",
+            "unit": "mL",
+            "cost_per_unit": "6"
+        },
+        {
+            "name": "test 6",
+            "quantity": "40",
+            "unit": "mL",
+            "cost_per_unit": "50"
         }
     ],
     "recipes": [
