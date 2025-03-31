@@ -38,13 +38,19 @@ def dashboard():
 
     data = load_data()
     low_stock = []
+    
+    # Load ingredients and check stock levels
     for i in data.get('ingredients', []):
+        qty = i.get('quantity', '')
         try:
-            qty = i.get('quantity')
-            if qty is None or qty == '' or float(qty) < 10:
+            if qty == '' or (isinstance(qty, (int, float, str)) and float(str(qty)) < 10):
                 low_stock.append(i)
-        except (ValueError, TypeError):
+                print(f"Adding to low stock: {i['name']} - Qty: {qty}")
+        except (ValueError, TypeError) as e:
+            print(f"Error processing {i['name']}: {e}")
             low_stock.append(i)
+    
+    print(f"Total low stock items: {len(low_stock)}")
     recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
 
     # Format timestamps
