@@ -35,6 +35,9 @@ def add_ingredient():
         }
         data['ingredients'].append(new_ingredient)
         save_data(data)
+        referer = request.headers.get('Referer')
+        if referer and '/recipes' in referer:
+            return redirect(referer)
         return redirect('/ingredients')
     return render_template('edit_ingredient.html', ingredient=None)
 
