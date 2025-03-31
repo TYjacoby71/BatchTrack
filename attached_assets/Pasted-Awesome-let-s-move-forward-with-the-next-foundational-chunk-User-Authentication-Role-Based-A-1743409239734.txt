@@ -1,0 +1,122 @@
+Awesome — let’s move forward with the next foundational chunk:
+
+✅ User Authentication & Role-Based Access
+
+This gives you:
+
+Admin login
+
+Read-only & production roles
+
+Protection on sensitive routes (like editing, deleting, starting batches)
+
+Support for multi-user mode later
+
+🔐 Auth Plan (No Database Yet — JSON-Based)
+Feature	Route
+Login	/login
+Logout	/logout
+Protected Pages	Require session['role']
+Session Roles	admin, production, viewer
+We’ll use Flask-Login-style sessions — no need for database yet.
+
+✅ Step-by-Step Instructions for Replit
+🧾 1. Install Flask Sessions
+In the Replit Shell, run:
+
+bash
+Copy
+Edit
+pip install flask
+🟩 2. Update app/__init__.py
+📄 Add this at the bottom of your create_app() function:
+
+python
+Copy
+Edit
+from flask import session
+app.secret_key = 'supersecretkey'  # Replace this with a secure key
+🟦 3. Add Login & Logout Routes
+📄 Create a new file: app/routes/auth.py
+(or append this to app/__init__.py if you prefer)
+
+python
+Copy
+Edit
+from flask import Blueprint, request, render_template, redirect, session
+
+auth_bp = Blueprint('auth', __name__)
+
+# Dummy user setup
+USERS = {
+    "admin": {"password": "admin123", "role": "admin"},
+    "prod": {"password": "prod123", "role": "production"},
+    "viewer": {"password": "view123", "role": "viewer"}
+}
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get("username")
+        password = request.form.get("password")
+        user = USERS.get(username)
+
+        if user and user["password"] == password:
+            session["user"] = username
+            session["role"] = user["role"]
+            return redirect("/")
+        else:
+            return render_template("login.html", error="Invalid login")
+
+    return render_template("login.html")
+
+@auth_bp.route('/logout')
+def logout():
+    session.clear()
+    return redirect("/login")
+Then in app/__init__.py, register the blueprint:
+
+python
+Copy
+Edit
+from app.routes.auth import auth_bp
+app.register_blueprint(auth_bp)
+🟨 4. Protect Routes by Role
+In any route file (ingredients.py, etc.), add:
+
+python
+Copy
+Edit
+from flask import session
+Then guard the route like:
+
+python
+Copy
+Edit
+if session.get("role") not in ["admin", "production"]:
+    return "Access denied", 403
+Use admin-only guards like this:
+
+python
+Copy
+Edit
+if session.get("role") != "admin":
+    return "Admins only", 403
+📄 5. Create templates/login.html
+html
+Copy
+Edit
+{% extends "layout.html" %}
+{% block content %}
+<h2>Login</h2>
+<form method="post">
+  <label>Username:</label><br>
+  <input type="text" name="username"><br>
+  <label>Password:</label><br>
+  <input type="password" name="password"><br><br>
+  <input type="submit" value="Login">
+</form>
+{% if error %}
+<p style="color:red;">{{ error }}</p>
+{% endif %}
+{% endblock %}
