@@ -3,9 +3,10 @@ from flask import Flask
 from app.routes.ingredients import ingredients_bp
 from app.routes.recipes import recipes_bp
 from app.routes.batches import batches_bp
+import os
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='../templates')
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
     app.register_blueprint(batches_bp)

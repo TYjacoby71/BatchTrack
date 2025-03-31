@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, request, redirect
-from datetime import datetime
 from app.routes.utils import load_data, save_data
 import json
 
@@ -9,10 +8,12 @@ ingredients_bp = Blueprint('ingredients', __name__)
 def index():
     data = load_data()
     stats = {
-        'total_recipes': len(data['recipes']),
-        'total_ingredients': len(data['ingredients']),
+        'total_recipes': len(data.get('recipes', [])),
+        'total_ingredients': len(data.get('ingredients', [])),
         'total_batches': len(data.get('batches', [])),
-        'recent_batches': sorted(data.get('batches', []), key=lambda x: x['timestamp'], reverse=True)[:5]
+        'recent_batches': sorted(data.get('batches', []), 
+                               key=lambda x: x['timestamp'], 
+                               reverse=True)[:5]
     }
     return render_template('home.html', stats=stats)
 
