@@ -8,8 +8,8 @@ def list_recipes():
     data = load_data()
     return render_template('recipe_list.html', recipes=data['recipes'])
 
-@recipes_bp.route('/check-stock/<string:recipe_name>', methods=['GET'])
-def check_stock(recipe_name):
+@recipes_bp.route('/api/check-stock/<string:recipe_name>', methods=['GET'])
+def check_stock_api(recipe_name):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['name'] == recipe_name), None)
     if not recipe:
