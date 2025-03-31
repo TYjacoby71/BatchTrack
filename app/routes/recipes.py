@@ -26,7 +26,7 @@ def check_stock(recipe_name):
     return jsonify({"stock_check": stock_check})
 
 
-@recipes_bp.route('/recipe/<int:recipe_id>')
+@recipes_bp.route('/recipes/<int:recipe_id>')
 def view_recipe(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
@@ -34,7 +34,7 @@ def view_recipe(recipe_id):
         return "Recipe not found", 404
     return render_template('recipe_detail.html', recipe=recipe)
 
-@recipes_bp.route('/recipe/edit/<int:recipe_id>', methods=['GET', 'POST'])
+@recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 def edit_recipe(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
