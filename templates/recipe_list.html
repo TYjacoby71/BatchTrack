@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recipe List</title>
+</head>
+<body>
+    <h1>Recipes</h1>
+    <a href="/recipes/new">Add New Recipe</a>
+    <div class="recipe-list">
+        {% for recipe in recipes %}
+        <div class="recipe">
+            <h2>{{ recipe.name }}</h2>
+            <div class="actions">
+                <a href="/recipes/{{ recipe.id }}">View</a> |
+                <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
+                <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
+                <form style="display: inline;" action="/delete-recipe/{{ recipe.id }}" method="POST">
+                    <button type="submit">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="/">Back to Home</a>
+</body>
+</html>
