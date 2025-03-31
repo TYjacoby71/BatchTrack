@@ -170,31 +170,6 @@ def toggle_favorite(batch_id):
     save_data(data)
     return redirect("/batches")
 
-@batches_bp.route('/batches/<batch_id>/repeat')
-def repeat_batch(batch_id):
-    data = load_data()
-    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
-    if not original:
-        return "Batch not found", 404
-
-    new_id = f"batch_{len(data.get('batches', [])) + 1}"
-
-    new_batch = {
-        "id": new_id,
-        "recipe_id": original["recipe_id"],
-        "recipe_name": original["recipe_name"],
-        "timestamp": datetime.utcnow().isoformat(),
-        "notes": original.get("notes", ""),
-        "tags": original.get("tags", []),
-        "ingredients": original.get("ingredients", []),
-        "total_cost": original.get("total_cost", 0),
-    }
-
-    data["batches"].append(new_batch)
-    save_data(data)
-    return redirect("/batches")
-
-
 @batches_bp.route('/start-batch/<int:recipe_id>', methods=['GET', 'POST'])
 def start_batch(recipe_id):
     data = load_data()
@@ -334,19 +309,18 @@ def edit_batch_notes(batch_id):
 def repeat_batch(batch_id):
     from datetime import datetime
     data = load_data()
-    old_batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
-    
-    if not old_batch:
+    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    if not original:
         return "Batch not found", 404
-        
-    new_batch = old_batch.copy()
-    new_batch['id'] = len(data['batches']) + 1
-    new_batch['timestamp'] = datetime.now().isoformat()
+
+    new_batch = original.copy()
+    new_batch['id'] = len(data['batches']) + 1 
+    new_batch['timestamp'] = datetime.utcnow().isoformat()
     if 'tags' in new_batch:
         new_batch['tags'].append('repeat')
     else:
         new_batch['tags'] = ['repeat']
-        
-    data['batches'].append(new_batch)
+
+    data["batches"].append(new_batch)
     save_data(data)
-    return redirect('/batches')
+    return redirect("/batches")
