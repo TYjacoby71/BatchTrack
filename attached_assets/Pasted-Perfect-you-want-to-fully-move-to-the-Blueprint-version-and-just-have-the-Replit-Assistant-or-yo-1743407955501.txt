@@ -1,0 +1,182 @@
+Perfect — you want to fully move to the Blueprint version, and just have the Replit Assistant (or you) apply all the changes.
+
+Let’s do it. Here is every single change you’ll need to make, with exact code to copy and paste into Replit.
+
+✅ Flask Blueprint Refactor: Full Code Changes
+🟩 1. Create app/__init__.py
+🧾 Create a new file: app/__init__.py
+
+python
+Copy
+Edit
+from flask import Flask
+from app.routes.ingredients import ingredients_bp
+from app.routes.recipes import recipes_bp
+from app.routes.batches import batches_bp
+
+def create_app():
+    app = Flask(__name__)
+    app.register_blueprint(ingredients_bp)
+    app.register_blueprint(recipes_bp)
+    app.register_blueprint(batches_bp)
+    return app
+🟨 2. Update main.py to use the app factory
+🧾 Replace the content of main.py with:
+
+python
+Copy
+Edit
+from app import create_app
+
+app = create_app()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+🟦 3. Create Folder Structure
+In Replit, create:
+
+Copy
+Edit
+app/
+└── routes/
+Inside app/routes/, create these files:
+
+ingredients.py
+
+recipes.py
+
+batches.py
+
+utils.py
+
+📁 4. app/routes/utils.py
+🧾 Create this file for shared helpers:
+
+python
+Copy
+Edit
+import json
+import os
+import qrcode
+
+DATA_FILE = 'data.json'
+
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return {"ingredients": [], "recipes": [], "batches": [], "recipe_counter": 0, "batch_counter": 0}
+    with open(DATA_FILE, 'r') as f:
+        data = json.load(f)
+        data.setdefault("ingredients", [])
+        data.setdefault("recipes", [])
+        data.setdefault("batches", [])
+        data.setdefault("recipe_counter", len(data["recipes"]))
+        data.setdefault("batch_counter", len(data["batches"]))
+        return data
+
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+def generate_qr_for_batch(batch_id):
+    url = f"https://yourdomain.com/feedback/{batch_id}"
+    img = qrcode.make(url)
+    img_path = f"static/qr/{batch_id}.png"
+    os.makedirs(os.path.dirname(img_path), exist_ok=True)
+    img.save(img_path)
+    return img_path
+📄 5. app/routes/ingredients.py
+🧾 Start with this minimal base (you’ll add real routes later):
+
+python
+Copy
+Edit
+from flask import Blueprint
+
+ingredients_bp = Blueprint('ingredients', __name__)
+📄 6. app/routes/recipes.py
+🧾 Include your restored check_stock() route:
+
+python
+Copy
+Edit
+from flask import Blueprint, jsonify, request
+from app.routes.utils import load_data
+
+recipes_bp = Blueprint('recipes', __name__)
+
+@recipes_bp.route('/check-stock/<string:recipe_name>', methods=['GET'])
+def check_stock(recipe_name):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['name'] == recipe_name), None)
+    if not recipe:
+        return jsonify({"error": "Recipe not found"}), 404
+
+    stock_check = []
+    for item in recipe['ingredients']:
+        ing = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
+        if not ing or float(ing['quantity']) < float(item['quantity']):
+            stock_check.append({"ingredient": item['name'], "status": "Insufficient"})
+        else:
+            stock_check.append({"ingredient": item['name'], "status": "OK"})
+
+    return jsonify({"stock_check": stock_check})
+📄 7. app/routes/batches.py
+🧾 Include your check_stock_bulk() route:
+
+python
+Copy
+Edit
+from flask import Blueprint, render_template, request
+from app.routes.utils import load_data
+
+batches_bp = Blueprint('batches', __name__)
+
+@batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
+def check_stock_bulk():
+    data = load_data()
+
+    def to_float(val):
+        try:
+            return float(val.strip())
+        except:
+            return 0.0
+
+    if request.method == 'POST':
+        recipe_ids = request.form.getlist('recipe_id')
+        batch_counts = request.form.getlist('batch_count')
+        usage = {}
+
+        for r_id, count in zip(recipe_ids, batch_counts):
+            recipe = next((r for r in data['recipes'] if str(r['id']) == r_id), None)
+            if recipe:
+                for item in recipe['ingredients']:
+                    qty = to_float(item['quantity']) * to_float(count)
+                    usage[item['name']] = usage.get(item['name'], 0) + qty
+
+        stock_report = []
+        for name, needed in usage.items():
+            current = next((i for i in data['ingredients'] if i['name'] == name), {"quantity": "0"})
+            current_qty = to_float(current['quantity'])
+            stock_report.append({
+                "name": name,
+                "needed": round(needed, 2),
+                "available": round(current_qty, 2),
+                "status": "OK" if current_qty >= needed else "LOW"
+            })
+
+        return render_template('stock_bulk_result.html', stock_report=stock_report)
+
+    return render_template('check_stock_bulk.html', recipes=data['recipes'])
+✅ Final Steps
+Make sure your .replit says:
+
+ini
+Copy
+Edit
+run = "python3 main.py"
+In the Shell, install the packages:
+
+bash
+Copy
+Edit
+pip install flask qrcode[pil]

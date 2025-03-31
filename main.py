@@ -2,8 +2,17 @@ from flask import Flask, request, jsonify, render_template, redirect, Response
 from datetime import datetime
 import json
 import os
+import qrcode
 
 app = Flask(__name__)
+
+def generate_qr_for_batch(batch_id):
+    url = f"{request.host_url}feedback/{batch_id}"
+    img = qrcode.make(url)
+    os.makedirs('static/qr', exist_ok=True)
+    img_path = f"static/qr/{batch_id}.png"
+    img.save(img_path)
+    return img_path
 
 DATA_FILE = 'data.json'
 
@@ -433,6 +442,7 @@ def start_batch(recipe_id):
                 cost = float(inv_item.get('cost_per_unit', 0)) * float(item['quantity'])
                 total_cost += cost
 
+        qr_path = generate_qr_for_batch(batch_id)
         new_batch = {
             "id": batch_id,
             "recipe_id": recipe['id'],
@@ -441,7 +451,8 @@ def start_batch(recipe_id):
             "notes": notes,
             "tags": tags,
             "ingredients": recipe['ingredients'],
-            "total_cost": round(total_cost, 2)
+            "total_cost": round(total_cost, 2),
+            "qr_code": qr_path
         }
 
         data.setdefault("batches", []).append(new_batch)
@@ -450,22 +461,59 @@ def start_batch(recipe_id):
 
     return render_template('start_batch.html', recipe=recipe)
 
-@app.route('/download-purchase-list', methods=['POST'])
-def download_purchase_list():
+@app.route('/generate-reorder-list', methods=['GET'])
+def generate_reorder_list():
+    data = load_data()
+    reorder_items = []
+    
+    for ingredient in data['ingredients']:
+        try:
+            current_qty = float(ingredient.get('quantity', 0))
+            min_threshold = 5.0  # Minimum quantity threshold
+            
+            if current_qty < min_threshold:
+                reorder_amount = min_threshold - current_qty
+                reorder_items.append({
+                    'name': ingredient['name'],
+                    'current_qty': current_qty,
+                    'unit': ingredient.get('unit', ''),
+                    'reorder_amount': round(reorder_amount, 2)
+                })
+        except ValueError:
+            continue
+    
+    return render_template('reorder_list.html', items=reorder_items)
+
+@app.route('/download-reorder-list', methods=['GET'])
+def download_reorder_list():
     import csv
     from io import StringIO
-
-    data = request.json
+    
+    data = load_data()
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Ingredient', 'Needed', 'Available', 'To Order'])
-    for item in data:
-        writer.writerow([item['ingredient'], item['needed'], item['available'], item['to_order']])
+    writer.writerow(['Ingredient', 'Current Quantity', 'Unit', 'Reorder Amount'])
+    
+    for ingredient in data['ingredients']:
+        try:
+            current_qty = float(ingredient.get('quantity', 0))
+            min_threshold = 5.0
+            
+            if current_qty < min_threshold:
+                reorder_amount = min_threshold - current_qty
+                writer.writerow([
+                    ingredient['name'],
+                    current_qty,
+                    ingredient.get('unit', ''),
+                    round(reorder_amount, 2)
+                ])
+        except ValueError:
+            continue
 
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=purchase_list.csv"}
+        headers={"Content-disposition": "attachment; filename=reorder_list.csv"}
     )
 
 @app.route('/batches', methods=['GET'])

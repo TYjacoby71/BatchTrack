@@ -33,7 +33,7 @@
         },
         {
             "name": "milk",
-            "quantity": "2.94",
+            "quantity": "2.88",
             "unit": "gallon",
             "cost_per_unit": "3.49"
         }
@@ -204,7 +204,24 @@
                 }
             ],
             "total_cost": 0.0
+        },
+        {
+            "id": "batch_8",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-03-31T07:58:07.478826",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_8.png"
         }
     ],
-    "batch_counter": 7
+    "batch_counter": 8
 }
