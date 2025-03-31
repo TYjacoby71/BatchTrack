@@ -2,8 +2,17 @@ from flask import Flask, request, jsonify, render_template, redirect, Response
 from datetime import datetime
 import json
 import os
+import qrcode
 
 app = Flask(__name__)
+
+def generate_qr_for_batch(batch_id):
+    url = f"{request.host_url}feedback/{batch_id}"
+    img = qrcode.make(url)
+    os.makedirs('static/qr', exist_ok=True)
+    img_path = f"static/qr/{batch_id}.png"
+    img.save(img_path)
+    return img_path
 
 DATA_FILE = 'data.json'
 
@@ -433,6 +442,7 @@ def start_batch(recipe_id):
                 cost = float(inv_item.get('cost_per_unit', 0)) * float(item['quantity'])
                 total_cost += cost
 
+        qr_path = generate_qr_for_batch(batch_id)
         new_batch = {
             "id": batch_id,
             "recipe_id": recipe['id'],
@@ -441,7 +451,8 @@ def start_batch(recipe_id):
             "notes": notes,
             "tags": tags,
             "ingredients": recipe['ingredients'],
-            "total_cost": round(total_cost, 2)
+            "total_cost": round(total_cost, 2),
+            "qr_code": qr_path
         }
 
         data.setdefault("batches", []).append(new_batch)
