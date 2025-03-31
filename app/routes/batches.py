@@ -329,3 +329,42 @@ def edit_batch_notes(batch_id):
         return redirect('/batches')
 
     return render_template("edit_batch_notes.html", batch=batch)
+
+@batches_bp.route('/batches/<batch_id>/favorite')
+def toggle_favorite(batch_id):
+    data = load_data()
+    batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+    
+    if not batch:
+        return "Batch not found", 404
+        
+    if 'favorite' in batch.get('tags', []):
+        batch['tags'].remove('favorite')
+    else:
+        if 'tags' not in batch:
+            batch['tags'] = []
+        batch['tags'].append('favorite')
+    
+    save_data(data)
+    return redirect('/batches')
+
+@batches_bp.route('/batches/<batch_id>/repeat')
+def repeat_batch(batch_id):
+    from datetime import datetime
+    data = load_data()
+    old_batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+    
+    if not old_batch:
+        return "Batch not found", 404
+        
+    new_batch = old_batch.copy()
+    new_batch['id'] = len(data['batches']) + 1
+    new_batch['timestamp'] = datetime.now().isoformat()
+    if 'tags' in new_batch:
+        new_batch['tags'].append('repeat')
+    else:
+        new_batch['tags'] = ['repeat']
+        
+    data['batches'].append(new_batch)
+    save_data(data)
+    return redirect('/batches')
