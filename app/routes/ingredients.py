@@ -4,31 +4,18 @@ import json
 
 ingredients_bp = Blueprint('ingredients', __name__)
 
-@ingredients_bp.route('/')
+@ingredients_bp.route('/home')
 def index():
     data = load_data()
-    ingredients = data.get('ingredients', [])
-
-    low_stock = []
-    for ing in ingredients:
-        print(f"Checking ingredient: {ing['name']} → quantity: {ing['quantity']}")
-        try:
-            qty = float(ing.get("quantity", 0))
-            if qty < 10:
-                print(f"⚠️ Low stock: {ing['name']} at {qty}")
-                low_stock.append(ing)
-        except Exception as e:
-            print(f"Error parsing quantity for {ing.get('name', '?')}: {e}")
-
-    print(f"Found {len(low_stock)} low stock ingredients.")
-
-    recent_batches = sorted(
-        data.get("batches", []),
-        key=lambda b: b.get("timestamp", ""),
-        reverse=True
-    )[:5]
-
-    return render_template('dashboard.html', low_stock=low_stock, recent_batches=recent_batches)
+    stats = {
+        'total_recipes': len(data.get('recipes', [])),
+        'total_ingredients': len(data.get('ingredients', [])),
+        'total_batches': len(data.get('batches', [])),
+        'recent_batches': sorted(data.get('batches', []), 
+                               key=lambda x: x['timestamp'], 
+                               reverse=True)[:5]
+    }
+    return render_template('home.html', stats=stats)
 
 @ingredients_bp.route('/ingredients')
 def ingredients():
@@ -66,7 +53,7 @@ def edit_ingredient(name):
         ingredient['cost_per_unit'] = request.form.get('cost_per_unit', '0.00')
         save_data(data)
         return redirect('/ingredients')
-    
+
     return render_template('edit_ingredient.html', ingredient=ingredient)
 
 @ingredients_bp.route('/delete-ingredient/<name>', methods=['POST'])
