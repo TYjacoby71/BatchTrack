@@ -24,3 +24,33 @@ def check_stock(recipe_name):
             stock_check.append({"ingredient": item['name'], "status": "OK"})
 
     return jsonify({"stock_check": stock_check})
+
+@recipes_bp.route('/recipes')
+def list_recipes():
+    data = load_data()
+    return render_template('recipe_list.html', recipes=data['recipes'])
+
+@recipes_bp.route('/recipes/<int:recipe_id>')
+def view_recipe(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
+    if not recipe:
+        return "Recipe not found", 404
+    return render_template('recipe_detail.html', recipe=recipe)
+
+@recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['POST'])
+def clone_recipe(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
+
+    if not recipe:
+        return "Recipe not found", 404
+
+    new_recipe = recipe.copy()
+    new_recipe['id'] = data['recipe_counter'] + 1
+    data['recipe_counter'] = new_recipe['id']
+    new_recipe['name'] = f"Copy of {recipe['name']}"
+    new_recipe['ingredients'] = [ing.copy() for ing in recipe['ingredients']]
+    data['recipes'].append(new_recipe)
+    save_data(data)
+    return redirect(f'/recipes/{new_recipe["id"]}')
