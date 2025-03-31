@@ -68,6 +68,18 @@
             "quantity": "4",
             "unit": "mL",
             "cost_per_unit": "4"
+        },
+        {
+            "name": "testttttt",
+            "quantity": "4",
+            "unit": "mL",
+            "cost_per_unit": "4"
+        },
+        {
+            "name": "reaetae",
+            "quantity": "54",
+            "unit": "mL",
+            "cost_per_unit": "45"
         }
     ],
     "recipes": [
