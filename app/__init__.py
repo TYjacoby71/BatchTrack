@@ -15,9 +15,10 @@ def create_app():
     app.register_blueprint(auth_bp)
 
     @app.context_processor
-    def inject_units():
+    def inject_globals():
         import json
+        from app.routes.utils import load_categories
         with open('units.json') as f:
             units = json.load(f)
-        return dict(units=units)
+        return dict(units=units, category_options=load_categories())
     return app
