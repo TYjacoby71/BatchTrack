@@ -34,11 +34,54 @@ def view_batches():
 
 @batches_bp.route('/')
 def dashboard():
+    data = load_data()
+    ingredients = data.get('ingredients', [])
+
+    low_stock = []
+    for ing in ingredients:
+        print(f"Checking ingredient: {ing['name']} → quantity: {ing['quantity']}")
+        try:
+            qty = float(ing.get("quantity", 0))
+            if qty < 10:
+                print(f"⚠️ Low stock: {ing['name']} at {qty}")
+                low_stock.append(ing)
+        except Exception as e:
+            print(f"Error parsing quantity for {ing.get('name', '?')}: {e}")
+
+    print(f"Found {len(low_stock)} low stock ingredients.")
+
+    recent_batches = sorted(
+        data.get("batches", []),
+        key=lambda b: b.get("timestamp", ""),
+        reverse=True
+    )[:5]
+
+    return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
+def dashboard():
     from datetime import datetime
 
     data = load_data()
-    low_stock = [i for i in data['ingredients'] if i.get('quantity') and float(i['quantity']) < 10]
-    recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
+    ingredients = data.get('ingredients', [])
+
+    low_stock = []
+    for ing in ingredients:
+        print(f"Checking ingredient: {ing['name']} → quantity: {ing['quantity']}")
+        try:
+            qty = float(ing.get("quantity", 0))
+            if qty < 10:
+                print(f"⚠️ Low stock: {ing['name']} at {qty}")
+                low_stock.append(ing)
+        except Exception as e:
+            print(f"Error parsing quantity for {ing.get('name', '?')}: {e}")
+
+    print(f"Found {len(low_stock)} low stock ingredients.")
+
+    # Get recent batches (sorted newest first)
+    recent_batches = sorted(
+        data.get("batches", []),
+        key=lambda b: b.get("timestamp", ""),
+        reverse=True
+    )[:5]
 
     # Format timestamps
     for batch in recent_batches:

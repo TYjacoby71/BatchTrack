@@ -4,7 +4,7 @@ import json
 
 ingredients_bp = Blueprint('ingredients', __name__)
 
-@ingredients_bp.route('/')
+@ingredients_bp.route('/home')
 def index():
     data = load_data()
     stats = {
@@ -53,7 +53,7 @@ def edit_ingredient(name):
         ingredient['cost_per_unit'] = request.form.get('cost_per_unit', '0.00')
         save_data(data)
         return redirect('/ingredients')
-    
+
     return render_template('edit_ingredient.html', ingredient=ingredient)
 
 @ingredients_bp.route('/delete-ingredient/<name>', methods=['POST'])
