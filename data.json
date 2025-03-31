@@ -1,16 +1,6 @@
 {
     "ingredients": [
         {
-            "name": "test",
-            "quantity": "32",
-            "unit": "oz"
-        },
-        {
-            "name": "test",
-            "quantity": "32",
-            "unit": "oz"
-        },
-        {
             "name": "shea butter",
             "quantity": "",
             "unit": ""
@@ -38,22 +28,10 @@
             "cost_per_unit": "3.49"
         },
         {
-            "name": "test low quantity",
-            "quantity": "5",
-            "unit": "mL",
-            "cost_per_unit": "5"
-        },
-        {
             "name": "Tallow",
             "quantity": "40",
             "unit": "g",
             "cost_per_unit": "40"
-        },
-        {
-            "name": "dasf",
-            "quantity": "1",
-            "unit": "mL",
-            "cost_per_unit": "1"
         }
     ],
     "recipes": [
