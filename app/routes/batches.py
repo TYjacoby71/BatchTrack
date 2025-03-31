@@ -114,6 +114,14 @@ def export_batches():
         headers={'Content-Disposition': 'attachment;filename=batches.csv'}
     )
 
+@batches_bp.route('/tags.json')
+def get_tags():
+    data = load_data()
+    tags = set()
+    for batch in data.get('batches', []):
+        tags.update(batch.get('tags', []))
+    return jsonify(sorted(list(tags)))
+
 @batches_bp.route('/tags/manage', methods=['GET', 'POST'])
 def tag_admin():
     data = load_data()
