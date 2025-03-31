@@ -1,0 +1,23 @@
+
+{
+  "volume": {
+    "label": "Volume",
+    "units": ["mL", "cL", "L", "fl oz", "cup", "pint", "quart", "gallon", "tsp", "tbsp", "dash", "drop", "pinch", "shot"]
+  },
+  "weight": {
+    "label": "Weight", 
+    "units": ["g", "kg", "oz", "lb"]
+  },
+  "count": {
+    "label": "Count",
+    "units": ["unit"]
+  },
+  "length": {
+    "label": "Length",
+    "units": ["mm", "cm", "m", "inch", "ft"]
+  },
+  "other": {
+    "label": "Other",
+    "units": ["shake", "splash", "handful", "to taste"]
+  }
+}

@@ -1,0 +1,210 @@
+{
+    "ingredients": [
+        {
+            "name": "test",
+            "quantity": "32",
+            "unit": "oz"
+        },
+        {
+            "name": "test",
+            "quantity": "32",
+            "unit": "oz"
+        },
+        {
+            "name": "shea butter",
+            "quantity": "",
+            "unit": ""
+        },
+        {
+            "name": "oil",
+            "quantity": "2.0",
+            "unit": "5"
+        },
+        {
+            "name": "eggs",
+            "quantity": "6.0",
+            "unit": "eggs",
+            "cost_per_unit": "0.00"
+        },
+        {
+            "name": "pepper",
+            "quantity": "7.0",
+            "unit": "10"
+        },
+        {
+            "name": "milk",
+            "quantity": "2.94",
+            "unit": "gallon",
+            "cost_per_unit": "3.49"
+        }
+    ],
+    "recipes": [
+        {
+            "id": 2,
+            "name": "Fried Egs",
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": "3",
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": "1",
+                    "unit": "dash"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": "1",
+                    "unit": "tsp"
+                }
+            ],
+            "instructions": "Fry, flip, eat"
+        },
+        {
+            "id": 3,
+            "name": "Cup of Milk",
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "instructions": "pour in bowl"
+        }
+    ],
+    "recipe_counter": 3,
+    "batches": [
+        {
+            "id": "batch_1",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-03-31T04:13:44.575276",
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": "12"
+                },
+                {
+                    "name": "oil",
+                    "quantity": "1"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": "1"
+                }
+            ]
+        },
+        {
+            "id": "batch_2",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-03-31T04:20:43.715850",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": "3"
+                },
+                {
+                    "name": "oil",
+                    "quantity": "1"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": "1"
+                }
+            ]
+        },
+        {
+            "id": "batch_3",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-03-31T04:22:51.925340",
+            "notes": "this is the test for batch",
+            "tags": [
+                "Sample"
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": "3"
+                },
+                {
+                    "name": "oil",
+                    "quantity": "1"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": "1"
+                }
+            ]
+        },
+        {
+            "id": "batch_4",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-03-31T06:06:29.296064",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": "1"
+                }
+            ],
+            "total_cost": 3.49
+        },
+        {
+            "id": "batch_5",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-03-31T06:51:57.328418",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0
+        },
+        {
+            "id": "batch_6",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-03-31T06:54:24.904180",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0
+        },
+        {
+            "id": "batch_7",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-03-31T07:03:05.884953",
+            "notes": "",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0
+        }
+    ],
+    "batch_counter": 7
+}
