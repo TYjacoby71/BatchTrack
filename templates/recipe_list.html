@@ -15,6 +15,7 @@
                 <a href="/recipes/{{ recipe.id }}">View</a> |
                 <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
                 <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
+                <a href="/check-stock/{{ recipe.id }}">Check Stock</a> |
                 <form style="display: inline;" action="/delete-recipe/{{ recipe.id }}" method="POST">
                     <button type="submit">Delete</button>
                 </form>
