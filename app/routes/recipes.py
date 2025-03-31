@@ -105,6 +105,39 @@ def delete_recipe(recipe_id):
     save_data(data)
     return redirect('/recipes')
 
+@recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
+def new_recipe():
+    if request.method == 'POST':
+        data = load_data()
+        new_recipe = {
+            'id': data.get('recipe_counter', 0) + 1,
+            'name': request.form['name'],
+            'instructions': request.form['instructions'],
+            'ingredients': []
+        }
+        
+        names = request.form.getlist('ingredient_name[]')
+        quantities = request.form.getlist('ingredient_quantity[]')
+        units = request.form.getlist('ingredient_unit[]')
+        
+        for name, qty, unit in zip(names, quantities, units):
+            if name and qty:
+                new_recipe['ingredients'].append({
+                    'name': name,
+                    'quantity': qty,
+                    'unit': unit
+                })
+        
+        data['recipe_counter'] = new_recipe['id']
+        data['recipes'].append(new_recipe)
+        save_data(data)
+        return redirect(f'/recipes/{new_recipe["id"]}')
+
+    data = load_data()
+    with open('units.json') as f:
+        units = json.load(f)
+    return render_template('recipe_edit.html', recipe={'name': '', 'instructions': '', 'ingredients': []}, ingredients=data['ingredients'], units=units)
+
 @recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['POST'])
 def clone_recipe(recipe_id):
     data = load_data()
