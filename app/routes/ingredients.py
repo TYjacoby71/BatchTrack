@@ -27,10 +27,10 @@ def add_ingredient():
         name = request.form.get('name', '').strip()
         quantity = request.form.get('quantity', '').strip()
         unit = request.form.get('unit', '').strip()
-        
+
         if not name or not quantity:
             return "Name and quantity are required", 400
-            
+
         data = load_data()
         cost_per_unit = request.form.get('cost_per_unit', '0.00').strip()
         new_ingredient = {
@@ -42,7 +42,7 @@ def add_ingredient():
         data['ingredients'].append(new_ingredient)
         save_data(data)
         return redirect('/ingredients')
-    
+
     with open('units.json', 'r') as f:
         units = json.load(f)
     return render_template('add_ingredient.html', units=units)
