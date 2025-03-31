@@ -38,15 +38,19 @@ def dashboard():
 
     data = load_data()
     ingredients = data.get('ingredients', [])
-    
+
     low_stock = []
     for ing in ingredients:
+        print(f"Checking ingredient: {ing['name']} → quantity: {ing['quantity']}")
         try:
             qty = float(ing.get("quantity", 0))
             if qty < 10:
+                print(f"⚠️ Low stock: {ing['name']} at {qty}")
                 low_stock.append(ing)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error parsing quantity for {ing.get('name', '?')}: {e}")
+
+    print(f"Found {len(low_stock)} low stock ingredients.")
 
     # Get recent batches (sorted newest first)
     recent_batches = sorted(
