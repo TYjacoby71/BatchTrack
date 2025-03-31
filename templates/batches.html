@@ -2,6 +2,11 @@
 {% block content %}
 <h2>Batches</h2>
 
+<div style="margin-bottom: 20px;">
+  <a href="/ingredients/usage">View Ingredient Usage</a> |
+  <a href="/batches/export?tag={{ request.args.get('tag', '') }}&recipe={{ request.args.get('recipe', '') }}">Export to CSV</a>
+</div>
+
 <form method="get" style="margin-bottom: 20px;">
   <label>Filter by tag:</label>
   <input type="text" name="tag" value="{{ request.args.get('tag', '') }}">
@@ -18,6 +23,7 @@
       <th>Date</th>
       <th>Total Cost</th>
       <th>Tags</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -27,6 +33,7 @@
         <td>{{ batch.timestamp }}</td>
         <td>${{ batch.total_cost|default(0.00) }}</td>
         <td>{{ batch.tags|join(', ') if batch.tags else '' }}</td>
+        <td><a href="/batches/{{ batch.id }}/print" target="_blank">🖨️ Print</a></td>
       </tr>
     {% endfor %}
   </tbody>

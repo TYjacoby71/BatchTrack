@@ -22,6 +22,37 @@ def dashboard():
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
+@batches_bp.route('/batches/export')
+def export_batches():
+    from datetime import datetime
+    from flask import Response
+    
+    data = load_data()
+    batches = data.get('batches', [])
+
+    # Apply same filters as /batches
+    tag_filter = request.args.get("tag", "").lower()
+    recipe_filter = request.args.get("recipe", "").lower()
+
+    if tag_filter:
+        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
+
+    if recipe_filter:
+        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    # Generate CSV
+    lines = ["id,recipe_name,date,total_cost,tags"]
+    for b in batches:
+        line = f"{b['id']},{b['recipe_name']},{b['timestamp']},{b.get('total_cost', 0)},\"{','.join(b.get('tags', []))}\""
+        lines.append(line)
+
+    content = "\n".join(lines)
+    return Response(
+        content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=filtered_batches.csv'}
+    )
+
 def check_stock_bulk():
     data = load_data()
     result = []
@@ -124,6 +155,51 @@ def start_batch(recipe_id):
     return render_template('start_batch.html', recipe=recipe)
 
 @batches_bp.route('/batches')
+@batches_bp.route('/ingredients/usage')
+def ingredient_usage():
+    data = load_data()
+    usage = {}
+
+    def to_float(v):
+        try:
+            return float(v)
+        except:
+            return 0
+
+    for batch in data.get("batches", []):
+        for ing in batch.get("ingredients", []):
+            name = ing["name"]
+            qty = to_float(ing["quantity"])
+            usage[name] = usage.get(name, 0) + qty
+
+    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
+    return render_template("ingredient_usage.html", usage=sorted_usage)
+
+@batches_bp.route('/batches/<batch_id>/print')
+def print_batch(batch_id):
+    data = load_data()
+    batch = next((b for b in data.get("batches", []) if b["id"] == batch_id), None)
+    if not batch:
+        return "Batch not found", 404
+    return render_template("batch_print.html", batch=batch)
+    data = load_data()
+    usage = {}
+
+    def to_float(v):
+        try:
+            return float(v)
+        except:
+            return 0
+
+    for batch in data.get("batches", []):
+        for ing in batch.get("ingredients", []):
+            name = ing["name"]
+            qty = to_float(ing["quantity"])
+            usage[name] = usage.get(name, 0) + qty
+
+    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
+    return render_template("ingredient_usage.html", usage=sorted_usage)
+
 def view_batches():
     from datetime import datetime
     
