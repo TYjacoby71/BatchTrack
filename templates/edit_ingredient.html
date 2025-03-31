@@ -2,14 +2,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Edit Ingredient</title>
+    <title>{% if ingredient %}Edit{% else %}Add{% endif %} Ingredient</title>
 </head>
 <body>
-    <h1>Edit Ingredient: {{ ingredient.name }}</h1>
+    <h1>{% if ingredient %}Edit Ingredient: {{ ingredient.name }}{% else %}Add New Ingredient{% endif %}</h1>
     <form method="POST">
+        {% if not ingredient %}
+        <div>
+            <label>Name:</label>
+            <input type="text" name="name" required>
+        </div>
+        {% endif %}
         <div>
             <label>Quantity:</label>
-            <input type="number" step="0.01" name="quantity" value="{{ ingredient.quantity }}">
+            <input type="number" step="0.01" name="quantity" value="{{ ingredient.quantity if ingredient else '' }}">
         </div>
         <div>
             <label>Unit:</label>
@@ -25,9 +31,9 @@
         </div>
         <div>
             <label>Cost per unit:</label>
-            <input type="number" step="0.01" name="cost_per_unit" value="{{ ingredient.cost_per_unit }}">
+            <input type="number" step="0.01" name="cost_per_unit" value="{{ ingredient.cost_per_unit if ingredient else '0.00' }}">
         </div>
-        <button type="submit">Save Changes</button>
+        <button type="submit">{% if ingredient %}Save Changes{% else %}Add Ingredient{% endif %}</button>
     </form>
     <a href="/ingredients">Back to Ingredients</a>
 </body>
