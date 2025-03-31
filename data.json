@@ -48,6 +48,12 @@
             "quantity": "40",
             "unit": "g",
             "cost_per_unit": "40"
+        },
+        {
+            "name": "dasf",
+            "quantity": "1",
+            "unit": "mL",
+            "cost_per_unit": "1"
         }
     ],
     "recipes": [
