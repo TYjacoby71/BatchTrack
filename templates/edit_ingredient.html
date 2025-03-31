@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Ingredient</title>
+</head>
+<body>
+    <h1>Edit Ingredient: {{ ingredient.name }}</h1>
+    <form method="POST">
+        <div>
+            <label>Quantity:</label>
+            <input type="number" step="0.01" name="quantity" value="{{ ingredient.quantity }}">
+        </div>
+        <div>
+            <label>Unit:</label>
+            <select name="unit">
+                {% for unit in units %}
+                <option value="{{ unit }}" {% if unit == ingredient.unit %}selected{% endif %}>{{ unit }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Cost per unit:</label>
+            <input type="number" step="0.01" name="cost_per_unit" value="{{ ingredient.cost_per_unit }}">
+        </div>
+        <button type="submit">Save Changes</button>
+    </form>
+    <a href="/ingredients">Back to Ingredients</a>
+</body>
+</html>
