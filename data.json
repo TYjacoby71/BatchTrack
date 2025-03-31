@@ -36,6 +36,12 @@
             "quantity": "2.88",
             "unit": "gallon",
             "cost_per_unit": "3.49"
+        },
+        {
+            "name": "test low quantity",
+            "quantity": "5",
+            "unit": "mL",
+            "cost_per_unit": "5"
         }
     ],
     "recipes": [
