@@ -4,7 +4,7 @@ from app.routes.utils import load_data, save_data
 recipes_bp = Blueprint('recipes', __name__)
 
 @recipes_bp.route('/recipes')
-def recipes():
+def list_recipes():
     data = load_data()
     return render_template('recipe_list.html', recipes=data['recipes'])
 
