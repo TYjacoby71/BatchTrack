@@ -1,0 +1,96 @@
+✅ Fix Request: Complete Category + Ingredient Integration
+🟠 1. Category Dropdowns — Add "Custom/New" Entry Option
+Issue: Dropdowns are fixed, and Balm is missing — no way to add a new option.
+
+Solution:
+
+Update the template for all dropdowns (e.g. Product Type, Use Area, Use Case) to include:
+
+html
+Copy
+Edit
+<option value="">-- Select --</option>
+{% for item in category_options.product_types %}
+  <option value="{{ item }}" {% if recipe.product_type == item %}selected{% endif %}>{{ item }}</option>
+{% endfor %}
+<option value="__custom__">+ Add New</option>
+Use JavaScript to dynamically reveal an input field if + Add New is selected.
+
+✅ JS Snippet to Insert (Once)
+html
+Copy
+Edit
+<script>
+function toggleCustomField(selectEl, targetId) {
+  const customField = document.getElementById(targetId);
+  customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
+}
+</script>
+Add this <script> to the bottom of the form page
+
+Add onchange="toggleCustomField(this, 'customProductType')" to the select
+
+Example below a select:
+
+html
+Copy
+Edit
+<div id="customProductType" style="display:none;">
+  <label>New Product Type:</label>
+  <input type="text" name="custom_product_type">
+</div>
+And in the POST route:
+
+python
+Copy
+Edit
+product_type = request.form.get("product_type")
+if product_type == "__custom__":
+    product_type = request.form.get("custom_product_type")
+recipe["product_type"] = product_type
+✅ Repeat for other fields: use_case, use_area
+
+🔴 2. Fix Broken "Add New Ingredient" Link
+Issue: Clicking the "Add New Ingredient" link leads to a 404.
+
+Fix: Make sure /ingredients/add route exists and points to the correct function:
+
+In ingredients.py:
+
+python
+Copy
+Edit
+@ingredients_bp.route('/add', methods=['GET', 'POST'])
+def add_ingredient():
+    ...
+And confirm the link in the template says:
+
+html
+Copy
+Edit
+<a href="/ingredients/add" target="_blank">➕ Add New Ingredient</a>
+🟡 3. Add “Balm” to Default Categories (Temporary)
+Until the above fix is done, ask the assistant to add Balm to categories.json:
+
+json
+Copy
+Edit
+{
+  "product_types": ["Balm", "Cream", "Serum", "Oil"],
+  "use_areas": ["Face", "Body", "Lips", "Hands"],
+  "use_cases": ["Day", "Night", "Seasonal", "Limited"]
+}
+🧾 Request for Replit Assistant:
+sql
+Copy
+Edit
+Please fix the recipe builder form with the following:
+
+1. Allow users to select "Add New" in product_type, use_area, use_case fields
+   - Add "__custom__" option to the dropdown
+   - Show an input when selected
+   - Save the custom value instead of the dropdown
+2. Ensure the route /ingredients/add exists and returns the ingredient form
+3. Add "Balm" to the product_type list in categories.json
+
+Make sure custom values are saved correctly in the recipe.

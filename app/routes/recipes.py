@@ -112,7 +112,12 @@ def new_recipe():
         new_recipe = {
             'id': data.get('recipe_counter', 0) + 1,
             'name': request.form['name'],
+            'description': request.form.get('description', ''),
             'instructions': request.form['instructions'],
+            'product_type': request.form.get('product_type', ''),
+            'use_area': request.form.get('use_area', ''),
+            'use_case': request.form.get('use_case', ''),
+            'primary_ingredient': request.form.get('primary_ingredient', ''),
             'ingredients': []
         }
         
