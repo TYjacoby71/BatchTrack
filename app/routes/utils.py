@@ -1,8 +1,21 @@
-
 import json
 import os
 import qrcode
 from flask import request
+import json
+from pathlib import Path
+
+def load_categories():
+    path = Path("categories.json")
+    if path.exists():
+        with open(path) as f:
+            return json.load(f)
+    return {
+        "product_types": [],
+        "use_areas": [],
+        "primary_ingredients": [],
+        "use_cases": []
+    }
 
 DATA_FILE = 'data.json'
 
@@ -31,30 +44,3 @@ def generate_qr_for_batch(batch_id):
     img_path = f"static/qr/{batch_id}.png"
     img.save(img_path)
     return img_path
-import json
-import os
-import qrcode
-from datetime import datetime
-
-def load_data():
-    try:
-        with open('data.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {'ingredients': [], 'recipes': [], 'batches': [], 'recipe_counter': 0}
-
-def save_data(data):
-    with open('data.json', 'w') as f:
-        json.dump(data, f, indent=4)
-
-def generate_qr_for_batch(batch_id):
-    if not os.path.exists('static/qr'):
-        os.makedirs('static/qr')
-        
-    qr_path = f'static/qr/{batch_id}.png'
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(batch_id)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    img.save(qr_path)
-    return qr_path

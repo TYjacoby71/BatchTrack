@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, Response, session
 from datetime import datetime
 from app.routes.utils import load_data, save_data, generate_qr_for_batch
@@ -8,7 +7,7 @@ batches_bp = Blueprint('batches', __name__)
 @batches_bp.route('/batches')
 def view_batches():
     from datetime import datetime
-    
+
     data = load_data()
     batches = data.get('batches', [])
 
@@ -35,11 +34,11 @@ def view_batches():
 @batches_bp.route('/')
 def dashboard():
     from datetime import datetime
-    
+
     data = load_data()
     low_stock = [i for i in data['ingredients'] if i.get('quantity') and float(i['quantity']) < 10]
     recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
-    
+
     # Format timestamps
     for batch in recent_batches:
         if batch.get('timestamp'):
@@ -51,7 +50,7 @@ def dashboard():
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
     data = load_data()
-    
+
     if request.method == 'POST':
         recipe_ids = request.form.getlist('recipe_id')
         batch_counts = request.form.getlist('batch_count')
@@ -86,7 +85,7 @@ def check_stock_bulk():
 def export_batches():
     from datetime import datetime
     from flask import Response
-    
+
     data = load_data()
     batches = data.get('batches', [])
 
@@ -114,6 +113,39 @@ def export_batches():
         mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=filtered_batches.csv'}
     )
+
+@batches_bp.route('/tags/manage', methods=['GET', 'POST'])
+def tag_admin():
+    data = load_data()
+    tag_counts = {}
+
+    for batch in data.get("batches", []):
+        for tag in batch.get("tags", []):
+            tag = tag.strip().lower()
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    if request.method == 'POST':
+        action = request.form.get("action")
+        old_tag = request.form.get("old_tag", "").strip().lower()
+        new_tag = request.form.get("new_tag", "").strip().lower()
+
+        if action == 'merge' and old_tag and new_tag:
+            for batch in data["batches"]:
+                if "tags" in batch:
+                    batch["tags"] = [new_tag if t.strip().lower() == old_tag else t for t in batch["tags"]]
+            save_data(data)
+
+        elif action == 'delete' and old_tag:
+            for batch in data["batches"]:
+                if "tags" in batch:
+                    batch["tags"] = [t for t in batch["tags"] if t.strip().lower() != old_tag]
+            save_data(data)
+
+        return redirect('/tags/manage')
+
+    sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+    return render_template("tags_manage.html", tags=sorted_tags)
+
 
 def check_stock_bulk():
     data = load_data()
@@ -244,32 +276,6 @@ def print_batch(batch_id):
     if not batch:
         return "Batch not found", 404
     return render_template("batch_print.html", batch=batch)
-
-def view_batches():
-    from datetime import datetime
-    
-    data = load_data()
-    batches = data.get('batches', [])
-
-    # Filters
-    tag_filter = request.args.get("tag", "").lower()
-    recipe_filter = request.args.get("recipe", "").lower()
-
-    if tag_filter:
-        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
-
-    if recipe_filter:
-        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
-
-    # Sort newest first
-    batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)
-
-    # Format timestamps
-    for batch in batches:
-        if batch.get("timestamp"):
-            batch["timestamp"] = datetime.fromisoformat(batch["timestamp"]).strftime("%b %d, %Y at %I:%M %p")
-
-    return render_template('batches.html', batches=batches)
 
 @batches_bp.route('/download-purchase-list')
 def download_purchase_list():
