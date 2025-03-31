@@ -1,0 +1,33 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Start Batch - {{ recipe.name }}</title>
+</head>
+<body>
+    <h1>Start Batch - {{ recipe.name }}</h1>
+    
+    <form method="POST">
+        <h3>Ingredients:</h3>
+        <ul>
+        {% for ingredient in recipe.ingredients %}
+            <li>{{ ingredient.name }}: {{ ingredient.quantity }} {{ ingredient.unit }}</li>
+        {% endfor %}
+        </ul>
+
+        <div>
+            <label for="notes">Notes:</label><br>
+            <textarea name="notes" id="notes"></textarea>
+        </div>
+
+        <div>
+            <label for="tags">Tags (comma-separated):</label><br>
+            <input type="text" name="tags" id="tags">
+        </div>
+
+        <button type="submit">Start Batch</button>
+    </form>
+
+    <a href="/recipes">Back to Recipes</a>
+</body>
+</html>
