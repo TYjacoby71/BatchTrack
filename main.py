@@ -297,7 +297,7 @@ def check_stock_bulk():
                 "to_order": to_order
             })
 
-    return render_template('bulk_stock_check.html', recipes=data['recipes'], result=result)
+    return render_template('check_stock_bulk.html', recipes=data['recipes'], result=result)
 
 @app.route('/recipes', methods=['GET'])
 def list_recipes():
