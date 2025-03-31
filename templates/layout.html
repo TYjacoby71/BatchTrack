@@ -104,10 +104,35 @@
 
       main {
         padding: 10px;
+        margin-bottom: 70px;
       }
 
       input, select, textarea {
         font-size: 16px;
+      }
+
+      .footer-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #333;
+        display: flex;
+        justify-content: space-around;
+        padding: 12px 0;
+        z-index: 999;
+      }
+
+      .footer-nav a {
+        color: white;
+        font-size: 24px;
+        text-decoration: none;
+      }
+    }
+
+    @media (min-width: 601px) {
+      .footer-nav {
+        display: none;
       }
     }
   </style>
@@ -127,6 +152,16 @@
 <main>
   {% block content %}{% endblock %}
 </main>
+
+<footer>
+  <nav class="footer-nav">
+    <a href="/">🏠</a>
+    <a href="/ingredients">🧪</a>
+    <a href="/recipes">📘</a>
+    <a href="/batches">📦</a>
+    <a href="/tags/manage">🏷</a>
+  </nav>
+</footer>
 
 </body>
 </html>

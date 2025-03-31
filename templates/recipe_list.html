@@ -1,28 +1,23 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Recipe List</title>
-</head>
-<body>
-    <h1>Recipes</h1>
-    <a href="/recipes/new">Add New Recipe</a>
-    <div class="recipe-list">
-        {% for recipe in recipes %}
-        <div class="recipe">
-            <h2>{{ recipe.name }}</h2>
-            <div class="actions">
-                <a href="/recipes/{{ recipe.id }}">View</a> |
-                <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
-                <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
-                <a href="/check-stock/{{ recipe.id }}">Check Stock</a> |
-                <form style="display: inline;" action="/delete-recipe/{{ recipe.id }}" method="POST">
-                    <button type="submit">Delete</button>
-                </form>
-            </div>
+{% extends "layout.html" %}
+{% block content %}
+<h1>📘 Recipes</h1>
+<p><a href="/recipes/new"><button>+ Add New Recipe</button></a></p>
+
+<div class="recipe-list">
+    {% for recipe in recipes %}
+    <div class="recipe">
+        <h2>{{ recipe.name }}</h2>
+        <div class="actions">
+            <a href="/recipes/{{ recipe.id }}">View</a> |
+            <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
+            <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
+            <a href="/check-stock/{{ recipe.id }}">Check Stock</a> |
+            <form style="display: inline;" action="/delete-recipe/{{ recipe.id }}" method="POST">
+                <button type="submit">Delete</button>
+            </form>
         </div>
-        {% endfor %}
     </div>
-    <a href="/">Back to Home</a>
-</body>
-</html>
+    {% endfor %}
+</div>
+{% endblock %}
