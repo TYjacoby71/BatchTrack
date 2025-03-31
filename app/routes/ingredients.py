@@ -22,6 +22,7 @@ def ingredients():
     data = load_data()
     return render_template('ingredients.html', ingredients=data['ingredients'])
 
+@ingredients_bp.route('/add', methods=['GET', 'POST'])
 @ingredients_bp.route('/add-ingredient', methods=['GET', 'POST'])
 def add_ingredient():
     if request.method == 'POST':

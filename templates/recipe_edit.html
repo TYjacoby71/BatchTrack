@@ -29,27 +29,45 @@
         </div>
         <div>
             <label>Product Type:</label><br>
-            <select name="product_type">
+            <select name="product_type" onchange="toggleCustomField(this, 'customProductType')">
+                <option value="">-- Select --</option>
                 {% for pt in category_options.product_types %}
                     <option value="{{ pt }}" {% if recipe and recipe.product_type == pt %}selected{% endif %}>{{ pt }}</option>
                 {% endfor %}
+                <option value="__custom__">+ Add New</option>
             </select>
+            <div id="customProductType" style="display:none;">
+                <label>New Product Type:</label>
+                <input type="text" name="custom_product_type">
+            </div>
         </div>
         <div>
             <label>Use Area:</label><br>
-            <select name="use_area">
+            <select name="use_area" onchange="toggleCustomField(this, 'customUseArea')">
+                <option value="">-- Select --</option>
                 {% for ua in category_options.use_areas %}
                     <option value="{{ ua }}" {% if recipe and recipe.use_area == ua %}selected{% endif %}>{{ ua }}</option>
                 {% endfor %}
+                <option value="__custom__">+ Add New</option>
             </select>
+            <div id="customUseArea" style="display:none;">
+                <label>New Use Area:</label>
+                <input type="text" name="custom_use_area">
+            </div>
         </div>
         <div>
             <label>Use Case:</label><br>
-            <select name="use_case">
+            <select name="use_case" onchange="toggleCustomField(this, 'customUseCase')">
+                <option value="">-- Select --</option>
                 {% for uc in category_options.use_cases %}
                     <option value="{{ uc }}" {% if recipe and recipe.use_case == uc %}selected{% endif %}>{{ uc }}</option>
                 {% endfor %}
+                <option value="__custom__">+ Add New</option>
             </select>
+            <div id="customUseCase" style="display:none;">
+                <label>New Use Case:</label>
+                <input type="text" name="custom_use_case">
+            </div>
         </div>
         <div>
             <label>Primary Ingredient:</label><br>
@@ -99,7 +117,7 @@
                     <option value="{{ ing.name }}">{{ ing.name }}</option>
                     {% endfor %}
                 </select>
-                <a href="/ingredients/add" target="_blank" style="font-size: 12px; margin-left: 10px;">➕ Add new ingredient</a>
+                <a href="/add-ingredient" class="btn btn-sm" style="font-size: 12px; margin-left: 10px; text-decoration: none; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 4px;">➕ Add new ingredient</a>
                 <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
                 <select name="ingredient_unit[]">
                     {% for category in units %}
@@ -117,6 +135,10 @@
 
         function removeIngredient(btn) {
             btn.parentElement.remove();
+        }
+    function toggleCustomField(selectEl, targetId) {
+            const customField = document.getElementById(targetId);
+            customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
         }
     </script>
 </body>
