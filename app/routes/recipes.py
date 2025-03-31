@@ -66,7 +66,11 @@ def edit_recipe(recipe_id):
 
     with open('units.json') as f:
         units = json.load(f)
-    return render_template('recipe_edit.html', recipe=recipe, ingredients=data['ingredients'], units=units)
+    return render_template('recipe_edit.html', 
+                         recipe=recipe,
+                         ingredients=data['ingredients'],
+                         recipe_only_ingredients=data.get('recipe_only_ingredients', []),
+                         units=units)
 
 
 @recipes_bp.route('/check-stock/<int:recipe_id>')
@@ -154,7 +158,11 @@ def new_recipe():
     data = load_data()
     with open('units.json') as f:
         units = json.load(f)
-    return render_template('recipe_edit.html', recipe={'name': '', 'instructions': '', 'ingredients': []}, ingredients=data['ingredients'], units=units)
+    return render_template('recipe_edit.html', 
+                         recipe={'name': '', 'instructions': '', 'ingredients': []}, 
+                         ingredients=data['ingredients'],
+                         recipe_only_ingredients=data.get('recipe_only_ingredients', []),
+                         units=units)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['POST'])
 def clone_recipe(recipe_id):
