@@ -35,11 +35,12 @@ def add_ingredient():
         }
         data['ingredients'].append(new_ingredient)
         save_data(data)
-        referer = request.headers.get('Referer')
-        if referer and ('recipes/new' in referer or '/recipe' in referer or '/recipes' in referer):
-            return redirect(referer)
+        next_url = request.form.get('next')
+        if next_url:
+            return redirect(next_url)
         return redirect('/ingredients')
-    return render_template('edit_ingredient.html', ingredient=None)
+    next_url = request.args.get('next', '')
+    return render_template('edit_ingredient.html', ingredient=None, next=next_url)
 
 @ingredients_bp.route('/edit-ingredient/<name>', methods=['GET', 'POST'])
 def edit_ingredient(name):

@@ -50,6 +50,18 @@
             "quantity": "50",
             "unit": "mL",
             "cost_per_unit": "5"
+        },
+        {
+            "name": "test",
+            "quantity": "5",
+            "unit": "mL",
+            "cost_per_unit": "5"
+        },
+        {
+            "name": "salt",
+            "quantity": "2",
+            "unit": "shake",
+            "cost_per_unit": "5"
         }
     ],
     "recipes": [

@@ -126,6 +126,7 @@ def new_recipe():
             'name': request.form['name'],
             'description': request.form.get('description', ''),
             'instructions': request.form['instructions'],
+            'tags': [t.strip().lower() for t in request.form.get('tags', '').split(',') if t.strip()],
             'product_type': product_type,
             'use_area': use_area,
             'use_case': use_case,
