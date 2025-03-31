@@ -86,6 +86,13 @@
                     {% for ing in ingredients %}
                     <option value="{{ ing.name }}" {% if ing.name == ingredient.name %}selected{% endif %}>{{ ing.name }}</option>
                     {% endfor %}
+                    {% if recipe_only_ingredients %}
+                    <optgroup label="Recipe-Only Ingredients">
+                        {% for ing in recipe_only_ingredients %}
+                        <option value="{{ ing.name }}">{{ ing.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
                 </select>
                 <input type="text" name="ingredient_quantity[]" value="{{ ingredient.quantity }}" placeholder="Quantity">
                 <select name="ingredient_unit[]">
@@ -118,6 +125,13 @@
                     {% for ing in ingredients %}
                     <option value="{{ ing.name }}">{{ ing.name }}</option>
                     {% endfor %}
+                    {% if recipe_only_ingredients %}
+                    <optgroup label="Recipe-Only Ingredients">
+                        {% for ing in recipe_only_ingredients %}
+                        <option value="{{ ing.name }}">{{ ing.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
                     <option value="__add_new__" style="background-color: #4CAF50; color: white;">➕ Quick add ingredient</option>
                 </select>
                 <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
