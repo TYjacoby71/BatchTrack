@@ -89,3 +89,20 @@ def add_ingredient():
     with open('units.json', 'r') as f:
         units = json.load(f)
     return render_template('add_ingredient.html', units=units)
+
+
+@ingredients_bp.route('/quickadd', methods=['GET', 'POST'])
+def quick_add_ingredient():
+    if request.method == 'POST':
+        data = load_data()
+        new_ingredient = {
+            'name': request.form['name'],
+            'quantity': request.form['quantity'],
+            'unit': request.form['unit'],
+            'cost_per_unit': request.form.get('cost_per_unit', '0.00')
+        }
+        data['ingredients'].append(new_ingredient)
+        save_data(data)
+        return redirect(request.form.get('next') or '/recipes/add')
+    next_url = request.args.get('next', '/recipes/add')
+    return render_template('ingredient_quickadd.html', ingredient=None, next=next_url)
