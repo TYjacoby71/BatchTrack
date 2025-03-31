@@ -49,7 +49,9 @@
         <td>{{ batch.notes[:60] ~ ("..." if batch.notes|length > 60 else "") if batch.notes else "" }}</td>
         <td>
           <a href="/batches/{{ batch.id }}/edit-notes">📝 Edit</a> |
-          <a href="/batches/{{ batch.id }}/print" target="_blank">🖨️ Print</a>
+          <a href="/batches/{{ batch.id }}/print" target="_blank">🖨️ Print</a> |
+          <a href="/batches/{{ batch.id }}/favorite">{% if 'favorite' in batch.tags %}⭐ Unfav{% else %}☆ Fav{% endif %}</a> |
+          <a href="/batches/{{ batch.id }}/repeat">🔁 Repeat</a>
         </td>
       </tr>
     {% endfor %}

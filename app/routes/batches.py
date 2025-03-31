@@ -146,6 +146,45 @@ def tag_admin():
     return render_template("tags_manage.html", tags=sorted_tags)
 
 
+@batches_bp.route('/batches/<batch_id>/favorite')
+def toggle_favorite(batch_id):
+    data = load_data()
+    for batch in data["batches"]:
+        if str(batch["id"]) == str(batch_id):
+            tags = batch.get("tags", [])
+            if "favorite" in tags:
+                tags.remove("favorite")
+            else:
+                tags.append("favorite")
+            batch["tags"] = tags
+            break
+    save_data(data)
+    return redirect("/batches")
+
+@batches_bp.route('/batches/<batch_id>/repeat')
+def repeat_batch(batch_id):
+    data = load_data()
+    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    if not original:
+        return "Batch not found", 404
+
+    new_id = f"batch_{len(data.get('batches', [])) + 1}"
+
+    new_batch = {
+        "id": new_id,
+        "recipe_id": original["recipe_id"],
+        "recipe_name": original["recipe_name"],
+        "timestamp": datetime.utcnow().isoformat(),
+        "notes": original.get("notes", ""),
+        "tags": original.get("tags", []),
+        "ingredients": original.get("ingredients", []),
+        "total_cost": original.get("total_cost", 0),
+    }
+
+    data["batches"].append(new_batch)
+    save_data(data)
+    return redirect("/batches")
+
 def check_stock_bulk():
     data = load_data()
     result = []
