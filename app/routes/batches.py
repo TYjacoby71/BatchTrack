@@ -125,16 +125,23 @@ def view_batches():
 
 @batches_bp.route('/download-purchase-list')
 def download_purchase_list():
-    data = load_data()
-    ingredients = data.get('ingredients', [])
+    try:
+        data = load_data()
+        ingredients = data.get('ingredients', [])
 
-    lines = ["name,quantity,unit"]
-    for ing in ingredients:
-        lines.append(f"{ing['name']},{ing['quantity']},{ing['unit']}")
+        lines = ["name,quantity,unit,cost_per_unit"]
+        for ing in ingredients:
+            name = ing.get('name', '').replace(',', ' ')
+            quantity = ing.get('quantity', '')
+            unit = ing.get('unit', '')
+            cost = ing.get('cost_per_unit', '0.00')
+            lines.append(f"{name},{quantity},{unit},{cost}")
 
-    csv_content = "\n".join(lines)
-    return Response(
-        csv_content,
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment;filename=purchase_list.csv'}
-    )
+        csv_content = "\n".join(lines)
+        return Response(
+            csv_content,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment;filename=purchase_list.csv'}
+        )
+    except Exception as e:
+        return f"Error generating purchase list: {str(e)}", 500
