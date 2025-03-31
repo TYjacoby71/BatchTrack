@@ -34,40 +34,16 @@
             "cost_per_unit": "40"
         },
         {
-            "name": "test5",
-            "quantity": "5",
-            "unit": "mL",
-            "cost_per_unit": "6"
-        },
-        {
-            "name": "test 6",
-            "quantity": "40",
-            "unit": "mL",
-            "cost_per_unit": "50"
-        },
-        {
-            "name": "test 7",
-            "quantity": "50",
-            "unit": "mL",
-            "cost_per_unit": "5"
-        },
-        {
-            "name": "test",
-            "quantity": "5",
-            "unit": "mL",
-            "cost_per_unit": "5"
-        },
-        {
             "name": "salt",
             "quantity": "2",
             "unit": "shake",
             "cost_per_unit": "5"
         },
         {
-            "name": "testtt",
-            "quantity": "4",
-            "unit": "mL",
-            "cost_per_unit": "4"
+            "name": "oranges",
+            "quantity": "",
+            "unit": "unit",
+            "cost_per_unit": "0.00"
         }
     ],
     "recipes": [
@@ -286,6 +262,10 @@
     "recipe_only_ingredients": [
         {
             "name": "orange",
+            "unit": "unit"
+        },
+        {
+            "name": "oranges",
             "unit": "unit"
         }
     ]
