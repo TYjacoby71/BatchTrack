@@ -62,6 +62,12 @@
             "quantity": "2",
             "unit": "shake",
             "cost_per_unit": "5"
+        },
+        {
+            "name": "testtt",
+            "quantity": "4",
+            "unit": "mL",
+            "cost_per_unit": "4"
         }
     ],
     "recipes": [
