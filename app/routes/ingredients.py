@@ -45,6 +45,9 @@ def edit_ingredient(name):
         return "Ingredient not found", 404
 
     if request.method == 'POST':
+        new_name = request.form['name']
+        # Update name in ingredient list
+        ingredient['name'] = new_name
         ingredient['quantity'] = request.form['quantity']
         ingredient['unit'] = request.form['unit']
         ingredient['cost_per_unit'] = request.form.get('cost_per_unit', '0.00')
