@@ -262,7 +262,20 @@ def check_stock(recipe_id):
     stock_check = []
     for item in recipe['ingredients']:
         ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
-        if not ing or float(ing['quantity']) < float(item['quantity']):
+        if not ing or not ing.get('quantity'):
+            stock_check.append({"ingredient": item['name'], "status": "Insufficient"})
+            continue
+
+        needed_qty = float(item['quantity'])
+        available_qty = float(ing['quantity'])
+
+        # Convert units if different
+        if item.get('unit') and ing.get('unit') and item['unit'] != ing['unit']:
+            converted_qty = convert_units(needed_qty, item['unit'], ing['unit'])
+            if converted_qty is not None:
+                needed_qty = converted_qty
+
+        if available_qty < needed_qty:
             stock_check.append({"ingredient": item['name'], "status": "Insufficient"})
         else:
             stock_check.append({"ingredient": item['name'], "status": "OK"})
@@ -284,20 +297,43 @@ def check_stock_bulk():
             for ing in recipe['ingredients']:
                 name = ing['name']
                 qty = float(ing['quantity']) * count
-                demand[name] = demand.get(name, 0) + qty
+                unit = ing.get('unit', '')
+                if name not in demand:
+                    demand[name] = {'qty': 0, 'unit': unit}
+                if unit == demand[name]['unit']:
+                    demand[name]['qty'] += qty
+                else:
+                    converted_qty = convert_units(qty, unit, demand[name]['unit'])
+                    if converted_qty is not None:
+                        demand[name]['qty'] += converted_qty
+                    else:
+                        demand[name]['qty'] += qty
 
-        for name, qty in demand.items():
-            match = next((i for i in data['ingredients'] if i['name'] == name), None)
-            available = float(match['quantity']) if match else 0.0
-            to_order = round(max(qty - available, 0.0), 2)
+        for name, details in demand.items():
+            match = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
+            if match and match.get('quantity'):
+                available = float(match['quantity'])
+                qty = details['qty']
+                # Convert units if different
+                if match.get('unit') and details['unit'] and match['unit'] != details['unit']:
+                    converted_qty = convert_units(qty, details['unit'], match['unit'])
+                    if converted_qty is not None:
+                        qty = converted_qty
+                to_order = round(max(qty - available, 0.0), 2)
+            else:
+                available = 0.0
+                to_order = details['qty']
             result.append({
-                "ingredient": name,
-                "needed": round(qty, 2),
+                "name": name,
+                "needed": round(details['qty'], 2),
                 "available": round(available, 2),
-                "to_order": to_order
+                "status": "Insufficient" if to_order > 0 else "OK",
+                "unit": match['unit'] if match and match.get('unit') else details['unit']
             })
 
-    return render_template('bulk_stock_check.html', recipes=data['recipes'], result=result)
+    if result:
+        return render_template('stock_bulk_result.html', stock_report=result)
+    return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
 @app.route('/recipes', methods=['GET'])
 def list_recipes():
