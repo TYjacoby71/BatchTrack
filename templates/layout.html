@@ -135,6 +135,29 @@
         display: none;
       }
     }
+  #floatBtn {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      #floatBtn {
+        display: block;
+        position: fixed;
+        right: 16px;
+        bottom: 70px;
+        background: #333;
+        color: white;
+        font-size: 28px;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        text-align: center;
+        line-height: 48px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        text-decoration: none;
+        z-index: 1000;
+      }
+    }
   </style>
 </head>
 <body>
@@ -155,13 +178,15 @@
 
 <footer>
   <nav class="footer-nav">
-    <a href="/">🏠</a>
-    <a href="/ingredients">🧪</a>
-    <a href="/recipes">📘</a>
-    <a href="/batches">📦</a>
-    <a href="/tags/manage">🏷</a>
+    <a href="/" title="Dashboard">🏠</a>
+    <a href="/ingredients" title="Ingredients">🧪</a>
+    <a href="/recipes" title="Recipes">📘</a>
+    <a href="/batches" title="Batches">📦</a>
+    <a href="/tags/manage" title="Manage Tags">🏷</a>
   </nav>
 </footer>
+
+<a href="/recipes/add" id="floatBtn" title="Add New Recipe">➕</a>
 
 </body>
 </html>

@@ -59,12 +59,13 @@
   <div class="section">
     <p>Welcome, {{ session.get("user", "Guest") }}!</p>
 
-    <h3>Quick Links</h3>
-    <div class="quick-links">
-      <a href="/ingredients">Manage Ingredients</a>
-      <a href="/recipes">View Recipes</a>
-      <a href="/batches">Production History</a>
-      <a href="/check-stock-bulk">Bulk Stock Check</a>
+    <h3>🧭 Quick Access</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      <a href="/ingredients"><button>🧪 Ingredients</button></a>
+      <a href="/recipes"><button>📘 Recipes</button></a>
+      <a href="/batches"><button>📦 Batches</button></a>
+      <a href="/check-stock-bulk"><button>📊 Bulk Stock Check</button></a>
+      <a href="/tags/manage"><button>🏷 Tag Manager</button></a>
     </div>
   </div>
 
