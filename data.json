@@ -44,6 +44,12 @@
             "quantity": "40",
             "unit": "mL",
             "cost_per_unit": "50"
+        },
+        {
+            "name": "test 7",
+            "quantity": "50",
+            "unit": "mL",
+            "cost_per_unit": "5"
         }
     ],
     "recipes": [
