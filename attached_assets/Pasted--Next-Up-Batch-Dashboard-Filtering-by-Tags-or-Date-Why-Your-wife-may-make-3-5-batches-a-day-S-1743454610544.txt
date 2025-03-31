@@ -1,0 +1,105 @@
+✅ Next Up: Batch Dashboard + Filtering by Tags or Date
+Why?
+
+Your wife may make 3–5 batches a day
+
+She may want to:
+
+Quickly find a batch she ran last week
+
+Search by tag ("lavender", "face balm", "holiday")
+
+🛠 What This Will Add:
+A filter/search form at the top of /batches
+
+Optional filters:
+
+✅ By tag (contains / match)
+
+✅ By recipe
+
+✅ By date range
+
+Results update dynamically
+
+✅ Replit Instructions — Copy & Paste
+🧾 Add Filters to batches.html
+php-template
+Copy
+Edit
+Please update `batches.html` to support filtering.
+
+1. Add this above the batch table:
+
+```html
+<h2>Batches</h2>
+
+<form method="get">
+  <label for="tag">Tag contains:</label>
+  <input type="text" name="tag" value="{{ request.args.get('tag', '') }}">
+  
+  <label for="recipe">Recipe name contains:</label>
+  <input type="text" name="recipe" value="{{ request.args.get('recipe', '') }}">
+
+  <input type="submit" value="Filter">
+  <a href="/batches">Reset</a>
+</form>
+<br>
+Below the filter, render a table of filtered batches like normal.
+
+yaml
+Copy
+Edit
+
+---
+
+### 🧾 Add Filtering Logic to `view_batches()` in `batches.py`
+
+Please update the /batches route in batches.py:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches')
+def view_batches():
+    data = load_data()
+    batches = data.get('batches', [])
+    tag_filter = request.args.get("tag", "").lower()
+    recipe_filter = request.args.get("recipe", "").lower()
+
+    if tag_filter:
+        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
+
+    if recipe_filter:
+        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    return render_template('batches.html', batches=batches)
+yaml
+Copy
+Edit
+
+---
+
+## 🧪 Bonus Options Later
+
+| Feature | Adds |
+|--------|------|
+| 🧠 Smart tag suggestions | Autocomplete or tag cloud |
+| 📅 Date range filtering | Filter batches by created date |
+| 📤 Export filtered view | PDF or CSV download |
+| 📸 QR preview in list | Tiny thumbnail per batch
+
+---
+
+Would you like me to:
+- Add date filters next?
+- Style the table with mobile responsiveness?
+- Add “batch notes” search?
+
+Let’s keep making this amazing for your wife — her digital lab notebook is leveling up!
+
+
+
+
+
+
