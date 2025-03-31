@@ -145,70 +145,6 @@ def tag_admin():
     sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
     return render_template("tags_manage.html", tags=sorted_tags)
 
-def export_batches():
-    from datetime import datetime
-    from flask import Response
-
-    data = load_data()
-    batches = data.get('batches', [])
-
-    # Apply same filters as /batches
-    tag_filter = request.args.get("tag", "").lower()
-    recipe_filter = request.args.get("recipe", "").lower()
-
-    if tag_filter:
-        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
-
-    if recipe_filter:
-        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
-
-    # Generate CSV
-    lines = ["id,recipe_name,date,total_cost,tags"]
-    for b in batches:
-        recipe_name = b['recipe_name'].replace('"', '""')
-        tags = '","'.join(b.get('tags', []))
-        line = f"{b['id']},\"{recipe_name}\",{b['timestamp']},{b.get('total_cost', 0)},\"{tags}\""
-        lines.append(line)
-
-    content = "\n".join(lines)
-    return Response(
-        content,
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment;filename=filtered_batches.csv'}
-    )
-
-@batches_bp.route('/tags/manage', methods=['GET', 'POST'])
-def tag_admin():
-    data = load_data()
-    tag_counts = {}
-
-    for batch in data.get("batches", []):
-        for tag in batch.get("tags", []):
-            tag = tag.strip().lower()
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-
-    if request.method == 'POST':
-        action = request.form.get("action")
-        old_tag = request.form.get("old_tag", "").strip().lower()
-        new_tag = request.form.get("new_tag", "").strip().lower()
-
-        if action == 'merge' and old_tag and new_tag:
-            for batch in data["batches"]:
-                if "tags" in batch:
-                    batch["tags"] = [new_tag if t.strip().lower() == old_tag else t for t in batch["tags"]]
-            save_data(data)
-
-        elif action == 'delete' and old_tag:
-            for batch in data["batches"]:
-                if "tags" in batch:
-                    batch["tags"] = [t for t in batch["tags"] if t.strip().lower() != old_tag]
-            save_data(data)
-
-        return redirect('/tags/manage')
-
-    sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
-    return render_template("tags_manage.html", tags=sorted_tags)
-
 
 def check_stock_bulk():
     data = load_data()
@@ -362,3 +298,19 @@ def download_purchase_list():
         )
     except Exception as e:
         return f"Error generating purchase list: {str(e)}", 500
+
+@batches_bp.route('/batches/<batch_id>/edit-notes', methods=['GET', 'POST'])
+def edit_batch_notes(batch_id):
+    data = load_data()
+    batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+
+    if not batch:
+        return "Batch not found", 404
+
+    if request.method == 'POST':
+        batch['notes'] = request.form.get("notes", "").strip()
+        batch['tags'] = [t.strip().lower() for t in request.form.get("tags", "").split(",") if t.strip()]
+        save_data(data)
+        return redirect('/batches')
+
+    return render_template("edit_batch_notes.html", batch=batch)

@@ -1,3 +1,4 @@
+
 {% extends "layout.html" %}
 {% block content %}
 <h2>Batches</h2>
@@ -23,17 +24,33 @@
       <th>Date</th>
       <th>Total Cost</th>
       <th>Tags</th>
+      <th>Notes</th>
       <th>Actions</th>
     </tr>
   </thead>
   <tbody>
     {% for batch in batches %}
       <tr>
-        <td>{{ batch.recipe_name }}</td>
+        <td>
+          {{ batch.recipe_name }}
+          {% if 'repeat' in batch.tags %}
+            <span title="Popular batch">⭐</span>
+          {% endif %}
+        </td>
         <td>{{ batch.timestamp }}</td>
         <td>${{ batch.total_cost|default(0.00) }}</td>
-        <td>{{ batch.tags|join(', ') if batch.tags else '' }}</td>
-        <td><a href="/batches/{{ batch.id }}/print" target="_blank">🖨️ Print</a></td>
+        <td>
+          {% for tag in batch.tags|default([]) %}
+            <a href="/batches?tag={{ tag }}" style="margin-right: 5px; text-decoration:none;">
+              <span style="background:#eee; border-radius:4px; padding:2px 6px;">#{{ tag }}</span>
+            </a>
+          {% endfor %}
+        </td>
+        <td>{{ batch.notes[:60] ~ ("..." if batch.notes|length > 60 else "") if batch.notes else "" }}</td>
+        <td>
+          <a href="/batches/{{ batch.id }}/edit-notes">📝 Edit</a> |
+          <a href="/batches/{{ batch.id }}/print" target="_blank">🖨️ Print</a>
+        </td>
       </tr>
     {% endfor %}
   </tbody>

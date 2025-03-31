@@ -1,0 +1,93 @@
+🔥 Amazing — let’s level this up with a “Repeat This Batch” feature and optional “Favorite” toggle. These help your wife quickly:
+
+⭐ Mark batches that turned out great
+
+🧪 Repeat a previous batch with one click
+
+📝 Clone the ingredients, notes, tags, and metadata — but refresh the date
+
+✅ This Batch Adds:
+Feature	Route
+⭐ Favorite toggle	/batches/<id>/favorite
+🔁 Repeat batch button	/batches/<id>/repeat
+✅ 1. Add to batches.py
+Paste this entire block into batches.py:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches/<batch_id>/favorite')
+def toggle_favorite(batch_id):
+    data = load_data()
+    for batch in data["batches"]:
+        if batch["id"] == batch_id:
+            tags = batch.get("tags", [])
+            if "favorite" in tags:
+                tags.remove("favorite")
+            else:
+                tags.append("favorite")
+            batch["tags"] = tags
+            break
+    save_data(data)
+    return redirect("/batches")
+
+@batches_bp.route('/batches/<batch_id>/repeat')
+def repeat_batch(batch_id):
+    data = load_data()
+    original = next((b for b in data["batches"] if b["id"] == batch_id), None)
+    if not original:
+        return "Batch not found", 404
+
+    new_id = f"batch_{data.get('batch_counter', len(data['batches'])) + 1}"
+    data['batch_counter'] += 1
+
+    new_batch = {
+        "id": new_id,
+        "recipe_id": original["recipe_id"],
+        "recipe_name": original["recipe_name"],
+        "timestamp": datetime.utcnow().isoformat(),
+        "notes": original.get("notes", ""),
+        "tags": original.get("tags", []),
+        "ingredients": original.get("ingredients", []),
+        "total_cost": original.get("total_cost", 0),
+        "qr_code": ""  # optional: regenerate if needed
+    }
+
+    data["batches"].append(new_batch)
+    save_data(data)
+    return redirect("/batches")
+✅ 2. Update Batch Table to Show Favorite/Repeat Buttons
+In your batches.html, in the <td> where you show actions, add:
+
+html
+Copy
+Edit
+<a href="/batches/{{ batch.id }}/edit-notes">📝</a>
+<a href="/batches/{{ batch.id }}/print" target="_blank">🖨</a>
+<a href="/batches/{{ batch.id }}/favorite">
+  {% if 'favorite' in batch.tags %}⭐ Unfav{% else %}☆ Fav{% endif %}
+</a>
+<a href="/batches/{{ batch.id }}/repeat">🔁 Repeat</a>
+✅ 3. Optional: Favorite Icon in Recipe Name
+In the <td> for recipe name:
+
+html
+Copy
+Edit
+<td>
+  {{ batch.recipe_name }}
+  {% if 'favorite' in batch.tags %}
+    <span style="color:gold;">⭐</span>
+  {% endif %}
+</td>
+✅ That’s It!
+Now your wife can:
+
+⭐ Favorite batches she loved
+
+🔁 Clone batches easily
+
+🧠 Maintain clean notes + tags
+
+🛠 Use batches as real historical templates
+
