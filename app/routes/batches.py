@@ -82,6 +82,47 @@ def check_stock_bulk():
     return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
 @batches_bp.route('/batches/export')
+@batches_bp.route('/tags.json')
+def tag_suggestions():
+    try:
+        with open("tags.json") as f:
+            tags = json.load(f)
+    except:
+        tags = []
+    return jsonify(tags)
+
+@batches_bp.route('/tags/manage', methods=['GET', 'POST'])
+def tag_admin():
+    data = load_data()
+    tag_counts = {}
+
+    for batch in data.get("batches", []):
+        for tag in batch.get("tags", []):
+            tag = tag.strip().lower()
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    if request.method == 'POST':
+        action = request.form.get("action")
+        old_tag = request.form.get("old_tag", "").strip().lower()
+        new_tag = request.form.get("new_tag", "").strip().lower()
+
+        if action == 'merge' and old_tag and new_tag:
+            for batch in data["batches"]:
+                if "tags" in batch:
+                    batch["tags"] = [new_tag if t.strip().lower() == old_tag else t for t in batch["tags"]]
+            save_data(data)
+
+        elif action == 'delete' and old_tag:
+            for batch in data["batches"]:
+                if "tags" in batch:
+                    batch["tags"] = [t for t in batch["tags"] if t.strip().lower() != old_tag]
+            save_data(data)
+
+        return redirect('/tags/manage')
+
+    sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+    return render_template("tags_manage.html", tags=sorted_tags)
+
 def export_batches():
     from datetime import datetime
     from flask import Response
