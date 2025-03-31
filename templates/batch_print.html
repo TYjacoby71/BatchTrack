@@ -1,0 +1,26 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Batch Summary: {{ batch.recipe_name }}</h2>
+
+<p><strong>Batch ID:</strong> {{ batch.id }}</p>
+<p><strong>Date:</strong> {{ batch.timestamp }}</p>
+<p><strong>Tags:</strong> {{ batch.tags | join(', ') }}</p>
+<p><strong>Total Cost:</strong> ${{ batch.total_cost|default(0.00) }}</p>
+
+<h3>Ingredients Used:</h3>
+<ul>
+  {% for ing in batch.ingredients %}
+    <li>{{ ing.quantity }} {{ ing.unit|default('') }} {{ ing.name }}</li>
+  {% endfor %}
+</ul>
+
+{% if batch.qr_code %}
+  <h3>QR Code:</h3>
+  <img src="/{{ batch.qr_code }}" width="150">
+{% endif %}
+
+<br><br>
+<button onclick="window.print()">Print</button>
+<a href="javascript:history.back()" style="margin-left: 10px;">Back</a>
+{% endblock %}

@@ -23,7 +23,9 @@ def save_data(data):
         json.dump(data, f, indent=4)
 
 def generate_qr_for_batch(batch_id):
-    url = f"{request.host_url}feedback/{batch_id}"
+    from urllib.parse import quote
+    safe_batch_id = quote(str(batch_id))
+    url = f"{request.host_url}feedback/{safe_batch_id}"
     img = qrcode.make(url)
     os.makedirs('static/qr', exist_ok=True)
     img_path = f"static/qr/{batch_id}.png"
