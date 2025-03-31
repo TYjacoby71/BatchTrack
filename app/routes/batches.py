@@ -49,6 +49,39 @@ def dashboard():
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
+def check_stock_bulk():
+    data = load_data()
+    
+    if request.method == 'POST':
+        recipe_ids = request.form.getlist('recipe_id')
+        batch_counts = request.form.getlist('batch_count')
+        usage = {}
+
+        for r_id, count in zip(recipe_ids, batch_counts):
+            count = float(count or 0)
+            if count > 0:
+                recipe = next((r for r in data['recipes'] if r['id'] == int(r_id)), None)
+                if recipe:
+                    for item in recipe['ingredients']:
+                        qty = float(item['quantity']) * count
+                        usage[item['name']] = usage.get(item['name'], 0) + qty
+
+        stock_report = []
+        for name, needed in usage.items():
+            current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
+            current_qty = float(current['quantity']) if current else 0
+            stock_report.append({
+                "name": name,
+                "needed": round(needed, 2),
+                "available": round(current_qty, 2),
+                "unit": current['unit'] if current else 'units',
+                "status": "OK" if current_qty >= needed else "LOW"
+            })
+
+        return render_template('stock_bulk_result.html', stock_report=stock_report)
+
+    return render_template('check_stock_bulk.html', recipes=data['recipes'])
+
 @batches_bp.route('/batches/export')
 def export_batches():
     from datetime import datetime
