@@ -1,49 +1,107 @@
 
 {% extends "layout.html" %}
 {% block content %}
+<style>
+  .dashboard-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .dashboard-title {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    color: #333;
+  }
+  .section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .quick-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .quick-links a {
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .quick-links a:hover {
+    background: #0056b3;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th {
+    background: #f8f9fa;
+    padding: 12px;
+  }
+  td {
+    padding: 10px;
+    border: 1px solid #dee2e6;
+  }
+  .low-stock {
+    color: #dc3545;
+  }
+</style>
 
-<h1>📋 BatchTrack Dashboard</h1>
+<div class="dashboard-container">
+  <h1 class="dashboard-title">📋 BatchTrack Dashboard</h1>
 
-<p>Welcome, {{ session.get("user", "Guest") }}!</p>
+  <div class="section">
+    <p>Welcome, {{ session.get("user", "Guest") }}!</p>
 
-<h3>Quick Links</h3>
-<ul>
-  <li><a href="/ingredients">Manage Ingredients</a></li>
-  <li><a href="/recipes">View Recipes</a></li>
-  <li><a href="/batches">Production History</a></li>
-  <li><a href="/check-stock-bulk">Bulk Stock Check</a></li>
-</ul>
+    <h3>Quick Links</h3>
+    <div class="quick-links">
+      <a href="/ingredients">Manage Ingredients</a>
+      <a href="/recipes">View Recipes</a>
+      <a href="/batches">Production History</a>
+      <a href="/check-stock-bulk">Bulk Stock Check</a>
+    </div>
+  </div>
 
-<h3>⚠️ Low Stock Ingredients</h3>
-{% if low_stock %}
-<table border="1" cellpadding="5">
-  <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
-  {% for ing in low_stock %}
-    <tr>
-      <td>{{ ing.name }}</td>
-      <td>{{ ing.quantity }}</td>
-      <td>{{ ing.unit }}</td>
-    </tr>
-  {% endfor %}
-</table>
-{% else %}
-<p>All stock levels look good ✅</p>
-{% endif %}
+  <div class="section">
+    <h3>⚠️ Low Stock Ingredients</h3>
+    {% if low_stock %}
+    <table>
+      <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
+      {% for ing in low_stock %}
+        <tr class="low-stock">
+          <td>{{ ing.name }}</td>
+          <td>{{ ing.quantity }}</td>
+          <td>{{ ing.unit }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p>All stock levels look good ✅</p>
+    {% endif %}
+  </div>
 
-<h3>🕒 Recent Batches</h3>
-{% if recent_batches %}
-<table border="1" cellpadding="5">
-  <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
-  {% for b in recent_batches %}
-    <tr>
-      <td>{{ b.recipe_name }}</td>
-      <td>{{ b.timestamp[:16].replace('T', ' ') }}</td>
-      <td>${{ b.total_cost|default(0.00) }}</td>
-    </tr>
-  {% endfor %}
-</table>
-{% else %}
-<p>No batches yet.</p>
-{% endif %}
-
+  <div class="section">
+    <h3>🕒 Recent Batches</h3>
+    {% if recent_batches %}
+    <table>
+      <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
+      {% for b in recent_batches %}
+        <tr>
+          <td>{{ b.recipe_name }}</td>
+          <td>{{ b.timestamp[:16].strftime('%B %d, %Y at %I:%M %p') if b.timestamp else 'Unknown' }}</td>
+          <td>${{ b.total_cost|default(0.00) }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p>No batches yet.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

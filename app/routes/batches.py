@@ -10,6 +10,13 @@ def dashboard():
     data = load_data()
     low_stock = [i for i in data['ingredients'] if i.get('quantity') and float(i['quantity']) < 10]
     recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
+    
+    # Format timestamps
+    for batch in recent_batches:
+        if batch.get('timestamp'):
+            timestamp = datetime.fromisoformat(batch['timestamp'])
+            batch['timestamp'] = timestamp
+
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
