@@ -1,0 +1,169 @@
+✅ Batch: Mobile-Friendly Layout + Responsive Navigation
+This batch makes sure the app:
+
+📱 Looks clean on phones or tablets
+
+📦 Is usable by your wife in her workspace
+
+✅ Has a navigation that collapses on small screens
+
+🧼 Keeps content readable and scrollable
+
+✅ 1. Replace layout.html With This Mobile-Ready Version
+In your templates/layout.html, use this full file:
+
+html
+Copy
+Edit
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BatchTrack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+    }
+
+    header {
+      background: #333;
+      color: white;
+      padding: 12px 20px;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    nav a.active {
+      text-decoration: underline;
+    }
+
+    main {
+      padding: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      min-height: 90vh;
+    }
+
+    h1, h2, h3 {
+      color: #333;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      word-wrap: break-word;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    input, select, textarea {
+      padding: 6px;
+      margin: 4px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    button, input[type="submit"] {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    button:hover, input[type="submit"]:hover {
+      background: #555;
+    }
+
+    .tag {
+      background: #eee;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin: 2px 4px;
+      display: inline-block;
+    }
+
+    @media (max-width: 600px) {
+      nav {
+        flex-direction: column;
+      }
+
+      table, th, td {
+        font-size: 14px;
+      }
+
+      main {
+        padding: 10px;
+      }
+
+      input, select, textarea {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
+    <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
+    <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
+    <a href="/batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦 Batches</a>
+    <a href="/tags/manage" {% if '/tags/manage' in request.path %}class="active"{% endif %}>🏷 Tags</a>
+  </nav>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>
+✅ 2. Small Improvements Across Templates (Optional)
+Tags
+In tag blocks, use:
+
+html
+Copy
+Edit
+<span class="tag">#{{ tag }}</span>
+Inputs
+Ensure form fields are wrapped in <div> or are spaced apart so they don’t crowd on small screens.
+
+Table Headings
+Keep column headers short and readable on mobile.
+
+✅ What You’ve Just Gained
+Feature	Effect
+📱 Mobile layout	Stacks nav and expands forms
+💻 Desktop layout	Clean, padded, clear
+🧭 Navigation	Visible and touch-friendly
+🧼 Uniform UX	Looks consistent across all views
+Would you like to:
