@@ -81,7 +81,6 @@ def check_stock_bulk():
 
     return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
-@batches_bp.route('/batches/export')
 @batches_bp.route('/tags.json')
 def tag_suggestions():
     try:
@@ -90,6 +89,29 @@ def tag_suggestions():
     except:
         tags = []
     return jsonify(tags)
+
+@batches_bp.route('/batches/export')
+def export_batches():
+    from datetime import datetime
+    from flask import Response
+
+    data = load_data()
+    batches = data.get('batches', [])
+
+    # Generate CSV
+    lines = ["id,recipe_name,date,total_cost,tags"]
+    for b in batches:
+        recipe_name = b['recipe_name'].replace('"', '""')
+        tags = '","'.join(b.get('tags', []))
+        line = f"{b['id']},\"{recipe_name}\",{b['timestamp']},{b.get('total_cost', 0)},\"{tags}\""
+        lines.append(line)
+
+    content = "\n".join(lines)
+    return Response(
+        content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=batches.csv'}
+    )
 
 @batches_bp.route('/tags/manage', methods=['GET', 'POST'])
 def tag_admin():
