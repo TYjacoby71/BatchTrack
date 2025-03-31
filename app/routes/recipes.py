@@ -109,14 +109,26 @@ def delete_recipe(recipe_id):
 def new_recipe():
     if request.method == 'POST':
         data = load_data()
+        product_type = request.form.get('product_type')
+        if product_type == '__custom__':
+            product_type = request.form.get('custom_product_type')
+            
+        use_area = request.form.get('use_area')
+        if use_area == '__custom__':
+            use_area = request.form.get('custom_use_area')
+            
+        use_case = request.form.get('use_case')
+        if use_case == '__custom__':
+            use_case = request.form.get('custom_use_case')
+
         new_recipe = {
             'id': data.get('recipe_counter', 0) + 1,
             'name': request.form['name'],
             'description': request.form.get('description', ''),
             'instructions': request.form['instructions'],
-            'product_type': request.form.get('product_type', ''),
-            'use_area': request.form.get('use_area', ''),
-            'use_case': request.form.get('use_case', ''),
+            'product_type': product_type,
+            'use_area': use_area,
+            'use_case': use_case,
             'primary_ingredient': request.form.get('primary_ingredient', ''),
             'ingredients': []
         }
