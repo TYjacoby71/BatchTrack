@@ -7,6 +7,8 @@ batches_bp = Blueprint('batches', __name__)
 
 @batches_bp.route('/')
 def dashboard():
+    from datetime import datetime
+    
     data = load_data()
     low_stock = [i for i in data['ingredients'] if i.get('quantity') and float(i['quantity']) < 10]
     recent_batches = sorted(data.get('batches', []), key=lambda b: b['timestamp'], reverse=True)[:5]
@@ -14,8 +16,8 @@ def dashboard():
     # Format timestamps
     for batch in recent_batches:
         if batch.get('timestamp'):
-            timestamp = datetime.fromisoformat(batch['timestamp'])
-            batch['timestamp'] = timestamp
+            dt = datetime.fromisoformat(batch['timestamp'])
+            batch['formatted_time'] = dt.strftime('%B %d, %Y at %I:%M %p')
 
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 

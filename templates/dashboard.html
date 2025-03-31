@@ -94,7 +94,7 @@
       {% for b in recent_batches %}
         <tr>
           <td>{{ b.recipe_name }}</td>
-          <td>{{ b.timestamp[:16].strftime('%B %d, %Y at %I:%M %p') if b.timestamp else 'Unknown' }}</td>
+          <td>{{ b.formatted_time if b.formatted_time else 'Unknown' }}</td>
           <td>${{ b.total_cost|default(0.00) }}</td>
         </tr>
       {% endfor %}
