@@ -43,7 +43,9 @@ def export_batches():
     # Generate CSV
     lines = ["id,recipe_name,date,total_cost,tags"]
     for b in batches:
-        line = f"{b['id']},{b['recipe_name']},{b['timestamp']},{b.get('total_cost', 0)},\"{','.join(b.get('tags', []))}\""
+        recipe_name = b['recipe_name'].replace('"', '""')
+        tags = '","'.join(b.get('tags', []))
+        line = f"{b['id']},\"{recipe_name}\",{b['timestamp']},{b.get('total_cost', 0)},\"{tags}\""
         lines.append(line)
 
     content = "\n".join(lines)
@@ -182,23 +184,6 @@ def print_batch(batch_id):
     if not batch:
         return "Batch not found", 404
     return render_template("batch_print.html", batch=batch)
-    data = load_data()
-    usage = {}
-
-    def to_float(v):
-        try:
-            return float(v)
-        except:
-            return 0
-
-    for batch in data.get("batches", []):
-        for ing in batch.get("ingredients", []):
-            name = ing["name"]
-            qty = to_float(ing["quantity"])
-            usage[name] = usage.get(name, 0) + qty
-
-    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
-    return render_template("ingredient_usage.html", usage=sorted_usage)
 
 def view_batches():
     from datetime import datetime
