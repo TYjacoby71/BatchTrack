@@ -37,12 +37,16 @@ def dashboard():
     from datetime import datetime
 
     data = load_data()
+    ingredients = data.get('ingredients', [])
     
-    # Get low stock ingredients (quantity < 10)
-    low_stock = [
-        ing for ing in data.get('ingredients', [])
-        if float(ing.get("quantity", 0)) < 10
-    ]
+    low_stock = []
+    for ing in ingredients:
+        try:
+            qty = float(ing.get("quantity", 0))
+            if qty < 10:
+                low_stock.append(ing)
+        except:
+            pass
 
     # Get recent batches (sorted newest first)
     recent_batches = sorted(

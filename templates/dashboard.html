@@ -71,6 +71,8 @@
 
   <div class="section">
     <h3>⚠️ Low Stock Ingredients</h3>
+    <p>Debug: {{ low_stock | length }} low stock items found</p>
+    <p>Debug: {{ low_stock }}</p>
     {% if low_stock %}
     <table>
       <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
