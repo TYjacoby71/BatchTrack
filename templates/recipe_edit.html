@@ -146,7 +146,8 @@
     document.addEventListener('change', function(e) {
         if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
             if (e.target.value === '__add_new__') {
-                window.location.href = '/add-ingredient';
+                const currentPath = window.location.pathname;
+                window.location.href = `/add-ingredient?next=${encodeURIComponent(currentPath)}`;
             }
         }
     });

@@ -35,10 +35,8 @@ def add_ingredient():
         }
         data['ingredients'].append(new_ingredient)
         save_data(data)
-        next_url = request.form.get('next')
-        if next_url:
-            return redirect(next_url)
-        return redirect('/ingredients')
+        redirect_url = request.form.get('next') or '/ingredients'
+        return redirect(redirect_url)
     next_url = request.args.get('next', '')
     return render_template('edit_ingredient.html', ingredient=None, next=next_url)
 
