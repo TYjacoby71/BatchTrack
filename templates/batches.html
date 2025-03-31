@@ -1,65 +1,34 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Batches</h2>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Batches</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .filter-form { margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px; }
-        .filter-form label { margin-right: 10px; }
-        .filter-form input[type="text"] { padding: 5px; margin-right: 15px; }
-        .filter-form input[type="submit"] { padding: 5px 15px; }
-        .reset-link { margin-left: 10px; text-decoration: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
-        th { background-color: #f5f5f5; }
-        tr:hover { background-color: #f9f9f9; }
-    </style>
-</head>
-<body>
-    <h1>Batches</h1>
+<form method="get" style="margin-bottom: 20px;">
+  <label>Filter by tag:</label>
+  <input type="text" name="tag" value="{{ request.args.get('tag', '') }}">
+  <label>Recipe name:</label>
+  <input type="text" name="recipe" value="{{ request.args.get('recipe', '') }}">
+  <button type="submit">Apply</button>
+  <a href="/batches">Clear</a>
+</form>
 
-    <div class="filter-form">
-        <form method="get">
-            <label for="tag">Tag contains:</label>
-            <input type="text" name="tag" id="tag" value="{{ request.args.get('tag', '') }}">
-            
-            <label for="recipe">Recipe name contains:</label>
-            <input type="text" name="recipe" id="recipe" value="{{ request.args.get('recipe', '') }}">
-
-            <input type="submit" value="Filter">
-            <a href="/batches" class="reset-link">Reset</a>
-        </form>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Recipe</th>
-                <th>Date</th>
-                <th>Tags</th>
-                <th>Notes</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for batch in batches %}
-            <tr>
-                <td>{{ batch.id }}</td>
-                <td>{{ batch.recipe_name }}</td>
-                <td>{{ batch.timestamp.split('T')[0] }}</td>
-                <td>{{ batch.tags|join(', ') if batch.tags else '' }}</td>
-                <td>{{ batch.notes if batch.notes else '' }}</td>
-                <td>
-                    <a href="/batches/{{ batch.id }}">View</a>
-                    {% if batch.qr_code %}
-                    | <a href="{{ batch.qr_code }}" target="_blank">QR</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Recipe</th>
+      <th>Date</th>
+      <th>Total Cost</th>
+      <th>Tags</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for batch in batches %}
+      <tr>
+        <td>{{ batch.recipe_name }}</td>
+        <td>{{ batch.timestamp }}</td>
+        <td>${{ batch.total_cost|default(0.00) }}</td>
+        <td>{{ batch.tags|join(', ') if batch.tags else '' }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -125,9 +125,12 @@ def start_batch(recipe_id):
 
 @batches_bp.route('/batches')
 def view_batches():
+    from datetime import datetime
+    
     data = load_data()
     batches = data.get('batches', [])
-    
+
+    # Filters
     tag_filter = request.args.get("tag", "").lower()
     recipe_filter = request.args.get("recipe", "").lower()
 
@@ -136,6 +139,14 @@ def view_batches():
 
     if recipe_filter:
         batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    # Sort newest first
+    batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)
+
+    # Format timestamps
+    for batch in batches:
+        if batch.get("timestamp"):
+            batch["timestamp"] = datetime.fromisoformat(batch["timestamp"]).strftime("%b %d, %Y at %I:%M %p")
 
     return render_template('batches.html', batches=batches)
 
