@@ -3,6 +3,27 @@
 {% block content %}
 <h2>Edit Batch Notes & Tags</h2>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tagInput = document.getElementById('tags');
+  fetch('/tags.json')
+    .then(response => response.json())
+    .then(tags => {
+      new Awesomplete(tagInput, {
+        list: tags,
+        filter: function(text, input) {
+          return Awesomplete.FILTER_CONTAINS(text, input.match(/[^,]*$/)[0].trim());
+        },
+        replace: function(text) {
+          const before = this.input.value.match(/^.+,\s*|/)[0];
+          this.input.value = before + text + ", ";
+        }
+      });
+    });
+});
+</script>
+
+
 <p><strong>Batch ID:</strong> {{ batch.id }}</p>
 <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
 <p><strong>Date:</strong> {{ batch.timestamp }}</p>
