@@ -9,7 +9,7 @@
     <h2>Ingredients:</h2>
     <ul>
     {% for ingredient in recipe.ingredients %}
-        <li>{{ ingredient.quantity }} {{ ingredient.unit }} of {{ ingredient.name }}</li>
+        <li>{{ ingredient.quantity if ingredient.quantity else '0' }} {{ ingredient.unit if ingredient.unit else 'units' }} of {{ ingredient.name }}</li>
     {% endfor %}
     </ul>
     <h2>Instructions:</h2>

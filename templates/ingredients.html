@@ -11,7 +11,7 @@
         {% for ingredient in ingredients %}
         <div class="ingredient">
             <h3>{{ ingredient.name }}</h3>
-            <p>Quantity: {{ ingredient.quantity }} {{ ingredient.unit }}</p>
+            <p>Quantity: {{ ingredient.quantity if ingredient.quantity else '0' }} {{ ingredient.unit if ingredient.unit else 'units' }}</p>
             <div class="actions">
                 <a href="/edit-ingredient/{{ ingredient.name }}">Edit</a> |
                 <form style="display: inline;" action="/delete-ingredient/{{ ingredient.name }}" method="POST">
