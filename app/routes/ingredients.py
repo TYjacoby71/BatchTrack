@@ -25,6 +25,42 @@ def ingredients():
 @ingredients_bp.route('/add-ingredient', methods=['GET', 'POST'])
 def add_ingredient():
     if request.method == 'POST':
+        data = load_data()
+        new_ingredient = {
+            'name': request.form['name'],
+            'quantity': request.form['quantity'],
+            'unit': request.form['unit'],
+            'cost_per_unit': request.form.get('cost_per_unit', '0.00')
+        }
+        data['ingredients'].append(new_ingredient)
+        save_data(data)
+        return redirect('/ingredients')
+    return render_template('edit_ingredient.html', ingredient=None)
+
+@ingredients_bp.route('/edit-ingredient/<name>', methods=['GET', 'POST'])
+def edit_ingredient(name):
+    data = load_data()
+    ingredient = next((i for i in data['ingredients'] if i['name'] == name), None)
+    if not ingredient:
+        return "Ingredient not found", 404
+
+    if request.method == 'POST':
+        ingredient['quantity'] = request.form['quantity']
+        ingredient['unit'] = request.form['unit']
+        ingredient['cost_per_unit'] = request.form.get('cost_per_unit', '0.00')
+        save_data(data)
+        return redirect('/ingredients')
+    
+    return render_template('edit_ingredient.html', ingredient=ingredient)
+
+@ingredients_bp.route('/delete-ingredient/<name>', methods=['POST'])
+def delete_ingredient(name):
+    data = load_data()
+    data['ingredients'] = [i for i in data['ingredients'] if i['name'] != name]
+    save_data(data)
+    return redirect('/ingredients')
+def add_ingredient():
+    if request.method == 'POST':
         name = request.form.get('name', '').strip()
         quantity = request.form.get('quantity', '').strip()
         unit = request.form.get('unit', '').strip()
