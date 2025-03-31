@@ -291,13 +291,15 @@ def check_stock_bulk():
             available = float(match['quantity']) if match else 0.0
             to_order = round(max(qty - available, 0.0), 2)
             result.append({
-                "ingredient": name,
+                "name": name,
                 "needed": round(qty, 2),
                 "available": round(available, 2),
-                "to_order": to_order
+                "status": "Insufficient" if to_order > 0 else "OK"
             })
 
-    return render_template('check_stock_bulk.html', recipes=data['recipes'], result=result)
+    if result:
+        return render_template('stock_bulk_result.html', stock_report=result)
+    return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
 @app.route('/recipes', methods=['GET'])
 def list_recipes():
