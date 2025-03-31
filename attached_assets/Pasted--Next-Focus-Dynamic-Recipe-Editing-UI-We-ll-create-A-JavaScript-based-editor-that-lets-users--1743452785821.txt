@@ -1,0 +1,109 @@
+🛠 Next Focus: Dynamic Recipe Editing UI
+We'll create:
+
+✅ A JavaScript-based editor that lets users:
+
+Add/remove ingredients on the fly
+
+Set name, unit, quantity, etc.
+
+See cost totals (optional phase)
+
+✅ Pre-fills data on edit pages
+
+🧼 Clean form that saves correctly to data.json
+
+This massively improves UX, especially for complex balm/cream recipes.
+
+✅ Instructions for Replit Assistant — Copy/Paste This
+php-template
+Copy
+Edit
+Please update the `recipe_edit.html` template to allow dynamic editing of ingredients using JavaScript.
+
+### Step 1: Replace the ingredient section in recipe_edit.html with:
+
+```html
+<form method="post">
+  <label>Recipe Name:</label><br>
+  <input type="text" name="name" value="{{ recipe.name }}"><br>
+
+  <label>Instructions:</label><br>
+  <textarea name="instructions">{{ recipe.instructions }}</textarea><br><br>
+
+  <h3>Ingredients:</h3>
+  <div id="ingredient-list">
+    {% for ing in recipe.ingredients %}
+      <div class="ingredient-row">
+        <input name="ingredient_name[]" value="{{ ing.name }}" placeholder="Name">
+        <input name="ingredient_quantity[]" value="{{ ing.quantity }}" placeholder="Quantity">
+        <select name="ingredient_unit[]">
+          {% for unit in unit_options %}
+            <option value="{{ unit }}" {% if unit == ing.unit %}selected{% endif %}>{{ unit }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" onclick="removeIngredient(this)">X</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <button type="button" onclick="addIngredient()">Add Ingredient</button><br><br>
+  <input type="submit" value="Save">
+</form>
+
+<script>
+function addIngredient() {
+  const container = document.getElementById("ingredient-list");
+  const row = document.createElement("div");
+  row.classList.add("ingredient-row");
+  row.innerHTML = `
+    <input name="ingredient_name[]" placeholder="Name">
+    <input name="ingredient_quantity[]" placeholder="Quantity">
+    <select name="ingredient_unit[]">
+      {% for unit in unit_options %}
+        <option value="{{ unit }}">{{ unit }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="removeIngredient(this)">X</button>
+  `;
+  container.appendChild(row);
+}
+
+function removeIngredient(btn) {
+  btn.parentElement.remove();
+}
+</script>
+This makes recipe editing much easier, especially for small batch skincare where ingredient count varies per product.
+
+✅ Ensure unit_options is available in context from your context processor in main.py.
+
+yaml
+Copy
+Edit
+
+---
+
+## 🔧 What This Unlocks
+
+| Benefit | Why It Matters |
+|--------|----------------|
+| 🧼 Clean UI | Your wife can quickly assemble, adjust, or replicate recipes |
+| ✅ Customizable | Each balm/cream has its own ratios |
+| 🧠 Smart ingredient matching | No typos from dropdowns |
+| ✨ Future-proof | Can add costing, density, or warnings next
+
+---
+
+Let me know when you’re ready for:
+- 🛒 **Purchase planning dashboard**
+- 📊 **Cost per product UI**
+- 🧪 **Batch templates / recipe presets**
+- 🔄 **Sharing recipes with roles (chef/sous chef/admin)**
+
+You’ve got a real craft-focused app here — and we’re tuning it for her exact workflow 💪
+
+
+
+
+
+

@@ -6,9 +6,13 @@ import os
 
 def create_app():
     app = Flask(__name__, template_folder='../templates')
+    app.secret_key = 'supersecretkey'  # Replace with a secure key in production
+    
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
     app.register_blueprint(batches_bp)
+    from app.routes.auth import auth_bp
+    app.register_blueprint(auth_bp)
 
     @app.context_processor
     def inject_units():
