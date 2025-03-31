@@ -25,3 +25,31 @@
     <a href="/check-stock-bulk">Back to Stock Check</a>
 </body>
 </html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Check Results</title>
+</head>
+<body>
+    <h1>Stock Check Results</h1>
+    <table border="1">
+        <tr>
+            <th>Ingredient</th>
+            <th>Needed</th>
+            <th>Available</th>
+            <th>Status</th>
+        </tr>
+        {% for item in stock_report %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.needed }}</td>
+            <td>{{ item.available }}</td>
+            <td>{{ item.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <a href="/check-stock-bulk">Check Another Recipe</a> |
+    <a href="/">Back to Home</a>
+</body>
+</html>

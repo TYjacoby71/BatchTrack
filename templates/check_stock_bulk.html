@@ -20,3 +20,22 @@
     <a href="/">Back to Home</a>
 </body>
 </html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Stock</title>
+</head>
+<body>
+    <h1>Check Stock for Multiple Recipes</h1>
+    <form method="POST">
+        {% for recipe in recipes %}
+        <div class="recipe-input">
+            <label>{{ recipe.name }}:</label>
+            <input type="number" name="recipe_{{ recipe.id }}" value="0" min="0">
+        </div>
+        {% endfor %}
+        <button type="submit">Check Stock</button>
+    </form>
+    <a href="/">Back to Home</a>
+</body>
+</html>

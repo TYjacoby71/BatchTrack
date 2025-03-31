@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ingredients</title>
+</head>
+<body>
+    <h1>Ingredients</h1>
+    <a href="/add-ingredient">Add New Ingredient</a>
+    <div class="ingredient-list">
+        {% for ingredient in ingredients %}
+        <div class="ingredient">
+            <h3>{{ ingredient.name }}</h3>
+            <p>Quantity: {{ ingredient.quantity }} {{ ingredient.unit }}</p>
+            <div class="actions">
+                <a href="/edit-ingredient/{{ ingredient.name }}">Edit</a> |
+                <form style="display: inline;" action="/delete-ingredient/{{ ingredient.name }}" method="POST">
+                    <button type="submit">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="/">Back to Home</a>
+</body>
+</html>
