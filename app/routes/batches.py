@@ -114,6 +114,14 @@ def export_batches():
         headers={'Content-Disposition': 'attachment;filename=batches.csv'}
     )
 
+@batches_bp.route('/tags.json')
+def get_tags():
+    data = load_data()
+    tags = set()
+    for batch in data.get('batches', []):
+        tags.update(batch.get('tags', []))
+    return jsonify(sorted(list(tags)))
+
 @batches_bp.route('/tags/manage', methods=['GET', 'POST'])
 def tag_admin():
     data = load_data()
@@ -161,31 +169,6 @@ def toggle_favorite(batch_id):
             break
     save_data(data)
     return redirect("/batches")
-
-@batches_bp.route('/batches/<batch_id>/repeat')
-def repeat_batch(batch_id):
-    data = load_data()
-    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
-    if not original:
-        return "Batch not found", 404
-
-    new_id = f"batch_{len(data.get('batches', [])) + 1}"
-
-    new_batch = {
-        "id": new_id,
-        "recipe_id": original["recipe_id"],
-        "recipe_name": original["recipe_name"],
-        "timestamp": datetime.utcnow().isoformat(),
-        "notes": original.get("notes", ""),
-        "tags": original.get("tags", []),
-        "ingredients": original.get("ingredients", []),
-        "total_cost": original.get("total_cost", 0),
-    }
-
-    data["batches"].append(new_batch)
-    save_data(data)
-    return redirect("/batches")
-
 
 @batches_bp.route('/start-batch/<int:recipe_id>', methods=['GET', 'POST'])
 def start_batch(recipe_id):
@@ -321,3 +304,23 @@ def edit_batch_notes(batch_id):
         return redirect('/batches')
 
     return render_template("edit_batch_notes.html", batch=batch)
+
+@batches_bp.route('/batches/<batch_id>/repeat')
+def repeat_batch(batch_id):
+    from datetime import datetime
+    data = load_data()
+    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    if not original:
+        return "Batch not found", 404
+
+    new_batch = original.copy()
+    new_batch['id'] = len(data['batches']) + 1 
+    new_batch['timestamp'] = datetime.utcnow().isoformat()
+    if 'tags' in new_batch:
+        new_batch['tags'].append('repeat')
+    else:
+        new_batch['tags'] = ['repeat']
+
+    data["batches"].append(new_batch)
+    save_data(data)
+    return redirect("/batches")
