@@ -42,6 +42,12 @@
             "quantity": "5",
             "unit": "mL",
             "cost_per_unit": "5"
+        },
+        {
+            "name": "Tallow",
+            "quantity": "40",
+            "unit": "g",
+            "cost_per_unit": "40"
         }
     ],
     "recipes": [
