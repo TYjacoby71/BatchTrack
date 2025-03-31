@@ -15,8 +15,8 @@
         {% for item in stock_report %}
         <tr>
             <td>{{ item.name }}</td>
-            <td>{{ item.needed }}</td>
-            <td>{{ item.available }}</td>
+            <td>{{ item.needed }} {{ item.unit }}</td>
+            <td>{{ item.available }} {{ item.unit }}</td>
             <td>{{ item.status }}</td>
         </tr>
         {% endfor %}
