@@ -1,0 +1,69 @@
+Please help me restore two routes that were lost in my Flask app refactor:
+
+1. A stock check route for a specific recipe
+2. A bulk stock check route for multiple recipes
+
+Add the following to the appropriate blueprint files:
+
+--- For app/routes/recipes.py ---
+from flask import request, jsonify
+from app.routes.utils import load_data
+
+@recipes_bp.route('/check-stock/<string:recipe_name>', methods=['GET'])
+def check_stock(recipe_name):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['name'] == recipe_name), None)
+    if not recipe:
+        return jsonify({"error": "Recipe not found"}), 404
+
+    stock_check = []
+    for item in recipe['ingredients']:
+        ing = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
+        if not ing or float(ing['quantity']) < float(item['quantity']):
+            stock_check.append({"ingredient": item['name'], "status": "Insufficient"})
+        else:
+            stock_check.append({"ingredient": item['name'], "status": "OK"})
+
+    return jsonify({"stock_check": stock_check})
+
+--- For app/routes/batches.py ---
+from flask import request, render_template
+from app.routes.utils import load_data
+
+@batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
+def check_stock_bulk():
+    data = load_data()
+    result = []
+
+    def to_float(val):
+        try:
+            return float(val.strip())
+        except:
+            return 0.0
+
+    if request.method == 'POST':
+        recipe_ids = request.form.getlist('recipe_id')
+        batch_counts = request.form.getlist('batch_count')
+        usage = {}
+
+        for r_id, count in zip(recipe_ids, batch_counts):
+            recipe = next((r for r in data['recipes'] if str(r['id']) == r_id), None)
+            if recipe:
+                for item in recipe['ingredients']:
+                    qty = to_float(item['quantity']) * to_float(count)
+                    usage[item['name']] = usage.get(item['name'], 0) + qty
+
+        stock_report = []
+        for name, needed in usage.items():
+            current = next((i for i in data['ingredients'] if i['name'] == name), {"quantity": "0"})
+            current_qty = to_float(current['quantity'])
+            stock_report.append({
+                "name": name,
+                "needed": round(needed, 2),
+                "available": round(current_qty, 2),
+                "status": "OK" if current_qty >= needed else "LOW"
+            })
+
+        return render_template('stock_bulk_result.html', stock_report=stock_report)
+
+    return render_template('check_stock_bulk.html', recipes=data['recipes'])

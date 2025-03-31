@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Batches</title>
+</head>
+<body>
+    <h1>Batches</h1>
+    <div class="batch-list">
+        {% for batch in batches %}
+        <div class="batch">
+            <h3>{{ batch.recipe_name }}</h3>
+            <p>Time: {{ batch.timestamp }}</p>
+            {% if batch.notes %}
+            <p>Notes: {{ batch.notes }}</p>
+            {% endif %}
+            {% if batch.tags %}
+            <p>Tags: {{ batch.tags|join(', ') }}</p>
+            {% endif %}
+            <p>Cost: ${{ batch.total_cost|default('0.00') }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="/">Back to Home</a>
+</body>
+</html>
