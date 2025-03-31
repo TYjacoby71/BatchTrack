@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, redirect
 from app.routes.utils import load_data, save_data
+import json
 
 recipes_bp = Blueprint('recipes', __name__)
 
@@ -61,7 +62,7 @@ def edit_recipe(recipe_id):
 
         recipe['ingredients'] = ingredients
         save_data(data)
-        return redirect(f'/recipe/{recipe_id}')
+        return redirect(f'/recipes/{recipe_id}')
 
     with open('units.json') as f:
         units = json.load(f)
