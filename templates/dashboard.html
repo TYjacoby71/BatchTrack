@@ -1,0 +1,49 @@
+
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>📋 BatchTrack Dashboard</h1>
+
+<p>Welcome, {{ session.get("user", "Guest") }}!</p>
+
+<h3>Quick Links</h3>
+<ul>
+  <li><a href="/ingredients">Manage Ingredients</a></li>
+  <li><a href="/recipes">View Recipes</a></li>
+  <li><a href="/batches">Production History</a></li>
+  <li><a href="/check-stock-bulk">Bulk Stock Check</a></li>
+</ul>
+
+<h3>⚠️ Low Stock Ingredients</h3>
+{% if low_stock %}
+<table border="1" cellpadding="5">
+  <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
+  {% for ing in low_stock %}
+    <tr>
+      <td>{{ ing.name }}</td>
+      <td>{{ ing.quantity }}</td>
+      <td>{{ ing.unit }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>All stock levels look good ✅</p>
+{% endif %}
+
+<h3>🕒 Recent Batches</h3>
+{% if recent_batches %}
+<table border="1" cellpadding="5">
+  <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
+  {% for b in recent_batches %}
+    <tr>
+      <td>{{ b.recipe_name }}</td>
+      <td>{{ b.timestamp[:16].replace('T', ' ') }}</td>
+      <td>${{ b.total_cost|default(0.00) }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No batches yet.</p>
+{% endif %}
+
+{% endblock %}
