@@ -17,11 +17,47 @@
     <form method="POST">
         <div>
             <label>Name:</label><br>
-            <input type="text" name="name" value="{{ recipe.name }}">
+            <input type="text" name="name" value="{{ recipe.name }}" required>
+        </div>
+        <div>
+            <label>Description:</label><br>
+            <textarea name="description" rows="3" placeholder="e.g. Soothing balm for dry skin">{{ recipe.description if recipe and recipe.description else '' }}</textarea>
         </div>
         <div>
             <label>Instructions:</label><br>
-            <textarea name="instructions">{{ recipe.instructions }}</textarea>
+            <textarea name="instructions" required>{{ recipe.instructions }}</textarea>
+        </div>
+        <div>
+            <label>Product Type:</label><br>
+            <select name="product_type">
+                {% for pt in category_options.product_types %}
+                    <option value="{{ pt }}" {% if recipe and recipe.product_type == pt %}selected{% endif %}>{{ pt }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Use Area:</label><br>
+            <select name="use_area">
+                {% for ua in category_options.use_areas %}
+                    <option value="{{ ua }}" {% if recipe and recipe.use_area == ua %}selected{% endif %}>{{ ua }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Use Case:</label><br>
+            <select name="use_case">
+                {% for uc in category_options.use_cases %}
+                    <option value="{{ uc }}" {% if recipe and recipe.use_case == uc %}selected{% endif %}>{{ uc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Primary Ingredient:</label><br>
+            <select name="primary_ingredient">
+                {% for pi in category_options.primary_ingredients %}
+                    <option value="{{ pi }}" {% if recipe and recipe.primary_ingredient == pi %}selected{% endif %}>{{ pi }}</option>
+                {% endfor %}
+            </select>
         </div>
         <h2>Ingredients:</h2>
         <div id="ingredient-list">
@@ -63,6 +99,7 @@
                     <option value="{{ ing.name }}">{{ ing.name }}</option>
                     {% endfor %}
                 </select>
+                <a href="/ingredients/add" target="_blank" style="font-size: 12px; margin-left: 10px;">➕ Add new ingredient</a>
                 <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
                 <select name="ingredient_unit[]">
                     {% for category in units %}
