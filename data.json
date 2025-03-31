@@ -68,18 +68,6 @@
             "quantity": "4",
             "unit": "mL",
             "cost_per_unit": "4"
-        },
-        {
-            "name": "testttttt",
-            "quantity": "4",
-            "unit": "mL",
-            "cost_per_unit": "4"
-        },
-        {
-            "name": "reaetae",
-            "quantity": "54",
-            "unit": "mL",
-            "cost_per_unit": "45"
         }
     ],
     "recipes": [
@@ -294,5 +282,11 @@
             "qr_code": "static/qr/batch_8.png"
         }
     ],
-    "batch_counter": 8
+    "batch_counter": 8,
+    "recipe_only_ingredients": [
+        {
+            "name": "orange",
+            "unit": "unit"
+        }
+    ]
 }
