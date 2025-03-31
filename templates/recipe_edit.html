@@ -3,40 +3,84 @@
 <html>
 <head>
     <title>Edit Recipe</title>
+    <style>
+        .ingredient-row {
+            margin: 10px 0;
+        }
+        .ingredient-row input, .ingredient-row select {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <h1>Edit Recipe</h1>
     <form method="POST">
         <div>
-            <label>Name:</label>
+            <label>Name:</label><br>
             <input type="text" name="name" value="{{ recipe.name }}">
         </div>
         <div>
-            <label>Instructions:</label>
+            <label>Instructions:</label><br>
             <textarea name="instructions">{{ recipe.instructions }}</textarea>
         </div>
         <h2>Ingredients:</h2>
-        {% for ingredient in recipe.ingredients %}
-        <div class="ingredient">
-            <select name="ingredient_name[]">
-                {% for ing in ingredients %}
-                <option value="{{ ing.name }}" {% if ing.name == ingredient.name %}selected{% endif %}>{{ ing.name }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="ingredient_quantity[]" value="{{ ingredient.quantity }}">
-            <select name="ingredient_unit[]">
-                {% for category in units %}
-                <optgroup label="{{ units[category]['label'] }}">
-                    {% for unit in units[category]['units'] %}
-                    <option value="{{ unit }}" {% if unit == ingredient.unit %}selected{% endif %}>{{ unit }}</option>
+        <div id="ingredient-list">
+            {% for ingredient in recipe.ingredients %}
+            <div class="ingredient-row">
+                <select name="ingredient_name[]">
+                    {% for ing in ingredients %}
+                    <option value="{{ ing.name }}" {% if ing.name == ingredient.name %}selected{% endif %}>{{ ing.name }}</option>
                     {% endfor %}
-                </optgroup>
-                {% endfor %}
-            </select>
+                </select>
+                <input type="text" name="ingredient_quantity[]" value="{{ ingredient.quantity }}" placeholder="Quantity">
+                <select name="ingredient_unit[]">
+                    {% for category in units %}
+                    <optgroup label="{{ units[category]['label'] }}">
+                        {% for unit in units[category]['units'] %}
+                        <option value="{{ unit }}" {% if unit == ingredient.unit %}selected{% endif %}>{{ unit }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" onclick="removeIngredient(this)">Remove</button>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+        <button type="button" onclick="addIngredient()">Add Ingredient</button>
+        <br><br>
         <button type="submit">Save Changes</button>
     </form>
     <a href="/recipes">Back to Recipes</a>
+
+    <script>
+        function addIngredient() {
+            const container = document.getElementById("ingredient-list");
+            const row = document.createElement("div");
+            row.classList.add("ingredient-row");
+            row.innerHTML = `
+                <select name="ingredient_name[]">
+                    {% for ing in ingredients %}
+                    <option value="{{ ing.name }}">{{ ing.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
+                <select name="ingredient_unit[]">
+                    {% for category in units %}
+                    <optgroup label="{{ units[category]['label'] }}">
+                        {% for unit in units[category]['units'] %}
+                        <option value="{{ unit }}">{{ unit }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" onclick="removeIngredient(this)">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeIngredient(btn) {
+            btn.parentElement.remove();
+        }
+    </script>
 </body>
 </html>
