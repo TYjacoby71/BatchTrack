@@ -1,0 +1,21 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Edit Batch Notes & Tags</h2>
+
+<p><strong>Batch ID:</strong> {{ batch.id }}</p>
+<p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+<p><strong>Date:</strong> {{ batch.timestamp }}</p>
+
+<form method="post">
+  <label>Notes:</label><br>
+  <textarea name="notes" rows="5" cols="50">{{ batch.notes|default('') }}</textarea><br><br>
+
+  <label>Tags (comma-separated):</label><br>
+  <input type="text" name="tags" value="{{ batch.tags|default([])|join(', ') }}"><br><br>
+
+  <input type="submit" value="Save Changes">
+</form>
+
+<p><a href="/batches">Back to Batches</a></p>
+{% endblock %}
