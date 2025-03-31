@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, Response, session
+from flask import Blueprint, render_template, request, redirect, Response, session, jsonify
+import json
 from datetime import datetime
 from app.routes.utils import load_data, save_data, generate_qr_for_batch
 
@@ -146,42 +147,45 @@ def tag_admin():
     return render_template("tags_manage.html", tags=sorted_tags)
 
 
-def check_stock_bulk():
+@batches_bp.route('/batches/<batch_id>/favorite')
+def toggle_favorite(batch_id):
     data = load_data()
-    result = []
+    for batch in data["batches"]:
+        if str(batch["id"]) == str(batch_id):
+            tags = batch.get("tags", [])
+            if "favorite" in tags:
+                tags.remove("favorite")
+            else:
+                tags.append("favorite")
+            batch["tags"] = tags
+            break
+    save_data(data)
+    return redirect("/batches")
 
-    def to_float(val):
-        try:
-            return float(val.strip())
-        except:
-            return 0.0
+@batches_bp.route('/batches/<batch_id>/repeat')
+def repeat_batch(batch_id):
+    data = load_data()
+    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    if not original:
+        return "Batch not found", 404
 
-    if request.method == 'POST':
-        recipe_ids = request.form.getlist('recipe_id')
-        batch_counts = request.form.getlist('batch_count')
-        usage = {}
+    new_id = f"batch_{len(data.get('batches', [])) + 1}"
 
-        for r_id, count in zip(recipe_ids, batch_counts):
-            recipe = next((r for r in data['recipes'] if str(r['id']) == r_id), None)
-            if recipe:
-                for item in recipe['ingredients']:
-                    qty = to_float(item['quantity']) * to_float(count)
-                    usage[item['name']] = usage.get(item['name'], 0) + qty
+    new_batch = {
+        "id": new_id,
+        "recipe_id": original["recipe_id"],
+        "recipe_name": original["recipe_name"],
+        "timestamp": datetime.utcnow().isoformat(),
+        "notes": original.get("notes", ""),
+        "tags": original.get("tags", []),
+        "ingredients": original.get("ingredients", []),
+        "total_cost": original.get("total_cost", 0),
+    }
 
-        stock_report = []
-        for name, needed in usage.items():
-            current = next((i for i in data['ingredients'] if i['name'] == name), {"quantity": "0"})
-            current_qty = to_float(current['quantity'])
-            stock_report.append({
-                "name": name,
-                "needed": round(needed, 2),
-                "available": round(current_qty, 2),
-                "status": "OK" if current_qty >= needed else "LOW"
-            })
+    data["batches"].append(new_batch)
+    save_data(data)
+    return redirect("/batches")
 
-        return render_template('stock_bulk_result.html', stock_report=stock_report)
-
-    return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
 @batches_bp.route('/start-batch/<int:recipe_id>', methods=['GET', 'POST'])
 def start_batch(recipe_id):
@@ -207,12 +211,15 @@ def start_batch(recipe_id):
         if insufficient:
             return f"Insufficient stock for: {', '.join(insufficient)}", 400
 
+        # Deduct ingredients
         for item in recipe['ingredients']:
             for ing in data['ingredients']:
                 if ing['name'] == item['name']:
                     ing_qty = to_float(ing['quantity'])
                     used_qty = to_float(item['quantity'])
                     ing['quantity'] = str(round(ing_qty - used_qty, 2))
+                    break
+
 
         notes = request.form.get('notes', '').strip()
         tags = request.form.get('tags', '').strip().split(',')
