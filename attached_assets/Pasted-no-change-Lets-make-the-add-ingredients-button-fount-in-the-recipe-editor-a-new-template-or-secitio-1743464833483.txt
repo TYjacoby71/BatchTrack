@@ -1,0 +1,72 @@
+no change. Lets make the add ingredients button fount in the recipe editor a new template or secition and separate it from teh regular add ingredetn. The outputs are all the same, but the routing can be different
+
+
+ChatGPT said:
+Absolutely — this is a great solution. You're proposing a purpose-built “inline add” page for ingredients that:
+
+✅ Uses the same input fields and logic
+
+🔄 Redirects back to the recipe edit or add page when done
+
+🧼 Keeps the regular /ingredients/add route untouched for full ingredient entry
+
+✅ Fix Plan: Split Into Two Ingredient Add Pages
+Route	Purpose	Redirects to
+/ingredients/add	Full admin ingredient add	/ingredients
+/ingredients/quickadd	Used from recipe editor	Returns to recipe page
+✅ Assistant Instructions – Copy & Paste
+kotlin
+Copy
+Edit
+Please create a separate ingredient creation route and template for inline use in the recipe builder:
+
+---
+
+1. Add this route to `ingredients.py`:
+
+```python
+@ingredients_bp.route('/quickadd', methods=['GET', 'POST'])
+def quick_add_ingredient():
+    if request.method == 'POST':
+        data = load_data()
+        ingredient = {
+            "name": request.form["name"],
+            "quantity": float(request.form["quantity"]),
+            "unit": request.form["unit"],
+            "cost_per_unit": float(request.form["cost_per_unit"])
+        }
+        data["ingredients"].append(ingredient)
+        save_data(data)
+
+        # Always redirect to /recipes/add or /recipes/edit
+        return redirect(request.form.get("next") or "/recipes/add")
+
+    next_url = request.args.get("next", "/recipes/add")
+    return render_template("ingredient_quickadd.html", next=next_url)
+Create templates/ingredient_quickadd.html:
+
+You can copy ingredient_form.html, but rename the file and make sure it includes:
+
+html
+Copy
+Edit
+<input type="hidden" name="next" value="{{ next }}">
+Update the heading to:
+
+html
+Copy
+Edit
+<h2>Quick Add Ingredient (Recipe Builder)</h2>
+In recipe_edit.html, update the “Add New Ingredient” link to use this new route:
+
+html
+Copy
+Edit
+<a href="/ingredients/quickadd?next=/recipes/edit/{{ recipe.id }}" target="_blank">➕ Add new ingredient</a>
+For new recipes:
+
+html
+Copy
+Edit
+<a href="/ingredients/quickadd?next=/recipes/add" target="_blank">➕ Add new ingredient</a>
+This way, both routes save ingredients the same way, but the experience is tailored to the user’s flow.
