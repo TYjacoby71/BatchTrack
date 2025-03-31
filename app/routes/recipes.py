@@ -63,7 +63,9 @@ def edit_recipe(recipe_id):
         save_data(data)
         return redirect(f'/recipe/{recipe_id}')
 
-    return render_template('recipe_edit.html', recipe=recipe, ingredients=data['ingredients'])
+    with open('units.json') as f:
+        units = json.load(f)
+    return render_template('recipe_edit.html', recipe=recipe, ingredients=data['ingredients'], units=units)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
 def delete_recipe(recipe_id):
