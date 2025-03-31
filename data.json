@@ -84,9 +84,36 @@
                 }
             ],
             "instructions": "pour in bowl"
+        },
+        {
+            "id": 4,
+            "name": "rest",
+            "description": "adsfasdf",
+            "instructions": "asdfasdfsaf",
+            "product_type": "Balm",
+            "use_area": "Hands",
+            "use_case": "Exfoliating",
+            "primary_ingredient": "Shea Butter",
+            "ingredients": [
+                {
+                    "name": "Tallow",
+                    "quantity": "1",
+                    "unit": "g"
+                },
+                {
+                    "name": "test low quantity",
+                    "quantity": "40",
+                    "unit": "mL"
+                },
+                {
+                    "name": "eggs",
+                    "quantity": "12",
+                    "unit": "unit"
+                }
+            ]
         }
     ],
-    "recipe_counter": 3,
+    "recipe_counter": 4,
     "batches": [
         {
             "id": "batch_1",
