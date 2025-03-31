@@ -2,14 +2,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Edit Ingredient</title>
+    <title>Add Ingredient</title>
 </head>
 <body>
-    <h1>Edit Ingredient: {{ ingredient.name }}</h1>
+    <h1>Add New Ingredient</h1>
     <form method="POST">
         <div>
+            <label>Name:</label>
+            <input type="text" name="name" required>
+        </div>
+        <div>
             <label>Quantity:</label>
-            <input type="number" step="0.01" name="quantity" value="{{ ingredient.quantity }}">
+            <input type="number" step="0.01" name="quantity" required>
         </div>
         <div>
             <label>Unit:</label>
@@ -17,7 +21,7 @@
                 {% for category in units %}
                 <optgroup label="{{ units[category]['label'] }}">
                     {% for unit in units[category]['units'] %}
-                    <option value="{{ unit }}" {% if ingredient and unit == ingredient.unit %}selected{% endif %}>{{ unit }}</option>
+                    <option value="{{ unit }}">{{ unit }}</option>
                     {% endfor %}
                 </optgroup>
                 {% endfor %}
@@ -25,9 +29,9 @@
         </div>
         <div>
             <label>Cost per unit:</label>
-            <input type="number" step="0.01" name="cost_per_unit" value="{{ ingredient.cost_per_unit }}">
+            <input type="number" step="0.01" name="cost_per_unit" value="0.00">
         </div>
-        <button type="submit">Save Changes</button>
+        <button type="submit">Add Ingredient</button>
     </form>
     <a href="/ingredients">Back to Ingredients</a>
 </body>

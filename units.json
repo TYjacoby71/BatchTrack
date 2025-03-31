@@ -2,22 +2,26 @@
 {
   "volume": {
     "label": "Volume",
-    "units": ["mL", "cL", "L", "fl oz", "cup", "pint", "quart", "gallon", "tsp", "tbsp", "dash", "drop", "pinch", "shot"]
+    "units": ["mL", "cL", "L", "fl oz", "cup", "pint", "quart", "gallon", "tsp", "tbsp", "dash", "drop", "pinch"]
   },
   "weight": {
     "label": "Weight", 
-    "units": ["g", "kg", "oz", "lb"]
+    "units": ["g", "mg", "kg", "oz", "lb"]
   },
   "count": {
     "label": "Count",
-    "units": ["unit"]
+    "units": ["unit", "piece", "dozen"]
   },
   "length": {
     "label": "Length",
     "units": ["mm", "cm", "m", "inch", "ft"]
   },
+  "temperature": {
+    "label": "Temperature",
+    "units": ["°F", "°C"]
+  },
   "other": {
     "label": "Other",
-    "units": ["shake", "splash", "handful", "to taste"]
+    "units": ["shot", "shake", "splash", "handful", "to taste"]
   }
 }

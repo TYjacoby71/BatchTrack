@@ -1,0 +1,28 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Check - {{ recipe.name }}</title>
+</head>
+<body>
+    <h1>Stock Check for {{ recipe.name }}</h1>
+    <table border="1">
+        <tr>
+            <th>Ingredient</th>
+            <th>Needed</th>
+            <th>Available</th>
+            <th>Status</th>
+        </tr>
+        {% for item in stock_check %}
+        <tr>
+            <td>{{ item.ingredient }}</td>
+            <td>{{ item.needed }} {{ item.unit }}</td>
+            <td>{{ item.available }} {{ item.unit }}</td>
+            <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <a href="/recipes">Back to Recipes</a>
+</body>
+</html>

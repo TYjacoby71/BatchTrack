@@ -1,4 +1,3 @@
-
 from flask import Flask
 from app.routes.ingredients import ingredients_bp
 from app.routes.recipes import recipes_bp
@@ -10,4 +9,11 @@ def create_app():
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
     app.register_blueprint(batches_bp)
+
+    @app.context_processor
+    def inject_units():
+        import json
+        with open('units.json') as f:
+            units = json.load(f)
+        return dict(units=units)
     return app

@@ -1,15 +1,16 @@
-from flask import Blueprint, render_template, jsonify, request
-from app.routes.utils import load_data
+from flask import Blueprint, render_template, jsonify, request, redirect
+from app.routes.utils import load_data, save_data
+import json
 
 recipes_bp = Blueprint('recipes', __name__)
 
 @recipes_bp.route('/recipes')
-def recipes():
+def list_recipes():
     data = load_data()
     return render_template('recipe_list.html', recipes=data['recipes'])
 
-@recipes_bp.route('/check-stock/<string:recipe_name>', methods=['GET'])
-def check_stock(recipe_name):
+@recipes_bp.route('/api/check-stock/<string:recipe_name>', methods=['GET'])
+def check_stock_api(recipe_name):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['name'] == recipe_name), None)
     if not recipe:
@@ -25,10 +26,6 @@ def check_stock(recipe_name):
 
     return jsonify({"stock_check": stock_check})
 
-@recipes_bp.route('/recipes')
-def list_recipes():
-    data = load_data()
-    return render_template('recipe_list.html', recipes=data['recipes'])
 
 @recipes_bp.route('/recipes/<int:recipe_id>')
 def view_recipe(recipe_id):
@@ -42,31 +39,63 @@ def view_recipe(recipe_id):
 def edit_recipe(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
-
     if not recipe:
         return "Recipe not found", 404
 
     if request.method == 'POST':
-        recipe['name'] = request.form.get('name', '').strip()
-        recipe['instructions'] = request.form.get('instructions', '').strip()
+        recipe['name'] = request.form['name']
+        recipe['instructions'] = request.form['instructions']
 
+        # Handle ingredients
+        ingredients = []
         names = request.form.getlist('ingredient_name[]')
         quantities = request.form.getlist('ingredient_quantity[]')
         units = request.form.getlist('ingredient_unit[]')
 
-        recipe['ingredients'] = []
         for name, qty, unit in zip(names, quantities, units):
-            if name and qty and unit:
-                recipe['ingredients'].append({
-                    "name": name,
-                    "quantity": qty,
-                    "unit": unit
+            if name and qty:
+                ingredients.append({
+                    'name': name,
+                    'quantity': qty,
+                    'unit': unit
                 })
 
+        recipe['ingredients'] = ingredients
         save_data(data)
         return redirect(f'/recipes/{recipe_id}')
 
-    return render_template('recipe_edit.html', recipe=recipe)
+    with open('units.json') as f:
+        units = json.load(f)
+    return render_template('recipe_edit.html', recipe=recipe, ingredients=data['ingredients'], units=units)
+
+@recipes_bp.route('/check-stock/<int:recipe_id>')
+def check_stock(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
+    if not recipe:
+        return "Recipe not found", 404
+
+    stock_check = []
+    for item in recipe['ingredients']:
+        ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
+        if not ing or float(ing.get('quantity', 0)) < float(item['quantity']):
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": item['quantity'],
+                "available": ing['quantity'] if ing else '0',
+                "unit": item.get('unit', 'units'),
+                "status": "LOW"
+            })
+        else:
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": item['quantity'],
+                "available": ing['quantity'],
+                "unit": item.get('unit', 'units'),
+                "status": "OK"
+            })
+
+    return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
 def delete_recipe(recipe_id):
@@ -74,12 +103,6 @@ def delete_recipe(recipe_id):
     data['recipes'] = [r for r in data['recipes'] if r['id'] != recipe_id]
     save_data(data)
     return redirect('/recipes')
-def view_recipe(recipe_id):
-    data = load_data()
-    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
-    if not recipe:
-        return "Recipe not found", 404
-    return render_template('recipe_detail.html', recipe=recipe)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['POST'])
 def clone_recipe(recipe_id):

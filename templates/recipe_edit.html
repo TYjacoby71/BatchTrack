@@ -18,9 +18,21 @@
         <h2>Ingredients:</h2>
         {% for ingredient in recipe.ingredients %}
         <div class="ingredient">
-            <input type="text" name="ingredient_name[]" value="{{ ingredient.name }}">
+            <select name="ingredient_name[]">
+                {% for ing in ingredients %}
+                <option value="{{ ing.name }}" {% if ing.name == ingredient.name %}selected{% endif %}>{{ ing.name }}</option>
+                {% endfor %}
+            </select>
             <input type="text" name="ingredient_quantity[]" value="{{ ingredient.quantity }}">
-            <input type="text" name="ingredient_unit[]" value="{{ ingredient.unit }}">
+            <select name="ingredient_unit[]">
+                {% for category in units %}
+                <optgroup label="{{ units[category]['label'] }}">
+                    {% for unit in units[category]['units'] %}
+                    <option value="{{ unit }}" {% if unit == ingredient.unit %}selected{% endif %}>{{ unit }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
         </div>
         {% endfor %}
         <button type="submit">Save Changes</button>

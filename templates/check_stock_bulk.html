@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -9,7 +10,8 @@
         {% for recipe in recipes %}
         <div class="recipe-input">
             <label>{{ recipe.name }}:</label>
-            <input type="number" name="recipe_{{ recipe.id }}" value="0" min="0">
+            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+            <input type="number" name="batch_count" value="0" min="0">
         </div>
         {% endfor %}
         <button type="submit">Check Stock</button>
