@@ -5,6 +5,33 @@ from app.routes.utils import load_data, save_data, generate_qr_for_batch
 
 batches_bp = Blueprint('batches', __name__)
 
+@batches_bp.route('/batches')
+def view_batches():
+    from datetime import datetime
+    
+    data = load_data()
+    batches = data.get('batches', [])
+
+    # Filters
+    tag_filter = request.args.get("tag", "").lower()
+    recipe_filter = request.args.get("recipe", "").lower()
+
+    if tag_filter:
+        batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
+
+    if recipe_filter:
+        batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    # Sort newest first
+    batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)
+
+    # Format timestamps
+    for batch in batches:
+        if batch.get("timestamp"):
+            batch["timestamp"] = datetime.fromisoformat(batch["timestamp"]).strftime("%b %d, %Y at %I:%M %p")
+
+    return render_template('batches.html', batches=batches)
+
 @batches_bp.route('/')
 def dashboard():
     from datetime import datetime
