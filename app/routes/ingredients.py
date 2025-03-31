@@ -95,13 +95,27 @@ def add_ingredient():
 def quick_add_ingredient():
     if request.method == 'POST':
         data = load_data()
+        name = request.form['name']
+        unit = request.form['unit']
+        
+        # Add to ingredients list without quantity
+        if not any(i['name'] == name for i in data['ingredients']):
+            data['ingredients'].append({
+                'name': name,
+                'quantity': '',  # Empty quantity - no inventory impact
+                'unit': unit,
+                'cost_per_unit': '0.00'
+            })
+        
+        # Add to recipe_only_ingredients
         if 'recipe_only_ingredients' not in data:
             data['recipe_only_ingredients'] = []
-        new_ingredient = {
-            'name': request.form['name'],
-            'unit': request.form['unit']
-        }
-        data['recipe_only_ingredients'].append(new_ingredient)
+        if not any(i['name'] == name for i in data['recipe_only_ingredients']):
+            data['recipe_only_ingredients'].append({
+                'name': name,
+                'unit': unit
+            })
+        
         save_data(data)
         return redirect(request.form.get('next') or '/recipes/add')
     next_url = request.args.get('next', '/recipes/add')
