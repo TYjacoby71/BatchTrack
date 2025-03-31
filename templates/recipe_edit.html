@@ -117,7 +117,7 @@
                     <option value="{{ ing.name }}">{{ ing.name }}</option>
                     {% endfor %}
                 </select>
-                <a href="/add-ingredient" target="_blank" class="btn btn-sm" style="font-size: 12px; margin-left: 10px; text-decoration: none; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 4px;">➕ Add new ingredient</a>
+                <a href="/add-ingredient" class="btn btn-sm" style="font-size: 12px; margin-left: 10px; text-decoration: none; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 4px;">➕ Add new ingredient</a>
                 <input type="text" name="ingredient_quantity[]" placeholder="Quantity">
                 <select name="ingredient_unit[]">
                     {% for category in units %}
