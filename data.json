@@ -119,9 +119,32 @@
                     "unit": "unit"
                 }
             ]
+        },
+        {
+            "id": 5,
+            "name": "Copy of rest",
+            "description": "adsfasdf",
+            "instructions": "asdfasdfsaf",
+            "ingredients": [
+                {
+                    "name": "Tallow",
+                    "quantity": "1",
+                    "unit": "g"
+                },
+                {
+                    "name": "shea butter",
+                    "quantity": "40",
+                    "unit": "mL"
+                },
+                {
+                    "name": "eggs",
+                    "quantity": "12",
+                    "unit": "unit"
+                }
+            ]
         }
     ],
-    "recipe_counter": 4,
+    "recipe_counter": 5,
     "batches": [
         {
             "id": "batch_1",
