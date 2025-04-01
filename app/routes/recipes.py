@@ -69,7 +69,6 @@ def edit_recipe(recipe_id):
     return render_template('recipe_edit.html', 
                          recipe=recipe,
                          ingredients=data['ingredients'],
-                         recipe_only_ingredients=data.get('recipe_only_ingredients', []),
                          units=units)
 
 
