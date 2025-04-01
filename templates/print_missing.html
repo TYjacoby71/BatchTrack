@@ -1,0 +1,13 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>🖨 Print List: Needed Items</h2>
+<ul>
+  {% for item in items %}
+    <li>{{ item.name }} — {{ item.total }} {{ item.unit }}</li>
+  {% endfor %}
+</ul>
+<script>
+  window.onload = function() { window.print(); }
+</script>
+{% endblock %}
