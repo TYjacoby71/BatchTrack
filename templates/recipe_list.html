@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <h1>📘 Recipes</h1>
@@ -14,7 +13,7 @@
             <a href="/recipes/{{ recipe.id }}/clone">📄 Clone</a> |
             <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
             <a href="/check-stock/{{ recipe.id }}">Check Stock</a> |
-            <form style="display: inline;" action="/delete-recipe/{{ recipe.id }}" method="POST">
+            <form style="display: inline;" action="/recipes/{{ recipe.id }}/delete" method="POST">
                 <button type="submit">Delete</button>
             </form>
         </div>
