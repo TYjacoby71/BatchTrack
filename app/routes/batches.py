@@ -116,7 +116,7 @@ def check_stock_bulk():
                     "name": name,
                     "needed": round(needed, 2),
                     "available": round(converted_stock, 2),
-                    "unit": recipe_unit,
+                    "unit": details['unit'],
                     "status": status
                 })
             except (ValueError, TypeError):
