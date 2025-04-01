@@ -215,8 +215,13 @@ def start_batch(recipe_id):
         insufficient = []
         for item in recipe['ingredients']:
             inv_item = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
-            if not inv_item or to_float(inv_item['quantity']) < to_float(item['quantity']):
+            from unit_converter import convert_units
+            if not inv_item:
                 insufficient.append(item['name'])
+            else:
+                converted_qty = convert_units(inv_item['quantity'], inv_item.get('unit', 'units'), item.get('unit', 'units'))
+                if converted_qty is None or converted_qty < float(item['quantity']):
+                    insufficient.append(item['name'])
 
         if insufficient:
             return f"Insufficient stock for: {', '.join(insufficient)}", 400

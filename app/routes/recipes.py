@@ -80,25 +80,38 @@ def check_stock(recipe_id):
     if not recipe:
         return "Recipe not found", 404
 
+    from unit_converter import check_stock_availability, format_unit_value
+    
     stock_check = []
     for item in recipe['ingredients']:
         ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
-        try:
-            ing_qty = float(ing['quantity']) if ing and ing.get('quantity') else 0
-            needed_qty = float(item['quantity']) if item.get('quantity') else 0
-            status = "LOW" if not ing or ing_qty < needed_qty else "OK"
-        except (ValueError, TypeError):
-            ing_qty = 0
-            needed_qty = 0
-            status = "LOW"
+        
+        if ing:
+            available, converted_stock, needed = check_stock_availability(
+                item.get('quantity'), 
+                item.get('unit', 'units'),
+                ing.get('quantity'),
+                ing.get('unit', 'units')
+            )
+            status = "OK" if available else "LOW"
             
-        stock_check.append({
-            "ingredient": item['name'],
-            "needed": str(needed_qty),
-            "available": str(ing_qty) if ing else '0',
-            "unit": item.get('unit', 'units'),
-            "status": status
-        })
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": format_unit_value(needed, item.get('unit', 'units')),
+                "available": format_unit_value(converted_stock, item.get('unit', 'units')),
+                "original_stock": format_unit_value(ing.get('quantity'), ing.get('unit', 'units')),
+                "unit": item.get('unit', 'units'),
+                "status": status
+            })
+        else:
+            stock_check.append({
+                "ingredient": item['name'],
+                "needed": format_unit_value(item.get('quantity'), item.get('unit', 'units')),
+                "available": "0",
+                "original_stock": "Not in stock",
+                "unit": item.get('unit', 'units'),
+                "status": "LOW"
+            })
 
     return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
 
