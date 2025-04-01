@@ -7,35 +7,35 @@
         },
         {
             "name": "oil",
-            "quantity": "2.0",
+            "quantity": 2.0,
             "unit": "5"
         },
         {
             "name": "eggs",
-            "quantity": "6.0",
+            "quantity": 6.0,
             "unit": "eggs",
             "cost_per_unit": "0.00"
         },
         {
             "name": "pepper",
-            "quantity": "7.0",
+            "quantity": 7.0,
             "unit": "10"
         },
         {
             "name": "milk",
-            "quantity": "2.88",
+            "quantity": 2.88,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
         {
             "name": "Tallow",
-            "quantity": "40",
+            "quantity": 40.0,
             "unit": "g",
             "cost_per_unit": "40"
         },
         {
             "name": "salt",
-            "quantity": "2",
+            "quantity": 2.0,
             "unit": "shake",
             "cost_per_unit": "5"
         },
