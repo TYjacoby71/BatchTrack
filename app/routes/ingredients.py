@@ -65,30 +65,7 @@ def delete_ingredient(name):
     data['ingredients'] = [i for i in data['ingredients'] if i['name'] != name]
     save_data(data)
     return redirect('/ingredients')
-def add_ingredient():
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        quantity = request.form.get('quantity', '').strip()
-        unit = request.form.get('unit', '').strip()
 
-        if not name or not quantity:
-            return "Name and quantity are required", 400
-
-        data = load_data()
-        cost_per_unit = request.form.get('cost_per_unit', '0.00').strip()
-        new_ingredient = {
-            "name": name,
-            "quantity": quantity,
-            "unit": unit,
-            "cost_per_unit": cost_per_unit
-        }
-        data['ingredients'].append(new_ingredient)
-        save_data(data)
-        return redirect('/ingredients')
-
-    with open('units.json', 'r') as f:
-        units = json.load(f)
-    return render_template('add_ingredient.html', units=units)
 
 
 @ingredients_bp.route('/quickadd', methods=['GET', 'POST'])
