@@ -33,7 +33,6 @@ def view_batches():
     return render_template('batches.html', batches=batches)
 
 @batches_bp.route('/')
-tches)
 def dashboard():
     from datetime import datetime
 
