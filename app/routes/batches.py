@@ -96,7 +96,7 @@ def check_stock_bulk():
                 current_qty = 0
                 needed = 0
                 status = "LOW"
-                
+
             stock_report.append({
                 "name": name,
                 "needed": needed,
@@ -212,16 +212,24 @@ def start_batch(recipe_id):
             except:
                 return 0.0
 
+        from unit_converter import can_fulfill
+
         insufficient = []
         for item in recipe['ingredients']:
             inv_item = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
-            from unit_converter import convert_units
             if not inv_item:
                 insufficient.append(item['name'])
-            else:
-                converted_qty = convert_units(inv_item['quantity'], inv_item.get('unit', 'units'), item.get('unit', 'units'))
-                if converted_qty is None or converted_qty < float(item['quantity']):
-                    insufficient.append(item['name'])
+                continue
+
+            has_stock = can_fulfill(
+                inv_item.get('quantity', 0),
+                inv_item.get('unit', 'units'),
+                item.get('quantity', 0),
+                item.get('unit', 'units')
+            )
+
+            if not has_stock:
+                insufficient.append(f"{item['name']} ({item.get('quantity', 0)} {item.get('unit', 'units')})")
 
         if insufficient:
             return f"Insufficient stock for: {', '.join(insufficient)}", 400
