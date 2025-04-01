@@ -14,7 +14,15 @@
     </div>
     {% endfor %}
 </div>
+{% if missing_summary %}
+    <h3>🛒 Needed Items Summary:</h3>
+    <ul>
+        {% for name, info in missing_summary.items() %}
+            <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
 <br>
 <a href="/check-stock-bulk">Check Another Recipe</a> |
 <a href="/">Back to Home</a>
-{% endblock %}
+{% endblock %}k %}

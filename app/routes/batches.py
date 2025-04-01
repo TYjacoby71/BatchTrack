@@ -104,13 +104,13 @@ def check_stock_bulk():
 
         stock_report = []
         from unit_converter import check_stock_availability
-        
+
         for name, details in usage.items():
             current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
             try:
                 if not current or not current.get('quantity'):
                     raise ValueError("No stock found")
-                    
+
                 available, converted_stock, needed = check_stock_availability(
                     details['qty'],
                     details['unit'],
@@ -134,7 +134,24 @@ def check_stock_bulk():
                     "status": "LOW"
                 })
 
-        return render_template('stock_bulk_result.html', stock_report=stock_report)
+        # Calculate missing items summary
+        from collections import defaultdict
+        from app.unit_conversion import convert_unit
+
+        needed_items = defaultdict(lambda: {"total": 0, "unit": ""})
+
+        for item in stock_report:
+            if item["status"] == "LOW":
+                name = item["name"]
+                needed = item["needed"]
+                available = item["available"]
+                unit = item["unit"]
+
+                shortfall = max(needed - available, 0)
+                needed_items[name]["total"] += shortfall
+                needed_items[name]["unit"] = unit
+
+        return render_template('stock_bulk_result.html', stock_report=stock_report, missing_summary=needed_items)
 
     return render_template('check_stock_bulk.html', recipes=data['recipes'])
 
