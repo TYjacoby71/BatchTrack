@@ -112,19 +112,21 @@ def check_stock_bulk():
                     current['unit']
                 )
                 status = "OK" if available else "LOW"
-                current_qty = float(current['quantity'])
+                stock_report.append({
+                    "name": name,
+                    "needed": round(needed, 2),
+                    "available": round(converted_stock, 2),
+                    "unit": recipe_unit,
+                    "status": status
+                })
             except (ValueError, TypeError):
-                current_qty = 0
-                needed = details['qty']
-                status = "LOW"
-
-            stock_report.append({
-                "name": name,
-                "needed": needed,
-                "available": round(current_qty, 2),
-                "unit": current['unit'] if current else 'units',
-                "status": status
-            })
+                stock_report.append({
+                    "name": name,
+                    "needed": details['qty'],
+                    "available": 0,
+                    "unit": details['unit'],
+                    "status": "LOW"
+                })
 
         return render_template('stock_bulk_result.html', stock_report=stock_report)
 
