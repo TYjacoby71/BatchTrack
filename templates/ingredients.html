@@ -12,6 +12,7 @@
       <th>Unit</th>
       <th>Cost/Unit</th>
       <th>Reason</th>
+      <th>Edit</th>
     </tr>
     {% for ing in ingredients %}
     <tr>
@@ -32,6 +33,9 @@
           <option value="Sync">Sync</option>
           <option value="Other">Other</option>
         </select>
+      </td>
+      <td>
+        <a href="/edit-ingredient/{{ ing.name }}">✏️ Edit</a>
       </td>
     </tr>
     {% endfor %}
