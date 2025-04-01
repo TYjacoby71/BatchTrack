@@ -22,14 +22,8 @@ def update_stock():
                 
             try:
                 delta = float(delta_str)
-            
-            if reason in ["Loss", "Spoiled", "Donation"]:
-                    delta = -abs(delta)
-                else:
-                    delta = abs(delta)
                 
-                # If reason indicates removal, make delta negative
-                if reason in ["Loss", "Spoiled", "Used", "Donation"]:
+                if reason in ["Loss", "Spoiled", "Donation"]:
                     delta = -abs(delta)
                 else:
                     delta = abs(delta)
