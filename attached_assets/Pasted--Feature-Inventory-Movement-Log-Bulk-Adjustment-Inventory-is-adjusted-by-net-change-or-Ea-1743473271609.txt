@@ -1,0 +1,97 @@
+✅ Feature: Inventory Movement Log + Bulk Adjustment
+Inventory is adjusted by net change (+ or -)
+
+Each adjustment is logged with:
+
+Ingredient name
+
+Quantity delta
+
+Unit
+
+Reason
+
+Timestamp
+
+🛠 Replit Code Batch: Inventory Adjustment UI + Logger
+🧾 1. Add New Route File: routes/inventory_adjust.py
+python
+Copy
+Edit
+from flask import Blueprint, request, render_template, redirect
+from app.routes.utils import load_data, save_data
+from datetime import datetime
+
+adjust_bp = Blueprint("adjust", __name__)
+
+@adjust_bp.route('/inventory/adjust', methods=['GET', 'POST'])
+def adjust_inventory():
+    data = load_data()
+    inventory = data.get("ingredients", [])
+    reasons = ["Purchase", "Donation", "Spoiled", "Sample", "Test Batch", "Error", "Sync", "Other"]
+
+    if request.method == 'POST':
+        for i in inventory:
+            name = i["name"]
+            unit = i["unit"]
+            qty_delta = request.form.get(f"adj_{name}")
+            reason = request.form.get(f"reason_{name}")
+
+            if qty_delta:
+                try:
+                    delta = float(qty_delta)
+                    i["quantity"] += delta
+
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": unit,
+                        "reason": reason or "Unspecified",
+                        "timestamp": datetime.now().isoformat()
+                    })
+
+                except ValueError:
+                    continue  # Ignore bad input
+
+        data["ingredients"] = inventory
+        save_data(data)
+        return redirect("/ingredients")
+
+    return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)
+🔧 2. Register It in __init__.py
+python
+Copy
+Edit
+from app.routes.inventory_adjust import adjust_bp
+app.register_blueprint(adjust_bp)
+🖼 3. Create Template: templates/inventory_adjust.html
+html
+Copy
+Edit
+{% extends "layout.html" %}
+{% block content %}
+<h2>🔁 Inventory Adjustment</h2>
+<form method="POST">
+  <table>
+    <tr>
+      <th>Name</th><th>Current Qty</th><th>Adjust</th><th>Unit</th><th>Reason</th>
+    </tr>
+    {% for ing in ingredients %}
+    <tr>
+      <td>{{ ing.name }}</td>
+      <td>{{ ing.quantity }}</td>
+      <td><input type="number" step="any" name="adj_{{ ing.name }}" value="0"></td>
+      <td>{{ ing.unit }}</td>
+      <td>
+        <select name="reason_{{ ing.name }}">
+          {% for r in reasons %}
+            <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
+        </select>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <button type="submit">Apply Adjustments</button>
+</form>
+{% endblock %}
