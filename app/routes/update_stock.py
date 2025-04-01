@@ -11,18 +11,22 @@ def update_stock():
     ingredients = data.get("ingredients", [])
 
     if request.method == "POST":
-        for ing in ingredients:
-            name = ing["name"]
+        names = request.form.getlist('ingredient_name[]')
+        deltas = request.form.getlist('delta[]')
+        reasons = request.form.getlist('reason[]')
+        
+        for name, delta_str, reason in zip(names, deltas, reasons):
             ing = next((i for i in ingredients if i["name"].lower() == name.lower()), None)
             if not ing:
                 continue
                 
-            delta_key = f"delta_{name}"
-            reason_key = f"reason_{name}"
-            
             try:
-                delta = float(request.form.get(delta_key, 0))
-                reason = request.form.get(reason_key, "Unspecified")
+                delta = float(delta_str)
+            
+            if reason in ["Loss", "Spoiled", "Donation"]:
+                    delta = -abs(delta)
+                else:
+                    delta = abs(delta)
                 
                 # If reason indicates removal, make delta negative
                 if reason in ["Loss", "Spoiled", "Used", "Donation"]:
