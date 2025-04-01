@@ -1,29 +1,20 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Stock Check Results</title>
-</head>
-<body>
-    <h1>Stock Check Results</h1>
-    <table border="1">
-        <tr>
-            <th>Ingredient</th>
-            <th>Needed</th>
-            <th>Available</th>
-            <th>Status</th>
-        </tr>
-        {% for item in stock_report %}
-        <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.needed }} {{ item.unit if item.unit else 'units' }}</td>
-            <td>{{ item.available }} {{ item.unit if item.unit else 'units' }}</td>
-            <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <br>
-    <a href="/check-stock-bulk">Check Another Recipe</a> |
-    <a href="/">Back to Home</a>
-</body>
-</html>
+{% extends "layout.html" %}
+{% block content %}
+<h2>Stock Check Results</h2>
+<div class="results">
+    {% for item in stock_report %}
+    <div class="stock-item {% if item.status == 'LOW' %}low-stock{% endif %}">
+        <h3>{{ item.name }}</h3>
+        <div class="details">
+            <p>Needed: {{ item.needed }} {{ item.unit }}</p>
+            <p>Available: {{ item.available }} {{ item.unit }}</p>
+            <p class="status">Status: {% if item.status == "OK" %}✅{% else %}❌{% endif %}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<br>
+<a href="/check-stock-bulk">Check Another Recipe</a> |
+<a href="/">Back to Home</a>
+{% endblock %}

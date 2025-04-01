@@ -1,21 +1,39 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Check Stock</title>
-</head>
-<body>
-    <h1>Check Stock for Multiple Recipes</h1>
-    <form method="POST">
-        {% for recipe in recipes %}
-        <div class="recipe-input">
-            <label>{{ recipe.name }}:</label>
-            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-            <input type="number" name="batch_count" value="0" min="0">
-        </div>
-        {% endfor %}
-        <button type="submit">Check Stock</button>
-    </form>
-    <a href="/">Back to Home</a>
-</body>
-</html>
+{% extends "layout.html" %}
+{% block content %}
+<h2>🧪 Bulk Stock Check</h2>
+
+<form method="POST">
+    {% for recipe in recipes %}
+    <div class="recipe-input">
+        <label>{{ recipe.name }}:</label>
+        <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+        <input type="number" name="batch_count" value="0" min="0">
+    </div>
+    {% endfor %}
+    <button type="submit">Check Stock</button>
+</form>
+
+{% if stock_report is defined %}
+    {% for item in stock_report %}
+    <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc;">
+        <h3>{{ item.name }} — {% if item.status == "OK" %}✅ Available{% else %}❌ Low Stock{% endif %}</h3>
+        <table>
+            <tr>
+                <th>Needed</th>
+                <th>Available</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>{{ item.needed }} {{ item.unit }}</td>
+                <td>{{ item.available }} {{ item.unit }}</td>
+                <td>{% if item.status == "OK" %}✅{% else %}❌{% endif %}</td>
+            </tr>
+        </table>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<br>
+<a href="/">Back to Home</a>
+{% endblock %}
