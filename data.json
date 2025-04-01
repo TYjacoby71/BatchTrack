@@ -65,17 +65,17 @@
             "ingredients": [
                 {
                     "name": "eggs",
-                    "quantity": "3",
+                    "quantity": 3.0,
                     "unit": "unit"
                 },
                 {
                     "name": "oil",
-                    "quantity": "1",
+                    "quantity": 1.0,
                     "unit": "dash"
                 },
                 {
                     "name": "pepper",
-                    "quantity": "1",
+                    "quantity": 1.0,
                     "unit": "tsp"
                 }
             ],
@@ -144,9 +144,7 @@
             "recipe_name": "Fried Egs",
             "timestamp": "2025-03-31T04:22:51.925340",
             "notes": "this is the test for batch",
-            "tags": [
-                "Sample"
-            ],
+            "tags": [],
             "ingredients": [
                 {
                     "name": "eggs",
