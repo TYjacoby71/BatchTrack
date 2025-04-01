@@ -67,9 +67,15 @@ def dashboard():
 
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
+from app.unit_conversion import can_fulfill
+from app.error_tools import safe_route
+
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
+@safe_route
 def check_stock_bulk():
     data = load_data()
+    inventory = data.get("ingredients", [])
+    recipes = data.get("recipes", [])
 
     if request.method == 'POST':
         recipe_ids = request.form.getlist('recipe_id')
