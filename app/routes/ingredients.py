@@ -22,6 +22,29 @@ def ingredients():
     data = load_data()
     return render_template('ingredients.html', ingredients=data['ingredients'])
 
+@ingredients_bp.route('/ingredients/bulk-update', methods=['POST'])
+def bulk_update_ingredients():
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    action = request.form.get("action")
+
+    if action == "delete":
+        to_delete = request.form.getlist("delete")
+        ingredients = [i for i in ingredients if i["name"] not in to_delete]
+
+    elif action == "update":
+        for i in ingredients:
+            form_key = f"qty_{i['name']}"
+            if form_key in request.form:
+                try:
+                    i["quantity"] = float(request.form[form_key])
+                except ValueError:
+                    pass
+
+    data["ingredients"] = ingredients
+    save_data(data)
+    return redirect("/ingredients")
+
 @ingredients_bp.route('/add', methods=['GET', 'POST'])
 @ingredients_bp.route('/add-ingredient', methods=['GET', 'POST'])
 def add_ingredient():
