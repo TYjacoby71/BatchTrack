@@ -164,19 +164,47 @@ def new_recipe():
                          recipe_only_ingredients=data.get('recipe_only_ingredients', []),
                          units=units)
 
-@recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['POST'])
+@recipes_bp.route('/recipes/<int:recipe_id>/clone', methods=['GET', 'POST'])
 def clone_recipe(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
-
+    
     if not recipe:
         return "Recipe not found", 404
 
-    new_recipe = recipe.copy()
-    new_recipe['id'] = data['recipe_counter'] + 1
+    if request.method == 'GET':
+        new_recipe = recipe.copy()
+        new_recipe['id'] = None  # Mark as new for template
+        new_recipe['name'] = f"Copy of {recipe['name']}"
+        new_recipe['ingredients'] = [ing.copy() for ing in recipe['ingredients']]
+        return render_template('recipe_edit.html', 
+                             recipe=new_recipe,
+                             ingredients=data['ingredients'],
+                             recipe_only_ingredients=data.get('recipe_only_ingredients', []),
+                             is_clone=True)
+
+    # POST handling remains the same as new recipe creation
+    new_recipe = {
+        'id': data.get('recipe_counter', 0) + 1,
+        'name': request.form['name'],
+        'description': request.form.get('description', ''),
+        'instructions': request.form['instructions'],
+        'ingredients': []
+    }
+    
+    names = request.form.getlist('ingredient_name[]')
+    quantities = request.form.getlist('ingredient_quantity[]')
+    units = request.form.getlist('ingredient_unit[]')
+    
+    for name, qty, unit in zip(names, quantities, units):
+        if name and qty:
+            new_recipe['ingredients'].append({
+                'name': name,
+                'quantity': qty,
+                'unit': unit
+            })
+    
     data['recipe_counter'] = new_recipe['id']
-    new_recipe['name'] = f"Copy of {recipe['name']}"
-    new_recipe['ingredients'] = [ing.copy() for ing in recipe['ingredients']]
     data['recipes'].append(new_recipe)
     save_data(data)
     return redirect(f'/recipes/{new_recipe["id"]}')
