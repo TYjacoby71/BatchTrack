@@ -24,6 +24,7 @@ def ingredients():
 
 @ingredients_bp.route('/ingredients/bulk-update', methods=['POST'])
 def bulk_update_ingredients():
+    from datetime import datetime
     data = load_data()
     ingredients = data.get("ingredients", [])
     action = request.form.get("action")
@@ -34,12 +35,25 @@ def bulk_update_ingredients():
 
     elif action == "update":
         for i in ingredients:
-            form_key = f"qty_{i['name']}"
-            if form_key in request.form:
+            name = i["name"]
+            unit = i["unit"]
+            delta_key = f"delta_{name}"
+            reason_key = f"reason_{name}"
+
+            if delta_key in request.form:
                 try:
-                    i["quantity"] = float(request.form[form_key])
+                    delta = float(request.form[delta_key])
+                    i["quantity"] = float(i.get("quantity", 0)) + delta
+
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": unit,
+                        "reason": request.form.get(reason_key, "Unspecified"),
+                        "timestamp": datetime.now().isoformat()
+                    })
                 except ValueError:
-                    pass
+                    continue
 
     data["ingredients"] = ingredients
     save_data(data)

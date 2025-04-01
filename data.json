@@ -289,5 +289,49 @@
             "name": "oranges",
             "unit": "unit"
         }
+    ],
+    "inventory_log": [
+        {
+            "name": "oil",
+            "change": 0.0,
+            "unit": "5",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580272"
+        },
+        {
+            "name": "eggs",
+            "change": 0.0,
+            "unit": "eggs",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580456"
+        },
+        {
+            "name": "pepper",
+            "change": 0.0,
+            "unit": "10",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580494"
+        },
+        {
+            "name": "milk",
+            "change": 0.0,
+            "unit": "gallon",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580504"
+        },
+        {
+            "name": "Tallow",
+            "change": 0.0,
+            "unit": "g",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580512"
+        },
+        {
+            "name": "salt",
+            "change": 0.0,
+            "unit": "shake",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:16:29.580521"
+        }
     ]
 }
