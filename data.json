@@ -44,6 +44,12 @@
             "quantity": "",
             "unit": "unit",
             "cost_per_unit": "0.00"
+        },
+        {
+            "name": "bananas",
+            "quantity": "",
+            "unit": "unit",
+            "cost_per_unit": "0.00"
         }
     ],
     "recipes": [
