@@ -83,22 +83,22 @@ def check_stock(recipe_id):
     stock_check = []
     for item in recipe['ingredients']:
         ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
-        if not ing or float(ing.get('quantity', 0)) < float(item['quantity']):
-            stock_check.append({
-                "ingredient": item['name'],
-                "needed": item['quantity'],
-                "available": ing['quantity'] if ing else '0',
-                "unit": item.get('unit', 'units'),
-                "status": "LOW"
-            })
-        else:
-            stock_check.append({
-                "ingredient": item['name'],
-                "needed": item['quantity'],
-                "available": ing['quantity'],
-                "unit": item.get('unit', 'units'),
-                "status": "OK"
-            })
+        try:
+            ing_qty = float(ing['quantity']) if ing and ing.get('quantity') else 0
+            needed_qty = float(item['quantity']) if item.get('quantity') else 0
+            status = "LOW" if not ing or ing_qty < needed_qty else "OK"
+        except (ValueError, TypeError):
+            ing_qty = 0
+            needed_qty = 0
+            status = "LOW"
+            
+        stock_check.append({
+            "ingredient": item['name'],
+            "needed": str(needed_qty),
+            "available": str(ing_qty) if ing else '0',
+            "unit": item.get('unit', 'units'),
+            "status": status
+        })
 
     return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
 
