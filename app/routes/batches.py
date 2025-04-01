@@ -88,13 +88,21 @@ def check_stock_bulk():
         stock_report = []
         for name, needed in usage.items():
             current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
-            current_qty = float(current['quantity']) if current else 0
+            try:
+                current_qty = float(current['quantity']) if current and current.get('quantity') else 0
+                needed = round(float(needed), 2)
+                status = "OK" if current_qty >= needed else "LOW"
+            except (ValueError, TypeError):
+                current_qty = 0
+                needed = 0
+                status = "LOW"
+                
             stock_report.append({
                 "name": name,
-                "needed": round(needed, 2),
+                "needed": needed,
                 "available": round(current_qty, 2),
                 "unit": current['unit'] if current else 'units',
-                "status": "OK" if current_qty >= needed else "LOW"
+                "status": status
             })
 
         return render_template('stock_bulk_result.html', stock_report=stock_report)
