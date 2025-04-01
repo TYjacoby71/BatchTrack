@@ -98,12 +98,14 @@ def quick_add_ingredient():
         name = request.form['name']
         unit = request.form['unit']
         
-        # Add to ingredients list without quantity
+        # Only add if it doesn't exist in either list
         if not any(i['name'] == name for i in data['ingredients']):
+            if 'ingredients' not in data:
+                data['ingredients'] = []
             data['ingredients'].append({
                 'name': name,
-                'quantity': '',  # Empty quantity - no inventory impact
                 'unit': unit,
+                'quantity': '',
                 'cost_per_unit': '0.00'
             })
         

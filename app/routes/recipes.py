@@ -66,9 +66,10 @@ def edit_recipe(recipe_id):
 
     with open('units.json') as f:
         units = json.load(f)
+    all_ingredients = data['ingredients']
     return render_template('recipe_edit.html', 
                          recipe=recipe,
-                         ingredients=data['ingredients'],
+                         ingredients=all_ingredients,
                          units=units)
 
 
