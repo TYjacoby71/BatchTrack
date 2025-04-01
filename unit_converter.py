@@ -56,9 +56,13 @@ def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
 
 def format_unit_value(value, unit):
     """Format a value with its unit for display"""
-    if value is None:
+    if value is None or value == '':
         return "N/A"
-    return f"{value:.2f} {unit}"
+    try:
+        value = float(value)
+        return f"{value:.2f} {unit}"
+    except (ValueError, TypeError):
+        return f"{value} {unit}"
 
 def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
     """
