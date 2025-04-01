@@ -1,0 +1,44 @@
+
+from flask import Blueprint, request, render_template, redirect
+from app.routes.utils import load_data, save_data
+from datetime import datetime
+
+adjust_bp = Blueprint("adjust", __name__)
+
+@adjust_bp.route('/inventory/adjust', methods=['GET', 'POST'])
+def adjust_inventory():
+    data = load_data()
+    inventory = data.get("ingredients", [])
+    reasons = ["Purchase", "Donation", "Spoiled", "Sample", "Test Batch", "Error", "Sync", "Other"]
+
+    if request.method == 'POST':
+        for i in inventory:
+            name = i["name"]
+            unit = i["unit"]
+            qty_delta = request.form.get(f"adj_{name}")
+            reason = request.form.get(f"reason_{name}")
+
+            if qty_delta:
+                try:
+                    delta = float(qty_delta)
+                    if "quantity" in i:
+                        i["quantity"] = float(i["quantity"] or 0) + delta
+                    else:
+                        i["quantity"] = delta
+
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": unit,
+                        "reason": reason or "Unspecified",
+                        "timestamp": datetime.now().isoformat()
+                    })
+
+                except ValueError:
+                    continue
+
+        data["ingredients"] = inventory
+        save_data(data)
+        return redirect("/ingredients")
+
+    return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)

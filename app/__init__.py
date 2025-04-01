@@ -13,8 +13,10 @@ def create_app():
     app.register_blueprint(recipes_bp)
     from app.routes.auth import auth_bp
     from app.routes.export_missings import export_bp
+    from app.routes.inventory_adjust import adjust_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(export_bp)
+    app.register_blueprint(adjust_bp)
 
     @app.context_processor
     def inject_globals():

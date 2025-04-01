@@ -1,0 +1,106 @@
+🧾 What’s Now Live:
+✅ Update Stock:
+Adjusts by + or − value only
+
+Logs every change with:
+
+Ingredient name
+
+Delta quantity
+
+Unit
+
+Reason
+
+Timestamp
+
+🛠 Replit Assistant Batch to Paste
+🔁 Update: templates/ingredients.html
+Replace entire file with:
+
+html
+Copy
+Edit
+{% extends "layout.html" %}
+{% block content %}
+<h2>🧂 Ingredients</h2>
+<form method="post" action="/ingredients/bulk-update">
+  <table>
+    <tr>
+      <th>Delete</th>
+      <th>Name</th>
+      <th>Current Qty</th>
+      <th>Adjust By</th>
+      <th>Unit</th>
+      <th>Cost/Unit</th>
+      <th>Reason</th>
+    </tr>
+    {% for ing in ingredients %}
+    <tr>
+      <td><input type="checkbox" name="delete" value="{{ ing.name }}"></td>
+      <td>{{ ing.name }}</td>
+      <td>{{ ing.quantity }}</td>
+      <td><input type="number" step="any" name="delta_{{ ing.name }}" value="0"></td>
+      <td>{{ ing.unit }}</td>
+      <td>{{ ing.cost_per_unit }}</td>
+      <td>
+        <select name="reason_{{ ing.name }}">
+          <option value="Purchase">Purchase</option>
+          <option value="Donation">Donation</option>
+          <option value="Spoiled">Spoiled</option>
+          <option value="Sample">Sample</option>
+          <option value="Test Batch">Test Batch</option>
+          <option value="Error">Error</option>
+          <option value="Sync">Sync</option>
+          <option value="Other">Other</option>
+        </select>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <button type="submit" name="action" value="update">💾 Update Stock</button>
+  <button type="submit" name="action" value="delete">🗑 Delete Selected</button>
+</form>
+{% endblock %}
+🔁 Update: routes/ingredients.py
+Replace the bulk_update_ingredients function with:
+
+python
+Copy
+Edit
+@ingredients_bp.route('/ingredients/bulk-update', methods=['POST'])
+def bulk_update_ingredients():
+    from datetime import datetime
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    action = request.form.get("action")
+
+    if action == "delete":
+        to_delete = request.form.getlist("delete")
+        ingredients = [i for i in ingredients if i["name"] not in to_delete]
+
+    elif action == "update":
+        for i in ingredients:
+            name = i["name"]
+            unit = i["unit"]
+            delta_key = f"delta_{name}"
+            reason_key = f"reason_{name}"
+
+            if delta_key in request.form:
+                try:
+                    delta = float(request.form[delta_key])
+                    i["quantity"] += delta
+
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": unit,
+                        "reason": request.form.get(reason_key, "Unspecified"),
+                        "timestamp": datetime.now().isoformat()
+                    })
+                except ValueError:
+                    continue
+
+    data["ingredients"] = ingredients
+    save_data(data)
+    return redirect("/ingredients")
