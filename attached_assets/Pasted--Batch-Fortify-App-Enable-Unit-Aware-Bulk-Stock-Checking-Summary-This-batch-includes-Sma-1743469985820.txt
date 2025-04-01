@@ -1,0 +1,140 @@
+✅ Batch: Fortify App + Enable Unit-Aware Bulk Stock Checking
+🧱 Summary
+This batch includes:
+
+🧠 Smart unit conversions (cup → gallon, mL → L, etc.)
+
+✅ Safe route wrappers to catch and log errors
+
+📊 Functional /check-stock-bulk route
+
+🔐 Stability for live testing
+
+1️⃣ ✅ Add File: app/unit_conversion.py
+python
+Copy
+Edit
+volume_units = {
+    "ml": 1,
+    "milliliter": 1,
+    "l": 1000,
+    "liter": 1000,
+    "tsp": 4.92892,
+    "tbsp": 14.7868,
+    "fl oz": 29.5735,
+    "cup": 236.588,
+    "pint": 473.176,
+    "quart": 946.353,
+    "gallon": 3785.41
+}
+
+weight_units = {
+    "mg": 0.001,
+    "g": 1,
+    "gram": 1,
+    "kg": 1000,
+    "oz": 28.3495,
+    "lb": 453.592
+}
+
+def convert_unit(amount, from_unit, to_unit):
+    from_unit = from_unit.lower().strip()
+    to_unit = to_unit.lower().strip()
+
+    if from_unit in volume_units and to_unit in volume_units:
+        base = volume_units
+    elif from_unit in weight_units and to_unit in weight_units:
+        base = weight_units
+    else:
+        raise ValueError(f"Incompatible units: {from_unit} → {to_unit}")
+
+    amount_in_base = amount * base[from_unit]
+    converted = amount_in_base / base[to_unit]
+    return converted
+
+def can_fulfill(stock_qty, stock_unit, required_qty, required_unit):
+    try:
+        converted_required = convert_unit(required_qty, required_unit, stock_unit)
+        return stock_qty >= converted_required, converted_required
+    except Exception:
+        return False, None
+2️⃣ ✅ Add File: app/error_tools.py
+python
+Copy
+Edit
+import traceback
+from flask import flash
+
+def safe_route(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print("⚠️ ROUTE ERROR:", str(e))
+            print(traceback.format_exc())
+            flash("An unexpected error occurred. Please try again.")
+            return "Something went wrong. Check logs.", 500
+    wrapper.__name__ = func.__name__
+    return wrapper
+3️⃣ 🔁 Update: app/routes/batches.py
+Add at the top:
+
+python
+Copy
+Edit
+from app.unit_conversion import can_fulfill
+from app.error_tools import safe_route
+Replace /check-stock-bulk route with this:
+
+python
+Copy
+Edit
+@batches_bp.route('/check-stock-bulk')
+@safe_route
+def check_stock_bulk():
+    data = load_data()
+    inventory = data.get("ingredients", [])
+    recipes = data.get("recipes", [])
+
+    results = []
+
+    for recipe in recipes:
+        recipe_status = {
+            "name": recipe["name"],
+            "can_make": True,
+            "missing": [],
+            "ingredients": []
+        }
+
+        for ing in recipe.get("ingredients", []):
+            ing_name = ing["name"]
+            req_qty = float(ing["quantity"])
+            req_unit = ing["unit"]
+
+            stock = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
+
+            if not stock:
+                recipe_status["can_make"] = False
+                recipe_status["missing"].append(f"{ing_name} (not in inventory)")
+                continue
+
+            stock_qty = float(stock["quantity"])
+            stock_unit = stock["unit"]
+
+            can, converted_needed = can_fulfill(stock_qty, stock_unit, req_qty, req_unit)
+            recipe_status["ingredients"].append({
+                "name": ing_name,
+                "needed": f"{req_qty} {req_unit}",
+                "available": f"{stock_qty} {stock_unit}",
+                "enough": can
+            })
+
+            if not can:
+                recipe_status["can_make"] = False
+                recipe_status["missing"].append(
+                    f"{ing_name} needs {req_qty} {req_unit}, have {stock_qty} {stock_unit}"
+                )
+
+        results.append(recipe_status)
+
+    return render_template("check_stock_bulk.html", results=results)
