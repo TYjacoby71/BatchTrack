@@ -212,23 +212,23 @@ def start_batch(recipe_id):
             except:
                 return 0.0
 
-        from unit_converter import can_fulfill
+        from unit_converter import check_stock_availability
 
         insufficient = []
         for item in recipe['ingredients']:
-            inv_item = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
+            inv_item = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
             if not inv_item:
                 insufficient.append(item['name'])
                 continue
 
-            has_stock = can_fulfill(
-                inv_item.get('quantity', 0),
-                inv_item.get('unit', 'units'),
-                item.get('quantity', 0),
-                item.get('unit', 'units')
+            available, _, _ = check_stock_availability(
+                item.get('quantity'),
+                item.get('unit', 'units'),
+                inv_item.get('quantity'),
+                inv_item.get('unit', 'units')
             )
 
-            if not has_stock:
+            if not available:
                 insufficient.append(f"{item['name']} ({item.get('quantity', 0)} {item.get('unit', 'units')})")
 
         if insufficient:
