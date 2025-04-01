@@ -50,6 +50,12 @@
             "quantity": "",
             "unit": "unit",
             "cost_per_unit": "0.00"
+        },
+        {
+            "name": "butter",
+            "unit": "oz",
+            "quantity": "",
+            "cost_per_unit": "0.00"
         }
     ],
     "recipes": [
