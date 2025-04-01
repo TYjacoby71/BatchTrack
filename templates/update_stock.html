@@ -1,0 +1,36 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>📥 Bulk Stock Update</h2>
+<form method="POST">
+  <table>
+    <tr>
+      <th>Ingredient</th>
+      <th>Quantity Δ</th>
+      <th>Unit</th>
+      <th>Reason</th>
+    </tr>
+    {% for ing in ingredients %}
+    <tr>
+      <td>
+        <label>
+          <input type="checkbox" name="update" value="{{ ing.name }}">
+          {{ ing.name }}
+        </label>
+      </td>
+      <td><input type="number" name="delta_{{ ing.name }}" step="any"></td>
+      <td>{{ ing.unit }}</td>
+      <td>
+        <select name="reason_{{ ing.name }}">
+          {% for r in reasons %}
+            <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
+        </select>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <br>
+  <button type="submit">Save All Updates</button>
+</form>
+{% endblock %}
