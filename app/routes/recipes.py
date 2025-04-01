@@ -7,7 +7,11 @@ recipes_bp = Blueprint('recipes', __name__)
 @recipes_bp.route('/recipes')
 def list_recipes():
     data = load_data()
-    return render_template('recipe_list.html', recipes=data['recipes'])
+    tags = set()
+    for r in data["recipes"]:
+        for t in r.get("tags", []):
+            tags.add(t.lower())
+    return render_template('recipe_list.html', recipes=data['recipes'], all_tags=sorted(tags))
 
 @recipes_bp.route('/api/check-stock/<string:recipe_name>', methods=['GET'])
 def check_stock_api(recipe_name):
