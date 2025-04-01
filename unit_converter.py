@@ -65,11 +65,17 @@ def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
     Check if there's enough stock for a recipe
     Returns: (bool available, float converted_stock_qty, float needed_qty)
     """
-    if not recipe_qty or not stock_qty:
+    try:
+        if not recipe_qty or not stock_qty or not recipe_unit or not stock_unit:
+            return False, 0, 0
+        
+        recipe_qty = float(recipe_qty) if recipe_qty else 0
+        stock_qty = float(stock_qty) if stock_qty else 0
+        
+        converted_stock = convert_units(stock_qty, stock_unit, recipe_unit)
+        if converted_stock is None:
+            return False, 0, recipe_qty
+            
+        return converted_stock >= recipe_qty, converted_stock, recipe_qty
+    except (ValueError, TypeError):
         return False, 0, 0
-
-    converted_stock = convert_units(stock_qty, stock_unit, recipe_unit)
-    if converted_stock is None:
-        return False, 0, float(recipe_qty)
-
-    return converted_stock >= float(recipe_qty), converted_stock, float(recipe_qty)
