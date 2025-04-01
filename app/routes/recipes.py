@@ -102,7 +102,7 @@ def check_stock(recipe_id):
 
     return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
 
-@recipes_bp.route('/recipes/<int:recipe_id>/delete')
+@recipes_bp.route('/recipes/<int:recipe_id>/delete', methods=['GET', 'POST'])
 def delete_recipe(recipe_id):
     data = load_data()
     data['recipes'] = [r for r in data['recipes'] if r['id'] != recipe_id]
