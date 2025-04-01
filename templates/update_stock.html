@@ -7,10 +7,9 @@
 </div>
 <form method="POST">
   <div style="margin-bottom: 20px;">
-    <h3>Select Ingredients to Update</h3>
+    <h3>Update Ingredients</h3>
     <table>
       <tr>
-        <th>Select</th>
         <th>Ingredient</th>
         <th>Current Stock</th>
         <th>Change Amount</th>
@@ -19,9 +18,6 @@
       </tr>
       {% for ing in ingredients %}
       <tr>
-        <td>
-          <input type="checkbox" name="update" value="{{ ing.name }}">
-        </td>
         <td>{{ ing.name }}</td>
         <td>{{ ing.quantity }} {{ ing.unit }}</td>
         <td><input type="number" step="any" name="delta_{{ ing.name }}" placeholder="Enter amount"></td>
@@ -31,7 +27,6 @@
             <option value="Purchase">Purchase (Add)</option>
             <option value="Loss">Loss (Remove)</option>
             <option value="Spoiled">Spoiled (Remove)</option>
-            <option value="Used">Used in Production (Remove)</option>
             <option value="Donation">Donation (Remove)</option>
           </select>
         </td>

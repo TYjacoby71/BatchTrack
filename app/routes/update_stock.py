@@ -11,9 +11,8 @@ def update_stock():
     ingredients = data.get("ingredients", [])
 
     if request.method == "POST":
-        to_update = request.form.getlist("update")
-        
-        for name in to_update:
+        for ing in ingredients:
+            name = ing["name"]
             ing = next((i for i in ingredients if i["name"].lower() == name.lower()), None)
             if not ing:
                 continue
