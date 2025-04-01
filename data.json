@@ -500,6 +500,48 @@
             "unit": "shake",
             "reason": "Purchase",
             "timestamp": "2025-04-01T02:26:16.870475"
+        },
+        {
+            "name": "oil",
+            "change": 0.0,
+            "unit": "5",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715228"
+        },
+        {
+            "name": "eggs",
+            "change": 0.0,
+            "unit": "eggs",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715241"
+        },
+        {
+            "name": "pepper",
+            "change": 0.0,
+            "unit": "10",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715248"
+        },
+        {
+            "name": "milk",
+            "change": 0.0,
+            "unit": "gallon",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715256"
+        },
+        {
+            "name": "Tallow",
+            "change": 0.0,
+            "unit": "g",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715263"
+        },
+        {
+            "name": "salt",
+            "change": 0.0,
+            "unit": "shake",
+            "reason": "Purchase",
+            "timestamp": "2025-04-01T02:27:55.715273"
         }
     ]
 }
