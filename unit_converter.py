@@ -12,6 +12,7 @@ CONVERSIONS = {
         'pint': 473.176,
         'quart': 946.353,
         'gallon': 3785.41,
+        'gal': 3785.41,  # Adding common abbreviation
         'dash': 0.92,
         'drop': 0.05
     },
