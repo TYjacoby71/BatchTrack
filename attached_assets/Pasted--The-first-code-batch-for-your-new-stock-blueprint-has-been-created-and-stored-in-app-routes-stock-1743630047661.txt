@@ -1,0 +1,108 @@
+✅ The first code batch for your new /stock blueprint has been created and stored in app/routes/stock/routes.py.
+
+🔧 What's Included:
+Blueprint: stock_bp
+
+Route: /stock/check/<recipe_id>
+
+Uses check_stock_availability() and pulls directly from data.json
+
+Renders: stock_status.html for single-recipe check
+
+✅ Next Step
+Would you like me to now implement:
+
+/stock/check-bulk (bulk stock checker with result template)?
+
+Or begin setting up the supporting __init__.py, utils.py, or models.py?
+
+Let’s proceed step-by-step with your confirmation.
+
+
+
+
+
+
+You said:
+please dont do that in a document. Do it in the chat
+
+
+ChatGPT said:
+Got it — from now on, I’ll deliver the code directly in chat rather than inside a document.
+
+✅ First Batch Recap (already implemented):
+Route: /stock/check/<recipe_id>
+Purpose: Display stock check for a single recipe using stock_status.html
+
+▶️ Next: Bulk Stock Check
+Here’s the code for the bulk stock check route (GET + POST), which:
+
+Displays a form to select recipes and input batch counts
+
+Renders bulk_stock_results.html with calculated availability
+
+Uses check_stock_availability for unit-aware comparison
+
+✅ Bulk Stock Route: /stock/check-bulk
+python
+Copy
+Edit
+@stock_bp.route('/stock/check-bulk', methods=['GET', 'POST'])
+def check_stock_bulk():
+    data = load_data()
+    inventory = data.get("ingredients", [])
+    recipes = data.get("recipes", [])
+
+    if request.method == 'POST':
+        recipe_ids = request.form.getlist('recipe_id')
+        batch_counts = request.form.getlist('batch_count')
+        usage = {}
+
+        for r_id, count in zip(recipe_ids, batch_counts):
+            count = float(count or 0)
+            if count > 0:
+                recipe = next((r for r in recipes if r['id'] == int(r_id)), None)
+                if recipe:
+                    for item in recipe['ingredients']:
+                        base_qty = float(item['quantity'])
+                        total_qty = base_qty * count
+                        name = item['name']
+                        unit = item.get('unit', 'units')
+
+                        if name not in usage:
+                            usage[name] = {"qty": total_qty, "unit": unit}
+                        else:
+                            usage[name]['qty'] += total_qty
+
+        stock_report = []
+        for name, details in usage.items():
+            match = next((i for i in inventory if i["name"].lower() == name.lower()), None)
+            try:
+                if not match:
+                    raise ValueError("No stock")
+
+                check = check_stock_availability(
+                    needed_qty=details['qty'],
+                    needed_unit=details['unit'],
+                    stock_qty=match['quantity'],
+                    stock_unit=match['unit']
+                )
+
+                stock_report.append({
+                    "name": name,
+                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
+                    "available": f"{check['converted']} {check['unit']}",
+                    "status": check['status']
+                })
+
+            except Exception:
+                stock_report.append({
+                    "name": name,
+                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
+                    "available": f"0 {details['unit']}",
+                    "status": "LOW"
+                })
+
+        return render_template("bulk_stock_results.html", stock_report=stock_report)
+
+    return render_template("bulk_stock_check.html", recipes=recipes)
