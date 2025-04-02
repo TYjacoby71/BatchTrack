@@ -15,12 +15,16 @@ def view_batches():
     # Filters
     tag_filter = request.args.get("tag", "").lower()
     recipe_filter = request.args.get("recipe", "").lower()
+    product_filter = request.args.get("product", "").lower()
 
     if tag_filter:
         batches = [b for b in batches if any(tag_filter in t.lower() for t in b.get("tags", []))]
 
     if recipe_filter:
         batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
+
+    if product_filter:
+        batches = [b for b in batches if product_filter == b.get("recipe_name", "").lower()]
 
     # Sort newest first
     batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)

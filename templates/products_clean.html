@@ -22,7 +22,7 @@
         <td>{{ p.unit }}</td>
         <td>
           {% if p.batch_id %}
-            <a href="/batches/view/{{ p.batch_id }}">#{{ p.batch_id }}</a>
+            <a href="/batches?product={{ p.product|urlencode }}">#{{ p.batch_id }}</a>
           {% else %}
             -
           {% endif %}
