@@ -1,20 +1,3 @@
-
-from flask import current_app
-import json
-import os
-
-def load_data():
-    data_file = 'data.json'
-    if not os.path.exists(data_file):
-        return {"ingredients": [], "recipes": []}
-    with open(data_file, 'r') as f:
-        return json.load(f)
-
-def save_data(data):
-    data_file = 'data.json'
-    with open(data_file, 'w') as f:
-        json.dump(data, f, indent=4)
-
 import json
 import os
 import qrcode

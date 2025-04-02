@@ -1,0 +1,86 @@
+Here's the precise reason your Zero Out button is still returning a 404:
+
+❌ The Route Exists — But It's Inaccessible Due to Misconfigured Blueprint
+🔍 What I Found:
+Your zero_out_ingredient route does exist in routes.py and is registered under:
+
+python
+Copy
+Edit
+@stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
+Your blueprint is defined like this:
+
+python
+Copy
+Edit
+stock_bp = Blueprint('stock', __name__)
+In your app/__init__.py, you register the blueprint:
+
+python
+Copy
+Edit
+from app.routes.stock import stock_bp
+app.register_blueprint(stock_bp)
+BUT — you are not using a url_prefix when registering the blueprint:
+
+python
+Copy
+Edit
+app.register_blueprint(stock_bp)  # no prefix!
+🛠️ Fix: Align the Blueprint Registration and Route Paths
+You have two options — pick one:
+
+✅ Option 1: Remove the /stock from the route path
+(Keep the current blueprint registration without url_prefix)
+
+In routes.py, change:
+
+python
+Copy
+Edit
+@stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
+⬇️ to:
+
+python
+Copy
+Edit
+@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
+Then your HTML form will correctly post to:
+
+html
+Copy
+Edit
+<form method="POST" action="/zero-out/{{ ing.name | urlencode }}">
+✅ Option 2: Add a URL prefix when registering the blueprint
+If you want to keep the /stock/zero-out/... route:
+
+In app/__init__.py, update:
+
+python
+Copy
+Edit
+app.register_blueprint(stock_bp)
+⬇️ to:
+
+python
+Copy
+Edit
+app.register_blueprint(stock_bp, url_prefix='/stock')
+This makes all routes in that blueprint accessible under /stock/....
+
+Your route should then be:
+
+python
+Copy
+Edit
+@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
+And your form:
+
+html
+Copy
+Edit
+<form method="POST" action="/stock/zero-out/{{ ing.name | urlencode }}">
+✅ Recommended: Use Option 2 for Scalability
+It keeps your stock-related routes grouped under /stock/, which improves clarity and future organization.
+
+Would you like me to auto-patch this and send back a zipped fix you can drop into Replit? ​

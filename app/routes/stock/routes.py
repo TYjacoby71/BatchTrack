@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
 from app.routes.utils import load_data, save_data
 from app.unit_conversion import check_stock_availability, can_fulfill
@@ -87,7 +86,7 @@ def check_stock_bulk():
                     current['quantity'],
                     current['unit']
                 )
-                
+
                 stock_report.append({
                     "name": name,
                     "needed": f"{round(details['qty'], 2)} {details['unit']}",
@@ -121,20 +120,20 @@ def update_inventory():
             try:
                 if not delta_str:
                     continue
-                    
+
                 delta = float(delta_str)
                 ingredient = next((i for i in ingredients if i['name'] == name), None)
-                
+
                 if ingredient:
                     from app.unit_conversion import convert_unit
                     if unit != ingredient['unit']:
                         converted_delta = convert_unit(delta, unit, ingredient['unit'])
                         if converted_delta is not None:
                             delta = converted_delta
-                    
+
                     current_qty = float(ingredient.get('quantity', 0))
                     ingredient['quantity'] = round(current_qty + delta, 2)
-                    
+
                     data.setdefault("inventory_log", []).append({
                         "name": name,
                         "change": delta,
@@ -152,60 +151,8 @@ def update_inventory():
 
     with open('units.json') as f:
         units = json.load(f)
-        
+
     return render_template("update_stock.html", ingredients=ingredients, units=units)
-
-@stock_bp.route('/stock/ingredients/bulk-update', methods=['POST'])
-def bulk_update_ingredients():
-    data = load_data()
-    if 'delete' in request.form:
-        ingredients_to_delete = request.form.getlist('delete')
-        data['ingredients'] = [i for i in data['ingredients'] if i['name'] not in ingredients_to_delete]
-        save_data(data)
-    return redirect('/ingredients')
-
-@stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
-def zero_out_ingredient(ingredient_name):
-    print(f"Starting zero out for: {ingredient_name}")
-    data = load_data()
-    ingredients = data.get("ingredients", [])
-    ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
-    
-    if not ingredient:
-        print(f"Error: Ingredient {ingredient_name} not found")
-        flash(f"Error: Ingredient {ingredient_name} not found")
-        return redirect('/ingredients')
-        
-    try:
-        current_qty = float(ingredient.get('quantity', 0))
-        print(f"Current quantity for {ingredient_name}: {current_qty}")
-        
-        if current_qty > 0:
-            change_amount = -current_qty
-            ingredient['quantity'] = 0.0  # Store as float
-            
-            data.setdefault("inventory_log", []).append({
-                "name": ingredient_name,
-                "change": change_amount,
-                "unit": ingredient.get('unit', 'units'),
-                "reason": "Zero Out",
-                "timestamp": datetime.now().isoformat()
-            })
-            
-            print(f"Saving data with new quantity: {ingredient['quantity']}")
-            save_data(data)
-            print(f"Data saved successfully")
-            
-            flash(f"Successfully zeroed out {ingredient_name} (removed {abs(change_amount)} {ingredient.get('unit', 'units')})")
-        else:
-            print(f"{ingredient_name} already at zero")
-            flash(f"{ingredient_name} is already at zero")
-    except (ValueError, TypeError) as e:
-        print(f"Error processing quantity for {ingredient_name}: {str(e)}")
-        flash(f"Error: Invalid quantity value for {ingredient_name}")
-        return redirect('/ingredients')
-    
-    return redirect('/ingredients')
 
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
@@ -259,3 +206,21 @@ def adjust_inventory():
         return redirect("/ingredients")
 
     return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)
+
+@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
+def zero_out_ingredient(ingredient_name):
+    data = load_data()
+    ingredients = data.get('ingredients', [])
+    for ingredient in ingredients:
+        if ingredient['name'].lower() == ingredient_name.lower():
+            ingredient['quantity'] = 0
+            data.setdefault("inventory_log", []).append({
+                "name": ingredient_name,
+                "change": -ingredient.get('quantity',0),
+                "unit": ingredient['unit'],
+                "reason": "Zeroed Out",
+                "timestamp": datetime.now().isoformat()
+            })
+            break
+    save_data(data)
+    return jsonify({"message": "Ingredient zeroed out"})
