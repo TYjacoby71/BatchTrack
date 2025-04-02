@@ -1,10 +1,17 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <title>BatchTrack</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    :root {
+      --spacing-1: 4px;
+      --spacing-2: 8px;
+      --spacing-3: 12px;
+      --spacing-4: 16px;
+      --primary-color: #333;
+      --secondary-color: #555;
+    }
     body {
       font-family: sans-serif;
       margin: 0;
@@ -13,83 +20,94 @@
     }
 
     header {
-      background: #333;
+      background: var(--primary-color);
       color: white;
-      padding: 12px 20px;
+      padding: var(--spacing-3) var(--spacing-4);
     }
 
     nav {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: var(--spacing-2);
     }
 
     nav a {
       color: white;
       text-decoration: none;
-      font-weight: bold;
+      font-weight: 600;
+      padding: var(--spacing-2);
+      border-radius: var(--spacing-1);
+      transition: background 0.2s;
     }
 
-    nav a.active {
-      text-decoration: underline;
+    nav a:hover {
+      background: rgba(255,255,255,0.1);
     }
 
     main {
-      padding: 16px;
+      padding: var(--spacing-4);
       max-width: 1000px;
       margin: 0 auto;
       background: white;
       min-height: 90vh;
+      border-radius: var(--spacing-2);
+      margin-top: var(--spacing-4);
     }
 
     h1, h2, h3 {
-      color: #333;
+      color: var(--primary-color);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: var(--spacing-4);
+      border-radius: var(--spacing-2);
+      overflow: hidden;
     }
 
     th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+      border: 1px solid #e5e7eb;
+      padding: var(--spacing-2) var(--spacing-3);
       word-wrap: break-word;
     }
 
     th {
-      background: #eee;
+      background: #f3f4f6;
     }
 
     input, select, textarea {
-      padding: 6px;
-      margin: 4px 0;
+      padding: var(--spacing-2);
+      margin: var(--spacing-1) 0;
       width: 100%;
       box-sizing: border-box;
+      border: 1px solid #e5e7eb;
+      border-radius: var(--spacing-1);
     }
 
     form {
-      margin-bottom: 20px;
+      margin-bottom: var(--spacing-4);
     }
 
     button, input[type="submit"] {
-      background: #333;
+      background: var(--primary-color);
       color: white;
       border: none;
-      padding: 8px 12px;
+      padding: var(--spacing-2) var(--spacing-3);
       cursor: pointer;
+      border-radius: var(--spacing-1);
+      transition: background 0.2s;
     }
 
     button:hover, input[type="submit"]:hover {
-      background: #555;
+      background: var(--secondary-color);
     }
 
     .tag {
       background: #eee;
-      border-radius: 4px;
-      padding: 2px 6px;
-      margin: 2px 4px;
+      border-radius: var(--spacing-1);
+      padding: var(--spacing-1) var(--spacing-2);
+      margin: var(--spacing-1) var(--spacing-2);
       display: inline-block;
     }
 
@@ -103,7 +121,7 @@
       }
 
       main {
-        padding: 10px;
+        padding: var(--spacing-2);
         margin-bottom: 70px;
       }
 
@@ -116,10 +134,10 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: #333;
+        background: var(--primary-color);
         display: flex;
         justify-content: space-around;
-        padding: 12px 0;
+        padding: var(--spacing-3) 0;
         z-index: 999;
       }
 
@@ -143,9 +161,9 @@
       #floatBtn {
         display: block;
         position: fixed;
-        right: 16px;
+        right: var(--spacing-4);
         bottom: 70px;
-        background: #333;
+        background: var(--primary-color);
         color: white;
         font-size: 28px;
         border-radius: 50%;
