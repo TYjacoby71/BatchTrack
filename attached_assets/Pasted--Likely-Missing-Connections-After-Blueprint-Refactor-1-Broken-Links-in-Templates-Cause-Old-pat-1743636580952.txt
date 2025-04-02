@@ -1,0 +1,121 @@
+🚨 Likely Missing Connections After Blueprint Refactor
+✅ 1. Broken Links in Templates
+Cause:
+Old paths like /check-stock/... or /inventory/update still referenced in buttons, links, or form actions.
+
+🔍 Check for:
+href="/check-stock/{{ recipe.id }}"
+
+action="/inventory/update"
+
+href="/check-stock-bulk"
+
+JavaScript fetch or redirect paths
+
+✅ 2. Missing Blueprint Registration
+Cause:
+You moved the route to /routes/stock/routes.py but didn’t register the blueprint.
+
+🔍 Fix:
+In main.py or app.py, ensure:
+
+python
+Copy
+Edit
+from app.routes.stock import stock_bp
+app.register_blueprint(stock_bp)
+✅ 3. Form Actions Not Updated
+Cause:
+Forms in templates like update_stock.html or inventory_adjust.html still post to outdated URLs.
+
+🔍 Fix:
+Update:
+
+html
+Copy
+Edit
+<form action="/inventory/update" method="POST">
+To:
+
+html
+Copy
+Edit
+<form action="/stock/inventory/update" method="POST">
+✅ 4. Mismatched Route Naming
+Cause:
+The route exists (e.g., /stock/check-bulk) but a link uses /check-stock-bulk.
+
+🔍 Fix:
+Ensure every button or link that points to a stock-related function has a /stock/ prefix.
+
+✅ 5. Template Not Found
+Cause:
+If the new route points to render_template("stock_status.html"), but that template was renamed or removed.
+
+🔍 Fix:
+Ensure the template file:
+
+Exists under /templates/
+
+Is not misnamed (e.g., stock_status.html vs single_stock.html)
+
+Has proper {% extends "layout.html" %} and {% block content %} syntax
+
+✅ 6. Route Logic Exists but No HTML Trigger
+Cause:
+You added routes to the blueprint but didn’t update UI buttons to point to them.
+
+🔍 Example:
+Route /stock/inventory/adjust is live
+
+No button or nav item points to it
+
+🔧 Fix:
+Add links like:
+
+html
+Copy
+Edit
+<a href="/stock/inventory/adjust" class="button">Adjust Inventory</a>
+✅ 7. Unmatched url_for() Calls
+Cause:
+If using url_for("stock.check_stock_bulk") but the function isn’t named properly.
+
+🔍 Fix:
+Ensure function decorators match:
+
+python
+Copy
+Edit
+@stock_bp.route('/check-bulk')
+def check_stock_bulk():
+Then use:
+
+html
+Copy
+Edit
+<a href="{{ url_for('stock.check_stock_bulk') }}">Bulk Check</a>
+✅ Diagnostic Prompt to Give Assistant
+Here’s a Replit Assistant prompt to find all of this:
+
+Prompt to Replit Assistant:
+
+We recently migrated stock-related routes to a new blueprint: stock_bp.
+Please scan all templates and app files to find:
+
+Any links (href, action) pointing to old paths:
+
+/check-stock/...
+
+/inventory/update
+
+/inventory/adjust
+
+Any routes missing the /stock/ prefix after blueprint refactor
+
+Any templates referencing routes or functions that no longer exist
+
+Any blueprint routes that are not reachable from the UI
+
+List all mismatches and show recommended fixes.
+
