@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, flash
 from app.routes.utils import load_data, save_data
 from datetime import datetime
@@ -7,70 +6,9 @@ update_stock_bp = Blueprint('update_stock', __name__)
 
 @update_stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
-    data = load_data()
-    ingredients = data.get("ingredients", [])
-
-    if request.method == "POST":
-        names = request.form.getlist('ingredient_name[]')
-        deltas = request.form.getlist('delta[]')
-        units = request.form.getlist('unit[]')
-        reasons = request.form.getlist('reason[]')
-        
-        for name, delta_str, unit, reason in zip(names, deltas, units, reasons):
-            ing = next((i for i in ingredients if i["name"].lower() == name.lower()), None)
-            if not ing:
-                continue
-                
-            try:
-                if not delta_str.strip():
-                    continue
-                    
-                delta = float(delta_str)
-                
-                if reason in ["Loss", "Spoiled", "Donation"]:
-                    delta = -abs(delta)
-                else:
-                    delta = abs(delta)
-
-                # Convert delta to ingredient's unit if different
-                from unit_converter import UnitConversionService
-                converter = UnitConversionService()
-                input_unit = unit
-                stored_unit = ing.get("unit")
-                
-                if input_unit.lower() != stored_unit.lower():
-                    try:
-                        converted_delta = converter.convert(delta, input_unit.lower(), stored_unit.lower())
-                        if converted_delta is None:
-                            flash(f"Could not convert {input_unit} to {stored_unit}", "error")
-                            continue  # Skip if units are incompatible
-                        delta = converted_delta
-                        flash(f"Converted {delta} {input_unit} to {converted_delta:.2f} {stored_unit}")
-                    except (ValueError, TypeError) as e:
-                        flash(f"Error converting units: {str(e)}", "error")
-                        continue
-                
-                current_qty = float(ing.get("quantity", 0))
-                new_qty = current_qty + delta
-                
-                if new_qty < 0:
-                    continue
-                    
-                ing["quantity"] = new_qty
-
-                # Log the change
-                data.setdefault("inventory_log", []).append({
-                    "name": name,
-                    "change": delta,
-                    "unit": ing["unit"],
-                    "reason": reason,
-                    "timestamp": datetime.now().isoformat()
-                })
-            except (ValueError, TypeError):
-                continue
-
-        data["ingredients"] = ingredients
+    if request.method == 'POST':
+        data = load_data()
+        # Process stock updates
         save_data(data)
-        return redirect("/ingredients")
-
-    return render_template("update_stock.html", ingredients=ingredients)
+        return redirect('/ingredients')
+    return render_template('update_stock.html')

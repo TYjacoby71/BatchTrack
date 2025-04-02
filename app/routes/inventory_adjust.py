@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, render_template, redirect
 from app.routes.utils import load_data, save_data
 from datetime import datetime
@@ -22,7 +21,7 @@ def adjust_inventory():
                 try:
                     delta = float(qty_delta)
                     input_unit = request.form.get(f"unit_{name}", unit)
-                    
+
                     if input_unit != unit:
                         from unit_converter import UnitConversionService
                         converter = UnitConversionService()
@@ -31,7 +30,7 @@ def adjust_inventory():
                             delta = converted_delta
                         else:
                             continue
-                            
+
                     if "quantity" in i:
                         i["quantity"] = float(i["quantity"] or 0) + delta
                     else:
