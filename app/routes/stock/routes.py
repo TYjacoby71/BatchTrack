@@ -172,21 +172,21 @@ def zero_out_ingredient(ingredient_name):
     
     if ingredient:
         try:
-            old_qty = float(ingredient.get('quantity', 0))
-            ingredient['quantity'] = 0
-            
-            data.setdefault("inventory_log", []).append({
-                "name": ingredient_name,
-                "change": -old_qty,
-                "unit": ingredient['unit'],
-                "reason": "Zero Out",
-                "timestamp": datetime.now().isoformat()
-            })
-            
-            save_data(data)
-        except (ValueError, TypeError):
-            ingredient['quantity'] = 0
-            save_data(data)
+            current_qty = float(ingredient.get('quantity', 0))
+            if current_qty > 0:
+                ingredient['quantity'] = 0
+                data.setdefault("inventory_log", []).append({
+                    "name": ingredient_name,
+                    "change": -current_qty,
+                    "unit": ingredient['unit'],
+                    "reason": "Zero Out",
+                    "timestamp": datetime.now().isoformat()
+                })
+                save_data(data)
+            return redirect('/ingredients')
+        except (ValueError, TypeError) as e:
+            flash(f"Error: Could not process quantity for {ingredient_name}")
+            return redirect('/ingredients')
             
         return redirect('/ingredients')
     
