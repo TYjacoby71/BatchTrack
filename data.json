@@ -809,7 +809,17 @@
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T04:42:32.554202"
+            "timestamp": "2025-04-02T04:42:32.554202",
+            "quantity_available": 0.0,
+            "events": [
+                {
+                    "type": "sold",
+                    "qty": 1,
+                    "method": "",
+                    "note": "",
+                    "timestamp": "2025-04-02T06:30:42.213233"
+                }
+            ]
         },
         {
             "product": "Cup of Milk",
