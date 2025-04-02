@@ -44,7 +44,7 @@ def check_stock_for_recipe(recipe_id):
 
     return render_template("single_recipe_stock.html", recipe=recipe, stock_check=stock_check)
 
-@stock_bp.route('/stock/update', methods=['GET', 'POST'])
+@stock_bp.route('/update', methods=['GET', 'POST'])
 def update_inventory():
     data = load_data()
     ingredients = data.get("ingredients", [])
