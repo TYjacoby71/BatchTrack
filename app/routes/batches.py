@@ -24,7 +24,10 @@ def view_batches():
         batches = [b for b in batches if recipe_filter in b.get("recipe_name", "").lower()]
 
     if product_filter:
+        # Get all batches for this product
         batches = [b for b in batches if product_filter == b.get("recipe_name", "").lower()]
+        # Sort by timestamp descending (newest first)
+        batches = sorted(batches, key=lambda x: x.get("timestamp", ""), reverse=True)
 
     # Sort newest first
     batches = sorted(batches, key=lambda b: b["timestamp"], reverse=True)
