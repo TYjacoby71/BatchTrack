@@ -33,7 +33,7 @@
     {% for batch in batches %}
       <tr>
         <td>
-          {{ batch.recipe_name }}
+          <a href="/recipes/{{ batch.recipe_id }}">{{ batch.recipe_name }}</a>
           {% if 'repeat' in batch.tags %}
             <span title="Popular batch">⭐</span>
           {% endif %}
