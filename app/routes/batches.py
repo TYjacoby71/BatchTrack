@@ -258,7 +258,9 @@ def start_batch(recipe_id):
             except:
                 return 0.0
 
-        from unit_converter import check_stock_availability, convert_units
+        from unit_converter import check_stock_availability
+        from unit_converter import UnitConversionService
+        service = UnitConversionService()
 
         insufficient = []
         for item in recipe['ingredients']:
@@ -272,7 +274,7 @@ def start_batch(recipe_id):
 
             # Convert recipe quantity to stock unit for comparison
             if item.get('unit') != inv_item.get('unit'):
-                converted_qty = convert_units(recipe_qty, item.get('unit'), inv_item.get('unit'))
+                converted_qty = service.convert(recipe_qty, item.get('unit'), inv_item.get('unit'), item['name'])
                 if converted_qty is not None:
                     recipe_qty = converted_qty
 
@@ -283,7 +285,8 @@ def start_batch(recipe_id):
             return f"Insufficient stock for: {', '.join(insufficient)}", 400
 
         # Deduct ingredients
-        from unit_converter import convert_units
+        from unit_converter import UnitConversionService
+        service = UnitConversionService()
         inventory = data.get("ingredients", [])
         for item in recipe['ingredients']:
             ing_name = item["name"]
@@ -296,7 +299,7 @@ def start_batch(recipe_id):
                 inv_qty = float(match["quantity"])
 
                 if inv_unit != req_unit:
-                    converted = convert_units(req_qty, req_unit, inv_unit)
+                    converted = service.convert(req_qty, req_unit, inv_unit, ing_name)
                     if converted is not None:
                         req_qty = converted
                     else:
@@ -468,7 +471,8 @@ def invalidate_batch(batch_id):
 
 @batches_bp.route('/batches/finish/<batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):
-    from unit_converter import convert_units
+    from unit_converter import UnitConversionService
+    service = UnitConversionService()
     from datetime import datetime
 
     data = load_data()
@@ -511,7 +515,7 @@ def finish_batch(batch_id):
                     inv_unit = match.get("unit", "").lower().strip()
                     inv_qty = float(match["quantity"])
                     if inv_unit != req_unit:
-                        converted = convert_units(req_qty, req_unit, inv_unit)
+                        converted = service.convert(req_qty, req_unit, inv_unit, ing_name)
                         if converted is not None:
                             req_qty = converted
                         else:
