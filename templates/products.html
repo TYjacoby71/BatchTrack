@@ -45,6 +45,9 @@
           <input type="text" name="note" placeholder="optional note" style="width: 200px;">
           <button type="submit">Submit</button>
         </form>
+        <form method="POST" action="/products/delete/{{ loop.index0 }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+          <button type="submit" style="background-color: #ff4444;">Delete Product</button>
+        </form>
       </td>
     </tr>
     {% endfor %}

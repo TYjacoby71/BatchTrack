@@ -528,7 +528,10 @@ def finish_batch(batch_id):
                 )
                 
                 if existing_product:
-                    existing_product["quantity_available"] = float(existing_product["quantity_available"]) + float(yield_qty)
+                    new_qty = float(existing_product["quantity_available"]) + float(yield_qty)
+                    if new_qty < 0:
+                        return "Cannot set product quantity below 0", 400
+                    existing_product["quantity_available"] = new_qty
                     existing_product["timestamp"] = datetime.now().isoformat()
                 else:
                     new_product = {
