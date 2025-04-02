@@ -1,150 +1,151 @@
-from flask import Blueprint, render_template, Response, request, redirect
-import csv
+
+from flask import Blueprint, render_template, request, redirect
 from datetime import datetime
-from collections import defaultdict
 from app.routes.utils import load_data, save_data
 
 products_bp = Blueprint("products", __name__)
 
 @products_bp.route('/products')
-def view_products():
+def products():
     data = load_data()
-    products = data.get("products", [])
-    batches = data.get('batches', [])
-
-    # Add batch IDs to products
-    for product in products:
-        if "batch_id" not in product: #Check for existence to avoid overwriting
-            # Find matching batch
-            batch = next((b for b in batches if b['recipe_name'] == product['product']), None)
-            if batch:
-                product['batch_id'] = batch['id']
-
-    # Aggregate products by name with unit conversion
-    from unit_converter import UnitConversionService
-    service = UnitConversionService()
-    aggregated = defaultdict(lambda: {"quantity": 0, "unit": None, "timestamps": []})
-
-    for p in products:
-        name = p["product"]
-        try:
-            # Get the base quantity from quantity_available
-            base_qty = float(p.get("quantity_available", 0))
-
-            # Process any recorded events
-            for event in p.get("events", []):
-                if event["type"] in ["sold", "spoiled", "sampled"]:
-                    base_qty -= float(event["qty"])
-
-            if not aggregated[name]["unit"]:
-                # First entry sets the unit
-                aggregated[name]["unit"] = p["unit"]
-                aggregated[name]["quantity"] = base_qty
+    
+    # Get all products from batches
+    products_dict = {}
+    
+    for batch in data.get("batches", []):
+        if "yield_qty" in batch and batch.get("finished", False):
+            product_name = batch["recipe_name"]
+            
+            if product_name not in products_dict:
+                products_dict[product_name] = {
+                    "product": product_name,
+                    "quantity_available": float(batch["yield_qty"]),
+                    "unit": batch.get("yield_unit", ""),
+                    "label_info": batch.get("label_info", ""),
+                    "batch_id": batch["id"],
+                    "timestamp": batch["timestamp"]
+                }
             else:
-                if p["unit"] == aggregated[name]["unit"]:
-                    # Same units, direct addition
-                    aggregated[name]["quantity"] += base_qty
-                else:
-                    # Try conversion only for same type of measurements
-                    converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"], material=name.lower())
-                    if converted_qty is not None:
-                        aggregated[name]["quantity"] += converted_qty
-                    else:
-                        # If units are incompatible, create separate entry
-                        unique_name = f"{name} ({p['unit']})"
-                        if not aggregated[unique_name]["unit"]:
-                            aggregated[unique_name]["unit"] = p["unit"]
-                            aggregated[unique_name]["quantity"] = base_qty
-                        else:
-                            aggregated[unique_name]["quantity"] += base_qty
+                products_dict[product_name]["quantity_available"] += float(batch["yield_qty"])
+                # Update batch ID and timestamp if this batch is more recent
+                if batch["timestamp"] > products_dict[product_name]["timestamp"]:
+                    products_dict[product_name]["batch_id"] = batch["id"]
+                    products_dict[product_name]["timestamp"] = batch["timestamp"]
 
-            aggregated[name]["timestamps"].append(p["timestamp"])
-        except (ValueError, TypeError) as e:
-            print(f"Error processing product {name}: {e}")
-            continue
-
-    # Convert to list format
-    products_display = [
-        {
-            "product": name,
-            "yield": str(details["quantity"]),  # Use quantity for display
-            "unit": details["unit"],
-            "timestamps": sorted([(ts, next((b["id"] for b in data["batches"] 
-                                           if b["timestamp"] == ts), None)) 
-                                for ts in details["timestamps"]], reverse=True)
-        }
-        for name, details in aggregated.items()
-    ]
-
-    return render_template("products.html", products=products_display)
+    products_list = list(products_dict.values())
+    return render_template("products.html", products=products_list)
 
 @products_bp.route('/products/event/<int:product_index>', methods=["POST"])
-def product_event(product_index):
+def log_product_event(product_index):
     data = load_data()
-    products = data.get("products", [])
+    products = []
+    
+    # Rebuild products list to match index
+    products_dict = {}
+    for batch in data.get("batches", []):
+        if "yield_qty" in batch and batch.get("finished", False):
+            product_name = batch["recipe_name"]
+            if product_name not in products_dict:
+                products_dict[product_name] = {
+                    "product": product_name,
+                    "quantity_available": float(batch["yield_qty"]),
+                    "unit": batch.get("yield_unit", ""),
+                    "batch_id": batch["id"]
+                }
+            else:
+                products_dict[product_name]["quantity_available"] += float(batch["yield_qty"])
+    
+    products = list(products_dict.values())
+    
     if product_index >= len(products):
-        return "Product not found", 404
-
+        return "Invalid product index", 400
+        
+    product = products[product_index]
     event_type = request.form.get("event_type")
-    quantity = request.form.get("quantity", type=int)
+    quantity = float(request.form.get("quantity", 0))
     method = request.form.get("method", "")
     note = request.form.get("note", "")
-
-    if quantity <= 0:
-        return "Invalid quantity", 400
-
-    product = products[product_index]
-    available = float(product.get("yield", 0))  # Use yield as initial quantity
-    if "quantity_available" not in product:
-        product["quantity_available"] = available
-
-    available = float(product["quantity_available"])
-    if event_type in ("sold", "spoiled", "sampled"):
-        if available < quantity:
-            return f"Not enough inventory to {event_type} {quantity} units. Only {available} available.", 400
-        new_quantity = available - quantity
-        if new_quantity < 0:
-            return "Cannot reduce quantity below 0", 400
-        product["quantity_available"] = new_quantity
-
-    product.setdefault("events", []).append({
+    
+    # Find all batches with this product and update quantities
+    for batch in data["batches"]:
+        if batch["recipe_name"] == product["product"] and batch.get("finished", False):
+            if float(batch.get("yield_qty", 0)) > 0:
+                batch["yield_qty"] = str(float(batch["yield_qty"]) - quantity)
+                break
+    
+    # Log the event
+    if "product_events" not in data:
+        data["product_events"] = []
+        
+    data["product_events"].append({
+        "product": product["product"],
         "type": event_type,
-        "qty": quantity,
+        "quantity": quantity,
         "method": method,
         "note": note,
         "timestamp": datetime.now().isoformat()
     })
-
+    
     save_data(data)
     return redirect("/products")
 
-
-@products_bp.route('/products/delete/<int:product_index>', methods=['POST'])
+@products_bp.route('/products/delete/<int:product_index>', methods=["POST"])
 def delete_product(product_index):
     data = load_data()
-    products = data.get("products", [])
-    if product_index < len(products):
-        del products[product_index]
-        data["products"] = products
-        save_data(data)
-    return redirect('/products')
+    products = []
+    
+    # Rebuild products list to match index
+    products_dict = {}
+    for batch in data.get("batches", []):
+        if "yield_qty" in batch and batch.get("finished", False):
+            product_name = batch["recipe_name"]
+            if product_name not in products_dict:
+                products_dict[product_name] = batch["recipe_name"]
+    
+    products = list(products_dict.values())
+    
+    if product_index >= len(products):
+        return "Invalid product index", 400
+        
+    product_name = products[product_index]
+    
+    # Set yield_qty to 0 for all batches of this product
+    for batch in data["batches"]:
+        if batch["recipe_name"] == product_name and batch.get("finished", False):
+            batch["yield_qty"] = "0"
+    
+    save_data(data)
+    return redirect("/products")
 
 @products_bp.route('/products/export')
 def export_products():
     data = load_data()
-    products = data.get("products", [])
-    fieldnames = ["product", "yield", "unit", "notes", "label_info", "timestamp"]
-    output = Response()
-    output.headers["Content-Disposition"] = "attachment; filename=products.csv"
-    output.headers["Content-type"] = "text/csv"
-    writer = csv.DictWriter(output.stream, fieldnames=fieldnames)
-    writer.writeheader()
-    for item in products:
-        writer.writerow({field: item.get(field, "") for field in fieldnames})
-    return output
+    products_dict = {}
+    
+    for batch in data.get("batches", []):
+        if "yield_qty" in batch and batch.get("finished", False):
+            product_name = batch["recipe_name"]
+            if product_name not in products_dict:
+                products_dict[product_name] = {
+                    "product": product_name,
+                    "quantity": float(batch["yield_qty"]),
+                    "unit": batch.get("yield_unit", "")
+                }
+            else:
+                products_dict[product_name]["quantity"] += float(batch["yield_qty"])
 
-@products_bp.route("/products/clean")
-def view_products_clean():
-    data = load_data()
-    products = data.get("products", [])
-    return render_template("products_clean.html", products=products)
+    csv_data = [["Product", "Quantity", "Unit"]]
+    for product in products_dict.values():
+        csv_data.append([
+            product["product"],
+            str(product["quantity"]),
+            product["unit"]
+        ])
+    
+    output = "\n".join([",".join(row) for row in csv_data])
+    
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=products.csv"}
+    )
