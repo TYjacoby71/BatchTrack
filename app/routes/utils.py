@@ -43,6 +43,13 @@ def load_data():
                 return default_data
                 
             data = json.loads(content)
+            # Clean up any empty quantities
+            if 'ingredients' in data:
+                for ing in data['ingredients']:
+                    if ing.get('quantity') == '':
+                        ing['quantity'] = 0
+                
+            data = json.loads(content)
             # Ensure all required keys exist
             for key in default_data:
                 data.setdefault(key, default_data[key])
