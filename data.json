@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 6.010567415418678,
+            "quantity": 5.885567481461723,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -174,9 +174,57 @@
             "success": "yes",
             "yield_qty": 7.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_62",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T18:20:12.585909",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_62.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 10.0,
+            "yield_unit": "mL"
+        },
+        {
+            "id": "batch_63",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T18:21:32.377222",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_63.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 5.0,
+            "yield_unit": "mL"
         }
     ],
-    "batch_counter": 61,
+    "batch_counter": 63,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -549,14 +597,14 @@
     "products": [
         {
             "product": "Cup of Milk",
-            "yield": 22.0,
+            "yield": 5.0,
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T18:18:34.184739",
-            "quantity_available": 109.0,
+            "timestamp": "2025-04-02T18:21:40.883924",
+            "quantity_available": 124.0,
             "events": [],
-            "batch_id": "batch_61"
+            "batch_id": "batch_63"
         }
     ],
     "product_events": [
