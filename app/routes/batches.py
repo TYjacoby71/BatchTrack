@@ -252,61 +252,38 @@ def start_batch(recipe_id):
         return "Recipe not found", 404
 
     if request.method == 'POST':
-        def to_float(val):
-            try:
-                return float(val.strip())
-            except:
-                return 0.0
-
-        from unit_converter import check_stock_availability
-        from unit_converter import UnitConversionService
-        service = UnitConversionService()
-
-        insufficient = []
-        for item in recipe['ingredients']:
-            inv_item = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
-            if not inv_item:
-                insufficient.append(item['name'])
-                continue
-
-            recipe_qty = to_float(item.get('quantity'))
-            stock_qty = to_float(inv_item.get('quantity'))
-
-            # Convert recipe quantity to stock unit for comparison
-            if item.get('unit') != inv_item.get('unit'):
-                converted_qty = service.convert(recipe_qty, item.get('unit'), inv_item.get('unit'), item['name'])
-                if converted_qty is not None:
-                    recipe_qty = converted_qty
-
-            if stock_qty < recipe_qty:
-                insufficient.append(f"{item['name']} ({item.get('quantity', 0)} {item.get('unit', 'units')})")
-
-        if insufficient:
-            return f"Insufficient stock for: {', '.join(insufficient)}", 400
-
-        # Deduct ingredients
+        # Check if we have sufficient stock
         from unit_converter import UnitConversionService
         service = UnitConversionService()
         inventory = data.get("ingredients", [])
+        insufficient = []
+
         for item in recipe['ingredients']:
             ing_name = item["name"]
             req_qty = float(item["quantity"])
             req_unit = item.get("unit", "").lower().strip()
 
             match = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
-            if match:
-                inv_unit = match.get("unit", "").lower().strip()
-                inv_qty = float(match["quantity"])
+            if not match:
+                insufficient.append(f"{ing_name} (not in stock)")
+                continue
 
-                if inv_unit != req_unit:
-                    converted = service.convert(req_qty, req_unit, inv_unit, material=ing_name.lower())
-                    if converted is not None:
-                        req_qty = converted
-                    else:
-                        continue  # Skip if units can't be converted  # Skip if units can't convert
+            inv_unit = match.get("unit", "").lower().strip()
+            inv_qty = float(match.get("quantity", 0))
 
-                match["quantity"] = max(inv_qty - req_qty, 0)
+            if inv_unit != req_unit:
+                converted = service.convert(req_qty, req_unit, inv_unit, material=ing_name.lower())
+                if converted is not None:
+                    req_qty = converted
+                else:
+                    insufficient.append(f"{ing_name} (unit conversion error)")
+                    continue
 
+            if inv_qty < req_qty:
+                insufficient.append(f"{ing_name} (need {req_qty} {req_unit}, have {inv_qty} {inv_unit})")
+
+        if insufficient:
+            return f"Cannot start batch. Insufficient ingredients: {', '.join(insufficient)}", 400
 
         notes = request.form.get('notes', '').strip()
         tags = request.form.get('tags', '').strip().split(',')
@@ -443,7 +420,7 @@ def bulk_delete_batches():
     batch_ids = request.form.getlist('batch_ids')
     if not batch_ids:
         return redirect('/batches')
-        
+
     data = load_data()
     data['batches'] = [b for b in data['batches'] if str(b['id']) not in batch_ids]
     save_data(data)
@@ -554,7 +531,7 @@ def finish_batch(batch_id):
                     (p for p in products if p["product"] == batch["recipe_name"] and p["unit"] == yield_unit),
                     None
                 )
-                
+
                 if existing_product:
                     new_qty = float(existing_product["quantity_available"]) + float(yield_qty)
                     if new_qty < 0:

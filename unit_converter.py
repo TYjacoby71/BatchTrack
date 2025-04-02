@@ -62,15 +62,16 @@ class UnitConversionService:
             return self.convert_weight(amount, from_unit, to_unit)
         return self.convert_between_types(amount, from_unit, to_unit, material)
 
-    def convert_units(value, from_unit, to_unit):
+    def convert_units(self, value, from_unit, to_unit):
         """Convert value between units"""
-        # For now just return the same value
-        # TODO: Implement actual unit conversion logic
-        return float(value)
+        try:
+            return self.convert(float(value), from_unit, to_unit)
+        except (ValueError, TypeError):
+            return None
 
-    def parse_unit(unit_str):
+    def parse_unit(self, unit_str):
         """Parse a unit string into a standardized format"""
-        return unit_str.lower().strip()
+        return unit_str.lower().strip() if unit_str else ""
 
 
 converter = UnitConversionService()
