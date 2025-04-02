@@ -239,9 +239,28 @@
             ],
             "total_cost": 3.49,
             "qr_code": "static/qr/batch_43.png"
+        },
+        {
+            "id": "batch_44",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T07:20:03.431629",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_44.png"
         }
     ],
-    "batch_counter": 43,
+    "batch_counter": 44,
     "recipe_only_ingredients": [
         {
             "name": "orange",
