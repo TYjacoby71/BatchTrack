@@ -22,13 +22,11 @@
       <td>{{ p.label_info or '' }}</td>
       <td>{{ p.notes }}</td>
       <td>
-        {% for ts, batch_id in p.timestamps %}
-          {% if batch_id %}
-            <a href="/batches/finish/{{ batch_id }}">{{ ts }}</a><br>
-          {% else %}
-            {{ ts }}<br>
-          {% endif %}
-        {% endfor %}
+        {% if p.batch_id %}
+          <a href="/batches/view/{{ p.batch_id }}">{{ p.timestamp }}</a>
+        {% else %}
+          {{ p.timestamp }}
+        {% endif %}
       </td>
     </tr>
     <tr>

@@ -10,23 +10,32 @@ products_bp = Blueprint("products", __name__)
 def view_products():
     data = load_data()
     products = data.get("products", [])
+    batches = data.get('batches', [])
+
+    # Add batch IDs to products
+    for product in products:
+        if "batch_id" not in product: #Check for existence to avoid overwriting
+            # Find matching batch
+            batch = next((b for b in batches if b['recipe_name'] == product['product']), None)
+            if batch:
+                product['batch_id'] = batch['id']
 
     # Aggregate products by name with unit conversion
     from unit_converter import UnitConversionService
     service = UnitConversionService()
     aggregated = defaultdict(lambda: {"quantity": 0, "unit": None, "timestamps": []})
-    
+
     for p in products:
         name = p["product"]
         try:
             # Get the base quantity from quantity_available
             base_qty = float(p.get("quantity_available", 0))
-            
+
             # Process any recorded events
             for event in p.get("events", []):
                 if event["type"] in ["sold", "spoiled", "sampled"]:
                     base_qty -= float(event["qty"])
-            
+
             if not aggregated[name]["unit"]:
                 # First entry sets the unit
                 aggregated[name]["unit"] = p["unit"]
@@ -36,7 +45,7 @@ def view_products():
                 converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
                     aggregated[name]["quantity"] += converted_qty
-            
+
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError) as e:
             print(f"Error processing product {name}: {e}")
@@ -76,7 +85,7 @@ def product_event(product_index):
     available = float(product.get("yield", 0))  # Use yield as initial quantity
     if "quantity_available" not in product:
         product["quantity_available"] = available
-    
+
     available = float(product["quantity_available"])
     if event_type in ("sold", "spoiled", "sampled"):
         if available < quantity:
