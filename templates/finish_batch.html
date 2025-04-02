@@ -35,4 +35,8 @@
 
   <button type="submit">Complete Batch</button>
 </form>
+
+<form method="POST" action="/batches/invalidate/{{ batch.id }}" style="margin-top: 2em;">
+  <button type="submit" style="color: red;">Mark Batch as Invalid (restores ingredients)</button>
+</form>
 {% endblock %}

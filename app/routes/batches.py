@@ -397,11 +397,11 @@ def repeat_batch(batch_id):
     batch = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
     if not batch:
         return "Batch not found", 404
-    
+
     recipe = next((r for r in data['recipes'] if r['id'] == batch['recipe_id']), None)
     if not recipe:
         return "Recipe not found", 404
-        
+
     return redirect(f"/start-batch/{recipe['id']}")
 
 @batches_bp.route('/batches/delete/<batch_id>')
@@ -411,6 +411,45 @@ def delete_batch(batch_id):
     data['batches'] = [b for b in data['batches'] if str(b['id']) != str(batch_id)]
     save_data(data)
     return redirect('/batches')
+
+@batches_bp.route('/batches/invalidate/<batch_id>', methods=["POST"])
+def invalidate_batch(batch_id):
+    data = load_data()
+    batches = data.get("batches", [])
+    recipes = data.get("recipes", [])
+    inventory = data.get("ingredients", [])
+
+    batch = next((b for b in batches if str(b['id']) == str(batch_id)), None)
+    if not batch:
+        return "Batch not found", 404
+
+    recipe_name = batch.get("recipe_name")
+    matched_recipe = next((r for r in recipes if r["name"] == recipe_name), None)
+
+    if not matched_recipe:
+        return "Recipe not found", 404
+
+    for item in matched_recipe["ingredients"]:
+        found = next((inv for inv in inventory if inv["name"] == item["name"]), None)
+        if found:
+            try:
+                found["quantity"] = float(found.get("quantity", 0)) + float(item["quantity"])
+            except ValueError:
+                continue
+        else:
+            inventory.append({
+                "name": item["name"],
+                "quantity": float(item["quantity"]),
+                "unit": item.get("unit", ""),
+                "cost_per_unit": 0,
+            })
+
+    batches.remove(batch)
+    data["ingredients"] = inventory
+    data["batches"] = batches
+    save_data(data)
+
+    return redirect("/batches")
 
 @batches_bp.route('/batches/finish/<batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):
@@ -441,7 +480,7 @@ def finish_batch(batch_id):
             if batch_type == "inventory":
                 # Check if item already exists in inventory
                 existing_item = next((i for i in inventory if i["name"].lower() == batch["recipe_name"].lower()), None)
-                
+
                 if existing_item:
                     # Convert new yield to existing unit if needed
                     from unit_converter import convert_units
@@ -461,7 +500,7 @@ def finish_batch(batch_id):
                             data["ingredients"] = inventory
                             save_data(data)
                             return redirect("/batches")
-                    
+
                     # Add to existing quantity
                     existing_item["quantity"] = float(existing_item.get("quantity", 0)) + new_qty
                 else:

@@ -1,0 +1,122 @@
+Absolutely — here's the full code batch for Replit to enable product event functions and batch invalidation with ingredient restoration.
+
+This covers:
+
+✅ Mark batch as invalid (with ingredient reversal)
+
+✅ Product event logging: sold, spoiled, sampled
+
+✅ UI buttons for product actions
+
+✅ Basic internal event log structure
+
+🔁 1. Edit: routes/batches.py
+Add this route at the bottom of the file:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches/invalidate/<int:batch_id>', methods=["POST"])
+def invalidate_batch(batch_id):
+    data = load_data()
+    batches = data.get("batches", [])
+    recipes = data.get("recipes", [])
+    inventory = data.get("ingredients", [])
+
+    if batch_id >= len(batches):
+        return "Batch not found", 404
+
+    batch = batches[batch_id]
+    recipe_name = batch.get("recipe_name")
+    matched_recipe = next((r for r in recipes if r["name"] == recipe_name), None)
+
+    if not matched_recipe:
+        return "Recipe not found", 404
+
+    for item in matched_recipe["ingredients"]:
+        found = next((inv for inv in inventory if inv["name"] == item["name"]), None)
+        if found:
+            try:
+                found["quantity"] += float(item["quantity"])
+            except ValueError:
+                continue
+        else:
+            inventory.append({
+                "name": item["name"],
+                "quantity": float(item["quantity"]),
+                "unit": item.get("unit", ""),
+                "cost_per_unit": 0,
+            })
+
+    batches.pop(batch_id)
+    data["ingredients"] = inventory
+    data["batches"] = batches
+    save_data(data)
+
+    return redirect("/batches")
+🔁 2. Edit: templates/finish_batch.html
+Add this after the main <form>:
+
+html
+Copy
+Edit
+<form method="POST" action="/batches/invalidate/{{ batch_id }}" style="margin-top: 2em;">
+  <button type="submit" style="color: red;">Mark Batch as Invalid (restores ingredients)</button>
+</form>
+🔁 3. Edit: routes/products.py
+Add this to the bottom of the file:
+
+python
+Copy
+Edit
+from flask import request
+from datetime import datetime
+
+@products_bp.route('/products/event/<int:product_index>', methods=["POST"])
+def product_event(product_index):
+    data = load_data()
+    products = data.get("products", [])
+    if product_index >= len(products):
+        return "Product not found", 404
+
+    event_type = request.form.get("event_type")
+    quantity = request.form.get("quantity", type=int)
+    method = request.form.get("method", "")
+    note = request.form.get("note", "")
+
+    event = {
+        "type": event_type,
+        "qty": quantity,
+        "method": method,
+        "note": note,
+        "timestamp": datetime.now().isoformat()
+    }
+
+    if "events" not in products[product_index]:
+        products[product_index]["events"] = []
+
+    products[product_index]["events"].append(event)
+    save_data(data)
+    return redirect("/products")
+🔁 4. Edit: templates/products.html
+Inside your {% for p in products %} loop row, add this below each row:
+
+html
+Copy
+Edit
+<tr>
+  <td colspan="5">
+    <form method="POST" action="/products/event/{{ loop.index0 }}">
+      <label>Log Event: </label>
+      <select name="event_type">
+        <option value="sold">Sold</option>
+        <option value="spoiled">Spoiled</option>
+        <option value="sampled">Sampled</option>
+      </select>
+      Qty: <input type="number" name="quantity" required style="width: 60px;">
+      <input type="text" name="method" placeholder="POS / Shopify / Farmer's Market" style="width: 160px;">
+      <input type="text" name="note" placeholder="optional note" style="width: 200px;">
+      <button type="submit">Submit</button>
+    </form>
+  </td>
+</tr>
