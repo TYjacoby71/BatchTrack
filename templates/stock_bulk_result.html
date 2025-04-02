@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-<h2>📋 Stock Check for {{ recipe.name }}</h2>
+<h2>📋 Bulk Stock Check Results</h2>
 
 {% if stock_check %}
 <table border="1">
@@ -28,10 +28,9 @@
     {% endfor %}
 </table>
 {% else %}
-<p>No stock data available for this recipe.</p>
+<p>No stock data available.</p>
 {% endif %}
 
 <br>
-<a href="/recipes">← Back to Recipes</a> |
-<a href="/start-batch/{{ recipe.id }}" class="button">Start Batch</a>
+<a href="/recipes">← Back to Recipes</a>
 {% endblock %}
