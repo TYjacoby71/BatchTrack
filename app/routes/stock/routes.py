@@ -155,65 +155,6 @@ def update_inventory():
         
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
-@stock_bp.route('/stock/ingredients/bulk-update', methods=['POST'])
-def bulk_update_ingredients():
-    data = load_data()
-    if 'delete' in request.form:
-        ingredients_to_delete = request.form.getlist('delete')
-        data['ingredients'] = [i for i in data['ingredients'] if i['name'] not in ingredients_to_delete]
-        save_data(data)
-    return redirect('/ingredients')
-
-@stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
-def zero_out_ingredient(ingredient_name):
-    try:
-        data = load_data()
-        ingredients = data.get("ingredients", [])
-        
-        # Find the ingredient
-        ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
-        if not ingredient:
-            flash(f"Error: Ingredient {ingredient_name} not found")
-            return redirect('/ingredients')
-
-        # Get current quantity and validate
-        try:
-            current_qty = float(ingredient.get('quantity', 0))
-        except (ValueError, TypeError):
-            current_qty = 0.0
-
-        if current_qty > 0:
-            # Record the change
-            change_amount = -current_qty
-            # Update quantity
-            ingredient['quantity'] = 0.0
-            
-            # Log the change
-            if "inventory_log" not in data:
-                data["inventory_log"] = []
-            
-            data["inventory_log"].append({
-                "name": ingredient_name,
-                "change": change_amount,
-                "unit": ingredient.get('unit', 'units'),
-                "reason": "Zero Out",
-                "timestamp": datetime.now().isoformat()
-            })
-            
-            # Save changes
-            save_data(data)
-            flash(f"Successfully zeroed out {ingredient_name} (removed {abs(change_amount)} {ingredient.get('unit', 'units')})")
-        else:
-            flash(f"{ingredient_name} is already at zero")
-            
-        return redirect('/ingredients')
-        
-    except Exception as e:
-        flash(f"Error occurred while zeroing out {ingredient_name}: {str(e)}")
-        return redirect('/ingredients')
-    
-    return redirect('/ingredients')
-
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
     data = load_data()
