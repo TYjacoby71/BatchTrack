@@ -626,8 +626,16 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-02T18:25:52.925432",
-            "quantity_available": 129.0,
-            "events": [],
+            "quantity_available": 29.0,
+            "events": [
+                {
+                    "type": "sold",
+                    "qty": 100,
+                    "method": "",
+                    "note": "",
+                    "timestamp": "2025-04-02T18:29:18.869929"
+                }
+            ],
             "batch_id": "batch_64"
         }
     ],
