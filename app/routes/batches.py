@@ -523,12 +523,12 @@ def finish_batch(batch_id):
             if batch_type == "product":
                 new_product = {
                     "product": batch["recipe_name"],
-                    "yield": yield_qty,
+                    "yield": float(yield_qty),
                     "unit": yield_unit,
                     "notes": notes,
                     "label_info": request.form.get("label_info", ""),
                     "timestamp": datetime.now().isoformat(),
-                    "quantity_available": int(yield_qty),
+                    "quantity_available": float(yield_qty),
                     "events": []
                 }
                 products.append(new_product)
