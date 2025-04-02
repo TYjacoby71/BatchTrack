@@ -10,73 +10,7 @@ products_bp = Blueprint("products", __name__)
 def view_products():
     data = load_data()
     products = data.get("products", [])
-    batches = data.get('batches', [])
-
-    # Add batch IDs to products
-    for product in products:
-        if "batch_id" not in product: #Check for existence to avoid overwriting
-            # Find matching batch
-            batch = next((b for b in batches if b['recipe_name'] == product['product']), None)
-            if batch:
-                product['batch_id'] = batch['id']
-
-    # Aggregate products by name with unit conversion
-    from unit_converter import UnitConversionService
-    service = UnitConversionService()
-    aggregated = defaultdict(lambda: {"quantity": 0, "unit": None, "timestamps": []})
-
-    for p in products:
-        name = p["product"]
-        try:
-            # Get the base quantity from quantity_available
-            base_qty = float(p.get("quantity_available", 0))
-
-            # Process any recorded events
-            for event in p.get("events", []):
-                if event["type"] in ["sold", "spoiled", "sampled"]:
-                    base_qty -= float(event["qty"])
-
-            if not aggregated[name]["unit"]:
-                # First entry sets the unit
-                aggregated[name]["unit"] = p["unit"]
-                aggregated[name]["quantity"] = base_qty
-            else:
-                if p["unit"] == aggregated[name]["unit"]:
-                    # Same units, direct addition
-                    aggregated[name]["quantity"] += base_qty
-                else:
-                    # Try conversion only for same type of measurements
-                    converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"], material=name.lower())
-                    if converted_qty is not None:
-                        aggregated[name]["quantity"] += converted_qty
-                    else:
-                        # If units are incompatible, create separate entry
-                        unique_name = f"{name} ({p['unit']})"
-                        if not aggregated[unique_name]["unit"]:
-                            aggregated[unique_name]["unit"] = p["unit"]
-                            aggregated[unique_name]["quantity"] = base_qty
-                        else:
-                            aggregated[unique_name]["quantity"] += base_qty
-
-            aggregated[name]["timestamps"].append(p["timestamp"])
-        except (ValueError, TypeError) as e:
-            print(f"Error processing product {name}: {e}")
-            continue
-
-    # Convert to list format
-    products_display = [
-        {
-            "product": name,
-            "yield": str(details["quantity"]),  # Use quantity for display
-            "unit": details["unit"],
-            "timestamps": sorted([(ts, next((b["id"] for b in data["batches"] 
-                                           if b["timestamp"] == ts), None)) 
-                                for ts in details["timestamps"]], reverse=True)
-        }
-        for name, details in aggregated.items()
-    ]
-
-    return render_template("products.html", products=products_display)
+    return render_template("products_clean.html", products=products)
 
 @products_bp.route('/products/event/<int:product_index>', methods=["POST"])
 def product_event(product_index):
