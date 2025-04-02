@@ -109,6 +109,8 @@ function initializeSelect2() {
 // Initialize Select2 on page load
 $(document).ready(function() {
   initializeSelect2();
+  // Override Select2 styling
+  $(".select2-container").css("width", "200px");
 });
 
 // Initialize Select2 after adding new row
