@@ -843,50 +843,6 @@
             "quantity_available": 22.0,
             "events": [],
             "batch_id": "batch_50"
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 5.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T07:49:48.651264",
-            "quantity_available": 5.0,
-            "events": [],
-            "batch_id": "batch_51"
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 50.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T07:53:40.893097",
-            "quantity_available": 50.0,
-            "events": [],
-            "batch_id": "batch_52"
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 50.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T07:55:23.225711",
-            "quantity_available": 50.0,
-            "events": [],
-            "batch_id": "batch_53"
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 50.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T07:57:30.721631",
-            "quantity_available": 50.0,
-            "events": [],
-            "batch_id": "batch_54"
         }
     ],
     "product_events": [
