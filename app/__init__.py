@@ -7,7 +7,7 @@ import os
 def create_app():
     app = Flask(__name__, template_folder='../templates')
     app.secret_key = 'supersecretkey'  # Replace with a secure key in production
-
+    
     app.register_blueprint(batches_bp)
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
@@ -24,8 +24,8 @@ def create_app():
     from app.routes.api import api_bp
     app.register_blueprint(api_bp)
     from app.routes.stock import stock_bp
-    app.register_blueprint(stock_bp, url_prefix='/stock')
-
+    app.register_blueprint(stock_bp)
+    
     from app.error_tools import register_error_handlers
     register_error_handlers(app)
 
