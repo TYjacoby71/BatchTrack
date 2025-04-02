@@ -125,7 +125,8 @@
             "batch_type": "product",
             "success": "yes",
             "yield_qty": 4.0,
-            "yield_unit": "mL"
+            "yield_unit": "mL",
+            "remaining_qty": 0.0
         },
         {
             "id": "batch_60",
@@ -149,7 +150,8 @@
             "batch_type": "product",
             "success": "yes",
             "yield_qty": 5.0,
-            "yield_unit": "mL"
+            "yield_unit": "mL",
+            "remaining_qty": 4.0
         },
         {
             "id": "batch_61",
@@ -626,7 +628,7 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-02T18:25:52.925432",
-            "quantity_available": 29.0,
+            "quantity_available": 33.0,
             "events": [
                 {
                     "type": "sold",
@@ -634,6 +636,13 @@
                     "method": "",
                     "note": "",
                     "timestamp": "2025-04-02T18:29:18.869929"
+                },
+                {
+                    "type": "sold",
+                    "qty": 5,
+                    "method": "",
+                    "note": "",
+                    "timestamp": "2025-04-02T18:36:23.988841"
                 }
             ],
             "batch_id": "batch_64"
