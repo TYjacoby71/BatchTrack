@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect
 from app.routes.utils import load_data, save_data
 import json
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 ingredients_bp = Blueprint('ingredients', __name__)
 
@@ -111,7 +113,7 @@ def quick_add_ingredient():
         data = load_data()
         name = request.form['name']
         unit = request.form['unit']
-        
+
         # Only add if it doesn't exist in either list
         if not any(i['name'] == name for i in data['ingredients']):
             if 'ingredients' not in data:
@@ -122,8 +124,48 @@ def quick_add_ingredient():
                 'quantity': '',
                 'cost_per_unit': '0.00'
             })
-        
+
         save_data(data)
         return redirect(request.form.get('next') or '/recipes/add')
     next_url = request.args.get('next', '/recipes/add')
     return render_template('ingredient_quickadd.html', ingredient=None, next=next_url)
+
+@ingredients_bp.route('/ingredients/zero/<int:index>', methods=["POST"])
+def zero_ingredient(index):
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    undo_stack = data.setdefault("undo_stack", [])
+
+    if index >= len(ingredients):
+        return "Ingredient not found", 404
+
+    ing = ingredients[index]
+    previous_qty = ing.get("quantity", 0)
+    ing["quantity"] = 0
+
+    undo_stack.append({
+        "index": index,
+        "previous_quantity": previous_qty,
+        "timestamp": datetime.now().isoformat()
+    })
+
+    save_data(data)
+    return redirect("/ingredients")
+
+@ingredients_bp.route('/ingredients/undo', methods=["POST"])
+def undo_last_ingredient_change():
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    undo_stack = data.setdefault("undo_stack", [])
+
+    if not undo_stack:
+        return "Nothing to undo", 400
+
+    last = undo_stack.pop()
+    index = last["index"]
+
+    if index < len(ingredients):
+        ingredients[index]["quantity"] = last["previous_quantity"]
+
+    save_data(data)
+    return redirect("/ingredients")

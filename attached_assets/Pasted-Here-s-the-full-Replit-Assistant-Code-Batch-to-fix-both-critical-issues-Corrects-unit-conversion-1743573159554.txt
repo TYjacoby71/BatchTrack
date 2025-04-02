@@ -1,0 +1,106 @@
+Here's the full Replit Assistant Code Batch to fix both critical issues:
+
+✅ Corrects unit conversion when finishing a batch
+✅ Adds a quantity_available field to finished products
+✅ Deducts product units on sold/spoiled events
+✅ Prevents overselling (shows error if insufficient)
+
+🔁 1. Edit: routes/batches.py
+Inside your batch finish logic (likely in /batches/finish/<int:batch_id>), find where ingredients are deducted.
+
+Replace your raw quantity subtraction logic with this:
+
+python
+Copy
+Edit
+from unit_converter import convert_units
+
+# Deduct ingredients from inventory with unit conversion
+for ingredient in recipe.get("ingredients", []):
+    ing_name = ingredient["name"]
+    req_qty = float(ingredient["quantity"])
+    req_unit = ingredient.get("unit", "").lower().strip()
+
+    match = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
+    if match:
+        inv_unit = match.get("unit", "").lower().strip()
+        inv_qty = float(match["quantity"])
+
+        if inv_unit != req_unit:
+            converted = convert_units(req_qty, req_unit, inv_unit)
+            if converted is not None:
+                req_qty = converted
+            else:
+                continue  # Skip if units can't convert
+
+        match["quantity"] = max(inv_qty - req_qty, 0)
+Also ensure that when you're logging a product in the same function, you store this:
+
+python
+Copy
+Edit
+products.append({
+    "product": batch["recipe_name"],
+    "yield": yield_qty,
+    "unit": yield_unit,
+    "notes": notes,
+    "label_info": request.form.get("label_info", ""),
+    "timestamp": datetime.now().isoformat(),
+    "quantity_available": int(yield_qty),
+    "events": []
+})
+🔁 2. Edit: routes/products.py
+Inside the /products/event/<int:product_index> route, replace with this logic:
+
+python
+Copy
+Edit
+@products_bp.route('/products/event/<int:product_index>', methods=["POST"])
+def product_event(product_index):
+    data = load_data()
+    products = data.get("products", [])
+    if product_index >= len(products):
+        return "Product not found", 404
+
+    event_type = request.form.get("event_type")
+    quantity = request.form.get("quantity", type=int)
+    method = request.form.get("method", "")
+    note = request.form.get("note", "")
+
+    if quantity <= 0:
+        return "Invalid quantity", 400
+
+    product = products[product_index]
+    available = product.get("quantity_available", 0)
+
+    if event_type in ("sold", "spoiled", "sampled"):
+        if available < quantity:
+            return f"Not enough inventory to {event_type} {quantity} units.", 400
+        product["quantity_available"] = available - quantity
+
+    product.setdefault("events", []).append({
+        "type": event_type,
+        "qty": quantity,
+        "method": method,
+        "note": note,
+        "timestamp": datetime.now().isoformat()
+    })
+
+    save_data(data)
+    return redirect("/products")
+✅ After You Apply This:
+Batch ingredient usage will now deduct properly with unit conversion
+
+Product units will decrement on each event
+
+Prevents overselling
+
+Fully tracks inventory accurately
+
+Let me know when it's in and we’ll add optional:
+
+Inventory alerts
+
+Product availability display
+
+Event logs per batch or unit
