@@ -1,5 +1,7 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>📋 Stock Check for {{ recipe.name }}</h2>
 
-<h1>Stock Check for {{ recipe.name }}</h1>
 <table border="1">
     <tr>
         <th>Ingredient</th>
@@ -10,12 +12,22 @@
     {% for item in stock_check %}
     <tr>
         <td>{{ item.ingredient }}</td>
-        <td>{{ item.needed }} {{ item.unit }}</td>
-        <td>{{ item.original_stock }} {{ item.unit }}</td>
-        <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
+        <td>{{ item.needed }}</td>
+        <td>{{ item.available }}</td>
+        <td{% if item.status != 'OK' %} style="color: red;"{% endif %}>
+            {% if item.status == 'OK' %}
+                ✅ OK
+            {% elif item.status == 'LOW' %}
+                ⚠️ LOW
+            {% else %}
+                ❌ ORDER NEEDED
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
 </table>
+
 <br>
-<a href="/recipes">Back to Recipes</a> |
+<a href="/recipes">← Back to Recipes</a> |
 <a href="/start-batch/{{ recipe.id }}" class="button">Start Batch</a>
+{% endblock %}
