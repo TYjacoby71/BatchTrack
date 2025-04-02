@@ -682,7 +682,7 @@
             "recipe_id": 2,
             "recipe_name": "Fried Egs",
             "timestamp": "2025-04-02T06:58:16.795485",
-            "notes": "",
+            "notes": "save and test",
             "tags": [
                 ""
             ],
@@ -1177,5 +1177,6 @@
             "note": "",
             "timestamp": "2025-04-02T05:48:29.030466"
         }
-    ]
+    ],
+    "undo_stack": []
 }

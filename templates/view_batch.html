@@ -7,7 +7,11 @@
   <p><strong>Date:</strong> {{ batch.timestamp }}</p>
   <p><strong>Type:</strong> {{ batch.batch_type|default('N/A') }}</p>
   <p><strong>Yield:</strong> {{ batch.yield_qty|default('0') }} {{ batch.yield_unit|default('units') }}</p>
-  <p><strong>Notes:</strong><br>{{ batch.notes|default('No notes') }}</p>
+  <form method="POST" action="/batches/update-notes/{{ batch.id }}" style="margin: 20px 0;">
+    <strong>Notes:</strong><br>
+    <textarea name="notes" style="width: 100%; min-height: 100px; margin: 10px 0;">{{ batch.notes|default('') }}</textarea>
+    <button type="submit" style="margin-top: 10px;">Update Notes</button>
+  </form>
   <p><strong>Status:</strong> {{ "Successful" if batch.success == "yes" else "Failed" if batch.success == "no" else "Pending" }}</p>
 </div>
 
