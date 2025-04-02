@@ -57,6 +57,12 @@
             "unit": "oz",
             "quantity": "",
             "cost_per_unit": "0.00"
+        },
+        {
+            "name": "test",
+            "quantity": 12.0,
+            "unit": "mL",
+            "cost_per_unit": "333"
         }
     ],
     "recipes": [
@@ -606,6 +612,20 @@
             "unit": "oz",
             "reason": "Purchase",
             "timestamp": "2025-04-01T02:39:38.977413"
+        },
+        {
+            "name": "test",
+            "change": 4.0,
+            "unit": "mL",
+            "reason": "Purchase",
+            "timestamp": "2025-04-02T04:14:06.504822"
+        },
+        {
+            "name": "test",
+            "change": 5.0,
+            "unit": "mL",
+            "reason": "Purchase",
+            "timestamp": "2025-04-02T04:14:36.404868"
         }
     ]
 }
