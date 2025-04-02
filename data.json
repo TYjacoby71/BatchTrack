@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 7.01056688707432,
+            "quantity": 6.948066920095842,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -222,44 +222,6 @@
             "yield_unit": "mL"
         },
         {
-            "id": "batch_43",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:18:20.234722",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_43.png"
-        },
-        {
-            "id": "batch_44",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:20:03.431629",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_44.png"
-        },
-        {
             "id": "batch_45",
             "recipe_id": 3,
             "recipe_name": "Cup of Milk",
@@ -282,9 +244,52 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_46",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T07:29:37.669944",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_46.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 5.0,
+            "yield_unit": "mL"
+        },
+        {
+            "id": "batch_47",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T07:30:32.006284",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_47.png"
         }
     ],
-    "batch_counter": 45,
+    "batch_counter": 47,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -656,23 +661,13 @@
     ],
     "products": [
         {
-            "product": "Fried Egs",
-            "yield": 5.0,
-            "unit": "unit",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T07:11:49.749024",
-            "quantity_available": 16.0,
-            "events": []
-        },
-        {
             "product": "Cup of Milk",
             "yield": 5.0,
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T07:20:32.090281",
-            "quantity_available": 5.0,
+            "timestamp": "2025-04-02T07:29:49.773326",
+            "quantity_available": 10.0,
             "events": [],
             "batch_id": "batch_45"
         }

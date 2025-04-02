@@ -23,6 +23,7 @@
       <td>{{ p.notes }}</td>
       <td>
         {% if p.batch_id %}
+          Batch #{{ p.batch_id }} - 
           <a href="/batches/view/{{ p.batch_id }}">{{ p.timestamp }}</a>
         {% else %}
           {{ p.timestamp }}
