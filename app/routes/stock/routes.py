@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, flash, url_for
 from app.routes.utils import load_data, save_data
 from app.unit_conversion import check_stock_availability, can_fulfill
 from datetime import datetime
@@ -44,7 +44,7 @@ def check_stock_for_recipe(recipe_id):
 
     return render_template("single_recipe_stock.html", recipe=recipe, stock_check=stock_check)
 
-@stock_bp.route('/stock/inventory/update', methods=['GET', 'POST'])
+@stock_bp.route('/stock/update', methods=['GET', 'POST'])
 def update_inventory():
     data = load_data()
     ingredients = data.get("ingredients", [])
@@ -55,18 +55,19 @@ def update_inventory():
             new_qty = request.form.get(f'quantity_{name}')
             if new_qty is not None:
                 try:
-                    ing['quantity'] = round(float(new_qty), 2)
+                    new_qty = float(new_qty)
+                    ing['quantity'] = round(new_qty, 2)
+
+                    # Log the change
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": new_qty,
+                        "unit": ing.get('unit', 'units'),
+                        "reason": "Update",
+                        "timestamp": datetime.now().isoformat()
+                    })
                 except (ValueError, TypeError):
                     continue
-
-            # Log the change
-            data.setdefault("inventory_log", []).append({
-                "name": name,
-                "change": ing['quantity'],
-                "unit": ing.get('unit', 'units'),
-                "reason": "Update",
-                "timestamp": datetime.now().isoformat()
-            })
 
         data['ingredients'] = ingredients
         save_data(data)
@@ -76,80 +77,6 @@ def update_inventory():
         units = json.load(f)
 
     return render_template("update_stock.html", ingredients=ingredients, units=units)
-
-@stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
-def adjust_inventory():
-    data = load_data()
-    inventory = data.get("ingredients", [])
-    reasons = ["Purchase", "Donation", "Spoiled", "Sample", "Test Batch", "Error", "Sync", "Other"]
-
-    if request.method == 'POST':
-        for i in inventory:
-            name = i["name"]
-            unit = i["unit"]
-            qty_delta = request.form.get(f"adj_{name}")
-            reason = request.form.get(f"reason_{name}")
-
-            if qty_delta:
-                try:
-                    delta = float(qty_delta)
-                    input_unit = request.form.get(f"unit_{name}", unit)
-
-                    if input_unit != unit:
-                        from unit_converter import UnitConversionService
-                        converter = UnitConversionService()
-                        converted_delta = converter.convert(delta, input_unit, unit)
-                        if converted_delta is not None:
-                            delta = converted_delta
-                        else:
-                            continue
-
-                    current_qty = float(i.get("quantity", 0))
-                    new_qty = current_qty + delta
-                    if new_qty < 0:
-                        flash("Error: Quantity cannot be negative")
-                        return redirect('/stock/inventory/adjust')
-                    i["quantity"] = new_qty
-
-                    data.setdefault("inventory_log", []).append({
-                        "name": name,
-                        "change": delta,
-                        "unit": unit,
-                        "reason": reason or "Unspecified",
-                        "timestamp": datetime.now().isoformat()
-                    })
-
-                except ValueError:
-                    continue
-
-        data["ingredients"] = inventory
-        save_data(data)
-        return redirect("/ingredients")
-
-    return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)
-
-@stock_bp.route('/stock/zero/<name>', methods=['POST'])
-def zero_ingredient(name):
-    data = load_data()
-    ingredients = data.get("ingredients", [])
-
-    ingredient = next((i for i in ingredients if i["name"] == name), None)
-    if ingredient:
-        previous_qty = ingredient.get("quantity", 0)
-        ingredient["quantity"] = 0
-
-        # Log the change
-        data.setdefault("inventory_log", []).append({
-            "name": name,
-            "change": -float(previous_qty),
-            "unit": ingredient.get("unit", "units"),
-            "reason": "Zero Out",
-            "timestamp": datetime.now().isoformat()
-        })
-
-        save_data(data)
-
-    return redirect("/ingredients")
 
 @stock_bp.route('/stock/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
