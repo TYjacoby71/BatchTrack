@@ -1,0 +1,80 @@
+Here’s your complete Replit Assistant Code Batch to implement:
+
+✅ “Zero Out” per ingredient
+✅ Full Undo Stack (multiple changes tracked)
+✅ Works only from /ingredients
+✅ Remains persistent unless explicitly cleared
+
+🔁 1. Edit: routes/ingredients.py
+Add this to the bottom of the file:
+
+python
+Copy
+Edit
+from datetime import datetime
+
+@ingredients_bp.route('/ingredients/zero/<int:index>', methods=["POST"])
+def zero_ingredient(index):
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    undo_stack = data.setdefault("undo_stack", [])
+
+    if index >= len(ingredients):
+        return "Ingredient not found", 404
+
+    ing = ingredients[index]
+    previous_qty = ing.get("quantity", 0)
+    ing["quantity"] = 0
+
+    undo_stack.append({
+        "index": index,
+        "previous_quantity": previous_qty,
+        "timestamp": datetime.now().isoformat()
+    })
+
+    save_data(data)
+    return redirect("/ingredients")
+
+
+@ingredients_bp.route('/ingredients/undo', methods=["POST"])
+def undo_last_ingredient_change():
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    undo_stack = data.setdefault("undo_stack", [])
+
+    if not undo_stack:
+        return "Nothing to undo", 400
+
+    last = undo_stack.pop()
+    index = last["index"]
+
+    if index < len(ingredients):
+        ingredients[index]["quantity"] = last["previous_quantity"]
+
+    save_data(data)
+    return redirect("/ingredients")
+🔁 2. Edit: templates/ingredients.html
+Inside the table where each ingredient is listed ({% for ing in ingredients %} loop), add this in a new column:
+
+html
+Copy
+Edit
+<td>
+  <form method="POST" action="/ingredients/zero/{{ loop.index0 }}">
+    <button type="submit" style="color: red;">Zero Out</button>
+  </form>
+</td>
+Above or below the table, add this Undo button:
+
+html
+Copy
+Edit
+<form method="POST" action="/ingredients/undo" style="margin-bottom: 1em;">
+  <button type="submit">Undo Last Ingredient Change</button>
+</form>
+✅ Done!
+You can now:
+
+Click “Zero Out” to set any item to 0
+
+Hit Undo repeatedly to walk back your changes (1 at a time)
