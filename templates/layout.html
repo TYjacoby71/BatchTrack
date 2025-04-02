@@ -63,13 +63,16 @@
       border-collapse: collapse;
       margin-top: var(--spacing-4);
       border-radius: var(--spacing-2);
-      overflow: hidden;
+      overflow-x: auto;
+      display: block;
+      -webkit-overflow-scrolling: touch;
     }
 
     th, td {
       border: 1px solid #e5e7eb;
       padding: var(--spacing-2) var(--spacing-3);
       word-wrap: break-word;
+      min-width: 100px;
     }
 
     th {
@@ -83,10 +86,13 @@
       box-sizing: border-box;
       border: 1px solid #e5e7eb;
       border-radius: var(--spacing-1);
+      font-size: 16px; /* Prevents zoom on mobile */
+      max-width: 100%;
     }
 
     form {
       margin-bottom: var(--spacing-4);
+      width: 100%;
     }
 
     button, input[type="submit"] {
@@ -97,6 +103,9 @@
       cursor: pointer;
       border-radius: var(--spacing-1);
       transition: background 0.2s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px; /* Better touch targets */
     }
 
     button:hover, input[type="submit"]:hover {
@@ -111,9 +120,10 @@
       display: inline-block;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
       nav {
         flex-direction: column;
+        gap: var(--spacing-1);
       }
 
       table, th, td {
@@ -123,6 +133,15 @@
       main {
         padding: var(--spacing-2);
         margin-bottom: 70px;
+        margin-top: var(--spacing-2);
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 20px;
       }
 
       input, select, textarea {
