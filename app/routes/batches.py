@@ -560,6 +560,6 @@ def finish_batch(batch_id):
                 inventory.append(inv_item)
 
         save_data(data)
-        return redirect("/batches")
+        return redirect("/products")
 
     return render_template("finish_batch.html", batch=batch, batch_id=batch_id)
