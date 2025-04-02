@@ -1,20 +1,21 @@
+
 {% extends "layout.html" %}
 {% block content %}
 <h2>📋 Bulk Stock Check Results</h2>
 
-{% if stock_check %}
+{% if stock_report and stock_report|length > 0 %}
 <table border="1">
     <tr>
         <th>Ingredient</th>
         <th>Needed</th>
-        <th>Available Stock</th>
+        <th>Available</th>
         <th>Status</th>
     </tr>
-    {% for item in stock_check %}
+    {% for item in stock_report %}
     <tr>
-        <td>{{ item.ingredient }}</td>
-        <td>{{ item.needed }}</td>
-        <td>{{ item.available }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.needed }} {{ item.unit }}</td>
+        <td>{{ item.available }} {{ item.unit }}</td>
         <td{% if item.status != 'OK' %} style="color: red;"{% endif %}>
             {% if item.status == 'OK' %}
                 ✅ OK
@@ -28,7 +29,7 @@
     {% endfor %}
 </table>
 {% else %}
-<p>No stock data available.</p>
+<p>Please select at least one recipe and enter batch quantities to check stock.</p>
 {% endif %}
 
 <br>
