@@ -4,7 +4,9 @@ conversion_factors = {
     ('liter', 'ml'): 1000,
     ('ml', 'liter'): 1 / 1000,
     ('oz', 'ml'): 29.5735,
-    ('ml', 'oz'): 1 / 29.5735
+    ('ml', 'oz'): 1 / 29.5735,
+    ('l', 'ml'): 1000,
+    ('ml', 'l'): 1 / 1000
 }
 
 def convert_unit(amount, from_unit, to_unit):
