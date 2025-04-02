@@ -106,7 +106,7 @@ def check_stock_bulk():
 
     return render_template('bulk_stock_check.html', recipes=data['recipes'])
 
-@stock_bp.route('/stock/inventory/update', methods=['GET', 'POST'])
+@stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_inventory():
     data = load_data()
     ingredients = data.get("ingredients", [])
@@ -207,7 +207,7 @@ def adjust_inventory():
 
     return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)
 
-@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
+@stock_bp.route('/ingredients/zero/<ingredient_name>', methods=['POST'])
 def zero_out_ingredient(ingredient_name):
     data = load_data()
     ingredients = data.get('ingredients', [])
