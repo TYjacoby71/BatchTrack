@@ -481,11 +481,9 @@ def finish_batch(batch_id):
     products = data.setdefault("products", [])
     recipes = data.get("recipes", [])
 
-    batch_id = int(batch_id)
-    if batch_id >= len(batches):
+    batch = next((b for b in batches if str(b['id']) == str(batch_id)), None)
+    if not batch:
         return "Batch not found", 404
-
-    batch = batches[batch_id]
     recipe = next((r for r in recipes if r["name"] == batch.get("recipe_name")), None)
 
     if request.method == "POST":
