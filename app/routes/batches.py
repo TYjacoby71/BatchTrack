@@ -472,6 +472,7 @@ def finish_batch(batch_id):
                     "yield": yield_qty,
                     "unit": yield_unit,
                     "notes": notes,
+                    "label_info": request.form.get("label_info", ""),
                     "timestamp": datetime.now().isoformat()
                 })
 

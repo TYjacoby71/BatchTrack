@@ -2,6 +2,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>📦 Finished Product Batches</h2>
+<a href='/products/export'>Export CSV</a><br><br>
 
 {% if products %}
   <table>
@@ -9,6 +10,7 @@
       <th>Product</th>
       <th>Yield</th>
       <th>Unit</th>
+      <th>Label Info</th>
       <th>Notes</th>
       <th>Timestamp</th>
     </tr>
@@ -17,6 +19,7 @@
       <td>{{ p.product }}</td>
       <td>{{ p.yield }}</td>
       <td>{{ p.unit }}</td>
+      <td>{{ p.label_info or '' }}</td>
       <td>{{ p.notes }}</td>
       <td>{{ p.timestamp }}</td>
     </tr>
