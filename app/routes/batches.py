@@ -535,8 +535,8 @@ def finish_batch(batch_id):
                 if existing:
                     # Add to total quantity and update timestamp/batch
                     existing["quantity_available"] += float(yield_qty)
-                    existing["batch_id"] = batch_id
                     existing["timestamp"] = datetime.now().isoformat()
+                    existing["batch_id"] = batch_id  # Update batch_id reference
                 else:
                     new_product = {
                         "product": batch["recipe_name"],
