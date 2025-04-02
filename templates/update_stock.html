@@ -43,11 +43,12 @@
     </style>
     <div id="ingredient-rows">
       <div class="ingredient-row">
-        <select name="ingredient_name[]" required>
+        <select name="ingredient_name[]" required onchange="if(this.value === '__add_new__') window.location.href='/add-ingredient?next=/inventory/update'">
           <option value="">Select Ingredient</option>
           {% for ing in ingredients %}
           <option value="{{ ing.name }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
           {% endfor %}
+          <option value="__add_new__" style="background-color: #4CAF50; color: white;">➕ Quick add new ingredient</option>
         </select>
         <input type="number" step="any" name="delta[]" placeholder="Change Amount">
         <select name="unit[]" required>
