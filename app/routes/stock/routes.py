@@ -171,18 +171,23 @@ def zero_out_ingredient(ingredient_name):
     ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
     
     if ingredient:
-        old_qty = ingredient.get('quantity', 0)
-        ingredient['quantity'] = 0
-        
-        data.setdefault("inventory_log", []).append({
-            "name": ingredient_name,
-            "change": -float(old_qty),
-            "unit": ingredient['unit'],
-            "reason": "Zero Out",
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        save_data(data)
+        try:
+            old_qty = float(ingredient.get('quantity', 0))
+            ingredient['quantity'] = 0
+            
+            data.setdefault("inventory_log", []).append({
+                "name": ingredient_name,
+                "change": -old_qty,
+                "unit": ingredient['unit'],
+                "reason": "Zero Out",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            save_data(data)
+        except (ValueError, TypeError):
+            ingredient['quantity'] = 0
+            save_data(data)
+            
         return redirect('/ingredients')
     
     return "Ingredient not found", 404
