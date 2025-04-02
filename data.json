@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 1.7500000330215222,
+            "quantity": 1.6875000660430444,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -342,7 +342,12 @@
                 }
             ],
             "total_cost": 3.49,
-            "qr_code": "static/qr/batch_23.png"
+            "qr_code": "static/qr/batch_23.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 5.0,
+            "yield_unit": "unit"
         }
     ],
     "batch_counter": 23,
@@ -784,6 +789,16 @@
             "label_info": "",
             "timestamp": "2025-04-02T06:01:41.349769",
             "quantity_available": 4,
+            "events": []
+        },
+        {
+            "product": "Cup of Milk",
+            "yield": 5.0,
+            "unit": "unit",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-02T06:22:40.919702",
+            "quantity_available": 5,
             "events": []
         }
     ],
