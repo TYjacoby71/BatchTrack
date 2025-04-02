@@ -60,11 +60,14 @@ def product_event(product_index):
         return "Invalid quantity", 400
 
     product = products[product_index]
-    available = product.get("quantity_available", 0)
-
+    available = float(product.get("yield", 0))  # Use yield as initial quantity
+    if "quantity_available" not in product:
+        product["quantity_available"] = available
+    
+    available = float(product["quantity_available"])
     if event_type in ("sold", "spoiled", "sampled"):
         if available < quantity:
-            return f"Not enough inventory to {event_type} {quantity} units.", 400
+            return f"Not enough inventory to {event_type} {quantity} units. Only {available} available.", 400
         product["quantity_available"] = available - quantity
 
     product.setdefault("events", []).append({
