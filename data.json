@@ -2,7 +2,7 @@
     "ingredients": [
         {
             "name": "shea butter",
-            "quantity": 3.0,
+            "quantity": 11.0,
             "unit": "oz",
             "cost_per_unit": "5"
         },
@@ -780,6 +780,13 @@
             "unit": "oz",
             "reason": "Stock Update",
             "timestamp": "2025-04-02T22:48:15.884456"
+        },
+        {
+            "name": "shea butter",
+            "change": 5.0,
+            "unit": "oz",
+            "reason": "Stock Update",
+            "timestamp": "2025-04-02T22:52:09.917778"
         }
     ],
     "products": [
