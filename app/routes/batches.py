@@ -438,6 +438,15 @@ def delete_batch(batch_id):
     save_data(data)
     return redirect('/batches')
 
+@batches_bp.route('/batches/update-notes/<batch_id>', methods=['POST'])
+def update_batch_notes(batch_id):
+    data = load_data()
+    batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+    if batch:
+        batch['notes'] = request.form.get('notes', '').strip()
+        save_data(data)
+    return redirect(f'/batches/view/{batch_id}')
+
 @batches_bp.route('/batches/invalidate/<batch_id>', methods=["POST"])
 def invalidate_batch(batch_id):
     data = load_data()
