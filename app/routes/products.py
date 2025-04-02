@@ -19,8 +19,8 @@ def view_products():
     for p in products:
         name = p["product"]
         try:
-            # Get the base quantity and handle events
-            base_qty = float(p.get("quantity_available", p["yield"]))
+            # Get the base quantity from quantity_available
+            base_qty = float(p.get("quantity_available", 0))
             
             # Process any recorded events
             for event in p.get("events", []):
@@ -32,10 +32,10 @@ def view_products():
                 aggregated[name]["unit"] = p["unit"]
                 aggregated[name]["quantity"] = base_qty
             else:
-                # Convert subsequent quantities to first unit
+                # Convert and ADD quantities
                 converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
-                    aggregated[name]["quantity"] = float(aggregated[name]["quantity"]) + converted_qty
+                    aggregated[name]["quantity"] += converted_qty
             
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError) as e:
