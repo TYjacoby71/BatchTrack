@@ -39,7 +39,7 @@ def update_stock():
                 stored_unit = ing.get("unit")
                 
                 if input_unit != stored_unit:
-                    converted_delta = convert_units(delta, input_unit, stored_unit)
+                    converted_delta = converter.convert(delta, input_unit, stored_unit)
                     if converted_delta is None:
                         continue  # Skip if units are incompatible
                     delta = converted_delta
