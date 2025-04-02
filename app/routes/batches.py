@@ -258,7 +258,7 @@ def start_batch(recipe_id):
             except:
                 return 0.0
 
-        from unit_converter import check_stock_availability
+        from unit_converter import check_stock_availability, convert_units
 
         insufficient = []
         for item in recipe['ingredients']:
@@ -267,14 +267,16 @@ def start_batch(recipe_id):
                 insufficient.append(item['name'])
                 continue
 
-            available, _, _ = check_stock_availability(
-                item.get('quantity'),
-                item.get('unit', 'units'),
-                inv_item.get('quantity'),
-                inv_item.get('unit', 'units')
-            )
-
-            if not available:
+            recipe_qty = to_float(item.get('quantity'))
+            stock_qty = to_float(inv_item.get('quantity'))
+            
+            # Convert recipe quantity to stock unit for comparison
+            if item.get('unit') != inv_item.get('unit'):
+                converted_qty = convert_units(recipe_qty, item.get('unit'), inv_item.get('unit'))
+                if converted_qty is not None:
+                    recipe_qty = converted_qty
+            
+            if stock_qty < recipe_qty:
                 insufficient.append(f"{item['name']} ({item.get('quantity', 0)} {item.get('unit', 'units')})")
 
         if insufficient:
