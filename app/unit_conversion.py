@@ -15,6 +15,15 @@ def convert_unit(amount, from_unit, to_unit):
         return amount * conversion_factors[key]
     return None
 
+def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
+    try:
+        converted = convert_unit(needed_qty, needed_unit, stock_unit)
+        if converted is None:
+            return False
+        return stock_qty >= converted
+    except:
+        return False
+
 def check_stock_availability(needed_qty, needed_unit, stock_qty, stock_unit):
     converted_stock = convert_unit(stock_qty, stock_unit, needed_unit)
     if converted_stock is None:
