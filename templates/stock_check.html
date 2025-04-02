@@ -10,8 +10,8 @@
     {% for item in stock_check %}
     <tr>
         <td>{{ item.ingredient }}</td>
-        <td>{{ item.needed }}</td>
-        <td>{{ item.available }} {{ item.unit }}</td>
+        <td>{{ item.needed }} {{ item.unit }}</td>
+        <td>{{ item.available }}</td>
         <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
     </tr>
     {% endfor %}
