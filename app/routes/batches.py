@@ -531,7 +531,7 @@ def finish_batch(batch_id):
                     "quantity_available": int(yield_qty),
                     "events": []
                 })
-            elif batch_type == "inventory":
+            else:  # inventory type
                 inv_item = {
                     "name": batch["recipe_name"],
                     "quantity": yield_qty,
