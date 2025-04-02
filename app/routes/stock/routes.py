@@ -7,7 +7,7 @@ import json
 
 from . import stock_bp
 
-@stock_bp.route('/stock/check/<int:recipe_id>')
+@stock_bp.route('/check/<int:recipe_id>')
 def check_stock_for_recipe(recipe_id):
     data = load_data()
     inventory = data.get("ingredients", [])

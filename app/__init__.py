@@ -18,13 +18,11 @@ def create_app():
     from app.routes.products import products_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(export_bp)
-    app.register_blueprint(adjust_bp)
-    app.register_blueprint(update_stock_bp)
     app.register_blueprint(products_bp)
     from app.routes.api import api_bp
     app.register_blueprint(api_bp)
     from app.routes.stock import stock_bp
-    app.register_blueprint(stock_bp)
+    app.register_blueprint(stock_bp, url_prefix='/stock')
     
     from app.error_tools import register_error_handlers
     register_error_handlers(app)
