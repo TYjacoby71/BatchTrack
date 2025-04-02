@@ -529,31 +529,19 @@ def finish_batch(batch_id):
                     match["quantity"] = max(inv_qty - req_qty, 0)
 
             if batch_type == "product":
-                # Find existing product
-                existing_product = next(
-                    (p for p in products if p["product"] == batch["recipe_name"] and p["unit"] == yield_unit),
-                    None
-                )
-
-                if existing_product:
-                    new_qty = float(existing_product["quantity_available"]) + float(yield_qty)
-                    if new_qty < 0:
-                        return "Cannot set product quantity below 0", 400
-                    existing_product["quantity_available"] = new_qty
-                    existing_product["timestamp"] = datetime.now().isoformat()
-                else:
-                    new_product = {
-                        "product": batch["recipe_name"],
-                        "yield": float(yield_qty),
-                        "unit": yield_unit,
-                        "notes": notes,
-                        "label_info": request.form.get("label_info", ""),
-                        "timestamp": datetime.now().isoformat(),
-                        "quantity_available": float(yield_qty),
-                        "events": [],
-                        "batch_id": batch_id
-                    }
-                    products.append(new_product)
+                # Always create a new product entry for each batch
+                new_product = {
+                    "product": batch["recipe_name"],
+                    "yield": float(yield_qty),
+                    "unit": yield_unit,
+                    "notes": notes,
+                    "label_info": request.form.get("label_info", ""),
+                    "timestamp": datetime.now().isoformat(),
+                    "quantity_available": float(yield_qty),
+                    "events": [],
+                    "batch_id": batch_id
+                }
+                products.append(new_product)
                 data["products"] = products  # Ensure products list is updated in data
             else:  # inventory type
                 inv_item = {
