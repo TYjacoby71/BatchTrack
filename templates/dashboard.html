@@ -71,21 +71,24 @@
 
   <div class="section">
     <h3>⚠️ Low Stock Ingredients</h3>
-    <p>Debug: {{ low_stock | length }} low stock items found</p>
-    <p>Debug: {{ low_stock }}</p>
     {% if low_stock %}
-    <table>
-      <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
-      {% for ing in low_stock %}
-        <tr class="low-stock">
-          <td>{{ ing.name }}</td>
-          <td>{{ ing.quantity }}</td>
-          <td>{{ ing.unit }}</td>
-        </tr>
-      {% endfor %}
-    </table>
+    <div class="alert alert-warning">
+      <p>{{ low_stock | length }} ingredients need attention:</p>
+      <table>
+        <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
+        {% for ing in low_stock %}
+          <tr class="low-stock">
+            <td>{{ ing.name }}</td>
+            <td>{{ ing.quantity }}</td>
+            <td>{{ ing.unit }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
     {% else %}
-    <p>All stock levels look good ✅</p>
+    <div class="alert alert-success">
+      <p>All stock levels look good ✅</p>
+    </div>
     {% endif %}
   </div>
 
