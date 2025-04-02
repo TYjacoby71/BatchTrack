@@ -6,7 +6,7 @@ import json
 
 from . import stock_bp
 
-@stock_bp.route('/stock/check/<int:recipe_id>')
+@stock_bp.route('/check/<int:recipe_id>')
 def check_stock_for_recipe(recipe_id):
     data = load_data()
     inventory = data.get("ingredients", [])
@@ -44,7 +44,7 @@ def check_stock_for_recipe(recipe_id):
 
     return render_template("stock_status.html", recipe=recipe, stock_check=stock_check)
 
-@stock_bp.route('/stock/check-bulk', methods=['GET', 'POST'])
+@stock_bp.route('/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
     data = load_data()
     inventory = data.get("ingredients", [])
@@ -154,7 +154,7 @@ def update_inventory():
 
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
-@stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
+@stock_bp.route('/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
     data = load_data()
     inventory = data.get("ingredients", [])
