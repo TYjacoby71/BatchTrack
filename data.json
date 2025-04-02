@@ -15,7 +15,7 @@
         {
             "name": "eggs",
             "quantity": 6.0,
-            "unit": "eggs",
+            "unit": "unit",
             "cost_per_unit": "0.00"
         },
         {
@@ -44,8 +44,8 @@
         },
         {
             "name": "oranges",
-            "quantity": "",
-            "unit": "unit",
+            "quantity": 1.0,
+            "unit": "L",
             "cost_per_unit": "0.00"
         },
         {
@@ -101,9 +101,27 @@
                 }
             ],
             "instructions": "pour in bowl"
+        },
+        {
+            "id": 6,
+            "name": "orange juice",
+            "description": "",
+            "instructions": "juice it",
+            "tags": [],
+            "product_type": "Balm",
+            "use_area": "Face",
+            "use_case": "Moisturizing",
+            "primary_ingredient": "Shea Butter",
+            "ingredients": [
+                {
+                    "name": "oranges",
+                    "quantity": "2",
+                    "unit": "mL"
+                }
+            ]
         }
     ],
-    "recipe_counter": 5,
+    "recipe_counter": 6,
     "batches": [
         {
             "id": "batch_59",
@@ -250,9 +268,47 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_65",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T19:16:17.505506",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_65.png"
+        },
+        {
+            "id": "batch_66",
+            "recipe_id": 6,
+            "recipe_name": "orange juice",
+            "timestamp": "2025-04-02T19:17:38.183894",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "oranges",
+                    "quantity": "2",
+                    "unit": "mL"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_66.png"
         }
     ],
-    "batch_counter": 64,
+    "batch_counter": 66,
     "recipe_only_ingredients": [
         {
             "name": "orange",
