@@ -396,9 +396,28 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_70",
+            "recipe_id": 7,
+            "recipe_name": "Copy of Cup of Milk",
+            "timestamp": "2025-04-02T20:05:15.587479",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": "1.0",
+                    "unit": "L"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_70.png"
         }
     ],
-    "batch_counter": 69,
+    "batch_counter": 70,
     "recipe_only_ingredients": [
         {
             "name": "orange",

@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <h2>🧪 Bulk Stock Check</h2>
@@ -17,7 +16,16 @@
 {% if stock_report is defined %}
     {% for item in stock_report %}
     <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc;">
-        <h3>{{ item.name }} — {% if item.status == "OK" %}✅ Available{% else %}❌ Low Stock{% endif %}</h3>
+        <h3>
+            {{ item.name }} —
+            {% if item.status == "OK" %}
+                ✅ Available
+            {% elif item.status == "LOW" %}
+                ⚠️ Low Stock
+            {% else %}
+                ❌ Order Needed
+            {% endif %}
+        </h3>
         <table>
             <tr>
                 <th>Needed</th>
@@ -25,9 +33,17 @@
                 <th>Status</th>
             </tr>
             <tr>
-                <td>{{ item.needed }} {{ item.unit }}</td>
-                <td>{{ item.available }} {{ item.unit }}</td>
-                <td>{% if item.status == "OK" %}✅{% else %}❌{% endif %}</td>
+                <td>{{ item.needed }}</td>
+                <td>{{ item.available }}</td>
+                <td>
+                    {% if item.status == "OK" %}
+                        ✅ OK
+                    {% elif item.status == "LOW" %}
+                        ⚠️ LOW
+                    {% else %}
+                        ❌ ORDER NEEDED
+                    {% endif %}
+                </td>
             </tr>
         </table>
     </div>
