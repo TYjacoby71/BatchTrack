@@ -1,6 +1,10 @@
 conversion_factors = {
     ('gallon', 'cup'): 16,
     ('cup', 'gallon'): 1 / 16,
+    ('gallon', 'ml'): 3785.41,
+    ('ml', 'gallon'): 1 / 3785.41,
+    ('gallon', 'l'): 3.78541,
+    ('l', 'gallon'): 1 / 3.78541,
     ('liter', 'ml'): 1000,
     ('ml', 'liter'): 1 / 1000,
     ('oz', 'ml'): 29.5735,
