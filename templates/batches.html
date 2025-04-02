@@ -27,9 +27,8 @@
     <td>
       {% if not batch.completed %}
       <a href="/batches/finish/{{ loop.index0 }}">Finish</a>
-      {% else %}
-      —
       {% endif %}
+      <a href="/batches/delete/{{ batch.id }}" onclick="return confirm('Are you sure you want to delete this batch?')" style="margin-left: 10px; color: red;">❌ Delete</a>
     </td>
   </tr>
   {% endfor %}

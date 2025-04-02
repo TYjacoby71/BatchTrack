@@ -404,6 +404,13 @@ def repeat_batch(batch_id):
         
     return redirect(f"/start-batch/{recipe['id']}")
 
+@batches_bp.route('/batches/delete/<batch_id>')
+def delete_batch(batch_id):
+    data = load_data()
+    data['batches'] = [b for b in data['batches'] if str(b['id']) != str(batch_id)]
+    save_data(data)
+    return redirect('/batches')
+
 @batches_bp.route('/batches/finish/<int:batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):
     data = load_data()
