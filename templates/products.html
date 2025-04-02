@@ -17,7 +17,7 @@
     {% for p in products %}
     <tr>
       <td>{{ p.product }}</td>
-      <td>{{ p.yield }}</td>
+      <td>{{ p.yield if p.yield is not none else 'N/A' }}</td>
       <td>{{ p.unit }}</td>
       <td>{{ p.label_info or '' }}</td>
       <td>
