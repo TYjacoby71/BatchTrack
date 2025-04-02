@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 6.948066920095842,
+            "quantity": 6.885566953117364,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -286,7 +286,12 @@
                 }
             ],
             "total_cost": 3.49,
-            "qr_code": "static/qr/batch_47.png"
+            "qr_code": "static/qr/batch_47.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 10.0,
+            "yield_unit": "mL"
         }
     ],
     "batch_counter": 47,
@@ -666,8 +671,8 @@
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T07:29:49.773326",
-            "quantity_available": 10.0,
+            "timestamp": "2025-04-02T07:30:41.564631",
+            "quantity_available": 20.0,
             "events": [],
             "batch_id": "batch_45"
         }
