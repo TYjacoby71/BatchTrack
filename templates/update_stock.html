@@ -4,7 +4,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <h2>📥 Stock Update</h2>
-<form method="POST" action="/stock/update" id="updateForm">
+<form method="POST" action="/stock/inventory/update" id="updateForm">
   <div style="margin-bottom: 20px;">
     <h3>Update Ingredients</h3>
     <style>
@@ -42,7 +42,7 @@
     </style>
     <div id="ingredient-rows">
       <div class="ingredient-row">
-        <select name="ingredient_name[]" required onchange="if(this.value === '__add_new__') window.location.href='/add-ingredient?next=/inventory/update'">
+        <select name="ingredient_name[]" required onchange="if(this.value === '__add_new__') window.location.href='/add-ingredient?next=/stock/inventory/update'">
           <option value="">Select Ingredient</option>
           {% for ing in ingredients %}
           <option value="{{ ing.name }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
