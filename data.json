@@ -8,8 +8,9 @@
         },
         {
             "name": "oil",
-            "quantity": 2.0,
-            "unit": "5"
+            "quantity": 50.0,
+            "unit": "mL",
+            "cost_per_unit": ""
         },
         {
             "name": "eggs",
@@ -20,7 +21,8 @@
         {
             "name": "pepper",
             "quantity": 7.0,
-            "unit": "10"
+            "unit": "pinch",
+            "cost_per_unit": ""
         },
         {
             "name": "milk",
@@ -36,7 +38,7 @@
         },
         {
             "name": "salt",
-            "quantity": 2.0,
+            "quantity": 50.0,
             "unit": "shake",
             "cost_per_unit": "5"
         },
@@ -78,12 +80,12 @@
                 {
                     "name": "oil",
                     "quantity": 1.0,
-                    "unit": "dash"
+                    "unit": "mL"
                 },
                 {
                     "name": "pepper",
                     "quantity": 1.0,
-                    "unit": "tsp"
+                    "unit": "pinch"
                 }
             ],
             "instructions": "Fry, flip, eat"

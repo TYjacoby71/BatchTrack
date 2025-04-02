@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect
+from flask import Blueprint, render_template, request, redirect, flash, url_for
 from app.routes.utils import load_data, save_data
 import json
 from datetime import datetime, timedelta
@@ -90,7 +90,15 @@ def edit_ingredient(name):
         new_name = request.form['name']
         # Update name in ingredient list
         ingredient['name'] = new_name
-        ingredient['quantity'] = request.form['quantity']
+        quantity = request.form.get('quantity', '')
+        try:
+            quantity = float(quantity) if quantity else 0
+            if quantity < 0:
+                flash("Quantity cannot be negative")
+                return redirect(url_for('ingredients.ingredients'))
+        except ValueError:
+            quantity = 0
+        ingredient['quantity'] = quantity
         ingredient['unit'] = request.form['unit']
         ingredient['cost_per_unit'] = request.form.get('cost_per_unit', '0.00')
         save_data(data)

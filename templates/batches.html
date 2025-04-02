@@ -19,8 +19,6 @@
     <td><input type="checkbox" name="batch_ids" value="{{ batch.id }}"></td>
     <td>{{ batch.recipe_name }}</td>
     <td><a href="/batches/view/{{ batch.id }}">{{ batch.timestamp }}</a></td>
-    <td>{{ batch.yield_qty|default('0') }} {{ batch.yield_unit|default('units') }}</td>
-    <td>{{ batch.remaining_qty|default(batch.yield_qty)|default('0') }} {{ batch.yield_unit|default('units') }}</td>
     <td>
       {% if batch.completed %}
         {% if batch.success == 'yes' %}
@@ -32,6 +30,8 @@
         ⏳ In Progress
       {% endif %}
     </td>
+    <td>{{ batch.yield_qty|default('0') }} {{ batch.yield_unit|default('units') }}</td>
+    <td>{{ batch.remaining_qty|default(batch.yield_qty)|default('0') }} {{ batch.yield_unit|default('units') }}</td>
     <td>
       {% if not batch.completed %}
       <a href="/batches/finish/{{ batch.id }}">Finish</a>
