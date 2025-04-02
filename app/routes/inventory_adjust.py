@@ -1,3 +1,4 @@
+
 from flask import Blueprint, request, render_template, redirect, flash
 from app.routes.utils import load_data, save_data
 from datetime import datetime
@@ -21,34 +22,34 @@ def adjust_inventory():
                 delta = float(qty_delta or 0)
                 input_unit = request.form.get(f"unit_{name}", unit)
 
-                    if input_unit != unit:
+                if input_unit != unit:
                     from unit_converter import UnitConversionService
-                        converter = UnitConversionService()
-                        converted_delta = converter.convert(delta, input_unit, unit)
-                        if converted_delta is not None:
-                            delta = converted_delta
-                        else:
-                            continue
-
-                    if "quantity" in i:
-                        new_qty = float(i["quantity"] or 0) + delta
-                        if new_qty < 0:
-                            flash("Error: Quantity cannot be negative")
-                            return redirect('/inventory/adjust')
-                        i["quantity"] = new_qty
+                    converter = UnitConversionService()
+                    converted_delta = converter.convert(delta, input_unit, unit)
+                    if converted_delta is not None:
+                        delta = converted_delta
                     else:
-                        i["quantity"] = delta
+                        continue
 
-                    data.setdefault("inventory_log", []).append({
-                        "name": name,
-                        "change": delta,
-                        "unit": unit,
-                        "reason": reason or "Unspecified",
-                        "timestamp": datetime.now().isoformat()
-                    })
+                if "quantity" in i:
+                    new_qty = float(i["quantity"] or 0) + delta
+                    if new_qty < 0:
+                        flash("Error: Quantity cannot be negative")
+                        return redirect('/inventory/adjust')
+                    i["quantity"] = new_qty
+                else:
+                    i["quantity"] = delta
 
-                except ValueError:
-                    continue
+                data.setdefault("inventory_log", []).append({
+                    "name": name,
+                    "change": delta,
+                    "unit": unit,
+                    "reason": reason or "Unspecified",
+                    "timestamp": datetime.now().isoformat()
+                })
+
+            except ValueError:
+                continue
 
         data["ingredients"] = inventory
         save_data(data)
