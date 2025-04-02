@@ -85,11 +85,11 @@ def check_stock(recipe_id):
         return "Recipe not found", 404
 
     from unit_converter import check_stock_availability, format_unit_value
-    
+
     stock_check = []
     for item in recipe['ingredients']:
         ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
-        
+
         if ing:
             available, converted_stock, needed = check_stock_availability(
                 item.get('quantity'), 
@@ -98,7 +98,7 @@ def check_stock(recipe_id):
                 ing.get('unit', 'units')
             )
             status = "OK" if available else "LOW"
-            
+
             stock_check.append({
                 "name": item['name'],
                 "needed": f"{format_unit_value(needed, item.get('unit', 'units'))} {item.get('unit', 'units')}",
@@ -129,11 +129,11 @@ def new_recipe():
         product_type = request.form.get('product_type')
         if product_type == '__custom__':
             product_type = request.form.get('custom_product_type')
-            
+
         use_area = request.form.get('use_area')
         if use_area == '__custom__':
             use_area = request.form.get('custom_use_area')
-            
+
         use_case = request.form.get('use_case')
         if use_case == '__custom__':
             use_case = request.form.get('custom_use_case')
@@ -150,11 +150,11 @@ def new_recipe():
             'primary_ingredient': request.form.get('primary_ingredient', ''),
             'ingredients': []
         }
-        
+
         names = request.form.getlist('ingredient_name[]')
         quantities = request.form.getlist('ingredient_quantity[]')
         units = request.form.getlist('ingredient_unit[]')
-        
+
         for name, qty, unit in zip(names, quantities, units):
             if name and qty:
                 new_recipe['ingredients'].append({
@@ -162,7 +162,7 @@ def new_recipe():
                     'quantity': qty,
                     'unit': unit
                 })
-        
+
         data['recipe_counter'] = new_recipe['id']
         data['recipes'].append(new_recipe)
         save_data(data)
@@ -181,7 +181,7 @@ def new_recipe():
 def clone_recipe(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
-    
+
     if not recipe:
         return "Recipe not found", 404
 
@@ -204,11 +204,11 @@ def clone_recipe(recipe_id):
         'instructions': request.form['instructions'],
         'ingredients': []
     }
-    
+
     names = request.form.getlist('ingredient_name[]')
     quantities = request.form.getlist('ingredient_quantity[]')
     units = request.form.getlist('ingredient_unit[]')
-    
+
     for name, qty, unit in zip(names, quantities, units):
         if name and qty:
             new_recipe['ingredients'].append({
@@ -216,7 +216,7 @@ def clone_recipe(recipe_id):
                 'quantity': qty,
                 'unit': unit
             })
-    
+
     data['recipe_counter'] = new_recipe['id']
     data['recipes'].append(new_recipe)
     save_data(data)
