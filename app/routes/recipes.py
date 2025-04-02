@@ -77,7 +77,7 @@ def edit_recipe(recipe_id):
                          units=units)
 
 
-@recipes_bp.route('/check-stock/<int:recipe_id>')
+# Stock check route moved to stock blueprint
 def check_stock(recipe_id):
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
