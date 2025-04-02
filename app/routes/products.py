@@ -35,7 +35,7 @@ def view_products():
                 # Convert subsequent quantities to first unit
                 converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
-                    aggregated[name]["quantity"] += converted_qty
+                    aggregated[name]["quantity"] = float(aggregated[name]["quantity"]) + converted_qty
             
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError) as e:
