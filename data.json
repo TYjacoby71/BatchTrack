@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 6.510567151246499,
+            "quantity": 6.448067184268021,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -436,9 +436,33 @@
             "success": "yes",
             "yield_qty": 50.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_54",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T07:57:23.012754",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_54.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 50.0,
+            "yield_unit": "mL"
         }
     ],
-    "batch_counter": 53,
+    "batch_counter": 54,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -852,6 +876,17 @@
             "quantity_available": 50.0,
             "events": [],
             "batch_id": "batch_53"
+        },
+        {
+            "product": "Cup of Milk",
+            "yield": 50.0,
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-02T07:57:30.721631",
+            "quantity_available": 50.0,
+            "events": [],
+            "batch_id": "batch_54"
         }
     ],
     "product_events": [
