@@ -93,9 +93,10 @@ def format_unit_value(value, unit):
         return "N/A"
     try:
         value = float(value)
-        return f"{value:.2f} {unit}"
+        unit = unit.strip() if unit else ''
+        return f"{value:.2f}{' ' + unit if unit else ''}"
     except (ValueError, TypeError):
-        return f"{value} {unit}"
+        return f"{value}{' ' + unit if unit else ''}"
 
 def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
     """

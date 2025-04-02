@@ -43,7 +43,7 @@
             "cost_per_unit": "5"
         },
         {
-            "name": "oranges",
+            "name": "orange juice",
             "quantity": 50.0,
             "unit": "L",
             "cost_per_unit": "0.00"
@@ -114,8 +114,8 @@
             "primary_ingredient": "Shea Butter",
             "ingredients": [
                 {
-                    "name": "oranges",
-                    "quantity": "2",
+                    "name": "shea butter",
+                    "quantity": 2.0,
                     "unit": "mL"
                 }
             ]
