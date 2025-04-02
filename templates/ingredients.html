@@ -24,10 +24,7 @@
       <td>{{ ing.unit }}</td>
       <td>{{ ing.cost_per_unit }}</td>
       <td>
-                    <a href="/stock/edit-ingredient/{{ ing.name }}">✏️ Edit</a> |
-                    <form method="POST" action="/stock/ingredients/zero/{{ loop.index0 }}" style="display: inline;">
-                        <button type="submit" style="color: red;">Zero Out</button>
-                    </form>
+                    <a href="/stock/edit-ingredient/{{ ing.name }}">✏️ Edit</a> 
                 </td>
     </tr>
     {% endfor %}
