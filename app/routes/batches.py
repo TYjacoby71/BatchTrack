@@ -422,6 +422,14 @@ def repeat_batch(batch_id):
 
     return redirect(f"/start-batch/{recipe['id']}")
 
+@batches_bp.route('/batches/view/<batch_id>')
+def view_batch(batch_id):
+    data = load_data()
+    batch = next((b for b in data.get("batches", []) if str(b["id"]) == str(batch_id)), None)
+    if not batch:
+        return "Batch not found", 404
+    return render_template("view_batch.html", batch=batch)
+
 @batches_bp.route('/batches/delete/<batch_id>')
 def delete_batch(batch_id):
     data = load_data()

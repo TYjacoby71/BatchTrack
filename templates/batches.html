@@ -12,7 +12,7 @@
   {% for batch in batches %}
   <tr>
     <td>{{ batch.recipe_name }}</td>
-    <td>{{ batch.timestamp }}</td>
+    <td><a href="/batches/view/{{ batch.id }}">{{ batch.timestamp }}</a></td>
     <td>
       {% if batch.completed %}
         {% if batch.success == 'yes' %}
