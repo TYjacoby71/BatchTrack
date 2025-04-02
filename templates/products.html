@@ -21,6 +21,8 @@
       <td>{{ p.unit }}</td>
       <td>{{ p.label_info or '' }}</td>
       <td>
+        {% if p.batch_id %}
+          <a href="/batches/view/{{ p.batch_id }}">#{{ p.batch_id }}</a>
         {% else %}
           -
         {% endif %}
