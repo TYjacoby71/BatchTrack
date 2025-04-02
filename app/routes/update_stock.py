@@ -31,6 +31,17 @@ def update_stock():
                     delta = -abs(delta)
                 else:
                     delta = abs(delta)
+
+                # Convert delta to ingredient's unit if different
+                from unit_converter import convert_units
+                input_unit = unit
+                stored_unit = ing.get("unit")
+                
+                if input_unit != stored_unit:
+                    converted_delta = convert_units(delta, input_unit, stored_unit)
+                    if converted_delta is None:
+                        continue  # Skip if units are incompatible
+                    delta = converted_delta
                 
                 current_qty = float(ing.get("quantity", 0))
                 new_qty = current_qty + delta
