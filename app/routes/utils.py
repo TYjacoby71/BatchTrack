@@ -30,33 +30,35 @@ def load_data():
         "product_events": [],
         "inventory_log": []
     }
-    
+
     try:
         if not os.path.exists(DATA_FILE):
             save_data(default_data)
             return default_data
-            
+
         with open(DATA_FILE, 'r') as f:
             content = f.read().strip()
             if not content:  # Handle empty file
                 save_data(default_data)
                 return default_data
-                
+
             data = json.loads(content)
             # Clean up any empty quantities
             if 'ingredients' in data:
                 for ing in data['ingredients']:
                     if ing.get('quantity') == '':
                         ing['quantity'] = 0
-                
+
             data = json.loads(content)
             # Ensure all required keys exist
             for key in default_data:
                 data.setdefault(key, default_data[key])
             return data
-            
+
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error loading data: {str(e)}")
+        from app.routes.faults import log_fault # Added import here to avoid circular dependency issues.
+        log_fault("Failed to load data", {"error": str(e)})
         # Backup corrupted file if it exists
         if os.path.exists(DATA_FILE):
             backup_name = f"{DATA_FILE}.backup"
@@ -70,8 +72,12 @@ def load_data():
         return default_data
 
 def save_data(data):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        from app.routes.faults import log_fault # Added import here to avoid circular dependency issues.
+        log_fault("Failed to save data", {"error": str(e)})
 
 def generate_qr_for_batch(batch_id):
     from urllib.parse import quote

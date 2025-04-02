@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, flash, url_for
+from flask import Blueprint, render_template, request, redirect
 from app.routes.utils import load_data, save_data
+from app.routes.faults import log_fault
+from datetime import datetime
 import json
-from datetime import datetime, timedelta
 from collections import defaultdict
 
 ingredients_bp = Blueprint('ingredients', __name__)
@@ -54,7 +55,8 @@ def bulk_update_ingredients():
                         "reason": request.form.get(reason_key, "Unspecified"),
                         "timestamp": datetime.now().isoformat()
                     })
-                except ValueError:
+                except ValueError as e:
+                    log_fault(f"Value Error during bulk update: {e}")
                     continue
 
     data["ingredients"] = ingredients
@@ -96,7 +98,8 @@ def edit_ingredient(name):
             if quantity < 0:
                 flash("Quantity cannot be negative")
                 return redirect(url_for('ingredients.ingredients'))
-        except ValueError:
+        except ValueError as e:
+            log_fault(f"Value Error during edit: {e}")
             quantity = 0
         ingredient['quantity'] = quantity
         ingredient['unit'] = request.form['unit']
