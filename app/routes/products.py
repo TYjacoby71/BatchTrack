@@ -36,10 +36,31 @@ def product_event(product_index):
     if event_type in ("sold", "spoiled", "sampled"):
         if available < quantity:
             return f"Not enough inventory to {event_type} {quantity} units. Only {available} available.", 400
-        new_quantity = available - quantity
-        if new_quantity < 0:
-            return "Cannot reduce quantity below 0", 400
-        product["quantity_available"] = new_quantity
+            
+        # Get all batches for this product
+        batches = data.get("batches", [])
+        product_batches = [b for b in batches 
+                         if b.get("recipe_name") == product["product"] 
+                         and b.get("completed") 
+                         and b.get("success") == "yes"]
+        
+        # Sort by timestamp (oldest first)
+        product_batches.sort(key=lambda x: x.get("timestamp", ""))
+        
+        remaining = quantity
+        for batch in product_batches:
+            if not batch.get("remaining_qty"):
+                batch["remaining_qty"] = float(batch.get("yield_qty", 0))
+            
+            if batch["remaining_qty"] > 0:
+                deduct = min(remaining, batch["remaining_qty"])
+                batch["remaining_qty"] -= deduct
+                remaining -= deduct
+                
+            if remaining <= 0:
+                break
+                
+        product["quantity_available"] = available - quantity
 
     product.setdefault("events", []).append({
         "type": event_type,
