@@ -20,16 +20,47 @@ def load_categories():
 DATA_FILE = 'data.json'
 
 def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"ingredients": [], "recipes": [], "batches": [], "recipe_counter": 0, "batch_counter": 0}
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-        data.setdefault("ingredients", [])
-        data.setdefault("recipes", [])
-        data.setdefault("batches", [])
-        data.setdefault("recipe_counter", len(data["recipes"]))
-        data.setdefault("batch_counter", len(data["batches"]))
-        return data
+    default_data = {
+        "ingredients": [],
+        "recipes": [],
+        "batches": [],
+        "recipe_counter": 0,
+        "batch_counter": 0,
+        "products": [],
+        "product_events": [],
+        "inventory_log": []
+    }
+    
+    try:
+        if not os.path.exists(DATA_FILE):
+            save_data(default_data)
+            return default_data
+            
+        with open(DATA_FILE, 'r') as f:
+            content = f.read().strip()
+            if not content:  # Handle empty file
+                save_data(default_data)
+                return default_data
+                
+            data = json.loads(content)
+            # Ensure all required keys exist
+            for key in default_data:
+                data.setdefault(key, default_data[key])
+            return data
+            
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error loading data: {str(e)}")
+        # Backup corrupted file if it exists
+        if os.path.exists(DATA_FILE):
+            backup_name = f"{DATA_FILE}.backup"
+            try:
+                os.rename(DATA_FILE, backup_name)
+                print(f"Corrupted data file backed up to {backup_name}")
+            except:
+                pass
+        # Return fresh data structure
+        save_data(default_data)
+        return default_data
 
 def save_data(data):
     with open(DATA_FILE, 'w') as f:
