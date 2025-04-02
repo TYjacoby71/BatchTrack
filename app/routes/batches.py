@@ -410,3 +410,53 @@ def repeat_batch(batch_id):
     data["batches"].append(new_batch)
     save_data(data)
     return redirect("/batches")
+
+@batches_bp.route('/batches/finish/<int:batch_id>', methods=["GET", "POST"])
+def finish_batch(batch_id):
+    data = load_data()
+    batches = data.get("batches", [])
+    inventory = data.get("ingredients", [])
+    products = data.setdefault("products", [])
+
+    if batch_id >= len(batches):
+        return "Batch not found", 404
+
+    batch = batches[batch_id]
+
+    if request.method == "POST":
+        batch_type = request.form.get("batch_type")
+        success = request.form.get("success")
+        notes = request.form.get("notes")
+        yield_qty = request.form.get("yield_qty")
+        yield_unit = request.form.get("yield_unit")
+
+        batch["completed"] = True
+        batch["batch_type"] = batch_type
+        batch["notes"] = notes
+        batch["success"] = success
+        batch["yield_qty"] = yield_qty
+        batch["yield_unit"] = yield_unit
+
+        if success == "yes":
+            if batch_type == "inventory":
+                inv_item = {
+                    "name": batch["recipe_name"],
+                    "quantity": float(yield_qty),
+                    "unit": yield_unit,
+                    "cost_per_unit": 0,
+                }
+                inventory.append(inv_item)
+                data["ingredients"] = inventory
+            elif batch_type == "product":
+                products.append({
+                    "product": batch["recipe_name"],
+                    "yield": yield_qty,
+                    "unit": yield_unit,
+                    "notes": notes,
+                    "timestamp": datetime.now().isoformat()
+                })
+
+        save_data(data)
+        return redirect("/batches")
+
+    return render_template("finish_batch.html", batch=batch, batch_id=batch_id)

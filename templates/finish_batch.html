@@ -1,0 +1,26 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Finish Batch: {{ batch.recipe_name }}</h2>
+
+<form method="POST">
+  <label>Batch Type:</label><br>
+  <select name="batch_type" required>
+    <option value="inventory">Inventory Item</option>
+    <option value="product">Final Product</option>
+  </select><br><br>
+
+  <label>Was the batch successful?</label><br>
+  <input type="radio" name="success" value="yes" required> Yes
+  <input type="radio" name="success" value="no"> No<br><br>
+
+  <label>Yield (Amount and Unit):</label><br>
+  <input type="number" step="any" name="yield_qty" required>
+  <input type="text" name="yield_unit" required><br><br>
+
+  <label>Notes:</label><br>
+  <textarea name="notes"></textarea><br><br>
+
+  <button type="submit">Complete Batch</button>
+</form>
+{% endblock %}
