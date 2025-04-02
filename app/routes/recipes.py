@@ -91,19 +91,20 @@ def check_stock(recipe_id):
         ing = next((i for i in data['ingredients'] if i['name'].lower() == item['name'].lower()), None)
 
         if ing:
-            check = check_stock_availability(
+            available, converted_stock, needed = check_stock_availability(
                 float(item.get('quantity', 0)), 
                 item.get('unit', 'units'),
                 float(ing.get('quantity', 0)),
                 ing.get('unit', 'units')
             )
             
+            status = "OK" if available else "LOW"
             stock_check.append({
                 "name": item['name'],
                 "needed": float(item.get('quantity', 0)),
-                "available": check['converted'],
+                "available": converted_stock,
                 "unit": item.get('unit', 'units'),
-                "status": check['status']
+                "status": status
             })
         else:
             stock_check.append({
