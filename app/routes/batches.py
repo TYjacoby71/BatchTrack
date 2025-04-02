@@ -118,19 +118,18 @@ def check_stock_bulk():
                 if not current or not current.get('quantity'):
                     raise ValueError("No stock found")
 
-                available, converted_stock, needed = check_stock_availability(
+                check = check_stock_availability(
                     details['qty'],
                     details['unit'],
                     current['quantity'],
                     current['unit']
                 )
-                status = "OK" if available else "LOW"
+                
                 stock_report.append({
                     "name": name,
-                    "needed": round(needed, 2),
-                    "available": round(converted_stock, 2),
-                    "unit": details['unit'],
-                    "status": status
+                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
+                    "available": f"{check['converted']} {check['unit']}",
+                    "status": check['status']
                 })
             except (ValueError, TypeError):
                 stock_report.append({
@@ -158,9 +157,7 @@ def check_stock_bulk():
                 needed_items[name]["total"] += shortfall
                 needed_items[name]["unit"] = unit
 
-        return render_template('stock_bulk_result.html', 
-                             stock_report=stock_report, 
-                             missing_summary=needed_items)
+        return render_template('stock_bulk_result.html', stock_report=stock_report, missing_summary=needed_items)
 
     return render_template('check_stock_bulk.html', recipes=data['recipes'])
 

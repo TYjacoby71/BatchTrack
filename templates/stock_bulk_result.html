@@ -1,37 +1,72 @@
 
 {% extends "layout.html" %}
 {% block content %}
-<h2>📋 Bulk Stock Check Results</h2>
-
-{% if stock_report and stock_report|length > 0 %}
-<table border="1">
-    <tr>
-        <th>Ingredient</th>
-        <th>Needed</th>
-        <th>Available</th>
-        <th>Status</th>
-    </tr>
+<h2>Stock Check Results</h2>
+<div class="results">
     {% for item in stock_report %}
-    <tr>
-        <td>{{ item.name }}</td>
-        <td>{{ item.needed }} {{ item.unit }}</td>
-        <td>{{ item.available }} {{ item.unit }}</td>
-        <td{% if item.status != 'OK' %} style="color: red;"{% endif %}>
-            {% if item.status == 'OK' %}
-                ✅ OK
-            {% elif item.status == 'LOW' %}
-                ⚠️ LOW
-            {% else %}
-                ❌ ORDER NEEDED
-            {% endif %}
-        </td>
-    </tr>
+    <div class="stock-item {% if item.status == 'LOW' %}low-stock{% endif %}">
+        <h3>{{ item.name }}</h3>
+        <div class="details">
+            <p>Needed: {{ item.needed }}</p>
+            <p>Available: {{ item.available }}</p>
+            <p class="status">Status: {% if item.status == "OK" %}✅{% else %}❌{% endif %}</p>
+        </div>
+    </div>
     {% endfor %}
-</table>
-{% else %}
-<p>Please select at least one recipe and enter batch quantities to check stock.</p>
-{% endif %}
+</div>
+{% if missing_summary %}
+    <h3>🛒 Needed Items Summary:</h3>
+    <ul>
+        {% for name, info in missing_summary.items() %}
+            <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+        {% endfor %}
+    </ul>
+    <form id="exportForm">
+      <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
+      <button type="button" onclick="printList()">🖨 Print List</button>
+    </form>
 
+    <script>
+    function getItems() {
+      const items = [];
+      {% for name, info in missing_summary.items() %}
+        items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
+      {% endfor %}
+      return items;
+    }
+
+    function downloadCSV() {
+      fetch('/missing/export/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: getItems() })
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "missing_items.csv";
+        a.click();
+      });
+    }
+
+    function printList() {
+      fetch('/missing/export/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: getItems() })
+      })
+      .then(res => res.text())
+      .then(html => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(html);
+        printWindow.document.close();
+      });
+    }
+    </script>
+{% endif %}
 <br>
-<a href="/recipes">← Back to Recipes</a>
-{% endblock %}
+<a href="/check-stock-bulk">Check Another Recipe</a> |
+<a href="/">Back to Home</a>
+{% endblock %}k %}
