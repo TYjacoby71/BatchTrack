@@ -570,7 +570,8 @@ def finish_batch(batch_id):
                         "label_info": request.form.get("label_info", ""),
                         "timestamp": datetime.now().isoformat(),
                         "quantity_available": float(yield_qty),
-                        "events": []
+                        "events": [],
+                        "batch_id": batch_id
                     }
                     products.append(new_product)
                 data["products"] = products  # Ensure products list is updated in data
