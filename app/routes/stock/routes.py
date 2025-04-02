@@ -155,6 +155,15 @@ def update_inventory():
         
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
+@stock_bp.route('/stock/ingredients/bulk-update', methods=['POST'])
+def bulk_update_ingredients():
+    data = load_data()
+    if 'delete' in request.form:
+        ingredients_to_delete = request.form.getlist('delete')
+        data['ingredients'] = [i for i in data['ingredients'] if i['name'] not in ingredients_to_delete]
+        save_data(data)
+    return redirect('/ingredients')
+
 @stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
 def zero_out_ingredient(ingredient_name):
     data = load_data()
