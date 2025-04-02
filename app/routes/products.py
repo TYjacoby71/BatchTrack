@@ -12,14 +12,22 @@ def view_products():
     data = load_data()
     products = data.get("products", [])
     
-    # Aggregate products by name
+    # Aggregate products by name with unit conversion
+    from unit_converter import convert_units
     aggregated = defaultdict(lambda: {"yield": 0, "unit": None, "timestamps": []})
     for p in products:
         name = p["product"]
         try:
             qty = float(p["yield"])
-            aggregated[name]["yield"] += qty
-            aggregated[name]["unit"] = p["unit"]  # Assume same unit for same product
+            if not aggregated[name]["unit"]:
+                # First entry sets the unit
+                aggregated[name]["unit"] = p["unit"]
+                aggregated[name]["yield"] = qty
+            else:
+                # Convert subsequent quantities to first unit
+                converted_qty = convert_units(qty, p["unit"], aggregated[name]["unit"])
+                if converted_qty is not None:
+                    aggregated[name]["yield"] += converted_qty
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError):
             continue
