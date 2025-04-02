@@ -41,10 +41,22 @@ def view_products():
                 aggregated[name]["unit"] = p["unit"]
                 aggregated[name]["quantity"] = base_qty
             else:
-                # Convert and ADD quantities
-                converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"])
-                if converted_qty is not None:
-                    aggregated[name]["quantity"] += converted_qty
+                if p["unit"] == aggregated[name]["unit"]:
+                    # Same units, direct addition
+                    aggregated[name]["quantity"] += base_qty
+                else:
+                    # Try conversion only for same type of measurements
+                    converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"], material=name.lower())
+                    if converted_qty is not None:
+                        aggregated[name]["quantity"] += converted_qty
+                    else:
+                        # If units are incompatible, create separate entry
+                        unique_name = f"{name} ({p['unit']})"
+                        if not aggregated[unique_name]["unit"]:
+                            aggregated[unique_name]["unit"] = p["unit"]
+                            aggregated[unique_name]["quantity"] = base_qty
+                        else:
+                            aggregated[unique_name]["quantity"] += base_qty
 
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError) as e:
