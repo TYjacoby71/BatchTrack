@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
 from app.routes.utils import load_data, save_data
 from app.unit_conversion import check_stock_availability, can_fulfill
@@ -89,7 +88,7 @@ def check_stock_bulk():
                     current['quantity'],
                     current['unit']
                 )
-                
+
                 stock_report.append({
                     "name": name,
                     "needed": f"{round(details['qty'], 2)} {details['unit']}",
@@ -123,14 +122,14 @@ def update_inventory():
             try:
                 if not delta_str:
                     continue
-                    
+
                 delta = float(delta_str)
                 ingredient = next((i for i in ingredients if i['name'] == name), None)
-                
+
                 if ingredient:
                     from app.unit_conversion import convert_unit
                     current_qty = float(ingredient.get('quantity', 0))
-                    
+
                     # Convert units if they don't match
                     if unit != ingredient['unit']:
                         converted_delta = convert_unit(delta, unit, ingredient['unit'])
@@ -140,10 +139,10 @@ def update_inventory():
                         else:
                             flash(f"Could not convert {unit} to {ingredient['unit']} - please check units.json for valid conversion")
                             continue
-                    
+
                     ingredient['quantity'] = round(current_qty + delta, 2)
                     print(f"Updated {name} from {current_qty} to {ingredient['quantity']} {ingredient['unit']}")
-                    
+
                     data.setdefault("inventory_log", []).append({
                         "name": name,
                         "change": delta,
@@ -161,7 +160,7 @@ def update_inventory():
 
     with open('units.json') as f:
         units = json.load(f)
-        
+
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])

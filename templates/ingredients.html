@@ -1,9 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
 <h1>Ingredients</h1>
-<form method="POST" action="/stock/ingredients/undo" style="margin-bottom: 1em;">
-    <button type="submit">Undo Last Ingredient Change</button>
-</form>
 <h2>🧂 Ingredients</h2>
 <a href="/stock/inventory/update" class="btn">📦 Update Stock</a>
 <form method="post" action="/stock/bulk-update">
