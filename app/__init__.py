@@ -36,7 +36,7 @@ def create_app():
         return dict(units=units, category_options=load_categories())
 
     @app.route('/')
-    def home():
+    def dashboard():
         return render_template('dashboard.html')
 
     return app
