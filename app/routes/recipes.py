@@ -84,7 +84,7 @@ def check_stock(recipe_id):
     if not recipe:
         return "Recipe not found", 404
 
-    from unit_converter import check_stock_availability, format_unit_value
+    from app.unit_conversion import check_stock_availability, converter
 
     stock_check = []
     for item in recipe['ingredients']:

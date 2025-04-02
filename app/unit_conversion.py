@@ -1,11 +1,22 @@
-from unit_converter import UnitConversionService, can_fulfill, format_unit_value, check_stock_availability
 
-# Re-export the comprehensive conversion service
+from unit_converter import UnitConversionService
+
+# Create a singleton instance
 converter = UnitConversionService()
 
-# Keep these wrapper functions for compatibility
 def convert_unit(amount, from_unit, to_unit, material="water"):
     return converter.convert(amount, from_unit, to_unit, material)
+
+def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
+    try:
+        stock_qty = float(stock_qty)
+        needed_qty = float(needed_qty)
+        converted_needed = converter.convert(needed_qty, needed_unit, stock_unit)
+        if converted_needed is None:
+            return False
+        return stock_qty >= converted_needed
+    except:
+        return False
 
 def check_stock_availability(needed_qty, needed_unit, stock_qty, stock_unit):
     try:
