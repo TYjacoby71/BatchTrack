@@ -36,4 +36,5 @@ def create_app():
         with open('units.json') as f:
             units = json.load(f)
         return dict(units=units, category_options=load_categories())
+    app.config['SERVER_NAME'] = '0.0.0.0:5000'
     return app
