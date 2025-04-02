@@ -45,29 +45,7 @@ def check_stock_for_recipe(recipe_id):
 
     return render_template("stock_status.html", recipe=recipe, stock_check=stock_check)
 
-@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
-def zero_out_ingredient(ingredient_name):
-    data = load_data()
-    ingredients = data.get("ingredients", [])
-    
-    ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
-    if ingredient:
-        old_qty = ingredient["quantity"]
-        ingredient["quantity"] = 0
-        
-        # Log the change
-        data.setdefault("inventory_log", []).append({
-            "name": ingredient_name,
-            "change": -float(old_qty),
-            "unit": ingredient["unit"],
-            "reason": "Zero Out",
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        save_data(data)
-        return redirect('/ingredients')
-    
-    return "Ingredient not found", 404
+
 
 @stock_bp.route('/stock/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
