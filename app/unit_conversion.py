@@ -18,14 +18,14 @@ def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
     except:
         return False
 
-def check_stock_availability(needed_qty, needed_unit, stock_qty, stock_unit):
+def check_stock_availability(needed_qty, needed_unit, stock_qty, stock_unit, material="water"):
     try:
         if not needed_qty or not stock_qty or not needed_unit or not stock_unit:
             return {"status": "LOW", "converted": 0, "unit": needed_unit}
 
         needed_qty = float(needed_qty)
         stock_qty = float(stock_qty)
-        converted_stock = converter.convert(stock_qty, stock_unit, needed_unit)
+        converted_stock = converter.convert(stock_qty, stock_unit, needed_unit, material=material)
 
         if converted_stock is None:
             return {"status": "conversion_error", "converted": 0, "unit": needed_unit}

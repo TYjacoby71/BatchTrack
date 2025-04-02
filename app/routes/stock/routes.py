@@ -24,9 +24,11 @@ def check_stock_for_recipe(recipe_id):
         match = next((i for i in inventory if i["name"].lower() == name.lower()), None)
 
         if match:
+            # Pass material type for proper density conversion
             check = check_stock_availability(
                 qty, unit,
-                match["quantity"], match["unit"]
+                match["quantity"], match["unit"],
+                material=name.lower()
             )
             stock_check.append({
                 "name": name,
