@@ -118,18 +118,19 @@ def check_stock_bulk():
                 if not current or not current.get('quantity'):
                     raise ValueError("No stock found")
 
-                check = check_stock_availability(
+                available, converted_stock, needed = check_stock_availability(
                     details['qty'],
                     details['unit'],
                     current['quantity'],
                     current['unit']
                 )
-                
+                status = "OK" if available else "LOW"
                 stock_report.append({
                     "name": name,
-                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
-                    "available": f"{check['converted']} {check['unit']}",
-                    "status": check['status']
+                    "needed": round(needed, 2),
+                    "available": round(converted_stock, 2),
+                    "unit": details['unit'],
+                    "status": status
                 })
             except (ValueError, TypeError):
                 stock_report.append({

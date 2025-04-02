@@ -7,8 +7,8 @@
     <div class="stock-item {% if item.status == 'LOW' %}low-stock{% endif %}">
         <h3>{{ item.name }}</h3>
         <div class="details">
-            <p>Needed: {{ item.needed }}</p>
-            <p>Available: {{ item.available }}</p>
+            <p>Needed: {{ item.needed }} {{ item.unit }}</p>
+            <p>Available: {{ item.available }} {{ item.unit }}</p>
             <p class="status">Status: {% if item.status == "OK" %}✅{% else %}❌{% endif %}</p>
         </div>
     </div>

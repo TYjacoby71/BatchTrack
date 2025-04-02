@@ -25,22 +25,12 @@ def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
         return False
 
 def check_stock_availability(needed_qty, needed_unit, stock_qty, stock_unit):
-    try:
-        if not needed_qty or not stock_qty or not needed_unit or not stock_unit:
-            return {"status": "LOW", "converted": 0, "unit": needed_unit}
-        
-        needed_qty = float(needed_qty)
-        stock_qty = float(stock_qty)
-        converted_stock = convert_unit(stock_qty, stock_unit, needed_unit)
-        
-        if converted_stock is None:
-            return {"status": "conversion_error", "converted": 0, "unit": needed_unit}
-            
-        status = "OK" if converted_stock >= needed_qty else "ORDER NEEDED" if converted_stock < 0.1 else "LOW"
-        return {
-            "status": status,
-            "converted": round(converted_stock, 2),
-            "unit": needed_unit
-        }
-    except (ValueError, TypeError):
-        return {"status": "conversion_error", "converted": 0, "unit": needed_unit}
+    converted_stock = convert_unit(stock_qty, stock_unit, needed_unit)
+    if converted_stock is None:
+        return {"status": "conversion_error", "converted": None}
+    status = "OK" if converted_stock >= needed_qty else "ORDER NEEDED" if converted_stock < 0.1 else "LOW"
+    return {
+        "status": status,
+        "converted": round(converted_stock, 2),
+        "unit": needed_unit
+    }

@@ -9,10 +9,10 @@
     </tr>
     {% for item in stock_check %}
     <tr>
-        <td>{{ item.name }}</td>
-        <td>{{ item.needed }}</td>
-        <td>{{ item.available }}</td>
-        <td{% if item.status != 'OK' %} style="color: red;"{% endif %}>{{ item.status }}</td>
+        <td>{{ item.ingredient }}</td>
+        <td>{{ item.needed }} {{ item.unit }}</td>
+        <td>{{ item.original_stock }} {{ item.unit }}</td>
+        <td{% if item.status == 'LOW' %} style="color: red;"{% endif %}>{{ item.status }}</td>
     </tr>
     {% endfor %}
 </table>
