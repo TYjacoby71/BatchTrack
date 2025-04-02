@@ -518,10 +518,13 @@ def finish_batch(batch_id):
                     inv_unit = match.get("unit", "").lower().strip()
                     inv_qty = float(match["quantity"])
                     if inv_unit != req_unit:
-                        converted = service.convert(req_qty, req_unit, inv_unit, ing_name)
-                        if converted is not None:
-                            req_qty = converted
-                        else:
+                        try:
+                            converted = service.convert(req_qty, req_unit, inv_unit)
+                            if converted is not None:
+                                req_qty = converted
+                            else:
+                                continue
+                        except (ValueError, TypeError):
                             continue
                     match["quantity"] = max(inv_qty - req_qty, 0)
 
