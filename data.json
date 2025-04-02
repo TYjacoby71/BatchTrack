@@ -26,7 +26,7 @@
         },
         {
             "name": "milk",
-            "quantity": 0,
+            "quantity": 1.0,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
