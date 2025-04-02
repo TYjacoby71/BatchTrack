@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
 from app.routes.utils import load_data, save_data
 from app.unit_conversion import check_stock_availability, can_fulfill
@@ -87,7 +86,7 @@ def check_stock_bulk():
                     current['quantity'],
                     current['unit']
                 )
-                
+
                 stock_report.append({
                     "name": name,
                     "needed": f"{round(details['qty'], 2)} {details['unit']}",
@@ -121,20 +120,20 @@ def update_inventory():
             try:
                 if not delta_str:
                     continue
-                    
+
                 delta = float(delta_str)
                 ingredient = next((i for i in ingredients if i['name'] == name), None)
-                
+
                 if ingredient:
                     from app.unit_conversion import convert_unit
                     if unit != ingredient['unit']:
                         converted_delta = convert_unit(delta, unit, ingredient['unit'])
                         if converted_delta is not None:
                             delta = converted_delta
-                    
+
                     current_qty = float(ingredient.get('quantity', 0))
                     ingredient['quantity'] = round(current_qty + delta, 2)
-                    
+
                     data.setdefault("inventory_log", []).append({
                         "name": name,
                         "change": delta,
@@ -152,7 +151,7 @@ def update_inventory():
 
     with open('units.json') as f:
         units = json.load(f)
-        
+
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
@@ -207,3 +206,21 @@ def adjust_inventory():
         return redirect("/ingredients")
 
     return render_template("inventory_adjust.html", ingredients=inventory, reasons=reasons)
+
+@stock_bp.route('/zero-out/<ingredient_name>', methods=['POST'])
+def zero_out_ingredient(ingredient_name):
+    data = load_data()
+    ingredients = data.get('ingredients', [])
+    for ingredient in ingredients:
+        if ingredient['name'].lower() == ingredient_name.lower():
+            ingredient['quantity'] = 0
+            data.setdefault("inventory_log", []).append({
+                "name": ingredient_name,
+                "change": -ingredient.get('quantity',0),
+                "unit": ingredient['unit'],
+                "reason": "Zeroed Out",
+                "timestamp": datetime.now().isoformat()
+            })
+            break
+    save_data(data)
+    return jsonify({"message": "Ingredient zeroed out"})
