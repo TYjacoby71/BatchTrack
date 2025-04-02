@@ -25,8 +25,8 @@
       <td>{{ ing.cost_per_unit }}</td>
       <td>
                     <a href="/stock/edit-ingredient/{{ ing.name }}">✏️ Edit</a> |
-                    <form method="POST" action="/stock/ingredients/zero/{{ loop.index0 }}" style="display: inline;">
-                        <button type="submit" style="color: red;">Zero Out</button>
+                    <form method="POST" action="/stock/zero-out/{{ ing.name }}" style="display: inline;">
+                        <button type="submit" onclick="return confirm('Are you sure you want to zero out this ingredient?')">Zero Out</button>
                     </form>
                 </td>
     </tr>

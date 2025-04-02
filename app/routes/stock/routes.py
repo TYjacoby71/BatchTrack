@@ -155,6 +155,29 @@ def update_inventory():
         
     return render_template("update_stock.html", ingredients=ingredients, units=units)
 
+@stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
+def zero_out_ingredient(ingredient_name):
+    data = load_data()
+    ingredients = data.get("ingredients", [])
+    ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
+    
+    if ingredient:
+        old_qty = ingredient.get('quantity', 0)
+        ingredient['quantity'] = 0
+        
+        data.setdefault("inventory_log", []).append({
+            "name": ingredient_name,
+            "change": -float(old_qty),
+            "unit": ingredient['unit'],
+            "reason": "Zero Out",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        save_data(data)
+        return redirect('/ingredients')
+    
+    return "Ingredient not found", 404
+
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
     data = load_data()
