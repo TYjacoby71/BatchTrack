@@ -12,7 +12,7 @@ def view_products():
     products = data.get("products", [])
 
     # Aggregate products by name with unit conversion
-    from unit_converter import convert_units
+    from unit_converter import convert_unit
     aggregated = defaultdict(lambda: {"yield": 0, "unit": None, "timestamps": []})
     for p in products:
         name = p["product"]
