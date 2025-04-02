@@ -5,6 +5,28 @@
 <form method="POST" id="updateForm">
   <div style="margin-bottom: 20px;">
     <h3>Update Ingredients</h3>
+    <style>
+      .ingredient-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+      }
+      .ingredient-row select, .ingredient-row input {
+        flex: 1;
+      }
+      .delete-btn {
+        background: #ff4444;
+        color: white;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .add-more-btn {
+        margin: 0 0 20px 0;
+      }
+    </style>
     <div id="ingredient-rows">
       <div class="ingredient-row">
         <select name="ingredient_name[]" required>
@@ -13,16 +35,17 @@
           <option value="{{ ing.name }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
           {% endfor %}
         </select>
-        <input type="number" step="any" name="delta[]" placeholder="Change Amount" required>
+        <input type="number" step="any" name="delta[]" placeholder="Change Amount">
         <select name="reason[]" required>
           <option value="Purchase">Purchase (Add)</option>
           <option value="Loss">Loss (Remove)</option>
           <option value="Spoiled">Spoiled (Remove)</option>
           <option value="Donation">Donation (Remove)</option>
         </select>
+        <button type="button" class="delete-btn" onclick="deleteRow(this)" style="display: none;">×</button>
       </div>
     </div>
-    <button type="button" onclick="addIngredientRow()" class="btn">+ Add Another Ingredient</button>
+    <button type="button" onclick="addIngredientRow()" class="btn add-more-btn">+ Add Another Ingredient</button>
   </div>
   <button type="submit" class="btn btn-primary">Save Changes</button>
 </form>
@@ -33,7 +56,19 @@ function addIngredientRow() {
   const template = container.querySelector('.ingredient-row').cloneNode(true);
   // Reset the values
   template.querySelectorAll('select, input').forEach(el => el.value = '');
+  // Show delete button for all rows when there's more than one
+  container.querySelectorAll('.delete-btn').forEach(btn => btn.style.display = 'block');
+  template.querySelector('.delete-btn').style.display = 'block';
   container.appendChild(template);
+}
+
+function deleteRow(btn) {
+  const container = document.getElementById('ingredient-rows');
+  btn.closest('.ingredient-row').remove();
+  // Hide delete button if only one row remains
+  if (container.children.length === 1) {
+    container.querySelector('.delete-btn').style.display = 'none';
+  }
 }
 </script>
 {% endblock %}

@@ -21,6 +21,9 @@ def update_stock():
                 continue
                 
             try:
+                if not delta_str.strip():
+                    continue
+                    
                 delta = float(delta_str)
                 
                 if reason in ["Loss", "Spoiled", "Donation"]:
