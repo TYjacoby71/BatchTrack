@@ -127,12 +127,17 @@ def update_inventory():
                 
                 if ingredient:
                     from app.unit_conversion import convert_unit
+                    current_qty = float(ingredient.get('quantity', 0))
+                    
+                    # Convert units if they don't match
                     if unit != ingredient['unit']:
                         converted_delta = convert_unit(delta, unit, ingredient['unit'])
                         if converted_delta is not None:
                             delta = converted_delta
-                    
-                    current_qty = float(ingredient.get('quantity', 0))
+                        else:
+                            flash(f"Could not convert {unit} to {ingredient['unit']}")
+                            continue
+                            
                     ingredient['quantity'] = round(current_qty + delta, 2)
                     
                     data.setdefault("inventory_log", []).append({
