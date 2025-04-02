@@ -98,13 +98,13 @@ def product_event(product_index):
     return redirect("/products")
 
 
-@products_bp.route('/products/delete/<int:product_index>', methods=['POST'])
-def delete_product(product_index):
+@products_bp.route('/products/delete/<string:timestamp>', methods=['POST'])
+def delete_product(timestamp):
     data = load_data()
     products = data.get("products", [])
-    if product_index < len(products):
-        del products[product_index]
-        save_data(data)
+    # Find and remove the product with matching timestamp
+    data["products"] = [p for p in products if p.get("timestamp") != timestamp]
+    save_data(data)
     return redirect('/products')
 
 @products_bp.route('/products/export')

@@ -1,0 +1,24 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Batch Details: {{ batch.recipe_name }}</h2>
+
+<div style="margin: 20px 0;">
+  <p><strong>Date:</strong> {{ batch.timestamp }}</p>
+  <p><strong>Type:</strong> {{ batch.batch_type|default('N/A') }}</p>
+  <p><strong>Yield:</strong> {{ batch.yield_qty|default('0') }} {{ batch.yield_unit|default('units') }}</p>
+  <p><strong>Notes:</strong><br>{{ batch.notes|default('No notes') }}</p>
+  <p><strong>Status:</strong> {{ "Successful" if batch.success == "yes" else "Failed" if batch.success == "no" else "Pending" }}</p>
+</div>
+
+<h3>Ingredients Used:</h3>
+<ul>
+{% for ing in batch.ingredients %}
+  <li>{{ ing.quantity }} {{ ing.unit|default('') }} {{ ing.name }}</li>
+{% endfor %}
+</ul>
+
+<div style="margin-top: 20px;">
+  <a href="/batches" class="button">Back to Batches</a>
+</div>
+{% endblock %}

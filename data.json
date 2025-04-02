@@ -676,9 +676,43 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_37",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-02T06:58:16.795485",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "dash"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "tsp"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_37.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 5.0,
+            "yield_unit": "unit"
         }
     ],
-    "batch_counter": 36,
+    "batch_counter": 37,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -1116,43 +1150,13 @@
             "events": []
         },
         {
-            "product": "Cup of Milk",
-            "yield": 7.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T06:40:03.936427",
-            "quantity_available": 7.0,
-            "events": []
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 5.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T06:44:33.847815",
-            "quantity_available": 5.0,
-            "events": []
-        },
-        {
             "product": "Fried Egs",
             "yield": 5.0,
             "unit": "unit",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T06:46:08.135070",
-            "quantity_available": 5.0,
-            "events": []
-        },
-        {
-            "product": "Cup of Milk",
-            "yield": 5.0,
-            "unit": "mL",
-            "notes": "",
-            "label_info": "",
-            "timestamp": "2025-04-02T06:47:16.435199",
-            "quantity_available": 5.0,
+            "timestamp": "2025-04-02T06:58:28.370549",
+            "quantity_available": 10.0,
             "events": []
         }
     ],
