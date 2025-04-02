@@ -156,7 +156,12 @@
                 }
             ],
             "total_cost": 0.0,
-            "qr_code": "static/qr/batch_12.png"
+            "qr_code": "static/qr/batch_12.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": "6",
+            "yield_unit": "mL"
         }
     ],
     "batch_counter": 13,
@@ -532,6 +537,14 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-02T05:01:05.584252"
+        },
+        {
+            "product": "Cup of Milk",
+            "yield": "6",
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-02T05:07:28.616235"
         }
     ]
 }
