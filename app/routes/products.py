@@ -142,3 +142,9 @@ def export_products():
     for item in products:
         writer.writerow({field: item.get(field, "") for field in fieldnames})
     return output
+
+@products_bp.route("/products/clean")
+def view_products_clean():
+    data = load_data()
+    products = data.get("products", [])
+    return render_template("products_clean.html", products=products)
