@@ -166,22 +166,24 @@ def bulk_update_ingredients():
 
 @stock_bp.route('/stock/zero-out/<ingredient_name>', methods=['POST'])
 def zero_out_ingredient(ingredient_name):
+    print(f"Starting zero out for: {ingredient_name}")
     data = load_data()
     ingredients = data.get("ingredients", [])
     ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
     
     if not ingredient:
+        print(f"Error: Ingredient {ingredient_name} not found")
         flash(f"Error: Ingredient {ingredient_name} not found")
         return redirect('/ingredients')
         
     try:
         current_qty = float(ingredient.get('quantity', 0))
+        print(f"Current quantity for {ingredient_name}: {current_qty}")
+        
         if current_qty > 0:
-            # Store the change amount before zeroing out
             change_amount = -current_qty
-            # Set quantity to 0
-            ingredient['quantity'] = 0
-            # Log the change
+            ingredient['quantity'] = 0.0  # Store as float
+            
             data.setdefault("inventory_log", []).append({
                 "name": ingredient_name,
                 "change": change_amount,
@@ -189,12 +191,17 @@ def zero_out_ingredient(ingredient_name):
                 "reason": "Zero Out",
                 "timestamp": datetime.now().isoformat()
             })
-            # Save the updated data
+            
+            print(f"Saving data with new quantity: {ingredient['quantity']}")
             save_data(data)
+            print(f"Data saved successfully")
+            
             flash(f"Successfully zeroed out {ingredient_name} (removed {abs(change_amount)} {ingredient.get('unit', 'units')})")
         else:
+            print(f"{ingredient_name} already at zero")
             flash(f"{ingredient_name} is already at zero")
     except (ValueError, TypeError) as e:
+        print(f"Error processing quantity for {ingredient_name}: {str(e)}")
         flash(f"Error: Invalid quantity value for {ingredient_name}")
         return redirect('/ingredients')
     
