@@ -38,7 +38,9 @@ def view_products():
             "product": name,
             "yield": str(details["quantity"]),  # Use quantity for display
             "unit": details["unit"],
-            "timestamps": sorted(details["timestamps"], reverse=True)
+            "timestamps": sorted([(ts, next((b["id"] for b in data["batches"] 
+                                           if b["timestamp"] == ts), None)) 
+                                for ts in details["timestamps"]], reverse=True)
         }
         for name, details in aggregated.items()
     ]
