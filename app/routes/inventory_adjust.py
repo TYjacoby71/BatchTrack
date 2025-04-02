@@ -21,6 +21,17 @@ def adjust_inventory():
             if qty_delta:
                 try:
                     delta = float(qty_delta)
+                    input_unit = request.form.get(f"unit_{name}", unit)
+                    
+                    if input_unit != unit:
+                        from unit_converter import UnitConversionService
+                        converter = UnitConversionService()
+                        converted_delta = converter.convert(delta, input_unit, unit)
+                        if converted_delta is not None:
+                            delta = converted_delta
+                        else:
+                            continue
+                            
                     if "quantity" in i:
                         i["quantity"] = float(i["quantity"] or 0) + delta
                     else:

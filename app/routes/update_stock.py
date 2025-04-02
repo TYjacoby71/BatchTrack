@@ -38,11 +38,17 @@ def update_stock():
                 input_unit = unit
                 stored_unit = ing.get("unit")
                 
-                if input_unit != stored_unit:
-                    converted_delta = convert_units(delta, input_unit, stored_unit)
-                    if converted_delta is None:
-                        continue  # Skip if units are incompatible
-                    delta = converted_delta
+                if input_unit.lower() != stored_unit.lower():
+                    try:
+                        converted_delta = converter.convert(delta, input_unit.lower(), stored_unit.lower())
+                        if converted_delta is None:
+                            flash(f"Could not convert {input_unit} to {stored_unit}", "error")
+                            continue  # Skip if units are incompatible
+                        delta = converted_delta
+                        flash(f"Converted {delta} {input_unit} to {converted_delta:.2f} {stored_unit}")
+                    except (ValueError, TypeError) as e:
+                        flash(f"Error converting units: {str(e)}", "error")
+                        continue
                 
                 current_qty = float(ing.get("quantity", 0))
                 new_qty = current_qty + delta
