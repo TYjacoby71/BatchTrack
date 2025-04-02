@@ -1,0 +1,28 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>📦 Finished Product Batches</h2>
+
+{% if products %}
+  <table>
+    <tr>
+      <th>Product</th>
+      <th>Yield</th>
+      <th>Unit</th>
+      <th>Notes</th>
+      <th>Timestamp</th>
+    </tr>
+    {% for p in products %}
+    <tr>
+      <td>{{ p.product }}</td>
+      <td>{{ p.yield }}</td>
+      <td>{{ p.unit }}</td>
+      <td>{{ p.notes }}</td>
+      <td>{{ p.timestamp }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>No finished product batches recorded yet.</p>
+{% endif %}
+{% endblock %}

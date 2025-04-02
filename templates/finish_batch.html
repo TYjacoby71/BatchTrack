@@ -14,9 +14,18 @@
   <input type="radio" name="success" value="yes" required> Yes
   <input type="radio" name="success" value="no"> No<br><br>
 
-  <label>Yield (Amount and Unit):</label><br>
+  <label>Yield:</label><br>
   <input type="number" step="any" name="yield_qty" required>
-  <input type="text" name="yield_unit" required><br><br>
+  <label>Units:</label>
+  <select name="yield_unit" required>
+    {% for category in units %}
+    <optgroup label="{{ units[category]['label'] }}">
+        {% for unit in units[category]['units'] %}
+        <option value="{{ unit }}">{{ unit }}</option>
+        {% endfor %}
+    </optgroup>
+    {% endfor %}
+  </select><br><br>
 
   <label>Notes:</label><br>
   <textarea name="notes"></textarea><br><br>
