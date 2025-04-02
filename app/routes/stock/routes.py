@@ -170,27 +170,29 @@ def zero_out_ingredient(ingredient_name):
     ingredients = data.get("ingredients", [])
     ingredient = next((i for i in ingredients if i["name"] == ingredient_name), None)
     
-    if ingredient:
-        try:
-            current_qty = float(ingredient.get('quantity', 0))
-            if current_qty > 0:
-                ingredient['quantity'] = 0
-                data.setdefault("inventory_log", []).append({
-                    "name": ingredient_name,
-                    "change": -current_qty,
-                    "unit": ingredient['unit'],
-                    "reason": "Zero Out",
-                    "timestamp": datetime.now().isoformat()
-                })
-                save_data(data)
-            return redirect('/ingredients')
-        except (ValueError, TypeError) as e:
-            flash(f"Error: Could not process quantity for {ingredient_name}")
-            return redirect('/ingredients')
-            
+    if not ingredient:
+        flash(f"Error: Ingredient {ingredient_name} not found")
         return redirect('/ingredients')
-    
-    return "Ingredient not found", 404
+        
+    try:
+        current_qty = float(ingredient.get('quantity', 0))
+        if current_qty > 0:
+            ingredient['quantity'] = 0
+            data.setdefault("inventory_log", []).append({
+                "name": ingredient_name,
+                "change": -current_qty,
+                "unit": ingredient['unit'],
+                "reason": "Zero Out",
+                "timestamp": datetime.now().isoformat()
+            })
+            save_data(data)
+            flash(f"Successfully zeroed out {ingredient_name}")
+        else:
+            flash(f"{ingredient_name} already at zero")
+    except (ValueError, TypeError) as e:
+        flash(f"Error: Could not process quantity for {ingredient_name}")
+        
+    return redirect('/ingredients')
 
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
