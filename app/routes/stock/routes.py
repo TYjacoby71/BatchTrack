@@ -177,21 +177,27 @@ def zero_out_ingredient(ingredient_name):
     try:
         current_qty = float(ingredient.get('quantity', 0))
         if current_qty > 0:
+            # Store the change amount before zeroing out
+            change_amount = -current_qty
+            # Set quantity to 0
             ingredient['quantity'] = 0
+            # Log the change
             data.setdefault("inventory_log", []).append({
                 "name": ingredient_name,
-                "change": -current_qty,
-                "unit": ingredient['unit'],
+                "change": change_amount,
+                "unit": ingredient.get('unit', 'units'),
                 "reason": "Zero Out",
                 "timestamp": datetime.now().isoformat()
             })
+            # Save the updated data
             save_data(data)
-            flash(f"Successfully zeroed out {ingredient_name}")
+            flash(f"Successfully zeroed out {ingredient_name} (removed {abs(change_amount)} {ingredient.get('unit', 'units')})")
         else:
-            flash(f"{ingredient_name} already at zero")
+            flash(f"{ingredient_name} is already at zero")
     except (ValueError, TypeError) as e:
-        flash(f"Error: Could not process quantity for {ingredient_name}")
-        
+        flash(f"Error: Invalid quantity value for {ingredient_name}")
+        return redirect('/ingredients')
+    
     return redirect('/ingredients')
 
 @stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
