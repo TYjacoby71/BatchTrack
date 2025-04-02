@@ -1,0 +1,34 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Products</h2>
+
+<div class="products-list">
+  {% for product in products %}
+    <div class="product-card">
+      <h3>{{ product.product }}</h3>
+      <div class="product-details">
+        <p>Yield: {{ product.yield }} {{ product.unit }}</p>
+        <p>Available: {{ product.quantity_available|default(product.yield, true) }} {{ product.unit }}</p>
+        {% if product.notes %}
+          <p>Notes: {{ product.notes }}</p>
+        {% endif %}
+        {% if product.label_info %}
+          <p>Label: {{ product.label_info }}</p>
+        {% endif %}
+      </div>
+
+      <form action="/products/event/{{ loop.index0 }}" method="POST" class="product-form">
+        <select name="event_type" required>
+          <option value="sold">Sold</option>
+          <option value="spoiled">Spoiled</option>
+          <option value="sampled">Sampled</option>
+        </select>
+        <input type="number" name="quantity" min="1" required placeholder="Quantity">
+        <input type="text" name="note" placeholder="Note (optional)">
+        <button type="submit">Record Event</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
