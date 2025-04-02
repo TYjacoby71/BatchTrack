@@ -36,4 +36,9 @@ def create_app():
         with open('units.json') as f:
             units = json.load(f)
         return dict(units=units, category_options=load_categories())
+
+    @app.route('/')
+    def home():
+        return render_template('dashboard.html')
+
     return app

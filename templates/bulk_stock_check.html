@@ -3,7 +3,7 @@
 {% block content %}
 <h2>🧪 Bulk Stock Check</h2>
 
-<form method="POST">
+<form method="POST" action="/stock/check-bulk">
     {% for recipe in recipes %}
     <div class="recipe-input">
         <label>{{ recipe.name }}:</label>
@@ -35,6 +35,6 @@
 {% endif %}
 
 <br>
-<a href="/">Back to Home</a> |
+<a href="/">Back to Dashboard</a> |
 <a href="/stock/check-bulk">Check Another Recipe</a>
 {% endblock %}
