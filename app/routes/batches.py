@@ -412,17 +412,16 @@ def delete_batch(batch_id):
     save_data(data)
     return redirect('/batches')
 
-@batches_bp.route('/batches/finish/<int:batch_id>', methods=["GET", "POST"])
+@batches_bp.route('/batches/finish/<batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):
     data = load_data()
     batches = data.get("batches", [])
     inventory = data.get("ingredients", [])
     products = data.setdefault("products", [])
 
-    if batch_id >= len(batches):
+    batch = next((b for b in batches if str(b['id']) == str(batch_id)), None)
+    if not batch:
         return "Batch not found", 404
-
-    batch = batches[batch_id]
 
     if request.method == "POST":
         batch_type = request.form.get("batch_type")
