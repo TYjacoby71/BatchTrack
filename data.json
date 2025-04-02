@@ -24,7 +24,7 @@
         },
         {
             "name": "milk",
-            "quantity": 6.448067184268021,
+            "quantity": 6.323067250311066,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -116,10 +116,10 @@
     "recipe_counter": 5,
     "batches": [
         {
-            "id": "batch_39",
+            "id": "batch_56",
             "recipe_id": 3,
             "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:11:01.855369",
+            "timestamp": "2025-04-02T08:26:30.039063",
             "notes": "",
             "tags": [
                 ""
@@ -132,329 +132,7 @@
                 }
             ],
             "total_cost": 3.49,
-            "qr_code": "static/qr/batch_39.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 5.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_40",
-            "recipe_id": 2,
-            "recipe_name": "Fried Egs",
-            "timestamp": "2025-04-02T07:11:35.388501",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "eggs",
-                    "quantity": 3.0,
-                    "unit": "unit"
-                },
-                {
-                    "name": "oil",
-                    "quantity": 1.0,
-                    "unit": "dash"
-                },
-                {
-                    "name": "pepper",
-                    "quantity": 1.0,
-                    "unit": "tsp"
-                }
-            ],
-            "total_cost": 0.0,
-            "qr_code": "static/qr/batch_40.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 6.0,
-            "yield_unit": "unit"
-        },
-        {
-            "id": "batch_41",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:12:22.178283",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_41.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 6.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_42",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:15:56.531756",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_42.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 5.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_45",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:20:24.461582",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_45.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 5.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_46",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:29:37.669944",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_46.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 5.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_47",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:30:32.006284",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_47.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 10.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_48",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:34:55.561505",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_48.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 40.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_49",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:38:24.778116",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_49.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 20.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_50",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:40:41.721366",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_50.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 22.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_51",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:49:37.068509",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_51.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 5.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_52",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:53:32.321881",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_52.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 50.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_53",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:55:15.006673",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_53.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 50.0,
-            "yield_unit": "mL"
-        },
-        {
-            "id": "batch_54",
-            "recipe_id": 3,
-            "recipe_name": "Cup of Milk",
-            "timestamp": "2025-04-02T07:57:23.012754",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": 1.0,
-                    "unit": "cup"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_54.png",
+            "qr_code": "static/qr/batch_56.png",
             "completed": true,
             "batch_type": "product",
             "success": "yes",
@@ -462,7 +140,7 @@
             "yield_unit": "mL"
         }
     ],
-    "batch_counter": 54,
+    "batch_counter": 56,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -839,10 +517,10 @@
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T07:40:50.091241",
-            "quantity_available": 22.0,
+            "timestamp": "2025-04-02T08:26:38.774906",
+            "quantity_available": 76.0,
             "events": [],
-            "batch_id": "batch_50"
+            "batch_id": "batch_56"
         }
     ],
     "product_events": [
