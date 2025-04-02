@@ -13,8 +13,8 @@
         },
         {
             "name": "eggs",
-            "quantity": "20",
-            "unit": "unit",
+            "quantity": 6.0,
+            "unit": "eggs",
             "cost_per_unit": "0.00"
         },
         {
@@ -138,9 +138,28 @@
             "success": "yes",
             "yield_qty": 50.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_57",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T17:51:20.217290",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_57.png"
         }
     ],
-    "batch_counter": 56,
+    "batch_counter": 57,
     "recipe_only_ingredients": [
         {
             "name": "orange",
