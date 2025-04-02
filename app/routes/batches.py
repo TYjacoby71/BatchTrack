@@ -269,13 +269,13 @@ def start_batch(recipe_id):
 
             recipe_qty = to_float(item.get('quantity'))
             stock_qty = to_float(inv_item.get('quantity'))
-            
+
             # Convert recipe quantity to stock unit for comparison
             if item.get('unit') != inv_item.get('unit'):
                 converted_qty = convert_units(recipe_qty, item.get('unit'), inv_item.get('unit'))
                 if converted_qty is not None:
                     recipe_qty = converted_qty
-            
+
             if stock_qty < recipe_qty:
                 insufficient.append(f"{item['name']} ({item.get('quantity', 0)} {item.get('unit', 'units')})")
 
@@ -283,13 +283,26 @@ def start_batch(recipe_id):
             return f"Insufficient stock for: {', '.join(insufficient)}", 400
 
         # Deduct ingredients
+        from unit_converter import convert_units
+        inventory = data.get("ingredients", [])
         for item in recipe['ingredients']:
-            for ing in data['ingredients']:
-                if ing['name'] == item['name']:
-                    ing_qty = to_float(ing['quantity'])
-                    used_qty = to_float(item['quantity'])
-                    ing['quantity'] = str(round(ing_qty - used_qty, 2))
-                    break
+            ing_name = item["name"]
+            req_qty = float(item["quantity"])
+            req_unit = item.get("unit", "").lower().strip()
+
+            match = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
+            if match:
+                inv_unit = match.get("unit", "").lower().strip()
+                inv_qty = float(match["quantity"])
+
+                if inv_unit != req_unit:
+                    converted = convert_units(req_qty, req_unit, inv_unit)
+                    if converted is not None:
+                        req_qty = converted
+                    else:
+                        continue  # Skip if units can't convert
+
+                match["quantity"] = max(inv_qty - req_qty, 0)
 
 
         notes = request.form.get('notes', '').strip()
@@ -521,7 +534,9 @@ def finish_batch(batch_id):
                     "unit": yield_unit,
                     "notes": notes,
                     "label_info": request.form.get("label_info", ""),
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
+                    "quantity_available": int(yield_qty),
+                    "events": []
                 })
 
         save_data(data)

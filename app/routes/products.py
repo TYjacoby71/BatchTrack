@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, Response, request, redirect
 import csv
 from datetime import datetime
@@ -11,7 +10,7 @@ products_bp = Blueprint("products", __name__)
 def view_products():
     data = load_data()
     products = data.get("products", [])
-    
+
     # Aggregate products by name with unit conversion
     from unit_converter import convert_units
     aggregated = defaultdict(lambda: {"yield": 0, "unit": None, "timestamps": []})
@@ -31,7 +30,7 @@ def view_products():
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError):
             continue
-    
+
     # Convert to list format
     products_display = [
         {
@@ -42,42 +41,43 @@ def view_products():
         }
         for name, details in aggregated.items()
     ]
-    
+
     return render_template("products.html", products=products_display)
 
-@products_bp.route('/products/event/<int:product_idx>', methods=['POST'])
-def log_product_event(product_idx):
+@products_bp.route('/products/event/<int:product_index>', methods=["POST"])
+def product_event(product_index):
     data = load_data()
     products = data.get("products", [])
-    
-    if product_idx >= len(products):
+    if product_index >= len(products):
         return "Product not found", 404
-        
-    event_type = request.form.get('event_type')
-    quantity = float(request.form.get('quantity', 0))
-    method = request.form.get('method', '')
-    note = request.form.get('note', '')
-    
-    # Log the event
-    data.setdefault("product_events", []).append({
-        "product": products[product_idx]["product"],
+
+    event_type = request.form.get("event_type")
+    quantity = request.form.get("quantity", type=int)
+    method = request.form.get("method", "")
+    note = request.form.get("note", "")
+
+    if quantity <= 0:
+        return "Invalid quantity", 400
+
+    product = products[product_index]
+    available = product.get("quantity_available", 0)
+
+    if event_type in ("sold", "spoiled", "sampled"):
+        if available < quantity:
+            return f"Not enough inventory to {event_type} {quantity} units.", 400
+        product["quantity_available"] = available - quantity
+
+    product.setdefault("events", []).append({
         "type": event_type,
-        "quantity": quantity,
+        "qty": quantity,
         "method": method,
         "note": note,
         "timestamp": datetime.now().isoformat()
     })
-    
-    # Update product quantity if needed
-    try:
-        current_qty = float(products[product_idx]["yield"])
-        if current_qty >= quantity:
-            products[product_idx]["yield"] = str(current_qty - quantity)
-    except (ValueError, TypeError):
-        pass
-        
+
     save_data(data)
-    return redirect('/products')
+    return redirect("/products")
+
 
 @products_bp.route('/products/export')
 def export_products():
