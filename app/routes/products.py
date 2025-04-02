@@ -81,7 +81,10 @@ def product_event(product_index):
     if event_type in ("sold", "spoiled", "sampled"):
         if available < quantity:
             return f"Not enough inventory to {event_type} {quantity} units. Only {available} available.", 400
-        product["quantity_available"] = available - quantity
+        new_quantity = available - quantity
+        if new_quantity < 0:
+            return "Cannot reduce quantity below 0", 400
+        product["quantity_available"] = new_quantity
 
     product.setdefault("events", []).append({
         "type": event_type,
