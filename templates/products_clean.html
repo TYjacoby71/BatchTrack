@@ -10,6 +10,9 @@
       <div class="product-details">
         <p>Yield: {{ product.yield }} {{ product.unit }}</p>
         <p>Available: {{ product.quantity_available|default(product.yield, true) }} {{ product.unit }}</p>
+        {% if product.batch_id %}
+          <p><a href="/batches/view/{{ product.batch_id }}">View Batch</a></p>
+        {% endif %}
         {% if product.notes %}
           <p>Notes: {{ product.notes }}</p>
         {% endif %}
