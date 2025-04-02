@@ -521,7 +521,7 @@ def finish_batch(batch_id):
                     match["quantity"] = max(inv_qty - req_qty, 0)
 
             if batch_type == "product":
-                products.append({
+                new_product = {
                     "product": batch["recipe_name"],
                     "yield": yield_qty,
                     "unit": yield_unit,
@@ -530,7 +530,9 @@ def finish_batch(batch_id):
                     "timestamp": datetime.now().isoformat(),
                     "quantity_available": int(yield_qty),
                     "events": []
-                })
+                }
+                products.append(new_product)
+                data["products"] = products  # Ensure products list is updated in data
             else:  # inventory type
                 inv_item = {
                     "name": batch["recipe_name"],
