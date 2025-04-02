@@ -1,12 +1,6 @@
+
 {% extends "layout.html" %}
 {% block content %}
-<h2>Check Stock Level</h2>
-<form method="post">
-    <label>Ingredient:</label>
-    <input type="text" name="ingredient" required>
-    <button type="submit">Check Stock</button>
-</form>
-
     <h1>Stock Check for {{ recipe.name }}</h1>
     <table border="1">
         <tr>
@@ -26,5 +20,4 @@
     </table>
     <br>
     <a href="/recipes">Back to Recipes</a>
-
 {% endblock %}
