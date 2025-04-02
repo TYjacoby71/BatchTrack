@@ -6,7 +6,9 @@ conversion_factors = {
     ('oz', 'ml'): 29.5735,
     ('ml', 'oz'): 1 / 29.5735,
     ('l', 'ml'): 1000,
-    ('ml', 'l'): 1 / 1000
+    ('ml', 'l'): 1 / 1000,
+    ('gallon', 'oz'): 128,
+    ('oz', 'gallon'): 1 / 128
 }
 
 def convert_unit(amount, from_unit, to_unit):

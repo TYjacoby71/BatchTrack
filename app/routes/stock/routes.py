@@ -134,11 +134,13 @@ def update_inventory():
                         converted_delta = convert_unit(delta, unit, ingredient['unit'])
                         if converted_delta is not None:
                             delta = converted_delta
+                            print(f"Converting {delta} {unit} to {converted_delta} {ingredient['unit']}")
                         else:
-                            flash(f"Could not convert {unit} to {ingredient['unit']}")
+                            flash(f"Could not convert {unit} to {ingredient['unit']} - please check units.json for valid conversion")
                             continue
-                            
+                    
                     ingredient['quantity'] = round(current_qty + delta, 2)
+                    print(f"Updated {name} from {current_qty} to {ingredient['quantity']} {ingredient['unit']}")
                     
                     data.setdefault("inventory_log", []).append({
                         "name": name,
