@@ -21,7 +21,11 @@
       <td>{{ p.unit }}</td>
       <td>{{ p.label_info or '' }}</td>
       <td>{{ p.notes }}</td>
-      <td>{{ p.timestamp }}</td>
+      <td>
+        {% for ts in p.timestamps %}
+          {{ ts }}<br>
+        {% endfor %}
+      </td>
     </tr>
     <tr>
       <td colspan="6">
