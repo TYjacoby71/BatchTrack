@@ -44,7 +44,7 @@
         },
         {
             "name": "oranges",
-            "quantity": 1.0,
+            "quantity": 50.0,
             "unit": "L",
             "cost_per_unit": "0.00"
         },
