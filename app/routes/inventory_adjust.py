@@ -22,7 +22,7 @@ def adjust_inventory():
                 input_unit = request.form.get(f"unit_{name}", unit)
 
                     if input_unit != unit:
-                        from unit_converter import UnitConversionService
+                    from unit_converter import UnitConversionService
                         converter = UnitConversionService()
                         converted_delta = converter.convert(delta, input_unit, unit)
                         if converted_delta is not None:
