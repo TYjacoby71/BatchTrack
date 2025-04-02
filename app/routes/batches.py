@@ -407,6 +407,7 @@ def repeat_batch(batch_id):
 @batches_bp.route('/batches/delete/<batch_id>')
 def delete_batch(batch_id):
     data = load_data()
+    # Simply remove the batch from the list without affecting inventory
     data['batches'] = [b for b in data['batches'] if str(b['id']) != str(batch_id)]
     save_data(data)
     return redirect('/batches')
