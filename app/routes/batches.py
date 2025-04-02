@@ -74,7 +74,7 @@ def dashboard():
 
     return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
 
-from app.unit_conversion import can_fulfill
+from unit_converter import can_fulfill
 from app.error_tools import safe_route
 
 @batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
