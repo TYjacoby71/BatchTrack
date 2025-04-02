@@ -113,13 +113,16 @@ def update_inventory():
     ingredients = data.get("ingredients", [])
 
     if request.method == 'POST':
-        for i, ing in enumerate(ingredients):
-            new_qty = request.form.get(f'quantity_{i}')
-            try:
-                ingredients[i]['quantity'] = round(float(new_qty), 2)
-            except (ValueError, TypeError):
-                continue
+        for ing in ingredients:
+            name = ing['name']
+            new_qty = request.form.get(f'quantity_{name}')
+            if new_qty is not None:
+                try:
+                    ing['quantity'] = round(float(new_qty), 2)
+                except (ValueError, TypeError):
+                    continue
 
+        data['ingredients'] = ingredients
         save_data(data)
         return redirect('/ingredients')
 
