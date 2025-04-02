@@ -119,13 +119,14 @@ def product_event(product_index):
     return redirect("/products")
 
 
-@products_bp.route('/products/delete/<product_name>', methods=['POST'])
-def delete_product(product_name):
+@products_bp.route('/products/delete/<int:product_index>', methods=['POST'])
+def delete_product(product_index):
     data = load_data()
     products = data.get("products", [])
-    # Find and remove all products with matching name
-    data["products"] = [p for p in products if p.get("product") != product_name]
-    save_data(data)
+    if product_index < len(products):
+        del products[product_index]
+        data["products"] = products
+        save_data(data)
     return redirect('/products')
 
 @products_bp.route('/products/export')
