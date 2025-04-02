@@ -15,21 +15,31 @@ def view_products():
     from unit_converter import UnitConversionService
     service = UnitConversionService()
     aggregated = defaultdict(lambda: {"quantity": 0, "unit": None, "timestamps": []})
+    
     for p in products:
         name = p["product"]
         try:
-            qty = float(p.get("quantity_available", p["yield"]))  # Fall back to yield if no quantity_available
+            # Get the base quantity and handle events
+            base_qty = float(p.get("quantity_available", p["yield"]))
+            
+            # Process any recorded events
+            for event in p.get("events", []):
+                if event["type"] in ["sold", "spoiled", "sampled"]:
+                    base_qty -= float(event["qty"])
+            
             if not aggregated[name]["unit"]:
                 # First entry sets the unit
                 aggregated[name]["unit"] = p["unit"]
-                aggregated[name]["quantity"] = qty
+                aggregated[name]["quantity"] = base_qty
             else:
                 # Convert subsequent quantities to first unit
-                converted_qty = service.convert(qty, p["unit"], aggregated[name]["unit"])
+                converted_qty = service.convert(base_qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
                     aggregated[name]["quantity"] += converted_qty
+            
             aggregated[name]["timestamps"].append(p["timestamp"])
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            print(f"Error processing product {name}: {e}")
             continue
 
     # Convert to list format
@@ -38,7 +48,9 @@ def view_products():
             "product": name,
             "yield": str(details["quantity"]),  # Use quantity for display
             "unit": details["unit"],
-            "timestamps": sorted(details["timestamps"], reverse=True)
+            "timestamps": sorted([(ts, next((b["id"] for b in data["batches"] 
+                                           if b["timestamp"] == ts), None)) 
+                                for ts in details["timestamps"]], reverse=True)
         }
         for name, details in aggregated.items()
     ]
