@@ -299,11 +299,11 @@ def start_batch(recipe_id):
                 inv_qty = float(match["quantity"])
 
                 if inv_unit != req_unit:
-                    converted = service.convert(req_qty, req_unit, inv_unit, ing_name)
+                    converted = service.convert(req_qty, req_unit, inv_unit, material=ing_name.lower())
                     if converted is not None:
                         req_qty = converted
                     else:
-                        continue  # Skip if units can't convert
+                        continue  # Skip if units can't be converted  # Skip if units can't convert
 
                 match["quantity"] = max(inv_qty - req_qty, 0)
 
