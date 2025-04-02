@@ -468,66 +468,57 @@ def invalidate_batch(batch_id):
 
 @batches_bp.route('/batches/finish/<batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):
+    from unit_converter import convert_units
+    from datetime import datetime
+
     data = load_data()
     batches = data.get("batches", [])
     inventory = data.get("ingredients", [])
     products = data.setdefault("products", [])
+    recipes = data.get("recipes", [])
 
-    batch = next((b for b in batches if str(b['id']) == str(batch_id)), None)
-    if not batch:
+    batch_id = int(batch_id)
+    if batch_id >= len(batches):
         return "Batch not found", 404
+
+    batch = batches[batch_id]
+    recipe = next((r for r in recipes if r["name"] == batch.get("recipe_name")), None)
 
     if request.method == "POST":
         batch_type = request.form.get("batch_type")
         success = request.form.get("success")
         notes = request.form.get("notes")
-        yield_qty = request.form.get("yield_qty")
+        yield_qty = float(request.form.get("yield_qty"))
         yield_unit = request.form.get("yield_unit")
 
-        batch["completed"] = True
-        batch["batch_type"] = batch_type
-        batch["notes"] = notes
-        batch["success"] = success
-        batch["yield_qty"] = yield_qty
-        batch["yield_unit"] = yield_unit
+        batch.update({
+            "completed": True,
+            "batch_type": batch_type,
+            "success": success,
+            "notes": notes,
+            "yield_qty": yield_qty,
+            "yield_unit": yield_unit
+        })
 
-        if success == "yes":
-            if batch_type == "inventory":
-                # Check if item already exists in inventory
-                existing_item = next((i for i in inventory if i["name"].lower() == batch["recipe_name"].lower()), None)
+        if success == "yes" and recipe:
+            for ingredient in recipe["ingredients"]:
+                ing_name = ingredient["name"]
+                req_qty = float(ingredient["quantity"])
+                req_unit = ingredient.get("unit", "").lower().strip()
 
-                if existing_item:
-                    # Convert new yield to existing unit if needed
-                    from unit_converter import convert_units
-                    new_qty = float(yield_qty)
-                    if yield_unit != existing_item["unit"]:
-                        converted_qty = convert_units(new_qty, yield_unit, existing_item["unit"])
-                        if converted_qty is not None:
-                            new_qty = converted_qty
+                match = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
+                if match:
+                    inv_unit = match.get("unit", "").lower().strip()
+                    inv_qty = float(match["quantity"])
+                    if inv_unit != req_unit:
+                        converted = convert_units(req_qty, req_unit, inv_unit)
+                        if converted is not None:
+                            req_qty = converted
                         else:
-                            # If units can't be converted, create new entry
-                            inventory.append({
-                                "name": batch["recipe_name"],
-                                "quantity": float(yield_qty),
-                                "unit": yield_unit,
-                                "cost_per_unit": 0,
-                            })
-                            data["ingredients"] = inventory
-                            save_data(data)
-                            return redirect("/batches")
+                            continue
+                    match["quantity"] = max(inv_qty - req_qty, 0)
 
-                    # Add to existing quantity
-                    existing_item["quantity"] = float(existing_item.get("quantity", 0)) + new_qty
-                else:
-                    # Create new inventory item
-                    inventory.append({
-                        "name": batch["recipe_name"],
-                        "quantity": float(yield_qty),
-                        "unit": yield_unit,
-                        "cost_per_unit": 0,
-                    })
-                data["ingredients"] = inventory
-            elif batch_type == "product":
+            if batch_type == "product":
                 products.append({
                     "product": batch["recipe_name"],
                     "yield": yield_qty,
@@ -538,6 +529,14 @@ def finish_batch(batch_id):
                     "quantity_available": int(yield_qty),
                     "events": []
                 })
+            elif batch_type == "inventory":
+                inv_item = {
+                    "name": batch["recipe_name"],
+                    "quantity": yield_qty,
+                    "unit": yield_unit,
+                    "cost_per_unit": 0,
+                }
+                inventory.append(inv_item)
 
         save_data(data)
         return redirect("/batches")
