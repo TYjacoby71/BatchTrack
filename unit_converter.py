@@ -1,53 +1,75 @@
-# Unit conversion system
-VOLUME_UNITS = {
-    'ml': 1,
-    'milliliter': 1,
-    'l': 1000,
-    'liter': 1000,
-    'tsp': 4.92892,
-    'tbsp': 14.7868,
-    'fl oz': 29.5735,
-    'cup': 236.588,
-    'pint': 473.176,
-    'quart': 946.353,
-    'gallon': 3785.41,
-    'gal': 3785.41
-}
+class UnitConversionService:
+    VOLUME_TO_ML = {
+        "ml": 1,
+        "liter": 1000,
+        "l": 1000,
+        "tsp": 4.92892,
+        "tbsp": 14.7868,
+        "cup": 236.588,
+        "pint": 473.176,
+        "quart": 946.353,
+        "gallon": 3785.41,
+    }
 
-WEIGHT_UNITS = {
-    'mg': 0.001,
-    'g': 1,
-    'gram': 1,
-    'kg': 1000,
-    'oz': 28.3495,
-    'lb': 453.592,
-    'pound': 453.592
-}
+    WEIGHT_TO_G = {
+        "mg": 0.001,
+        "g": 1,
+        "kg": 1000,
+        "oz": 28.3495,
+        "lb": 453.592,
+    }
 
-def convert_units(amount, from_unit, to_unit):
-    from_unit = from_unit.lower().strip()
-    to_unit = to_unit.lower().strip()
+    DENSITIES = {
+        "water": 1.0,
+        "milk": 1.03,
+        "olive oil": 0.91,
+        "tallow": 0.92,
+        "beeswax": 0.96
+    }
 
-    if from_unit in VOLUME_UNITS and to_unit in VOLUME_UNITS:
-        base = VOLUME_UNITS
-    elif from_unit in WEIGHT_UNITS and to_unit in WEIGHT_UNITS:
-        base = WEIGHT_UNITS
-    else:
+    def convert_volume(self, amount, from_unit, to_unit):
+        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        if from_unit not in self.VOLUME_TO_ML or to_unit not in self.VOLUME_TO_ML:
+            return None
+        ml = amount * self.VOLUME_TO_ML[from_unit]
+        return ml / self.VOLUME_TO_ML[to_unit]
+
+    def convert_weight(self, amount, from_unit, to_unit):
+        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        if from_unit not in self.WEIGHT_TO_G or to_unit not in self.WEIGHT_TO_G:
+            return None
+        g = amount * self.WEIGHT_TO_G[from_unit]
+        return g / self.WEIGHT_TO_G[to_unit]
+
+    def convert_between_types(self, amount, from_unit, to_unit, material="water"):
+        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        if material not in self.DENSITIES:
+            return None
+        if from_unit in self.VOLUME_TO_ML and to_unit in self.WEIGHT_TO_G:
+            ml = amount * self.VOLUME_TO_ML[from_unit]
+            g = ml * self.DENSITIES[material]
+            return g / self.WEIGHT_TO_G[to_unit]
+        if from_unit in self.WEIGHT_TO_G and to_unit in self.VOLUME_TO_ML:
+            g = amount * self.WEIGHT_TO_G[from_unit]
+            ml = g / self.DENSITIES[material]
+            return ml / self.VOLUME_TO_ML[to_unit]
         return None
 
-    try:
-        amount = float(amount)
-        base_amount = amount * base[from_unit]
-        converted = base_amount / base[to_unit]
-        return round(converted, 4)
-    except:
-        return None
+    def convert(self, amount, from_unit, to_unit, material="water"):
+        if from_unit in self.VOLUME_TO_ML and to_unit in self.VOLUME_TO_ML:
+            return self.convert_volume(amount, from_unit, to_unit)
+        elif from_unit in self.WEIGHT_TO_G and to_unit in self.WEIGHT_TO_G:
+            return self.convert_weight(amount, from_unit, to_unit)
+        return self.convert_between_types(amount, from_unit, to_unit, material)
+
+
+converter = UnitConversionService()
 
 def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
     try:
         stock_qty = float(stock_qty)
         needed_qty = float(needed_qty)
-        converted_needed = convert_units(needed_qty, needed_unit, stock_unit)
+        converted_needed = converter.convert(needed_qty, needed_unit, stock_unit)
         if converted_needed is None:
             return False
         return stock_qty >= converted_needed
@@ -72,14 +94,14 @@ def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
     try:
         if not recipe_qty or not stock_qty or not recipe_unit or not stock_unit:
             return False, 0, 0
-        
+
         recipe_qty = float(recipe_qty) if recipe_qty else 0
         stock_qty = float(stock_qty) if stock_qty else 0
-        
-        converted_stock = convert_units(stock_qty, stock_unit, recipe_unit)
+
+        converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit)
         if converted_stock is None:
             return False, 0, recipe_qty
-            
+
         return converted_stock >= recipe_qty, converted_stock, recipe_qty
     except (ValueError, TypeError):
         return False, 0, 0
