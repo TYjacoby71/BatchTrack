@@ -44,7 +44,7 @@
         },
         {
             "name": "orange juice",
-            "quantity": 50.0,
+            "quantity": 49.995999999999995,
             "unit": "L",
             "cost_per_unit": "0.00"
         },
@@ -114,7 +114,7 @@
             "primary_ingredient": "Shea Butter",
             "ingredients": [
                 {
-                    "name": "shea butter",
+                    "name": "orange juice",
                     "quantity": 2.0,
                     "unit": "mL"
                 }
@@ -305,10 +305,39 @@
                 }
             ],
             "total_cost": 0.0,
-            "qr_code": "static/qr/batch_66.png"
+            "qr_code": "static/qr/batch_66.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 2.0,
+            "yield_unit": "mL"
+        },
+        {
+            "id": "batch_67",
+            "recipe_id": 6,
+            "recipe_name": "orange juice",
+            "timestamp": "2025-04-02T19:41:54.999992",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "orange juice",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_67.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 2.0,
+            "yield_unit": "mL"
         }
     ],
-    "batch_counter": 66,
+    "batch_counter": 67,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -704,6 +733,17 @@
                 }
             ],
             "batch_id": "batch_64"
+        },
+        {
+            "product": "orange juice",
+            "yield": 2.0,
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-02T19:42:27.269486",
+            "quantity_available": 4.0,
+            "events": [],
+            "batch_id": "batch_66"
         }
     ],
     "product_events": [
