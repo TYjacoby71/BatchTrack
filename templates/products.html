@@ -24,7 +24,7 @@
       <td>
         {% for ts, batch_id in p.timestamps %}
           {% if batch_id %}
-            <a href="/batches/finish/{{ batch_id }}">{{ ts }}</a><br>
+            <a href="/batches/view/{{ batch_id }}">{{ ts }} ({{ batch_id }})</a><br>
           {% else %}
             {{ ts }}<br>
           {% endif %}
