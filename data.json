@@ -13,8 +13,8 @@
         },
         {
             "name": "eggs",
-            "quantity": "20",
-            "unit": "unit",
+            "quantity": 6.0,
+            "unit": "eggs",
             "cost_per_unit": "0.00"
         },
         {
