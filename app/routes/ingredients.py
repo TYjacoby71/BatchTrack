@@ -81,7 +81,7 @@ def add_ingredient():
     next_url = request.args.get('next', '')
     return render_template('edit_ingredient.html', ingredient=None, next=next_url)
 
-@ingredients_bp.route('/edit-ingredient/<name>', methods=['GET', 'POST'])
+@ingredients_bp.route('/stock/edit-ingredient/<name>', methods=['GET', 'POST'])
 def edit_ingredient(name):
     data = load_data()
     ingredient = next((i for i in data['ingredients'] if i['name'] == name), None)
