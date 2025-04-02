@@ -137,7 +137,7 @@
             "batch_type": "product",
             "success": "yes",
             "yield_qty": "5",
-            "yield_unit": "gallon"
+            "yield_unit": "mL"
         },
         {
             "id": "batch_12",
@@ -524,6 +524,14 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-02T04:43:34.484682"
+        },
+        {
+            "product": "Cup of Milk",
+            "yield": "5",
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-02T05:01:05.584252"
         }
     ]
 }
