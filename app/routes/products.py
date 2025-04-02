@@ -25,7 +25,7 @@ def view_products():
                 aggregated[name]["yield"] = qty
             else:
                 # Convert subsequent quantities to first unit
-                converted_qty = convert_units(qty, p["unit"], aggregated[name]["unit"])
+                converted_qty = service.convert(qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
                     aggregated[name]["yield"] += converted_qty
             aggregated[name]["timestamps"].append(p["timestamp"])
