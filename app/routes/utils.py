@@ -3,15 +3,18 @@ from flask import current_app
 import json
 import os
 
+from flask import current_app
+
 def load_data():
-    data_file = 'data.json'
+    data_file = current_app.config['DATA_FILE']
     if not os.path.exists(data_file):
         return {"ingredients": [], "recipes": []}
     with open(data_file, 'r') as f:
         return json.load(f)
 
 def save_data(data):
-    data_file = 'data.json'
+    data_file = current_app.config['DATA_FILE']
+    print("Saving to:", data_file)  # Debug print
     with open(data_file, 'w') as f:
         json.dump(data, f, indent=4)
 

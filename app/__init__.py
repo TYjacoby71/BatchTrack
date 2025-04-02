@@ -8,6 +8,9 @@ def create_app():
     app = Flask(__name__, template_folder='../templates')
     app.secret_key = 'supersecretkey'  # Replace with a secure key in production
     
+    # Set absolute path to data.json
+    app.config['DATA_FILE'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data.json'))
+    
     app.register_blueprint(batches_bp)
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
