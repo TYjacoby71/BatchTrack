@@ -1,0 +1,62 @@
+🧾 Fault Integration Batch (Phase 1)
+✅ Add fault logging to ingredients.py and utils.py
+📍 Ensure all errors in inventory and file operations are caught
+
+✅ 1. Add log_fault() to app/routes/ingredients.py
+🔁 At the top:
+python
+Copy
+Edit
+from app.routes.faults import log_fault
+🔁 Inside your update_stock() route, replace your stock update loop like this:
+python
+Copy
+Edit
+for idx, ing in enumerate(data.get("ingredients", [])):
+    try:
+        adj = float(request.form.get(f"adjust_{idx}", 0))
+        reason = request.form.get(f"reason_{idx}", "adjustment")
+        if adj != 0:
+            data["ingredients"][idx]["quantity"] += adj
+            data["ingredients"][idx]["last_update_reason"] = reason
+            data["ingredients"][idx]["last_update_time"] = datetime.now().isoformat()
+
+            if data["ingredients"][idx]["quantity"] < 0:
+                log_fault("Negative stock after bulk adjustment", {
+                    "ingredient": data["ingredients"][idx]["name"],
+                    "final_quantity": data["ingredients"][idx]["quantity"],
+                    "adjusted_by": adj,
+                    "reason": reason
+                })
+    except Exception as e:
+        log_fault("Stock adjustment error", {
+            "index": idx,
+            "error": str(e)
+        })
+✅ 2. Add Fault Logging in app/routes/utils.py
+🔁 Modify load_data() like this:
+python
+Copy
+Edit
+def load_data():
+    try:
+        with open(DATA_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        from app.routes.faults import log_fault
+        log_fault("Failed to load data", {"error": str(e)})
+        return {}
+🔁 Modify save_data() like this:
+python
+Copy
+Edit
+def save_data(data):
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        from app.routes.faults import log_fault
+        log_fault("Failed to save data", {"error": str(e)})
+✅ 3. Confirm This Exists: from app.routes.faults import log_fault
+You’ll need to import this in any file where fault logging is used.
+
