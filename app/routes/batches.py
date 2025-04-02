@@ -393,23 +393,16 @@ def edit_batch_notes(batch_id):
 
 @batches_bp.route('/batches/<batch_id>/repeat')
 def repeat_batch(batch_id):
-    from datetime import datetime
     data = load_data()
-    original = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
-    if not original:
+    batch = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    if not batch:
         return "Batch not found", 404
-
-    new_batch = original.copy()
-    new_batch['id'] = len(data['batches']) + 1 
-    new_batch['timestamp'] = datetime.utcnow().isoformat()
-    if 'tags' in new_batch:
-        new_batch['tags'].append('repeat')
-    else:
-        new_batch['tags'] = ['repeat']
-
-    data["batches"].append(new_batch)
-    save_data(data)
-    return redirect("/batches")
+    
+    recipe = next((r for r in data['recipes'] if r['id'] == batch['recipe_id']), None)
+    if not recipe:
+        return "Recipe not found", 404
+        
+    return redirect(f"/start-batch/{recipe['id']}")
 
 @batches_bp.route('/batches/finish/<int:batch_id>', methods=["GET", "POST"])
 def finish_batch(batch_id):

@@ -316,6 +316,7 @@
             "tags": [
                 "",
                 "repeat",
+                "repeat",
                 "repeat"
             ],
             "ingredients": [
@@ -327,9 +328,50 @@
             ],
             "total_cost": 0.0,
             "qr_code": "static/qr/batch_10.png"
+        },
+        {
+            "id": 13,
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T04:18:56.292209",
+            "notes": "",
+            "tags": [
+                "",
+                "repeat",
+                "repeat",
+                "repeat"
+            ],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_10.png"
+        },
+        {
+            "id": "batch_11",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T04:19:20.077254",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_11.png"
         }
     ],
-    "batch_counter": 10,
+    "batch_counter": 11,
     "recipe_only_ingredients": [
         {
             "name": "orange",
