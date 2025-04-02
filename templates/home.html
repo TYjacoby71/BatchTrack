@@ -1,10 +1,6 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Recipe Manager - Home</title>
-</head>
-<body>
+{% extends "layout.html" %}
+{% block content %}
     <h1>Recipe Manager Dashboard</h1>
     <div class="stats">
         <h2>Statistics</h2>
@@ -22,11 +18,10 @@
         </ul>
     </div>
     
-    <nav>
-        <a href="/recipes">View Recipes</a> |
-        <a href="/ingredients">View Ingredients</a> |
-        <a href="/batches">View Batches</a> |
-        <a href="/check-stock-bulk">Check Stock</a>
-    </nav>
-</body>
-</html>
+    <div class="quick-links">
+        <a href="/recipes" class="btn">View Recipes</a>
+        <a href="/ingredients" class="btn">View Ingredients</a>
+        <a href="/batches" class="btn">View Batches</a>
+        <a href="/check-stock-bulk" class="btn">Check Stock</a>
+    </div>
+{% endblock %}
