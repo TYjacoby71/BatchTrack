@@ -11,7 +11,6 @@
       <th>On Hand</th>
       <th>Unit</th>
       <th>Label Info</th>
-      <th>Notes</th>
       <th>Batch ID</th>
       <th>Created</th>
     </tr>
@@ -21,7 +20,6 @@
       <td>{{ p.yield }}</td>
       <td>{{ p.unit }}</td>
       <td>{{ p.label_info or '' }}</td>
-      <td>{{ p.notes }}</td>
       <td>
         {% if p.batch_id %}
           <a href="/batches/view/{{ p.batch_id }}">#{{ p.batch_id }}</a>
@@ -30,8 +28,6 @@
         {% endif %}
       </td>
       <td>{{ p.timestamp }}</td>
-        {% endif %}
-      </td>
     </tr>
     <tr>
       <td colspan="6">
