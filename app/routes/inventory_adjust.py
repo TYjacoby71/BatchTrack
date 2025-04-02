@@ -14,13 +14,12 @@ def adjust_inventory():
         for i in inventory:
             name = i["name"]
             unit = i["unit"]
-            qty_delta = request.form.get(f"adj_{name}")
+            qty_delta = request.form.get(f"adj_{name}", "0")
             reason = request.form.get(f"reason_{name}")
 
-            if qty_delta:
-                try:
-                    delta = float(qty_delta)
-                    input_unit = request.form.get(f"unit_{name}", unit)
+            try:
+                delta = float(qty_delta or 0)
+                input_unit = request.form.get(f"unit_{name}", unit)
 
                     if input_unit != unit:
                         from unit_converter import UnitConversionService

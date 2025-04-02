@@ -184,8 +184,9 @@ def check_stock_bulk():
         for name, details in usage.items():
             current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
             try:
-                if not current or not current.get('quantity'):
+                if not current:
                     raise ValueError("No stock found")
+                current_qty = float(current.get('quantity', 0))
 
                 check = check_stock_availability(
                     details['qty'],
@@ -193,7 +194,7 @@ def check_stock_bulk():
                     current['quantity'],
                     current['unit']
                 )
-                
+
                 stock_report.append({
                     "name": name,
                     "needed": f"{round(details['qty'], 2)} {details['unit']}",
