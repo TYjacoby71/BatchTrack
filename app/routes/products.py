@@ -10,7 +10,7 @@ products_bp = Blueprint("products", __name__)
 def view_products():
     data = load_data()
     products = data.get("products", [])
-    return render_template("products_clean.html", products=products)
+    return render_template("products.html", products=products)
 
 @products_bp.route('/products/event/<int:product_index>', methods=["POST"])
 def product_event(product_index):
@@ -76,9 +76,3 @@ def export_products():
     for item in products:
         writer.writerow({field: item.get(field, "") for field in fieldnames})
     return output
-
-@products_bp.route("/products/clean")
-def view_products_clean():
-    data = load_data()
-    products = data.get("products", [])
-    return render_template("products_clean.html", products=products)
