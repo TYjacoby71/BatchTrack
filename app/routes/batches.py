@@ -529,20 +529,27 @@ def finish_batch(batch_id):
                     match["quantity"] = max(inv_qty - req_qty, 0)
 
             if batch_type == "product":
-                # Always create a new product entry for each batch
-                new_product = {
-                    "product": batch["recipe_name"],
-                    "yield": float(yield_qty),
-                    "unit": yield_unit,
-                    "notes": notes,
-                    "label_info": request.form.get("label_info", ""),
-                    "timestamp": datetime.now().isoformat(),
-                    "quantity_available": float(yield_qty),
-                    "events": [],
-                    "batch_id": batch_id
-                }
-                products.append(new_product)
-                data["products"] = products  # Ensure products list is updated in data
+                # Find existing product
+                existing = next((p for p in products if p["product"].lower() == batch["recipe_name"].lower() and p["unit"] == yield_unit), None)
+
+                if existing:
+                    # Add to total quantity and update timestamp/batch
+                    existing["quantity_available"] += float(yield_qty)
+                    existing["batch_id"] = batch_id
+                    existing["timestamp"] = datetime.now().isoformat()
+                else:
+                    new_product = {
+                        "product": batch["recipe_name"],
+                        "yield": float(yield_qty),
+                        "unit": yield_unit,
+                        "notes": notes,
+                        "label_info": request.form.get("label_info", ""),
+                        "timestamp": datetime.now().isoformat(),
+                        "quantity_available": float(yield_qty),
+                        "events": [],
+                        "batch_id": batch_id
+                    }
+                    products.append(new_product)
             else:  # inventory type
                 inv_item = {
                     "name": batch["recipe_name"],
