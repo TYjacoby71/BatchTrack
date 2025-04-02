@@ -33,7 +33,8 @@ def update_stock():
                     delta = abs(delta)
 
                 # Convert delta to ingredient's unit if different
-                from unit_converter import convert_units
+                from unit_converter import UnitConversionService
+converter = UnitConversionService()
                 input_unit = unit
                 stored_unit = ing.get("unit")
                 
