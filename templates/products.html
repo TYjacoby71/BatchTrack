@@ -23,6 +23,22 @@
       <td>{{ p.notes }}</td>
       <td>{{ p.timestamp }}</td>
     </tr>
+    <tr>
+      <td colspan="6">
+        <form method="POST" action="/products/event/{{ loop.index0 }}">
+          <label>Log Event: </label>
+          <select name="event_type">
+            <option value="sold">Sold</option>
+            <option value="spoiled">Spoiled</option>
+            <option value="sampled">Sampled</option>
+          </select>
+          Qty: <input type="number" name="quantity" required style="width: 60px;">
+          <input type="text" name="method" placeholder="POS / Shopify / Farmer's Market" style="width: 160px;">
+          <input type="text" name="note" placeholder="optional note" style="width: 200px;">
+          <button type="submit">Submit</button>
+        </form>
+      </td>
+    </tr>
     {% endfor %}
   </table>
 {% else %}
