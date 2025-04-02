@@ -1,64 +1,56 @@
 
 {% extends "layout.html" %}
 {% block content %}
-<h2>📦 Product Inventory</h2>
+<h2>📦 Finished Product Batches</h2>
 <a href='/products/export'>Export CSV</a><br><br>
 
 {% if products %}
   <table>
-    <thead>
-      <tr>
-        <th>Product</th>
-        <th>On Hand</th>
-        <th>Unit</th>
-        <th>Most Recent Batch</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in products %}
-      <tr>
-        <td>{{ p.product }}</td>
-        <td>{{ p.quantity_available or p.yield }}</td>
-        <td>{{ p.unit }}</td>
-        <td>
-          {% if p.batch_id %}
-            <a href="/batches/view/{{ p.batch_id }}">#{{ p.batch_id }}</a>
-          {% else %}
-            -
-          {% endif %}
-        </td>
-      </tr>
-      <tr>
-        <td colspan="4">
-          <div style="margin: 0.5em 0;">
-            <strong>Label Info:</strong> {{ p.label_info or "N/A" }}<br>
-            {% if p.product %}
-              <a href="/batches?product={{ p.product | urlencode }}">View All Batches of {{ p.product }}</a>
-            {% endif %}
-          </div>
-
-          <form method="POST" action="/products/event/{{ loop.index0 }}" style="margin-bottom: 0.5em;">
-            <label>Log Event: </label>
-            <select name="event_type">
-              <option value="sold">Sold</option>
-              <option value="spoiled">Spoiled</option>
-              <option value="sampled">Sampled</option>
-            </select>
-            Qty: <input type="number" name="quantity" required style="width: 60px;">
-            <input type="text" name="method" placeholder="POS / Shopify / Market" style="width: 160px;">
-            <input type="text" name="note" placeholder="optional note" style="width: 200px;">
-            <button type="submit">Submit</button>
-          </form>
-
-          <form method="POST" action="/products/delete/{{ loop.index0 }}" style="display: inline;" onsubmit="return confirm('Delete this product?');">
-            <button type="submit" style="background-color: #ff4444;">Delete Product</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
+    <tr>
+      <th>Product</th>
+      <th>On Hand</th>
+      <th>Unit</th>
+      <th>Label Info</th>
+      <th>Batch ID</th>
+      <th>Created</th>
+    </tr>
+    {% for p in products %}
+    <tr>
+      <td>{{ p.product }}</td>
+      <td>{{ p.yield }}</td>
+      <td>{{ p.unit }}</td>
+      <td>{{ p.label_info or '' }}</td>
+      <td>
+        {% if p.batch_id %}
+          <a href="/batches/view/{{ p.batch_id }}">#{{ p.batch_id }}</a>
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ p.timestamp or 'N/A' }}</td>
+    </tr>
+    <tr>
+      <td colspan="6">
+        <form method="POST" action="/products/event/{{ loop.index0 }}">
+          <label>Log Event: </label>
+          <select name="event_type">
+            <option value="sold">Sold</option>
+            <option value="spoiled">Spoiled</option>
+            <option value="sampled">Sampled</option>
+          </select>
+          Qty: <input type="number" name="quantity" required style="width: 60px;">
+          <input type="text" name="method" placeholder="POS / Shopify / Farmer's Market" style="width: 160px;">
+          <input type="text" name="note" placeholder="optional note" style="width: 200px;">
+          <button type="submit">Submit</button>
+        </form>
+        <form method="POST" action="/products/delete/{{ loop.index0 }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+          <button type="submit" style="background-color: #ff4444;">Delete Product</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
   </table>
 {% else %}
-  <p>No products found.</p>
+  <p>No finished product batches recorded yet.</p>
 {% endif %}
 {% endblock %}
