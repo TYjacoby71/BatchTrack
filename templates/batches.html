@@ -1,9 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>📋 All Batches</h2>
+<form method="POST" action="/batches/bulk-delete" onsubmit="return confirm('Delete selected batches?')">
 {% if batches %}
+<button type="submit" class="danger-btn">Delete Selected</button>
 <table>
   <tr>
+    <th><input type="checkbox" onclick="toggleAll(this)"></th>
     <th>Recipe</th>
     <th>Timestamp</th>
     <th>Status</th>
@@ -11,6 +14,7 @@
   </tr>
   {% for batch in batches %}
   <tr>
+    <td><input type="checkbox" name="batch_ids" value="{{ batch.id }}"></td>
     <td>{{ batch.recipe_name }}</td>
     <td><a href="/batches/view/{{ batch.id }}">{{ batch.timestamp }}</a></td>
     <td>
@@ -36,4 +40,29 @@
 {% else %}
 <p>No batches found.</p>
 {% endif %}
+</form>
+
+<script>
+function toggleAll(source) {
+  const checkboxes = document.getElementsByName('batch_ids');
+  for(let checkbox of checkboxes) {
+    checkbox.checked = source.checked;
+  }
+}
+</script>
+
+<style>
+.danger-btn {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.danger-btn:hover {
+  background: #cc0000;
+}
+</style>
 {% endblock %}

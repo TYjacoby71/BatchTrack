@@ -438,6 +438,17 @@ def delete_batch(batch_id):
     save_data(data)
     return redirect('/batches')
 
+@batches_bp.route('/batches/bulk-delete', methods=['POST'])
+def bulk_delete_batches():
+    batch_ids = request.form.getlist('batch_ids')
+    if not batch_ids:
+        return redirect('/batches')
+        
+    data = load_data()
+    data['batches'] = [b for b in data['batches'] if str(b['id']) not in batch_ids]
+    save_data(data)
+    return redirect('/batches')
+
 @batches_bp.route('/batches/update-notes/<batch_id>', methods=['POST'])
 def update_batch_notes(batch_id):
     data = load_data()
