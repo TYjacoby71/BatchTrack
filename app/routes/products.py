@@ -14,20 +14,20 @@ def view_products():
     # Aggregate products by name with unit conversion
     from unit_converter import UnitConversionService
     service = UnitConversionService()
-    aggregated = defaultdict(lambda: {"yield": 0, "unit": None, "timestamps": []})
+    aggregated = defaultdict(lambda: {"quantity": 0, "unit": None, "timestamps": []})
     for p in products:
         name = p["product"]
         try:
-            qty = float(p["yield"])
+            qty = float(p.get("quantity_available", p["yield"]))  # Fall back to yield if no quantity_available
             if not aggregated[name]["unit"]:
                 # First entry sets the unit
                 aggregated[name]["unit"] = p["unit"]
-                aggregated[name]["yield"] = qty
+                aggregated[name]["quantity"] = qty
             else:
                 # Convert subsequent quantities to first unit
                 converted_qty = service.convert(qty, p["unit"], aggregated[name]["unit"])
                 if converted_qty is not None:
-                    aggregated[name]["yield"] += converted_qty
+                    aggregated[name]["quantity"] += converted_qty
             aggregated[name]["timestamps"].append(p["timestamp"])
         except (ValueError, TypeError):
             continue
@@ -36,7 +36,7 @@ def view_products():
     products_display = [
         {
             "product": name,
-            "yield": str(details["yield"]),
+            "yield": str(details["quantity"]),  # Use quantity for display
             "unit": details["unit"],
             "timestamps": sorted(details["timestamps"], reverse=True)
         }
