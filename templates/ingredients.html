@@ -1,5 +1,9 @@
 {% extends "layout.html" %}
 {% block content %}
+<h1>Ingredients</h1>
+<form method="POST" action="/ingredients/undo" style="margin-bottom: 1em;">
+    <button type="submit">Undo Last Ingredient Change</button>
+</form>
 <h2>🧂 Ingredients</h2>
 <a href="/inventory/update" class="btn">📦 Update Stock</a>
 <form method="post" action="/ingredients/bulk-update">
@@ -20,8 +24,11 @@
       <td>{{ ing.unit }}</td>
       <td>{{ ing.cost_per_unit }}</td>
       <td>
-        <a href="/edit-ingredient/{{ ing.name }}">✏️ Edit</a>
-      </td>
+                    <a href="/edit-ingredient/{{ ing.name }}">✏️ Edit</a> |
+                    <form method="POST" action="/ingredients/zero/{{ ing.name }}" style="display: inline;">
+                        <button type="submit" style="color: red;">Zero Out</button>
+                    </form>
+                </td>
     </tr>
     {% endfor %}
   </table>
