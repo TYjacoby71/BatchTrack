@@ -113,11 +113,38 @@ def update_inventory():
     ingredients = data.get("ingredients", [])
 
     if request.method == 'POST':
-        for i, ing in enumerate(ingredients):
-            new_qty = request.form.get(f'quantity_{i}')
+        ingredient_names = request.form.getlist('ingredient_name[]')
+        deltas = request.form.getlist('delta[]')
+        units = request.form.getlist('unit[]')
+
+        for name, delta_str, unit in zip(ingredient_names, deltas, units):
             try:
-                ingredients[i]['quantity'] = round(float(new_qty), 2)
-            except (ValueError, TypeError):
+                if not delta_str:
+                    continue
+                    
+                delta = float(delta_str)
+                ingredient = next((i for i in ingredients if i['name'] == name), None)
+                
+                if ingredient:
+                    from app.unit_conversion import convert_unit
+                    if unit != ingredient['unit']:
+                        converted_delta = convert_unit(delta, unit, ingredient['unit'])
+                        if converted_delta is not None:
+                            delta = converted_delta
+                    
+                    current_qty = float(ingredient.get('quantity', 0))
+                    ingredient['quantity'] = round(current_qty + delta, 2)
+                    
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": ingredient['unit'],
+                        "reason": "Stock Update",
+                        "timestamp": datetime.now().isoformat()
+                    })
+
+            except (ValueError, TypeError) as e:
+                flash(f"Error updating {name}: {str(e)}")
                 continue
 
         save_data(data)
