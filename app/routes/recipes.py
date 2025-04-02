@@ -77,6 +77,10 @@ def edit_recipe(recipe_id):
                          units=units)
 
 
+@recipes_bp.route('/check-stock')
+def check_stock_redirect():
+    return redirect('/check-stock-bulk')
+
 @recipes_bp.route('/check-stock/<int:recipe_id>')
 def check_stock(recipe_id):
     data = load_data()
