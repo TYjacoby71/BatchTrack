@@ -100,24 +100,20 @@ def check_stock(recipe_id):
             status = "OK" if available else "LOW"
             
             stock_check.append({
-                "ingredient": item['name'],
-                "needed": format_unit_value(needed, item.get('unit', 'units')),
-                "available": format_unit_value(converted_stock, item.get('unit', 'units')),
-                "original_stock": format_unit_value(ing.get('quantity'), ing.get('unit', 'units')),
-                "unit": item.get('unit', 'units'),
+                "name": item['name'],
+                "needed": f"{format_unit_value(needed, item.get('unit', 'units'))} {item.get('unit', 'units')}",
+                "available": f"{format_unit_value(converted_stock, item.get('unit', 'units'))} {item.get('unit', 'units')}",
                 "status": status
             })
         else:
             stock_check.append({
-                "ingredient": item['name'],
-                "needed": format_unit_value(item.get('quantity'), item.get('unit', 'units')),
+                "name": item['name'],
+                "needed": f"{format_unit_value(item.get('quantity'), item.get('unit', 'units'))} {item.get('unit', 'units')}",
                 "available": "0",
-                "original_stock": "Not in stock",
-                "unit": item.get('unit', 'units'),
                 "status": "LOW"
             })
 
-    return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
+    return render_template('single_recipe_stock.html', recipe=recipe, stock_check=stock_check)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete', methods=['GET', 'POST'])
 def delete_recipe(recipe_id):

@@ -26,7 +26,7 @@
         },
         {
             "name": "milk",
-            "quantity": 5.294723160767267,
+            "quantity": 0,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -184,7 +184,7 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL",
-            "remaining_qty": 0.0
+            "remaining_qty": 4.0
         },
         {
             "id": "batch_61",
@@ -208,8 +208,7 @@
             "batch_type": "product",
             "success": "yes",
             "yield_qty": 7.0,
-            "yield_unit": "mL",
-            "remaining_qty": 0.0
+            "yield_unit": "mL"
         },
         {
             "id": "batch_62",
@@ -397,28 +396,9 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
-        },
-        {
-            "id": "batch_70",
-            "recipe_id": 7,
-            "recipe_name": "Copy of Cup of Milk",
-            "timestamp": "2025-04-02T20:05:15.587479",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "milk",
-                    "quantity": "1.0",
-                    "unit": "L"
-                }
-            ],
-            "total_cost": 3.49,
-            "qr_code": "static/qr/batch_70.png"
         }
     ],
-    "batch_counter": 70,
+    "batch_counter": 69,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -796,7 +776,7 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-02T18:25:52.925432",
-            "quantity_available": 18.0,
+            "quantity_available": 33.0,
             "events": [
                 {
                     "type": "sold",
@@ -811,13 +791,6 @@
                     "method": "",
                     "note": "",
                     "timestamp": "2025-04-02T18:36:23.988841"
-                },
-                {
-                    "type": "sold",
-                    "qty": 15,
-                    "method": "",
-                    "note": "",
-                    "timestamp": "2025-04-02T20:26:31.195039"
                 }
             ],
             "batch_id": "batch_64"
@@ -863,5 +836,11 @@
             "timestamp": "2025-04-02T05:48:29.030466"
         }
     ],
-    "undo_stack": []
+    "undo_stack": [
+        {
+            "index": 4,
+            "previous_quantity": 5.294723160767267,
+            "timestamp": "2025-04-02T19:49:17.283207"
+        }
+    ]
 }
