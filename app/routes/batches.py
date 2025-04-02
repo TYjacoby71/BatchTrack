@@ -157,9 +157,9 @@ def check_stock_bulk():
                 needed_items[name]["total"] += shortfall
                 needed_items[name]["unit"] = unit
 
-        return render_template('stock_bulk_result.html', stock_report=stock_report, missing_summary=needed_items)
+        return render_template('bulk_stock_results.html', stock_report=stock_report, missing_summary=needed_items)
 
-    return render_template('check_stock_bulk.html', recipes=data['recipes'])
+    return render_template('bulk_stock_check.html', recipes=data['recipes'])
 
 @batches_bp.route('/tags.json')
 def tag_suggestions():

@@ -113,7 +113,7 @@ def check_stock(recipe_id):
                 "status": "LOW"
             })
 
-    return render_template('stock_check.html', recipe=recipe, stock_check=stock_check)
+    return render_template('single_recipe_stock.html', recipe=recipe, stock_check=stock_check)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete', methods=['GET', 'POST'])
 def delete_recipe(recipe_id):
