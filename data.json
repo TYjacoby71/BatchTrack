@@ -138,9 +138,67 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_40",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-02T07:11:35.388501",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "dash"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "tsp"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_40.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 6.0,
+            "yield_unit": "unit"
+        },
+        {
+            "id": "batch_41",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T07:12:22.178283",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_41.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 6.0,
+            "yield_unit": "mL"
         }
     ],
-    "batch_counter": 39,
+    "batch_counter": 41,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -543,8 +601,8 @@
             "unit": "mL",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T07:11:08.847217",
-            "quantity_available": 15.0,
+            "timestamp": "2025-04-02T07:12:30.186514",
+            "quantity_available": 21.0,
             "events": []
         },
         {
@@ -583,8 +641,8 @@
             "unit": "unit",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-02T06:58:28.370549",
-            "quantity_available": 10.0,
+            "timestamp": "2025-04-02T07:11:49.749024",
+            "quantity_available": 16.0,
             "events": []
         }
     ],
