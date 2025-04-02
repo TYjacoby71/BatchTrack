@@ -25,8 +25,8 @@
                 <th>Status</th>
             </tr>
             <tr>
-                <td>{{ item.needed }} {{ item.unit }}</td>
-                <td>{{ item.available }} {{ item.unit }}</td>
+                <td>{{ item.needed }}</td>
+                <td>{{ item.available }}</td>
                 <td>{% if item.status == "OK" %}✅{% else %}❌{% endif %}</td>
             </tr>
         </table>
