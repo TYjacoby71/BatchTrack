@@ -13,3 +13,13 @@ def safe_route(func):
             return "Something went wrong. Check logs.", 500
     wrapper.__name__ = func.__name__
     return wrapper
+from flask import render_template
+
+def register_error_handlers(app):
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('errors/404.html'), 404
+        
+    @app.errorhandler(500) 
+    def server_error(error):
+        return render_template('errors/500.html'), 500

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect
+from flask import Blueprint, request, render_template, redirect, flash
 from app.routes.utils import load_data, save_data
 from datetime import datetime
 
@@ -32,7 +32,11 @@ def adjust_inventory():
                             continue
 
                     if "quantity" in i:
-                        i["quantity"] = float(i["quantity"] or 0) + delta
+                        new_qty = float(i["quantity"] or 0) + delta
+                        if new_qty < 0:
+                            flash("Error: Quantity cannot be negative")
+                            return redirect('/inventory/adjust')
+                        i["quantity"] = new_qty
                     else:
                         i["quantity"] = delta
 
