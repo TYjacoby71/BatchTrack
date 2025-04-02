@@ -60,7 +60,7 @@
         },
         {
             "name": "test",
-            "quantity": 12.0,
+            "quantity": 22724.46,
             "unit": "mL",
             "cost_per_unit": "333"
         }
@@ -273,7 +273,50 @@
             "timestamp": "2025-04-01T01:36:35.513354",
             "notes": "",
             "tags": [
-                ""
+                "",
+                "repeat"
+            ],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_10.png"
+        },
+        {
+            "id": 11,
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T04:17:53.238895",
+            "notes": "",
+            "tags": [
+                "",
+                "repeat",
+                "repeat"
+            ],
+            "ingredients": [
+                {
+                    "name": "Milk",
+                    "quantity": "1",
+                    "unit": "cup"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_10.png"
+        },
+        {
+            "id": 12,
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-02T04:17:59.456631",
+            "notes": "",
+            "tags": [
+                "",
+                "repeat",
+                "repeat"
             ],
             "ingredients": [
                 {
@@ -626,6 +669,13 @@
             "unit": "mL",
             "reason": "Purchase",
             "timestamp": "2025-04-02T04:14:36.404868"
+        },
+        {
+            "name": "test",
+            "change": 22712.46,
+            "unit": "mL",
+            "reason": "Purchase",
+            "timestamp": "2025-04-02T04:17:14.039235"
         }
     ]
 }
