@@ -46,7 +46,7 @@
           {% for ing in ingredients %}
           <option value="{{ ing.name }}" data-unit="{{ ing.unit }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
           {% endfor %}
-          <option value="__add_new__" style="background-color: #4CAF50; color: white;">➕ Quick add new ingredient</option>
+          <option value="__add_new__" data-url="/quickadd?next=/stock/inventory/update" style="background-color: #4CAF50; color: white;">➕ Quick add new ingredient</option>
         </select>
         <input type="number" step="any" name="delta[]" placeholder="Change Amount">
         <select name="unit[]" required>
@@ -87,7 +87,7 @@ function addIngredientRow() {
       {% for ing in ingredients %}
       <option value="{{ ing.name }}" data-unit="{{ ing.unit }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
       {% endfor %}
-      <option value="__add_new__" style="background-color: #4CAF50; color: white;">➕ Quick add new ingredient</option>
+      <option value="__add_new__" data-url="/quickadd?next=/stock/inventory/update" style="background-color: #4CAF50; color: white;">➕ Quick add new ingredient</option>
     </select>
     <input type="number" step="any" name="delta[]" placeholder="Change Amount">
     <select name="unit[]" required>
