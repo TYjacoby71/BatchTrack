@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <style>
@@ -109,4 +108,26 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function startFlow() {
+  window.location.href = "/batches/start";
+}
+
+function finishFlow() {
+  window.location.href = "/batches/finish";
+}
+
+function checkStock() {
+  const recipeId = document.getElementById("recipe").value;
+  //Improved error handling: check if recipeId is valid before redirecting.
+  if (recipeId) {
+    window.location.href = `/stock/check/${recipeId}`;
+  } else {
+    alert("Please select a recipe first.");
+  }
+}
+</script>
 {% endblock %}
