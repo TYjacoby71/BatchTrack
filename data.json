@@ -2,7 +2,7 @@
     "ingredients": [
         {
             "name": "shea butter",
-            "quantity": 205.08,
+            "quantity": 200.0,
             "unit": "oz",
             "cost_per_unit": "5"
         },

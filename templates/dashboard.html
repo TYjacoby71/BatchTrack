@@ -85,6 +85,19 @@
   scroll-behavior: smooth;
 }
 
+@media (min-width: 1200px) {
+  .quick-access {
+    justify-content: center;
+    overflow-x: visible;
+  }
+  .quick-access-container {
+    flex-wrap: nowrap;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
 .quick-access::-webkit-scrollbar {
   display: none;
 }
@@ -286,15 +299,27 @@ function toggleAll(source) {
 }
 
 function startFlow() {
-  window.location.href = '/recipes';
+  fetch('/recipes.json')
+    .then(response => response.json())
+    .then(data => {
+      const recipeSelect = document.getElementById('recipe');
+      recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
+        data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      document.getElementById('recipe-select').style.display = 'block';
+    });
 }
 
 function checkStock() {
-  window.location.href = '/stock/check-bulk';
+  const recipeId = document.getElementById("recipe").value;
+  if (!recipeId) {
+    alert("Please select a recipe first");
+    return;
+  }
+  window.location.href = `/stock/check/${recipeId}`;
 }
 
 function finishFlow() {
-  window.location.href = '/batches';
+  window.location.href = "/batches";
 }
 
 function startSelectedBatch() {
@@ -303,11 +328,12 @@ function startSelectedBatch() {
     alert('Please select a recipe first');
     return;
   }
-  window.location.href = `/start-batch/${recipeId}`;
+  checkStock();
 }
 
 function cancelFlow() {
   document.getElementById('recipe-select').style.display = 'none';
+  document.getElementById('stock-status').style.display = 'none';
   document.getElementById('recipe').value = '';
 }
 
