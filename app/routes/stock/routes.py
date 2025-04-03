@@ -56,8 +56,8 @@ def update_stock():
                     continue
 
         save_data(data)
-        # Get the previous page from the referer header, default to ingredients page
-        previous_page = request.referrer or '/ingredients'
+        # Get the referrer from form data, fallback to HTTP referrer, then ingredients page
+        previous_page = request.form.get('referrer') or request.referrer or '/ingredients'
         return redirect(previous_page)
 
     # Load units from JSON file
