@@ -209,54 +209,66 @@ document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
   const originalItems = container.innerHTML;
+  container.innerHTML = originalItems.repeat(8);
   
-  // Clone items multiple times for smooth infinite scroll
-  container.innerHTML = originalItems + originalItems + originalItems;
-  
-  let scrolling = false;
+  let scrolling = true;
   let lastTime = 0;
-  const scrollSpeed = 0.5; // Reduced speed
+  let touchActive = false;
+  let touchStartX = 0;
+  let scrollStartX = 0;
+  const scrollSpeed = 0.3;
   
   const scroll = (currentTime) => {
-    if (!scrolling) return;
+    if (!scrolling || touchActive) return;
     
     if (!lastTime) lastTime = currentTime;
     const delta = currentTime - lastTime;
     
-    quickAccess.scrollLeft += scrollSpeed * (delta / 16); // Smooth speed based on frame time
+    quickAccess.scrollLeft += scrollSpeed * (delta / 16);
     
     if (quickAccess.scrollLeft >= (container.scrollWidth - quickAccess.offsetWidth) / 2) {
-      quickAccess.scrollLeft = 0;
+      quickAccess.scrollLeft = quickAccess.offsetWidth / 4;
     }
     
     lastTime = currentTime;
     requestAnimationFrame(scroll);
   };
   
-  // Start automatic scrolling with delay
-  setTimeout(() => {
-    scrolling = true;
+  quickAccess.addEventListener('touchstart', (e) => {
+    touchActive = true;
+    touchStartX = e.touches[0].clientX;
+    scrollStartX = quickAccess.scrollLeft;
+  }, { passive: true });
+  
+  quickAccess.addEventListener('touchmove', (e) => {
+    if (!touchActive) return;
+    const touchDelta = touchStartX - e.touches[0].clientX;
+    quickAccess.scrollLeft = scrollStartX + touchDelta;
+  }, { passive: true });
+  
+  quickAccess.addEventListener('touchend', () => {
+    touchActive = false;
     requestAnimationFrame(scroll);
-  }, 1000);
-  
-  // Add debounce for hover events
-  let hoverTimeout;
-  quickAccess.addEventListener('mouseenter', () => {
-    clearTimeout(hoverTimeout);
-    hoverTimeout = setTimeout(() => {
-      scrolling = false;
-      lastTime = 0;
-    }, 100);
   });
   
-  quickAccess.addEventListener('mouseleave', () => {
-    clearTimeout(hoverTimeout);
-    hoverTimeout = setTimeout(() => {
-      scrolling = true;
-      lastTime = 0;
-      requestAnimationFrame(scroll);
-    }, 100);
+  quickAccess.addEventListener('mousedown', (e) => {
+    touchActive = true;
+    touchStartX = e.clientX;
+    scrollStartX = quickAccess.scrollLeft;
   });
+  
+  window.addEventListener('mousemove', (e) => {
+    if (!touchActive) return;
+    const touchDelta = touchStartX - e.clientX;
+    quickAccess.scrollLeft = scrollStartX + touchDelta;
+  });
+  
+  window.addEventListener('mouseup', () => {
+    touchActive = false;
+    requestAnimationFrame(scroll);
+  });
+  
+  requestAnimationFrame(scroll);
 });
 </script>
 
