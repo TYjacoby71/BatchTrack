@@ -69,6 +69,13 @@
       box-shadow: 0 8px 16px rgba(0,0,0,0.1);
       border-radius: var(--spacing-1);
       z-index: 1001;
+      max-width: calc(100vw - 32px);
+    }
+
+    @media (max-width: 768px) {
+      .nav-content {
+        right: -8px;
+      }
     }
 
     .nav-content a {
