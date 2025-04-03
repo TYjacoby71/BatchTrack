@@ -1,3 +1,7 @@
+📄 unit_converter.py
+python
+Copy
+Edit
 class UnitConversionService:
     UNIT_ALIASES = {
         "cups": "cup", "tbsps": "tbsp", "tsps": "tsp",
@@ -34,52 +38,50 @@ class UnitConversionService:
         "beeswax": 0.96
     }
 
+    def normalize_unit(self, unit):
+        unit = unit.lower().strip()
+        return self.UNIT_ALIASES.get(unit, unit)
+
     def convert_volume(self, amount, from_unit, to_unit):
-        from_unit = from_unit.lower().strip()
-        to_unit = to_unit.lower().strip()
-        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
-        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
+        from_unit = self.normalize_unit(from_unit)
+        to_unit = self.normalize_unit(to_unit)
         if from_unit not in self.VOLUME_TO_ML or to_unit not in self.VOLUME_TO_ML:
+            print(f"[WARN] Unknown volume unit: {from_unit} or {to_unit}")
             return None
         ml = amount * self.VOLUME_TO_ML[from_unit]
         return ml / self.VOLUME_TO_ML[to_unit]
 
     def convert_weight(self, amount, from_unit, to_unit):
-        from_unit = from_unit.lower().strip()
-        to_unit = to_unit.lower().strip()
-        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
-        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
+        from_unit = self.normalize_unit(from_unit)
+        to_unit = self.normalize_unit(to_unit)
         if from_unit not in self.WEIGHT_TO_G or to_unit not in self.WEIGHT_TO_G:
+            print(f"[WARN] Unknown weight unit: {from_unit} or {to_unit}")
             return None
         g = amount * self.WEIGHT_TO_G[from_unit]
         return g / self.WEIGHT_TO_G[to_unit]
 
     def convert_between_types(self, amount, from_unit, to_unit, material="water"):
-        from_unit = from_unit.lower().strip()
-        to_unit = to_unit.lower().strip()
-        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
-        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
-
-        if from_unit not in self.VOLUME_TO_ML and from_unit not in self.WEIGHT_TO_G:
-            print(f"[WARN] Unknown unit: {from_unit}")
-        if to_unit not in self.VOLUME_TO_ML and to_unit not in self.WEIGHT_TO_G:
-            print(f"[WARN] Unknown unit: {to_unit}")
-
+        from_unit = self.normalize_unit(from_unit)
+        to_unit = self.normalize_unit(to_unit)
         density = self.DENSITIES.get(material.lower(), 1.0)
-        if material.lower() not in self.DENSITIES:
-            print(f"[WARN] Unknown material density for: {material}, using default 1.0")
 
         if from_unit in self.VOLUME_TO_ML and to_unit in self.WEIGHT_TO_G:
             ml = amount * self.VOLUME_TO_ML[from_unit]
             g = ml * density
             return g / self.WEIGHT_TO_G[to_unit]
+
         if from_unit in self.WEIGHT_TO_G and to_unit in self.VOLUME_TO_ML:
             g = amount * self.WEIGHT_TO_G[from_unit]
             ml = g / density
             return ml / self.VOLUME_TO_ML[to_unit]
+
+        print(f"[WARN] Cannot convert {from_unit} to {to_unit} for material: {material}")
         return None
 
     def convert(self, amount, from_unit, to_unit, material="water"):
+        from_unit = self.normalize_unit(from_unit)
+        to_unit = self.normalize_unit(to_unit)
+
         if from_unit in self.VOLUME_TO_ML and to_unit in self.VOLUME_TO_ML:
             return self.convert_volume(amount, from_unit, to_unit)
         elif from_unit in self.WEIGHT_TO_G and to_unit in self.WEIGHT_TO_G:
@@ -87,18 +89,18 @@ class UnitConversionService:
         return self.convert_between_types(amount, from_unit, to_unit, material)
 
     def convert_units(self, value, from_unit, to_unit):
-        """Convert value between units"""
         try:
             return self.convert(float(value), from_unit, to_unit)
         except (ValueError, TypeError):
             return None
 
     def parse_unit(self, unit_str):
-        """Parse a unit string into a standardized format"""
-        return unit_str.lower().strip() if unit_str else ""
+        return self.normalize_unit(unit_str)
 
-
+# Shared converter instance
 converter = UnitConversionService()
+
+# Support functions
 
 def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
     try:
@@ -112,7 +114,6 @@ def can_fulfill(stock_qty, stock_unit, needed_qty, needed_unit):
         return False
 
 def format_unit_value(value, unit):
-    """Format a value with its unit for display"""
     if value is None or value == '':
         return "N/A"
     try:
@@ -123,16 +124,12 @@ def format_unit_value(value, unit):
         return f"{value}{' ' + unit if unit else ''}"
 
 def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
-    """
-    Check if there's enough stock for a recipe
-    Returns: (bool available, float converted_stock_qty, float needed_qty)
-    """
     try:
         if not recipe_qty or not stock_qty or not recipe_unit or not stock_unit:
             return False, 0, 0
 
-        recipe_qty = float(recipe_qty) if recipe_qty else 0
-        stock_qty = float(stock_qty) if stock_qty else 0
+        recipe_qty = float(recipe_qty)
+        stock_qty = float(stock_qty)
 
         converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit)
         if converted_stock is None:
