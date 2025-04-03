@@ -117,16 +117,14 @@ function addIngredientRow() {
     width: '100%'
   });
 
-
-<script>
-document.querySelectorAll('select[name="unit[]"]').forEach(select => {
-  select.addEventListener('change', function() {
-    if (this.value === '__add_unit__') {
-      window.location.href = '/units';
-    }
+  // Add unit selector handling
+  document.querySelectorAll('select[name="unit[]"]').forEach(select => {
+    select.addEventListener('change', function() {
+      if (this.value === '__add_unit__') {
+        window.location.href = '/units';
+      }
+    });
   });
-});
-</script>
 
   showAllDeleteButtons();
 }
