@@ -313,52 +313,38 @@ th {
 {% block scripts %}
 <script>
 function startFlow() {
-  fetch('/recipes')
-    .then(response => response.json())
-    .then(data => {
-      const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = data.recipes.map(r => 
-        `<option value="${r.id}">${r.name}</option>`
-      ).join('');
-      
-      document.getElementById('action-select').classList.remove('active');
-      setTimeout(() => {
-        document.getElementById('recipe-select').classList.add('active');
-      }, 100);
-    });
+  document.getElementById('action-select').classList.remove('active');
+  document.getElementById('recipe-select').classList.add('active');
 }
 
 function finishFlow() {
-  window.location.href = "/batches/finish";
+  window.location.href = "/batches";
 }
 
 function checkStock() {
   const recipeId = document.getElementById("recipe").value;
-  document.getElementById("recipe-select").classList.remove('active');
-  document.getElementById("stock-status").classList.add('active');
-  
-  fetch(`/stock/check/${recipeId}`)
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById("stock-message").innerText = data.message;
-      if (data.status === "OK") {
-        document.getElementById("stock-options").style.display = "block";
-      }
-    });
+  if (!recipeId) {
+    alert("Please select a recipe first");
+    return;
+  }
+  window.location.href = `/stock/check/${recipeId}`;
 }
 
 function startBatch() {
   const recipeId = document.getElementById("recipe").value;
-  window.location.href = `/batches/start/${recipeId}`;
+  if (!recipeId) {
+    alert("Please select a recipe first");
+    return;
+  }
+  window.location.href = `/start-batch/${recipeId}`;
 }
 
 function goToShopping() {
-  const recipeId = document.getElementById("recipe").value;
-  window.location.href = `/stock/check-bulk?recipe=${recipeId}`;
+  window.location.href = "/stock/check-bulk";
 }
 
 function goToUpdate() {
-  window.location.href = "/stock/inventory/adjust";
+  window.location.href = "/stock/update";
 }
 
 function cancelFlow() {
