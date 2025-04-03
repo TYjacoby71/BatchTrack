@@ -120,17 +120,22 @@ def format_unit_value(value, unit):
         return f"{value}{' ' + unit if unit else ''}"
 
 def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
+    """
+    Check if there's enough stock for a recipe
+    Returns: (bool available, float converted_stock_qty, float needed_qty)
+    """
     try:
-        if not recipe_qty or not stock_qty or not recipe_unit or not stock_unit:
-            return False, 0, 0
-
-        recipe_qty = float(recipe_qty)
-        stock_qty = float(stock_qty)
+        # Safe float fallback
+        recipe_qty = float(recipe_qty or 0)
+        stock_qty = float(stock_qty or 0)
 
         converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit)
         if converted_stock is None:
+            print(f"[WARN] Unit mismatch: {stock_unit} → {recipe_unit}")
             return False, 0, recipe_qty
 
         return converted_stock >= recipe_qty, converted_stock, recipe_qty
-    except (ValueError, TypeError):
+
+    except (ValueError, TypeError) as e:
+        print(f"[ERROR] Stock check failed for {stock_qty} {stock_unit}: {e}")
         return False, 0, 0

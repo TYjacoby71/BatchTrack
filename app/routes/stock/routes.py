@@ -8,6 +8,13 @@ import json
 
 from . import stock_bp
 
+def safe_float(value):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
+
+
 @stock_bp.route('/check/<int:recipe_id>')
 def check_stock_for_recipe(recipe_id):
     data = load_data()
@@ -20,7 +27,7 @@ def check_stock_for_recipe(recipe_id):
     stock_check = []
     for item in recipe.get("ingredients", []):
         name = item["name"]
-        qty = float(item["quantity"])
+        qty = safe_float(item["quantity"]) # Use safe_float here
         unit = item.get("unit", "units")
 
         match = next((i for i in inventory if i["name"].lower() == name.lower()), None)
@@ -30,7 +37,7 @@ def check_stock_for_recipe(recipe_id):
             try:
                 check = check_stock_availability(
                     qty, unit,
-                    float(match["quantity"]), match["unit"],
+                    safe_float(match["quantity"]), match["unit"], # Use safe_float here
                     material=name.lower()
                 )
             except (ValueError, TypeError) as e:
@@ -65,12 +72,12 @@ def check_stock_bulk():
         usage = {}
 
         for r_id, count in zip(recipe_ids, batch_counts):
-            count = float(count or 0)
+            count = safe_float(count or 0) # Use safe_float here
             if count > 0:
                 recipe = next((r for r in data['recipes'] if r['id'] == int(r_id)), None)
                 if recipe:
                     for item in recipe['ingredients']:
-                        base_qty = float(item['quantity'])
+                        base_qty = safe_float(item['quantity']) # Use safe_float here
                         total_qty = base_qty * count
                         if item['name'] not in usage:
                             usage[item['name']] = {
@@ -90,9 +97,9 @@ def check_stock_bulk():
                     raise ValueError("No stock found")
 
                 check = check_stock_availability(
-                    float(details['qty']),
+                    safe_float(details['qty']), # Use safe_float here
                     details['unit'],
-                    float(current['quantity']),
+                    safe_float(current['quantity']), # Use safe_float here
                     current['unit'],
                     material=name.lower()
                 )
@@ -131,11 +138,11 @@ def update_inventory():
                 if not delta_str:
                     continue
 
-                delta = float(delta_str)
+                delta = safe_float(delta_str) # Use safe_float here
                 ingredient = next((i for i in ingredients if i['name'] == name), None)
 
                 if ingredient:
-                    current_qty = float(ingredient.get('quantity', 0))
+                    current_qty = safe_float(ingredient.get('quantity', 0)) # Use safe_float here
 
                     # Convert units if they don't match
                     if unit != ingredient['unit']:
@@ -185,7 +192,7 @@ def adjust_inventory():
 
             if qty_delta:
                 try:
-                    delta = float(qty_delta)
+                    delta = safe_float(qty_delta) # Use safe_float here
                     input_unit = request.form.get(f"unit_{name}", unit)
 
                     if input_unit != unit:
@@ -198,7 +205,7 @@ def adjust_inventory():
                             continue
 
                     if "quantity" in i:
-                        new_qty = float(i["quantity"] or 0) + delta
+                        new_qty = safe_float(i["quantity"] or 0) + delta # Use safe_float here
                         if new_qty < 0:
                             flash("Error: Quantity cannot be negative")
                             return redirect('/stock/inventory/adjust')
