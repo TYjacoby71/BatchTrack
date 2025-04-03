@@ -290,7 +290,9 @@ def start_batch(recipe_id):
                 insufficient.append(f"{ing_name} (need {req_qty} {req_unit}, have {inv_qty} {inv_unit})")
 
         if insufficient:
-            return f"Cannot start batch. Insufficient ingredients: {', '.join(insufficient)}", 400
+            from flask import flash
+            flash(f"Cannot start batch. Insufficient ingredients: {', '.join(insufficient)}")
+            return redirect(f'/stock/check/{recipe_id}')
 
         notes = request.form.get('notes', '').strip()
         tags = request.form.get('tags', '').strip().split(',')
