@@ -27,6 +27,9 @@ def create_app():
     from app.routes.units import unit_bp
     app.register_blueprint(unit_bp)
     
+    from app.routes.settings import settings_bp
+    app.register_blueprint(settings_bp)
+    
     from app.error_tools import register_error_handlers
     register_error_handlers(app)
 

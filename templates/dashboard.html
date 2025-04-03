@@ -5,35 +5,36 @@
     max-width: 900px;
     margin: 0 auto;
     padding: 20px;
+    text-align: center;
   }
   .dashboard-title {
     font-size: 2.5em;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     color: #333;
   }
-  .section {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  .quick-access-section {
+    margin-bottom: 40px;
   }
-  .quick-links {
+  .icon-buttons {
     display: flex;
-    gap: 10px;
+    justify-content: center;
+    gap: 25px;
     flex-wrap: wrap;
   }
-  .quick-links a {
-    padding: 8px 16px;
-    background: #007bff;
-    color: white;
+  .icon-btn {
+    font-size: 2em;
     text-decoration: none;
-    border-radius: 4px;
-    transition: background 0.2s;
+    padding: 15px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
   }
-  .quick-links a:hover {
-    background: #0056b3;
+  .icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
+</style>
   table {
     width: 100%;
     border-collapse: collapse;
@@ -53,18 +54,15 @@
 </style>
 
 <div class="dashboard-container">
-  <h1 class="dashboard-title">📋 BatchTrack Dashboard</h1>
+  <h1 class="dashboard-title">Dashboard</h1>
 
-  <div class="section">
-    <p>Welcome, {{ session.get("user", "Guest") }}!</p>
-
-    <h3>🧭 Quick Access</h3>
-    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-      <a href="/ingredients"><button>🧪 Ingredients</button></a>
-      <a href="/recipes"><button>📘 Recipes</button></a>
-      <a href="/batches"><button>📦 Batches</button></a>
-      <a href="/stock/check-bulk"><button>📊 Bulk Stock Check</button></a>
-      <a href="/tags/manage"><button>🏷 Tag Manager</button></a>
+  <div class="quick-access-section">
+    <div class="icon-buttons">
+      <a href="/ingredients" class="icon-btn" title="Ingredients">🧪</a>
+      <a href="/recipes" class="icon-btn" title="Recipes">📘</a>
+      <a href="/batches" class="icon-btn" title="Batches">📦</a>
+      <a href="/stock/check-bulk" class="icon-btn" title="Bulk Stock Check">📊</a>
+      <a href="/tags/manage" class="icon-btn" title="Tag Manager">🏷</a>
     </div>
   </div>
 
