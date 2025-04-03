@@ -13,57 +13,59 @@
     margin-bottom: 30px;
     color: #333;
   }
-  .quick-access-section {
-    margin-bottom: 40px;
-  }
-  .icon-buttons {
+  .action-buttons {
     display: flex;
     justify-content: center;
-    gap: 25px;
-    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
   }
-  .icon-btn {
-    font-size: 2em;
-    text-decoration: none;
-    padding: 15px;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  .icon-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-  th {
-    background: #f8f9fa;
-    padding: 12px;
-  }
-  td {
+  .quick-scroll-bar {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
     padding: 10px;
-    border: 1px solid #dee2e6;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 30px;
   }
-  .low-stock {
-    color: #dc3545;
+  .quick-scroll-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .quick-btn {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    background-color: #f3f4f6;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: background 0.2s ease;
+  }
+  .quick-btn:hover {
+    background-color: #e0e7ff;
+  }
+  .section {
+    margin-bottom: 40px;
   }
 </style>
 
 <div class="dashboard-container">
   <h1 class="dashboard-title">Dashboard</h1>
 
-  <div class="quick-access-section">
-    <div class="icon-buttons">
-      <a href="/ingredients" class="icon-btn" title="Ingredients">🧪</a>
-      <a href="/recipes" class="icon-btn" title="Recipes">📘</a>
-      <a href="/stock/check-bulk" class="icon-btn" title="Bulk Stock Check">📊</a>
-      <a href="/batches" class="icon-btn" title="Batches">📦</a>
-      <a href="/products" class="icon-btn" title="Products">📝</a>
-    </div>
+  <div class="action-buttons">
+    <a href="/batches/start" class="icon-btn" title="Start Batch">📦 Start Batch</a>
+    <a href="/recipes" class="icon-btn" title="Recipes">📘 Recipes</a>
+    <a href="/stock/check-bulk" class="icon-btn" title="Stock Check">📊 Stock Check</a>
+  </div>
+
+  <div class="quick-scroll-bar">
+    <a href="/ingredients" class="quick-btn">🧪 Ingredients</a>
+    <a href="/stock/update" class="quick-btn">📥 Stock Update</a>
+    <a href="/batches" class="quick-btn">📦 Batches</a>
+    <a href="/products" class="quick-btn">🏭 Products</a>
+    <a href="/tags/manage" class="quick-btn">🏷 Tags</a>
   </div>
 
   <div class="section">
