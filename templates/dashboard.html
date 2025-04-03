@@ -159,6 +159,27 @@
   display: none;
   margin-top: 20px;
 }
+
+#recipe-select {
+    display: none;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    max-width: 90%;
+    width: 400px;
+  }
+
+  @media (min-width: 768px) {
+    #recipe-select {
+      top: 35%;
+    }
+  }
 </style>
 
 <div class="dashboard-container">
@@ -172,7 +193,7 @@
       {% endif %}
     </div>
 
-    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+    <div id="recipe-select" class="alert-card" >
       <h3>Select Recipe</h3>
       <select id="recipe" class="form-control" style="margin: 20px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
         <option value="">Choose a recipe...</option>
