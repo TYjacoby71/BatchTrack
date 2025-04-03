@@ -1,76 +1,46 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Start Batch - {{ recipe.name }}</title>
+    <title>Production: {{ recipe.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Start Batch - {{ recipe.name }}</h1>
-    
-    <form method="POST">
-        <h3>Ingredients:</h3>
-        <ul>
-        {% for ingredient in recipe.ingredients %}
-            <li>{{ ingredient.name }}: {{ ingredient.quantity }} {{ ingredient.unit }}</li>
-        {% endfor %}
-        </ul>
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl mb-4">Production: {{ recipe.name }}</h1>
+        <div class="mb-4">Scale: {{ scale }}x</div>
 
-        <div>
-            <label for="scale">Scale (how many batches):</label><br>
-            <input type="number" name="scale" id="scale" step="0.1" min="0.1" value="1" required><br><br>
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl mb-4">Scaled Ingredients</h2>
+            <ul class="mb-4">
+            {% for ingredient in scaled_ingredients %}
+                <li class="py-2 border-b">
+                    {{ ingredient.name }}: {{ "%.2f"|format(ingredient.quantity) }} {{ ingredient.unit }}
+                </li>
+            {% endfor %}
+            </ul>
+
+            <h2 class="text-xl mb-4">Instructions</h2>
+            <div class="whitespace-pre-wrap mb-6">{{ recipe.instructions }}</div>
         </div>
 
-        <div>
-            <label for="notes">Notes:</label><br>
-            <textarea name="notes" id="notes"></textarea>
-        </div>
+        <form method="POST" class="space-y-4">
+            <input type="hidden" name="scale" value="{{ scale }}">
 
-        <div>
-            <label for="tags">Tags (comma-separated):</label><br>
-            <input type="text" name="tags" id="tags">
-        </div>
+            <div>
+                <label class="block text-gray-700 mb-2">Notes:</label>
+                <textarea name="notes" class="w-full p-2 border rounded">{{ notes }}</textarea>
+            </div>
 
-        <button type="submit">Start Batch</button>
-    </form>
+            <div>
+                <label class="block text-gray-700 mb-2">Tags:</label>
+                <input type="text" name="tags" value="{{ tags }}" class="w-full p-2 border rounded" placeholder="Enter tags, comma separated">
+            </div>
 
-    <a href="/recipes">Back to Recipes</a>
-<label>Tags (comma-separated):</label>
-<input type="text" id="tagsInput" name="tags" placeholder="e.g. lavender, night-use">
-<ul id="tagSuggestions" style="list-style: none; padding: 0; margin: 0;"></ul>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  const input = document.getElementById("tagsInput");
-  const suggestionsBox = document.getElementById("tagSuggestions");
-  let allTags = [];
-
-  fetch("/tags.json")
-    .then(res => res.json())
-    .then(data => allTags = data);
-
-  input.addEventListener("input", function() {
-    const query = input.value.toLowerCase();
-    const used = query.split(',').map(s => s.trim());
-    const current = used[used.length - 1];
-
-    suggestionsBox.innerHTML = '';
-    if (current.length === 0) return;
-
-    allTags.filter(tag => tag.includes(current) && !used.includes(tag))
-           .slice(0, 5)
-           .forEach(tag => {
-              const li = document.createElement("li");
-              li.textContent = tag;
-              li.style.cursor = "pointer";
-              li.onclick = () => {
-                used[used.length - 1] = tag;
-                input.value = used.join(', ') + ', ';
-                suggestionsBox.innerHTML = '';
-              };
-              suggestionsBox.appendChild(li);
-           });
-  });
-});
-</script>
+            <div class="flex gap-4">
+                <button type="submit" name="finish_batch" class="bg-green-500 text-white px-4 py-2 rounded">Complete Batch</button>
+                <button type="submit" name="leave_batch" class="bg-gray-500 text-white px-4 py-2 rounded">Leave Unfinished</button>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
