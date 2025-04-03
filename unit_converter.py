@@ -1,4 +1,11 @@
 class UnitConversionService:
+    UNIT_ALIASES = {
+        "cups": "cup", "tbsps": "tbsp", "tsps": "tsp",
+        "liters": "liter", "gallons": "gallon",
+        "lbs": "lb", "kgs": "kg", "ozs": "oz",
+        "milliliters": "ml", "grams": "g",
+    }
+
     VOLUME_TO_ML = {
         "ml": 1,
         "liter": 1000,
@@ -28,21 +35,30 @@ class UnitConversionService:
     }
 
     def convert_volume(self, amount, from_unit, to_unit):
-        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        from_unit = from_unit.lower().strip()
+        to_unit = to_unit.lower().strip()
+        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
+        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
         if from_unit not in self.VOLUME_TO_ML or to_unit not in self.VOLUME_TO_ML:
             return None
         ml = amount * self.VOLUME_TO_ML[from_unit]
         return ml / self.VOLUME_TO_ML[to_unit]
 
     def convert_weight(self, amount, from_unit, to_unit):
-        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        from_unit = from_unit.lower().strip()
+        to_unit = to_unit.lower().strip()
+        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
+        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
         if from_unit not in self.WEIGHT_TO_G or to_unit not in self.WEIGHT_TO_G:
             return None
         g = amount * self.WEIGHT_TO_G[from_unit]
         return g / self.WEIGHT_TO_G[to_unit]
 
     def convert_between_types(self, amount, from_unit, to_unit, material="water"):
-        from_unit, to_unit = from_unit.lower(), to_unit.lower()
+        from_unit = from_unit.lower().strip()
+        to_unit = to_unit.lower().strip()
+        from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
+        to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
         if material not in self.DENSITIES:
             return None
         if from_unit in self.VOLUME_TO_ML and to_unit in self.WEIGHT_TO_G:
