@@ -154,4 +154,4 @@ def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit, mat
 
     except (ValueError, TypeError) as e:
         print(f"[ERROR] Stock check failed: {e}")
-        return {"status": "LOW", "converted": 0, "unit": recipe_unit} 0
+        return {"status": "LOW", "converted": 0, "unit": recipe_unit}
