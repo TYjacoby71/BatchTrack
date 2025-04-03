@@ -168,6 +168,13 @@ $(document).ready(function () {
   $('select[name="ingredient_name[]"]').select2({
     placeholder: "Search for an ingredient...",
     width: '100%'
+  }).on('change', function(e) {
+    if (this.value === '__add_new__') {
+      const url = $(this).find('option:selected').data('url');
+      if (url) {
+        window.location.href = url;
+      }
+    }
   });
 });
 </script>
