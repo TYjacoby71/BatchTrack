@@ -49,9 +49,9 @@
   <textarea name="label_info" placeholder="Enter information for product label"></textarea><br><br>
 
   <label>Expiration:</label><br>
-  <input type="radio" name="is_perishable" value="yes" onclick="document.getElementById('expiry_days').disabled=false"> Perishable
-  <input type="radio" name="is_perishable" value="no" onclick="document.getElementById('expiry_days').disabled=true" checked> Non-perishable<br>
-  <input type="number" id="expiry_days" name="expiry_days" placeholder="Days until expiration" disabled><br><br>
+  <input type="radio" name="is_perishable" value="yes" onclick="document.getElementById('expiry_date').disabled=false"> Perishable
+  <input type="radio" name="is_perishable" value="no" onclick="document.getElementById('expiry_date').disabled=true" checked> Non-perishable<br>
+  <input type="date" id="expiry_date" name="expiry_date" disabled><br><br>
 
   <button type="submit">Complete Batch</button>
 </form>
