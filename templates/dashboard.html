@@ -176,7 +176,7 @@
   <div class="alert-card">
     <h3>⚠️ Low Stock Alert</h3>
     <p class="alert-content">
-      You're low on: {{ ", ".join(ing.name for ing in low_stock) }}
+      You're low on: {{ ", ".join([ing["name"] for ing in low_stock]) }}
     </p>
     <a href="/stock/update" class="main-btn">Update Stock</a>
   </div>
