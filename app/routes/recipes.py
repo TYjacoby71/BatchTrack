@@ -237,35 +237,12 @@ def plan_production(recipe_id):
     stock_check = []
     missing_items = {}
     inventory = data.get('ingredients', [])
-    notes = request.form.get('notes', '')
-    tags = request.form.get('tags', '')
     
     if request.method == 'POST':
         scale = float(request.form.get('scale', 1))
-        if 'continue_batch' in request.form:
-            # Scale ingredients for display
-            scaled_ingredients = []
-            for ing in recipe['ingredients']:
-                scaled_ingredients.append({
-                    'name': ing['name'],
-                    'quantity': float(ing['quantity']) * scale,
-                    'unit': ing['unit']
-                })
-            return render_template('start_batch.html', 
-                                recipe=recipe,
-                                scale=scale,
-                                scaled_ingredients=scaled_ingredients,
-                                notes=notes,
-                                tags=tags)
+        if 'start_batch' in request.form:
+            return redirect(f'/start-batch/{recipe_id}?scale={scale}')
         
-        if 'finish_batch' in request.form:
-            # Handle batch completion
-            return redirect('/batches')
-            
-        if 'leave_batch' in request.form:
-            # Leave batch unfinished
-            return redirect('/recipes')
-            
         if 'check_stock' in request.form:
             for item in recipe.get('ingredients', []):
                 name = item['name']
