@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, Response, session, jsonify
+from flask import Blueprint, render_template, request, redirect, Response, session, jsonify, flash
 import json
 from datetime import datetime
 from app.routes.utils import load_data, save_data, generate_qr_for_batch
+from unit_converter import check_stock_availability
 
 batches_bp = Blueprint('batches', __name__)
 
@@ -281,7 +282,7 @@ def start_batch(recipe_id):
             break
 
     if has_low_stock:
-        flash("Cannot start batch due to insufficient stock. Please check inventory levels.", "error")
+        flash("⚠️ Cannot start batch - insufficient ingredients available. Please check the list below.", "error")
         return redirect(f'/stock/check/{recipe_id}')
 
     if request.method == 'POST':
