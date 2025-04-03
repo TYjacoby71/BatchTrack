@@ -8,19 +8,19 @@
         },
         {
             "name": "oil",
-            "quantity": 50.0,
+            "quantity": 48.0,
             "unit": "mL",
             "cost_per_unit": ""
         },
         {
             "name": "eggs",
-            "quantity": 6.0,
+            "quantity": 0.0,
             "unit": "unit",
             "cost_per_unit": "0.00"
         },
         {
             "name": "pepper",
-            "quantity": 7.0,
+            "quantity": 5.0,
             "unit": "g",
             "cost_per_unit": ""
         },
@@ -65,6 +65,12 @@
             "quantity": 22724.46,
             "unit": "mL",
             "cost_per_unit": "333"
+        },
+        {
+            "name": "vitamin E",
+            "quantity": 32.0,
+            "unit": "fl oz",
+            "cost_per_unit": "16.00"
         }
     ],
     "recipes": [
@@ -396,9 +402,78 @@
             "success": "yes",
             "yield_qty": 5.0,
             "yield_unit": "mL"
+        },
+        {
+            "id": "batch_70",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T00:40:43.318704",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_70.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 3.0,
+            "yield_unit": "unit",
+            "remaining_qty": 0.0
+        },
+        {
+            "id": "batch_71",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T01:16:54.789033",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_71.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 3.0,
+            "yield_unit": "unit"
         }
     ],
-    "batch_counter": 69,
+    "batch_counter": 71,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -822,6 +897,13 @@
             "unit": "oz",
             "reason": "Stock Update",
             "timestamp": "2025-04-03T00:31:04.159305"
+        },
+        {
+            "name": "vitamin E",
+            "change": 16.0,
+            "unit": "fl oz",
+            "reason": "Stock Update",
+            "timestamp": "2025-04-03T01:21:50.480620"
         }
     ],
     "products": [
@@ -872,6 +954,25 @@
             "quantity_available": 9.0,
             "events": [],
             "batch_id": "batch_69"
+        },
+        {
+            "product": "Fried Egs",
+            "yield": 3.0,
+            "unit": "unit",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-03T01:17:35.165621",
+            "quantity_available": 3.0,
+            "events": [
+                {
+                    "type": "sold",
+                    "qty": 3,
+                    "method": "",
+                    "note": "",
+                    "timestamp": "2025-04-03T01:18:48.702172"
+                }
+            ],
+            "batch_id": "batch_71"
         }
     ],
     "product_events": [

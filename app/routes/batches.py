@@ -304,8 +304,15 @@ def start_batch(recipe_id):
         for item in recipe['ingredients']:
             inv_item = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
             if inv_item:
-                cost = float(inv_item.get('cost_per_unit', 0)) * float(item['quantity'])
-                total_cost += cost
+                try:
+                    cost_per_unit = float(inv_item.get('cost_per_unit', '') or 0)
+                    quantity = float(item.get('quantity', '') or 0)
+                    cost = cost_per_unit * quantity
+                    total_cost += cost
+                except ValueError:
+                    # If conversion fails, treat as 0
+                    cost = 0
+                    total_cost += cost
 
         qr_path = generate_qr_for_batch(batch_id)
 
