@@ -38,12 +38,11 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 10px;
   }
   th {
     background: #f8f9fa;
     padding: 12px;
-    text-align: left;
   }
   td {
     padding: 10px;
@@ -51,19 +50,6 @@
   }
   .low-stock {
     color: #dc3545;
-  }
-  .alert {
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0;
-  }
-  .alert-warning {
-    background-color: #fff3cd;
-    border: 1px solid #ffeeba;
-  }
-  .alert-success {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
   }
 </style>
 
@@ -80,21 +66,45 @@
     </div>
   </div>
 
-  {% if low_stock %}
-  <div class="alert alert-warning">
-    <h3>⚠️ Low Stock Alert</h3>
-    <p>{{ low_stock | length }} ingredients need attention:</p>
+  <div class="section">
+    <h3>⚠️ Low Stock Ingredients</h3>
+    {% if low_stock %}
+    <div class="alert alert-warning">
+      <p>{{ low_stock | length }} ingredients need attention:</p>
+      <table>
+        <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
+        {% for ing in low_stock %}
+          <tr class="low-stock">
+            <td>{{ ing.name }}</td>
+            <td>{{ ing.quantity }}</td>
+            <td>{{ ing.unit }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+      <p>All stock levels look good ✅</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h3>🕒 Recent Batches</h3>
+    {% if recent_batches %}
     <table>
-      <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
-      {% for ing in low_stock %}
-        <tr class="low-stock">
-          <td>{{ ing.name }}</td>
-          <td>{{ ing.quantity }}</td>
-          <td>{{ ing.unit }}</td>
+      <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
+      {% for b in recent_batches %}
+        <tr>
+          <td>{{ b.recipe_name }}</td>
+          <td>{{ b.formatted_time if b.formatted_time else 'Unknown' }}</td>
+          <td>${{ b.total_cost|default(0.00) }}</td>
         </tr>
       {% endfor %}
     </table>
+    {% else %}
+    <p>No batches yet.</p>
+    {% endif %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}
