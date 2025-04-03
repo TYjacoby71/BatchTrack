@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash, session
 from app.routes.utils import load_data, save_data
 from unit_converter import UnitConversionService, check_stock_availability, can_fulfill
 
