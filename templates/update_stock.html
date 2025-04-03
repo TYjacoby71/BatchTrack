@@ -77,12 +77,26 @@
 function addIngredientRow() {
   const container = document.getElementById('ingredient-rows');
   const template = container.querySelector('.ingredient-row').cloneNode(true);
-  // Reset the values
-  template.querySelectorAll('select, input').forEach(el => el.value = '');
-  // Show delete button for all rows when there's more than one
+  
+  // Reset the values and destroy any existing select2
+  template.querySelectorAll('select, input').forEach(el => {
+    if ($(el).data('select2')) {
+      $(el).select2('destroy');
+    }
+    el.value = '';
+  });
+  
+  // Show delete button
   container.querySelectorAll('.delete-btn').forEach(btn => btn.style.display = 'block');
   template.querySelector('.delete-btn').style.display = 'block';
+  
   container.appendChild(template);
+  
+  // Reinitialize select2 on the new row
+  $(template).find('select[name="ingredient_name[]"]').select2({
+    placeholder: "Search for an ingredient...",
+    width: '100%'
+  });
 }
 
 function deleteRow(btn) {
