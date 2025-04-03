@@ -71,18 +71,37 @@
   margin-bottom: 15px;
 }
 
-.quick-access {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255,255,255,0.9);
+.nav-menu {
+  background: #fff;
   padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.nav-list {
   display: flex;
-  overflow-x: auto;
-  gap: 12px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  justify-content: center;
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  position: relative;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #2d3748;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.nav-link:hover {
+  background: #f7fafc;
 }
 
 .quick-btn {
@@ -182,48 +201,54 @@
   </div>
   {% endif %}
 
-  <div class="quick-access">
-    <a href="/stock/update" class="quick-btn">📦 Stock Update</a>
-    <a href="/stock/check-bulk" class="quick-btn">🔍 Bulk Check</a>
-    <a href="/recipes" class="quick-btn">📖 Recipes</a>
-    <a href="/batches" class="quick-btn">📝 Batches</a>
-    <a href="/products" class="quick-btn">🏭 Products</a>
-  </div>
+  <nav class="nav-menu">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="/stock/update" class="nav-link">📦 Stock</a></li>
+      <li class="nav-item"><a href="/stock/check-bulk" class="nav-link">🔍 Check</a></li>
+      <li class="nav-item"><a href="/recipes" class="nav-link">📖 Recipes</a></li>
+      <li class="nav-item"><a href="/batches" class="nav-link">📝 Batches</a></li>
+      <li class="nav-item"><a href="/products" class="nav-link">🏭 Products</a></li>
+    </ul>
+  </nav>
 </div>
 
 <script>
-function checkStock() {
-  const recipeId = document.getElementById("recipe").value;
-  if (!recipeId) {
-    alert("Please select a recipe first");
-    return;
-  }
-  window.location.href = `/stock/check/${recipeId}`;
-}
+document.addEventListener('DOMContentLoaded', function() {
+  window.checkStock = function() {
+    const recipeId = document.getElementById("recipe").value;
+    if (!recipeId) {
+      alert("Please select a recipe first");
+      return;
+    }
+    window.location.href = `/stock/check/${recipeId}`;
+  };
 
-function finishFlow() {
-  window.location.href = "/batches";
-}
+  window.finishFlow = function() {
+    window.location.href = "/batches";
+  };
 
-function startFlow() {
-  fetch('/recipes')
-    .then(response => response.json())
-    .then(data => {
-      const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = data.recipes.map(r => 
-        `<option value="${r.id}">${r.name}</option>`
-      ).join('');
-      
-      document.getElementById('action-select').classList.remove('active');
-      setTimeout(() => {
-        document.getElementById('recipe-select').classList.add('active');
-      }, 100);
-    });
-}
+  window.startFlow = function() {
+    fetch('/recipes')
+      .then(response => response.json())
+      .then(data => {
+        const recipeSelect = document.getElementById('recipe');
+        recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
+          data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+        
+        document.getElementById('action-select').classList.remove('active');
+        setTimeout(() => {
+          document.getElementById('recipe-select').classList.add('active');
+        }, 100);
+      });
+  };
 
-function finishFlow() {
-  window.location.href = "/batches";
-}
+  window.cancelFlow = function() {
+    document.getElementById("recipe-select").classList.remove('active');
+    document.getElementById("stock-status").classList.remove('active');
+    document.getElementById("action-select").classList.add('active');
+  };
+});
+</script>
 
 function checkStock() {
   const recipeId = document.getElementById("recipe").value;
