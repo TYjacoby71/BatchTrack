@@ -311,6 +311,7 @@ def start_batch(recipe_id):
     scale = float(request.args.get('scale', 1))
 
     if request.method == 'POST':
+        scale = float(request.form.get('scale', 1.0))
         # Scale ingredients for new batch
         scaled_ingredients = []
         for ing in recipe['ingredients']:

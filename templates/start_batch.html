@@ -10,8 +10,8 @@
     <form method="POST">
         <div>
             <label>Scale:</label><br>
-            <strong>{{ scale }}x</strong>
-            <input type="hidden" name="scale" value="{{ scale }}">
+            <strong>{{ "%.2f"|format(scale) }}x</strong>
+            <input type="hidden" name="scale" value="{{ "%.2f"|format(scale) }}">
         </div>
 
         <div>
