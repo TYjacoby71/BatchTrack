@@ -508,6 +508,36 @@ def finish_batch(batch_id):
     recipe = next((r for r in recipes if r["name"] == batch.get("recipe_name")), None)
 
     if request.method == "POST":
+        # Handle ingredient usage adjustments
+        ingredient_names = request.form.getlist("ingredient_name[]")
+        quantities_used = request.form.getlist("quantity_used[]")
+        
+        # Process each ingredient adjustment
+        for name, qty_used_str in zip(ingredient_names, quantities_used):
+            try:
+                qty_used = float(qty_used_str)
+                ingredient = next((i for i in inventory if i["name"].lower() == name.lower()), None)
+                if ingredient:
+                    recipe_ingredient = next((ri for ri in batch["ingredients"] if ri["name"].lower() == name.lower()), None)
+                    if recipe_ingredient:
+                        # Only update if quantity used is different from recipe
+                        if qty_used != float(recipe_ingredient["quantity"]):
+                            inv_qty = float(ingredient["quantity"])
+                            # Calculate the difference and adjust inventory
+                            qty_diff = float(recipe_ingredient["quantity"]) - qty_used
+                            ingredient["quantity"] = inv_qty + qty_diff
+                            # Log the adjustment
+                            data.setdefault("inventory_log", []).append({
+                                "name": name,
+                                "change": qty_diff,
+                                "unit": ingredient["unit"],
+                                "reason": "Batch Usage Adjustment",
+                                "timestamp": datetime.now().isoformat()
+                            })
+            except ValueError:
+                continue
+
+    if request.method == "POST":
         batch_type = request.form.get("batch_type")
         success = request.form.get("success")
         notes = request.form.get("notes")
