@@ -26,7 +26,7 @@
         },
         {
             "name": "milk",
-            "quantity": 4.875000066043045,
+            "quantity": 4.812500099064567,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -75,7 +75,7 @@
         {
             "name": "12 oz glass jar",
             "unit": "unit",
-            "quantity": 27.5,
+            "quantity": 26.5,
             "cost_per_unit": "0.00"
         },
         {
@@ -158,8 +158,39 @@
         }
     ],
     "recipe_counter": 7,
-    "batches": [],
-    "batch_counter": 74,
+    "batches": [
+        {
+            "id": "batch_75",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-03T05:11:14.032862",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                },
+                {
+                    "name": "12 oz glass jar",
+                    "quantity": 1.0,
+                    "unit": "unit"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_75.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "cup"
+        }
+    ],
+    "batch_counter": 75,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -636,30 +667,15 @@
     ],
     "products": [
         {
-            "product": "Fried Egs",
-            "yield": 3.0,
-            "unit": "unit",
+            "product": "Cup of Milk",
+            "yield": 1.0,
+            "unit": "cup",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-03T01:17:35.165621",
-            "quantity_available": 0.0,
-            "events": [
-                {
-                    "type": "sold",
-                    "qty": 3,
-                    "method": "",
-                    "note": "",
-                    "timestamp": "2025-04-03T01:18:48.702172"
-                },
-                {
-                    "type": "sold",
-                    "qty": 3,
-                    "method": "",
-                    "note": "",
-                    "timestamp": "2025-04-03T05:03:55.371224"
-                }
-            ],
-            "batch_id": "batch_71"
+            "timestamp": "2025-04-03T05:11:40.554936",
+            "quantity_available": 1.0,
+            "events": [],
+            "batch_id": "batch_75"
         }
     ],
     "product_events": [
