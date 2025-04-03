@@ -20,28 +20,66 @@
 </div>
 
 <div class="settings-section">
-    <h3>Low Stock Alerts</h3>
-    <table class="settings-table">
-        <tr>
-            <th>Ingredient</th>
-            <th>Current Stock</th>
-            <th>Alert Threshold</th>
-            <th>Unit</th>
-            <th>Actions</th>
-        </tr>
-        {% for ingredient in ingredients %}
-        <tr>
-            <td>{{ ingredient.name }}</td>
-            <td>{{ ingredient.quantity }}</td>
-            <td>{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else 'Not set' }}</td>
-            <td>{{ ingredient.unit }}</td>
-            <td>
-                <a href="{{ url_for('ingredients.edit_ingredient', name=ingredient.name) }}" class="btn">Edit</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    <h3>Low Stock Alert Categories</h3>
+    <form method="POST" action="{{ url_for('settings.save_stock_alerts') }}">
+        <select id="alert-category" name="alert_category" class="form-control">
+            <option value="">Select a category...</option>
+            <option value="volume">Volume (mL, L, fl oz)</option>
+            <option value="weight">Weight (g, kg, oz, lb)</option>
+            <option value="unit">Count (units, pieces)</option>
+        </select>
+
+        <div id="ingredients-list" style="margin-top: 20px;">
+            <table class="settings-table">
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Current Stock</th>
+                    <th>Alert Threshold</th>
+                    <th>Unit</th>
+                </tr>
+                {% for ingredient in ingredients %}
+                <tr data-unit="{{ ingredient.unit }}">
+                    <td>{{ ingredient.name }}</td>
+                    <td>{{ ingredient.quantity }}</td>
+                    <td>
+                        <input type="number" 
+                               name="threshold_{{ ingredient.name }}" 
+                               value="{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else '' }}"
+                               step="0.01"
+                               min="0">
+                    </td>
+                    <td>{{ ingredient.unit }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Save Alert Settings</button>
+    </form>
 </div>
+
+<script>
+document.getElementById('alert-category').addEventListener('change', function() {
+    const category = this.value;
+    const rows = document.querySelectorAll('#ingredients-list tr');
+    
+    const unitMappings = {
+        'volume': ['ml', 'l', 'fl oz', 'cup', 'gallon'],
+        'weight': ['g', 'kg', 'oz', 'lb'],
+        'unit': ['unit', 'piece', 'pieces', 'count']
+    };
+    
+    rows.forEach(row => {
+        if (!row.dataset.unit) return;
+        const unit = row.dataset.unit.toLowerCase();
+        if (category === '') {
+            row.style.display = '';
+        } else {
+            const showRow = unitMappings[category].some(u => unit.includes(u));
+            row.style.display = showRow ? '' : 'none';
+        }
+    });
+});
+</script>
 
 <style>
 .settings-section {

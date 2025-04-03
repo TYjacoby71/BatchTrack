@@ -30,3 +30,25 @@ def save_settings():
         flash(f'Error saving settings: {str(e)}', 'error')
     
     return redirect('/settings')
+
+@settings_bp.route('/settings/stock-alerts', methods=['POST'])
+def save_stock_alerts():
+    try:
+        data = load_data()
+        for ingredient in data.get('ingredients', []):
+            threshold_key = f"threshold_{ingredient['name']}"
+            if threshold_key in request.form:
+                threshold = request.form[threshold_key]
+                if threshold.strip():
+                    ingredient['low_stock_threshold'] = float(threshold)
+                else:
+                    ingredient.pop('low_stock_threshold', None)
+        
+        save_data(data)
+        flash('Stock alert thresholds updated successfully', 'success')
+    except ValueError:
+        flash('Invalid threshold value provided', 'error')
+    except Exception as e:
+        flash(f'Error saving stock alerts: {str(e)}', 'error')
+    
+    return redirect('/settings')
