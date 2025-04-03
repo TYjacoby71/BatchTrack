@@ -8,19 +8,19 @@
         },
         {
             "name": "oil",
-            "quantity": 48.0,
+            "quantity": 50.0,
             "unit": "mL",
             "cost_per_unit": ""
         },
         {
             "name": "eggs",
-            "quantity": 0.0,
+            "quantity": 2.0,
             "unit": "unit",
             "cost_per_unit": "0.00"
         },
         {
             "name": "pepper",
-            "quantity": 5.0,
+            "quantity": 7.0,
             "unit": "g",
             "cost_per_unit": ""
         },
@@ -904,6 +904,27 @@
             "unit": "fl oz",
             "reason": "Stock Update",
             "timestamp": "2025-04-03T01:21:50.480620"
+        },
+        {
+            "name": "oil",
+            "change": 2.0,
+            "unit": "mL",
+            "reason": "Stock Update",
+            "timestamp": "2025-04-03T01:38:28.255322"
+        },
+        {
+            "name": "eggs",
+            "change": 2.0,
+            "unit": "unit",
+            "reason": "Stock Update",
+            "timestamp": "2025-04-03T01:38:28.255352"
+        },
+        {
+            "name": "pepper",
+            "change": 2.0,
+            "unit": "g",
+            "reason": "Stock Update",
+            "timestamp": "2025-04-03T01:38:28.255369"
         }
     ],
     "products": [
