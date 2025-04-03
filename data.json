@@ -263,9 +263,39 @@
             "scale": 10.0,
             "total_cost": 34.9,
             "qr_code": "static/qr/batch_78.png"
+        },
+        {
+            "id": "batch_79",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T22:35:02.235163",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 6.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 2.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 2.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_79.png"
         }
     ],
-    "batch_counter": 78,
+    "batch_counter": 79,
     "recipe_only_ingredients": [
         {
             "name": "orange",
