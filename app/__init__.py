@@ -24,6 +24,9 @@ def create_app():
     from app.routes.stock import stock_bp
     app.register_blueprint(stock_bp, url_prefix='/stock')
     
+    from app.routes.units import unit_bp
+    app.register_blueprint(unit_bp)
+    
     from app.error_tools import register_error_handlers
     register_error_handlers(app)
 
