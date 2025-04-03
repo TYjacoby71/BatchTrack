@@ -236,6 +236,7 @@ def plan_production(recipe_id):
     scale = float(request.args.get('scale', 1))
     stock_check = []
     missing_items = {}
+    inventory = data.get('ingredients', [])
     
     if request.method == 'POST':
         scale = float(request.form.get('scale', 1))
@@ -243,9 +244,7 @@ def plan_production(recipe_id):
             return redirect(f'/start-batch/{recipe_id}?scale={scale}')
         
         if 'check_stock' in request.form:
-            inventory = data.get('ingredients', [])
-
-    for item in recipe.get('ingredients', []):
+            for item in recipe.get('ingredients', []):
         name = item['name']
         needed_qty = float(item['quantity']) * scale
         unit = item.get('unit', 'units')
