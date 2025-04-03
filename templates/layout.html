@@ -66,13 +66,24 @@
       overflow-x: auto;
       display: block;
       -webkit-overflow-scrolling: touch;
+      font-size: 14px;
     }
 
     th, td {
       border: 1px solid #e5e7eb;
       padding: var(--spacing-2) var(--spacing-3);
       word-wrap: break-word;
-      min-width: 100px;
+      min-width: 80px;
+    }
+
+    @media (max-width: 600px) {
+      table {
+        font-size: 12px;
+      }
+      th, td {
+        padding: var(--spacing-1) var(--spacing-2);
+        min-width: 60px;
+      }
     }
 
     th {
@@ -93,6 +104,25 @@
     form {
       margin-bottom: var(--spacing-4);
       width: 100%;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-3);
+    }
+
+    @media (max-width: 600px) {
+      form {
+        padding: 0 var(--spacing-2);
+      }
+      
+      input[type="submit"],
+      button {
+        width: 100%;
+        margin-bottom: var(--spacing-2);
+      }
     }
 
     button, input[type="submit"] {

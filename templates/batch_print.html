@@ -21,6 +21,22 @@
 {% endif %}
 
 <br><br>
-<button onclick="window.print()">Print</button>
-<a href="javascript:history.back()" style="margin-left: 10px;">Back</a>
+<div class="action-buttons">
+  <button onclick="window.print()" class="print-btn">Print</button>
+  <a href="javascript:history.back()" class="back-btn">Back</a>
+</div>
+<style>
+  @media (max-width: 600px) {
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-2);
+      margin: var(--spacing-3) 0;
+    }
+    .print-btn, .back-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
 {% endblock %}
