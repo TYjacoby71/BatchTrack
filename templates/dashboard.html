@@ -208,11 +208,30 @@
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
+  const originalItems = container.innerHTML;
   
-  quickAccess.addEventListener('scroll', function() {
-    if (quickAccess.scrollLeft + quickAccess.offsetWidth >= container.scrollWidth) {
-      quickAccess.scrollTo({ left: 0, behavior: 'smooth' });
+  // Clone items multiple times for smooth infinite scroll
+  container.innerHTML = originalItems + originalItems + originalItems;
+  
+  let scrolling = false;
+  const scroll = () => {
+    if (!scrolling) return;
+    quickAccess.scrollLeft += 1;
+    if (quickAccess.scrollLeft >= (container.scrollWidth - quickAccess.offsetWidth) / 2) {
+      quickAccess.scrollLeft = 0;
     }
+    requestAnimationFrame(scroll);
+  };
+  
+  // Start automatic scrolling
+  scrolling = true;
+  scroll();
+  
+  // Pause on hover
+  quickAccess.addEventListener('mouseenter', () => scrolling = false);
+  quickAccess.addEventListener('mouseleave', () => {
+    scrolling = true;
+    scroll();
   });
 });
 </script>
