@@ -205,24 +205,31 @@
 
 /* Quick Access Bar */
 .quick-access {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin: 24px 0;
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 10px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  margin: 20px 0;
+  scrollbar-width: none;
 }
 
 .quick-btn {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
   display: flex;
   align-items: center;
   gap: 12px;
   background: white;
-  padding: 20px;
-  border-radius: 16px;
+  padding: 16px 24px;
+  border-radius: 12px;
   text-decoration: none;
   color: #2d3748;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .quick-btn i {
@@ -230,7 +237,7 @@
   color: #4a5568;
 }
 
-.quick-scroll-bar::-webkit-scrollbar {
+.quick-access::-webkit-scrollbar {
   display: none;
 }
 
