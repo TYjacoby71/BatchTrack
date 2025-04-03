@@ -155,10 +155,46 @@
       display: inline-block;
     }
 
+    .desktop-nav {
+      display: flex;
+      gap: var(--spacing-2);
+    }
+
+    .mobile-nav {
+      display: none;
+    }
+
     @media (max-width: 768px) {
-      nav {
-        flex-direction: column;
-        gap: var(--spacing-1);
+      .desktop-nav {
+        display: none;
+      }
+
+      .mobile-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--primary-color);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: var(--spacing-2) 0;
+        z-index: 999;
+        height: 50px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      }
+
+      .mobile-nav a {
+        color: white;
+        text-decoration: none;
+        font-size: 24px;
+        padding: var(--spacing-1);
+      }
+
+      .mobile-nav a.active {
+        color: #fff;
+        background: rgba(255,255,255,0.1);
+        border-radius: var(--spacing-1);
       }
 
       table, th, td {
@@ -167,45 +203,15 @@
 
       main {
         padding: var(--spacing-2);
-        margin-bottom: 70px;
-        margin-top: var(--spacing-2);
+        margin-bottom: 60px;
+        margin-top: 45px;
       }
 
-      h1 {
-        font-size: 24px;
-      }
-
-      h2 {
-        font-size: 20px;
-      }
-
+      h1 { font-size: 24px; }
+      h2 { font-size: 20px; }
+      
       input, select, textarea {
         font-size: 16px;
-      }
-
-      .footer-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: var(--primary-color);
-        display: flex;
-        justify-content: space-around;
-        padding: var(--spacing-2) 0;
-        z-index: 999;
-        height: 45px;
-      }
-
-      .footer-nav a {
-        color: white;
-        font-size: 20px;
-        text-decoration: none;
-      }
-    }
-
-    @media (min-width: 601px) {
-      .footer-nav {
-        display: none;
       }
     }
   #floatBtn {
@@ -236,7 +242,7 @@
 <body>
 
 <header>
-  <nav>
+  <nav class="desktop-nav">
     <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
     <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
     <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
@@ -250,15 +256,13 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer>
-  <nav class="footer-nav">
-    <a href="/" title="Dashboard">🏠</a>
-    <a href="/ingredients" title="Ingredients">🧪</a>
-    <a href="/recipes" title="Recipes">📘</a>
-    <a href="/batches" title="Batches">📦</a>
-    <a href="/tags/manage" title="Manage Tags">🏷</a>
-  </nav>
-</footer>
+<nav class="mobile-nav">
+  <a href="/" title="Dashboard" {% if request.path == '/' %}class="active"{% endif %}>🏠</a>
+  <a href="/ingredients" title="Ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪</a>
+  <a href="/recipes" title="Recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘</a>
+  <a href="/batches" title="Batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦</a>
+  <a href="/products" title="Products" {% if '/products' in request.path %}class="active"{% endif %}>🏭</a>
+</nav>
 
 <a href="/recipes/add" id="floatBtn" title="Add New Recipe">➕</a>
 
