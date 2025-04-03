@@ -40,6 +40,11 @@ def view_batches():
 
     return render_template('batches.html', batches=batches)
 
+@batches_bp.route('/api/recipes')
+def get_recipes():
+    data = load_data()
+    return jsonify({"recipes": data.get("recipes", [])})
+
 @batches_bp.route('/')
 def dashboard():
     from datetime import datetime
