@@ -60,7 +60,7 @@ def check_stock_for_recipe(recipe_id):
 
 
 
-@stock_bp.route('/stock/check-bulk', methods=['GET', 'POST'])
+@stock_bp.route('/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
     data = load_data()
     inventory = data.get("ingredients", [])
@@ -72,12 +72,12 @@ def check_stock_bulk():
         usage = {}
 
         for r_id, count in zip(recipe_ids, batch_counts):
-            count = safe_float(count or 0) # Use safe_float here
+            count = safe_float(count or 0)
             if count > 0:
                 recipe = next((r for r in data['recipes'] if r['id'] == int(r_id)), None)
                 if recipe:
                     for item in recipe['ingredients']:
-                        base_qty = safe_float(item['quantity']) # Use safe_float here
+                        base_qty = safe_float(item['quantity'])
                         total_qty = base_qty * count
                         if item['name'] not in usage:
                             usage[item['name']] = {
@@ -88,18 +88,18 @@ def check_stock_bulk():
                             usage[item['name']]['qty'] += total_qty
 
         stock_report = []
-        from app.unit_conversion import check_stock_availability
+        needed_items = {}
 
         for name, details in usage.items():
-            current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
+            current = next((i for i in inventory if i['name'].lower() == name.lower()), None)
             try:
                 if not current or not current.get('quantity'):
                     raise ValueError("No stock found")
 
                 check = check_stock_availability(
-                    safe_float(details['qty']), # Use safe_float here
+                    safe_float(details['qty']),
                     details['unit'],
-                    safe_float(current['quantity']), # Use safe_float here
+                    safe_float(current['quantity']),
                     current['unit'],
                     material=name.lower()
                 )
@@ -110,6 +110,10 @@ def check_stock_bulk():
                     "available": f"{check['converted']} {check['unit']}",
                     "status": check['status']
                 })
+
+                if check['status'] == "LOW":
+                    if name not in needed_items:
+                        needed_items[name] = {"total": 0, "unit": details['unit']}
             except (ValueError, TypeError):
                 stock_report.append({
                     "name": name,
@@ -119,12 +123,12 @@ def check_stock_bulk():
                     "status": "LOW"
                 })
 
-        return render_template('bulk_stock_results.html', stock_report=stock_report)
+        return render_template('bulk_stock_results.html', stock_report=stock_report, missing_summary=needed_items)
 
-    return render_template('bulk_stock_check.html', recipes=data['recipes'])
+    return render_template('bulk_stock_check.html', recipes=recipes)
 
-@stock_bp.route('/inventory/update', methods=['GET', 'POST'])
-def update_inventory():
+@stock_bp.route('/inventory/adjust', methods=['GET', 'POST'])
+def adjust_inventory():
     data = load_data()
     ingredients = data.get("ingredients", [])
 
