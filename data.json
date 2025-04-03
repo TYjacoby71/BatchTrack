@@ -158,43 +158,7 @@
         }
     ],
     "recipe_counter": 7,
-    "batches": [
-        {
-            "id": "batch_70",
-            "recipe_id": 2,
-            "recipe_name": "Fried Egs",
-            "timestamp": "2025-04-03T00:40:43.318704",
-            "notes": "",
-            "tags": [
-                ""
-            ],
-            "ingredients": [
-                {
-                    "name": "eggs",
-                    "quantity": 3.0,
-                    "unit": "unit"
-                },
-                {
-                    "name": "oil",
-                    "quantity": 1.0,
-                    "unit": "mL"
-                },
-                {
-                    "name": "pepper",
-                    "quantity": 1.0,
-                    "unit": "g"
-                }
-            ],
-            "total_cost": 0.0,
-            "qr_code": "static/qr/batch_70.png",
-            "completed": true,
-            "batch_type": "product",
-            "success": "yes",
-            "yield_qty": 3.0,
-            "yield_unit": "unit",
-            "remaining_qty": 0.0
-        }
-    ],
+    "batches": [],
     "batch_counter": 74,
     "recipe_only_ingredients": [
         {
@@ -678,7 +642,7 @@
             "notes": "",
             "label_info": "",
             "timestamp": "2025-04-03T01:17:35.165621",
-            "quantity_available": 3.0,
+            "quantity_available": 0.0,
             "events": [
                 {
                     "type": "sold",
@@ -686,6 +650,13 @@
                     "method": "",
                     "note": "",
                     "timestamp": "2025-04-03T01:18:48.702172"
+                },
+                {
+                    "type": "sold",
+                    "qty": 3,
+                    "method": "",
+                    "note": "",
+                    "timestamp": "2025-04-03T05:03:55.371224"
                 }
             ],
             "batch_id": "batch_71"
