@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <h1>📋 Stock Check for {{ recipe.name }}</h1>
@@ -62,7 +61,8 @@
         });
     }
     </script>
-{% endif %} %}
+{% endif %}
+
 <div class="alert alert-warning">
     <h3>🛒 Shopping List:</h3>
     <ul>
@@ -70,52 +70,7 @@
             <li>{{ name }}: {{ "%.2f"|format(info.total) }} {{ info.unit }}</li>
         {% endfor %}
     </ul>
-    <form id="exportForm">
-        <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
-        <button type="button" onclick="printList()">🖨 Print List</button>
-    </form>
-
-    <script>
-    function getItems() {
-        const items = [];
-        {% for name, info in session.get('needed_items').items() %}
-            items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
-        {% endfor %}
-        return items;
-    }
-
-    function downloadCSV() {
-        fetch('/missing/export/csv', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: getItems() })
-        })
-        .then(res => res.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "missing_items.csv";
-            a.click();
-        });
-    }
-
-    function printList() {
-        fetch('/missing/export/print', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: getItems() })
-        })
-        .then(res => res.text())
-        .then(html => {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(html);
-            printWindow.document.close();
-        });
-    }
-    </script>
 </div>
-{% endif %}
 
 {% if stock_check %}
 <table border="1">
