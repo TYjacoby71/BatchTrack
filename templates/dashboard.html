@@ -38,12 +38,27 @@
   </div>
 
   <!-- Scrollable Quick Access Bar -->
-  <div class="quick-scroll-bar">
-    <a href="/stock/update" class="quick-btn">Stock Update</a>
-    <a href="/stock/check-bulk" class="quick-btn">Bulk Check</a>
-    <a href="/recipes" class="quick-btn">Recipes</a>
-    <a href="/batches" class="quick-btn">Batches</a>
-    <a href="/products" class="quick-btn">Products</a>
+  <div class="quick-access">
+    <a href="/stock/update" class="quick-btn">
+      <i class="fas fa-boxes"></i>
+      Stock Update
+    </a>
+    <a href="/stock/check-bulk" class="quick-btn">
+      <i class="fas fa-clipboard-check"></i>
+      Bulk Check
+    </a>
+    <a href="/recipes" class="quick-btn">
+      <i class="fas fa-book-open"></i>
+      Recipes
+    </a>
+    <a href="/batches" class="quick-btn">
+      <i class="fas fa-flask"></i>
+      Batches
+    </a>
+    <a href="/products" class="quick-btn">
+      <i class="fas fa-shopping-bag"></i>
+      Products
+    </a>
   </div>
 
   {% if low_stock %}
@@ -88,9 +103,28 @@
 {% block styles %}
 <style>
 .dashboard-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+}
+
+#dashboard-flow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.panel {
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .welcome-banner {
@@ -170,15 +204,30 @@
 }
 
 /* Quick Access Bar */
-.quick-scroll-bar {
+.quick-access {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.quick-btn {
   display: flex;
-  overflow-x: auto;
+  align-items: center;
   gap: 12px;
-  padding: 10px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  margin: 30px 0;
-  scrollbar-width: none;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: #2d3748;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s;
+}
+
+.quick-btn i {
+  font-size: 24px;
+  color: #4a5568;
 }
 
 .quick-scroll-bar::-webkit-scrollbar {
