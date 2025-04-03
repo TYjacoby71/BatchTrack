@@ -57,8 +57,8 @@
             {% endfor %}
           </optgroup>
           {% endfor %}
+          <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
         </select>
-        <a href="/units" style="margin: 0 10px; font-size: 0.9em; color: #4CAF50;">➕ Add Unit</a>
         <select name="reason[]" required>
           <option value="Purchase">Purchase (Add)</option>
           <option value="Loss">Loss (Remove)</option>
@@ -116,6 +116,17 @@ function addIngredientRow() {
     placeholder: "Search for an ingredient...",
     width: '100%'
   });
+
+
+<script>
+document.querySelectorAll('select[name="unit[]"]').forEach(select => {
+  select.addEventListener('change', function() {
+    if (this.value === '__add_unit__') {
+      window.location.href = '/units';
+    }
+  });
+});
+</script>
 
   showAllDeleteButtons();
 }
