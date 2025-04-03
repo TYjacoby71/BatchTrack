@@ -495,7 +495,7 @@ def view_batch(batch_id):
 def delete_batch(batch_id):
     data = load_data()
     batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
-    
+
     if batch and batch.get('completed') and batch.get('success') == 'yes':
         # If this was a product batch, update product inventory
         if batch.get('batch_type') == 'product':
@@ -522,7 +522,7 @@ def bulk_delete_batches():
 
     data = load_data()
     products = data.get('products', [])
-    
+
     for batch_id in batch_ids:
         batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
         if batch and batch.get('completed') and batch.get('success') == 'yes':
@@ -533,7 +533,7 @@ def bulk_delete_batches():
                         product['quantity_available'] = max(0, float(product['quantity_available']) - float(batch.get('yield_qty', 0)))
                     if float(product.get('quantity_available', 0)) <= 0:
                         products = [p for p in products if p.get('batch_id') != batch_id]
-    
+
     data['products'] = products
     data['batches'] = [b for b in data['batches'] if str(b['id']) not in batch_ids]
     save_data(data)
@@ -693,8 +693,22 @@ def finish_batch(batch_id):
                         "timestamp": datetime.now().isoformat(),
                         "quantity_available": float(yield_qty),
                         "events": [],
-                        "batch_id": batch_id
+                        "batch_id": batch_id,
+                        "expiration_date": None
                     }
+
+                    # Handle expiration
+                    is_perishable = request.form.get("is_perishable")
+                    if is_perishable == "yes":
+                        try:
+                            expiry_days = int(request.form.get("expiry_days", 0))
+                            if expiry_days > 0:
+                                from datetime import datetime, timedelta
+                                expiry_date = datetime.now() + timedelta(days=expiry_days)
+                                new_product["expiration_date"] = expiry_date.isoformat()
+                        except (ValueError, TypeError):
+                            pass
+
                     products.append(new_product)
             else:  # inventory type
                 inv_item = {

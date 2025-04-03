@@ -48,6 +48,11 @@
   <label>Label Info:</label><br>
   <textarea name="label_info" placeholder="Enter information for product label"></textarea><br><br>
 
+  <label>Expiration:</label><br>
+  <input type="radio" name="is_perishable" value="yes" onclick="document.getElementById('expiry_days').disabled=false"> Perishable
+  <input type="radio" name="is_perishable" value="no" onclick="document.getElementById('expiry_days').disabled=true" checked> Non-perishable<br>
+  <input type="number" id="expiry_days" name="expiry_days" placeholder="Days until expiration" disabled><br><br>
+
   <button type="submit">Complete Batch</button>
 </form>
 
