@@ -26,37 +26,84 @@
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
+      width: 200px;
+      height: 100vh;
       z-index: 1000;
-    }
-
-    nav {
       display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-1);
+      flex-direction: column;
+      align-items: flex-start;
     }
 
-    nav a {
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      padding: var(--spacing-2);
       color: white;
       text-decoration: none;
-      font-weight: 600;
-      padding: var(--spacing-1) var(--spacing-2);
-      border-radius: var(--spacing-1);
-      transition: background 0.2s;
-      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+      margin-bottom: 20px;
     }
 
-    nav a:hover {
-      background: rgba(255,255,255,0.1);
+    .nav-dropdown {
+      width: 100%;
+    }
+
+    .nav-button {
+      display: none;
+    }
+
+    .nav-content {
+      display: block;
+      position: static;
+      background-color: transparent;
+      min-width: auto;
+      box-shadow: none;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .nav-content {
+        right: -8px;
+      }
+    }
+
+    .nav-content a {
+      color: white;
+      padding: var(--spacing-2) var(--spacing-3);
+      text-decoration: none;
+      display: block;
+      font-size: 14px;
+      border-radius: var(--spacing-1);
+    }
+
+    .nav-content a:hover {
+      background-color: rgba(255,255,255,0.1);
     }
 
     main {
       padding: var(--spacing-3);
       max-width: 1000px;
-      margin: 45px auto 60px;
+      margin: 20px 20px 20px 220px;
       background: white;
-      min-height: calc(100vh - 105px);
+      min-height: calc(100vh - 40px);
       border-radius: var(--spacing-2);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        width: 60px;
+      }
+      .logo {
+        font-size: 16px;
+      }
+      .nav-content a span {
+        display: none;
+      }
+      main {
+        margin-left: 80px;
+      }
     }
 
     h1, h2, h3 {
@@ -122,7 +169,7 @@
       form {
         padding: 0 var(--spacing-2);
       }
-      
+
       input[type="submit"],
       button {
         width: 100%;
@@ -156,59 +203,22 @@
     }
 
     @media (max-width: 768px) {
-      nav {
-        flex-direction: column;
-        gap: var(--spacing-1);
-      }
-
-      table, th, td {
-        font-size: 14px;
+      .mobile-nav {
+        display: none;
       }
 
       main {
         padding: var(--spacing-2);
-        margin-bottom: 70px;
-        margin-top: var(--spacing-2);
+        margin-top: 60px;
       }
 
-      h1 {
-        font-size: 24px;
-      }
-
-      h2 {
-        font-size: 20px;
-      }
-
-      input, select, textarea {
-        font-size: 16px;
-      }
-
-      .footer-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: var(--primary-color);
-        display: flex;
-        justify-content: space-around;
-        padding: var(--spacing-2) 0;
-        z-index: 999;
-        height: 45px;
-      }
-
-      .footer-nav a {
-        color: white;
-        font-size: 20px;
-        text-decoration: none;
+      .nav-content {
+        right: var(--spacing-2);
+        left: var(--spacing-2);
       }
     }
 
-    @media (min-width: 601px) {
-      .footer-nav {
-        display: none;
-      }
-    }
-  #floatBtn {
+    #floatBtn {
       display: none;
     }
 
@@ -217,7 +227,7 @@
         display: block;
         position: fixed;
         right: var(--spacing-4);
-        bottom: 70px;
+        bottom: var(--spacing-4);
         background: var(--primary-color);
         color: white;
         font-size: 28px;
@@ -236,29 +246,25 @@
 <body>
 
 <header>
-  <nav>
-    <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
-    <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
-    <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
-    <a href="/batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦 Batches</a>
-    <a href="/products" {% if '/products' in request.path %}class="active"{% endif %}>🏭 Products</a>
-    <a href="/tags/manage" {% if '/tags/manage' in request.path %}class="active"{% endif %}>🏷 Tags</a>
-  </nav>
+  <a href="/" class="logo">
+    📋 BatchTrack
+  </a>
+  <div class="nav-dropdown">
+    <button class="nav-button">Menu ▾</button>
+    <div class="nav-content">
+      <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
+      <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
+      <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
+      <a href="/batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦 Batches</a>
+      <a href="/products" {% if '/products' in request.path %}class="active"{% endif %}>🏭 Products</a>
+      <a href="/tags/manage" {% if '/tags/manage' in request.path %}class="active"{% endif %}>🏷 Tags</a>
+    </div>
+  </div>
 </header>
 
 <main>
   {% block content %}{% endblock %}
 </main>
-
-<footer>
-  <nav class="footer-nav">
-    <a href="/" title="Dashboard">🏠</a>
-    <a href="/ingredients" title="Ingredients">🧪</a>
-    <a href="/recipes" title="Recipes">📘</a>
-    <a href="/batches" title="Batches">📦</a>
-    <a href="/tags/manage" title="Manage Tags">🏷</a>
-  </nav>
-</footer>
 
 <a href="/recipes/add" id="floatBtn" title="Add New Recipe">➕</a>
 

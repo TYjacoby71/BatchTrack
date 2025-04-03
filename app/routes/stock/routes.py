@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash, session
 from app.routes.utils import load_data, save_data
 from unit_converter import UnitConversionService, check_stock_availability, can_fulfill
 
@@ -23,6 +23,10 @@ def check_stock_for_recipe(recipe_id):
 
     if not recipe:
         return "Recipe not found", 404
+
+    # Clear any existing stock alerts from session
+    if 'needed_items' in session:
+        del session['needed_items']
 
     stock_check = []
     for item in recipe.get("ingredients", []):
