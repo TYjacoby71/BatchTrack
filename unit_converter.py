@@ -130,23 +130,28 @@ def format_unit_value(value, unit):
     except (ValueError, TypeError):
         return f"{value}{' ' + unit if unit else ''}"
 
-def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
+def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit, material=None):
     """
     Check if there's enough stock for a recipe
-    Returns: (bool available, float converted_stock_qty, float needed_qty)
+    Returns: dict with status, converted amount and unit info
     """
     try:
-        # Safe float fallback
         recipe_qty = float(recipe_qty or 0)
         stock_qty = float(stock_qty or 0)
 
-        converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit)
+        converter = UnitConversionService()
+        converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit, material=material)
+        
         if converted_stock is None:
-            print(f"[WARN] Unit mismatch: {stock_unit} → {recipe_unit}")
-            return False, 0, recipe_qty
+            print(f"[WARN] Unit mismatch: {stock_qty} {stock_unit} → {recipe_qty} {recipe_unit}")
+            return {"status": "LOW", "converted": 0, "unit": recipe_unit}
 
-        return converted_stock >= recipe_qty, converted_stock, recipe_qty
+        return {
+            "status": "OK" if converted_stock >= recipe_qty else "LOW",
+            "converted": round(converted_stock, 2),
+            "unit": recipe_unit
+        }
 
     except (ValueError, TypeError) as e:
-        print(f"[ERROR] Stock check failed for {stock_qty} {stock_unit}: {e}")
-        return False, 0, 0
+        print(f"[ERROR] Stock check failed: {e}")
+        return {"status": "LOW", "converted": 0, "unit": recipe_unit} 0
