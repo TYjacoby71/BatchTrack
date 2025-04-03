@@ -13,7 +13,7 @@
 {% if session.get('needed_items') %}
     <h3>🛒 Missing Ingredients:</h3>
     <ul>
-        {% for name, info in session.get('needed_items').items() %}
+        {% for name, info in (session.get('needed_items') or {}).items() %}
             <li>{{ name }}: {{ "%.2f"|format(info.total) }} {{ info.unit }}</li>
         {% endfor %}
     </ul>
@@ -25,7 +25,7 @@
     <script>
     function getItems() {
         const items = [];
-        {% for name, info in session.get('needed_items').items() %}
+        {% for name, info in (session.get('needed_items') or {}).items() %}
             items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
         {% endfor %}
         return items;
@@ -66,7 +66,7 @@
 <div class="alert alert-warning">
     <h3>🛒 Shopping List:</h3>
     <ul>
-        {% for name, info in session.get('needed_items').items() %}
+        {% for name, info in (session.get('needed_items') or {}).items() %}
             <li>{{ name }}: {{ "%.2f"|format(info.total) }} {{ info.unit }}</li>
         {% endfor %}
     </ul>
