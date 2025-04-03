@@ -278,28 +278,23 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-function checkStock() {
-  const recipeId = document.getElementById("recipe").value;
-  if (!recipeId) {
-    alert("Please select a recipe first");
-    return;
+function toggleAll(source) {
+  const checkboxes = document.getElementsByName('batch_ids');
+  for(let checkbox of checkboxes) {
+    checkbox.checked = source.checked;
   }
-  window.location.href = `/stock/check/${recipeId}`;
-}
-
-function finishFlow() {
-  window.location.href = "/batches";
 }
 
 function startFlow() {
-  fetch('/recipes.json')
-    .then(response => response.json())
-    .then(data => {
-      const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
-        data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      document.getElementById('recipe-select').style.display = 'block';
-    });
+  window.location.href = '/recipes';
+}
+
+function checkStock() {
+  window.location.href = '/stock/check';
+}
+
+function finishFlow() {
+  window.location.href = '/batches';
 }
 
 function startSelectedBatch() {
