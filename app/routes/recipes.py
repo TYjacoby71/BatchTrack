@@ -245,9 +245,9 @@ def plan_production(recipe_id):
         
         if 'check_stock' in request.form:
             for item in recipe.get('ingredients', []):
-        name = item['name']
-        needed_qty = float(item['quantity']) * scale
-        unit = item.get('unit', 'units')
+                name = item['name']
+                needed_qty = float(item['quantity']) * scale
+                unit = item.get('unit', 'units')
 
         match = next((i for i in inventory if i['name'].lower() == name.lower()), None)
         if match:
