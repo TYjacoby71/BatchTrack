@@ -83,6 +83,17 @@
   gap: 12px;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.quick-access::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-access-container {
+  display: flex;
+  gap: 12px;
 }
 
 .quick-btn {
@@ -182,14 +193,29 @@
   </div>
   {% endif %}
 
-  <div class="quick-access">
-    <a href="/stock/update" class="quick-btn">📦 Stock Update</a>
-    <a href="/stock/check-bulk" class="quick-btn">🔍 Bulk Check</a>
-    <a href="/recipes" class="quick-btn">📖 Recipes</a>
-    <a href="/batches" class="quick-btn">📝 Batches</a>
-    <a href="/products" class="quick-btn">🏭 Products</a>
+  <div class="quick-access" id="quickAccess">
+    <div class="quick-access-container">
+      <a href="/stock/update" class="quick-btn">📦 Stock Update</a>
+      <a href="/stock/check-bulk" class="quick-btn">🔍 Bulk Check</a>
+      <a href="/recipes" class="quick-btn">📖 Recipes</a>
+      <a href="/batches" class="quick-btn">📝 Batches</a>
+      <a href="/products" class="quick-btn">🏭 Products</a>
+    </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const quickAccess = document.getElementById('quickAccess');
+  const container = quickAccess.querySelector('.quick-access-container');
+  
+  quickAccess.addEventListener('scroll', function() {
+    if (quickAccess.scrollLeft + quickAccess.offsetWidth >= container.scrollWidth) {
+      quickAccess.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  });
+});
+</script>
 
 <script>
 function checkStock() {
