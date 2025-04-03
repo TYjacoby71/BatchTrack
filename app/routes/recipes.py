@@ -337,15 +337,9 @@ def start_batch(recipe_id):
             'status': 'in_progress'
         }
 
-        if 'batches' not in data:
-            data['batches'] = []
-        data['batches'].append(new_batch)
+        data.setdefault('batches', []).append(new_batch)
         save_data(data)
-
-        return render_template('batch_in_process.html',
-                            recipe=recipe,
-                            scaled_ingredients=scaled_ingredients,
-                            batch_id=new_batch['id'])
+        return redirect(f'/batches/in_progress/{new_batch["id"]}') # Corrected redirect
 
 
     return render_template('start_batch.html', recipe=recipe, scale=scale)
@@ -355,6 +349,15 @@ def start_batch(recipe_id):
 def list_batches():
     data = load_data()
     return render_template('batch_list.html', batches=data.get('batches', []))
+
+@recipes_bp.route('/batches/in_progress/<batch_id>', methods=['GET'])
+def view_batch_in_progress(batch_id):
+    data = load_data()
+    batch = next((b for b in data.get('batches', []) if b['id'] == batch_id), None)
+    if not batch:
+        return "Batch not found", 404
+    recipe = next((r for r in data['recipes'] if r['id'] == batch['recipe_id']), None)
+    return render_template('batch_in_process.html', batch=batch, recipe=recipe)
 
 @recipes_bp.route('/batches/finish/<batch_id>', methods=['GET', 'POST'])
 def finish_batch(batch_id):
