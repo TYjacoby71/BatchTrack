@@ -59,15 +59,23 @@ class UnitConversionService:
         to_unit = to_unit.lower().strip()
         from_unit = self.UNIT_ALIASES.get(from_unit, from_unit)
         to_unit = self.UNIT_ALIASES.get(to_unit, to_unit)
-        if material not in self.DENSITIES:
-            return None
+
+        if from_unit not in self.VOLUME_TO_ML and from_unit not in self.WEIGHT_TO_G:
+            print(f"[WARN] Unknown unit: {from_unit}")
+        if to_unit not in self.VOLUME_TO_ML and to_unit not in self.WEIGHT_TO_G:
+            print(f"[WARN] Unknown unit: {to_unit}")
+
+        density = self.DENSITIES.get(material.lower(), 1.0)
+        if material.lower() not in self.DENSITIES:
+            print(f"[WARN] Unknown material density for: {material}, using default 1.0")
+
         if from_unit in self.VOLUME_TO_ML and to_unit in self.WEIGHT_TO_G:
             ml = amount * self.VOLUME_TO_ML[from_unit]
-            g = ml * self.DENSITIES[material]
+            g = ml * density
             return g / self.WEIGHT_TO_G[to_unit]
         if from_unit in self.WEIGHT_TO_G and to_unit in self.VOLUME_TO_ML:
             g = amount * self.WEIGHT_TO_G[from_unit]
-            ml = g / self.DENSITIES[material]
+            ml = g / density
             return ml / self.VOLUME_TO_ML[to_unit]
         return None
 
