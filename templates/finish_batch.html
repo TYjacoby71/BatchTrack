@@ -4,11 +4,26 @@
 <h2>Finish Batch: {{ batch.recipe_name }}</h2>
 
 <form method="POST">
+  <h3>Batch Information</h3>
   <label>Batch Type:</label><br>
   <select name="batch_type" required>
     <option value="inventory">Inventory Item</option>
     <option value="product">Final Product</option>
   </select><br><br>
+
+  <h3>Ingredient Usage Adjustment</h3>
+  <p><small>Adjust actual quantities used if different from recipe amounts</small></p>
+  <div id="ingredient-adjustments">
+    {% for ingredient in batch.ingredients %}
+    <div class="ingredient-row">
+      <input type="hidden" name="ingredient_name[]" value="{{ ingredient.name }}">
+      <label>{{ ingredient.name }} (Recipe called for: {{ ingredient.quantity }} {{ ingredient.unit }})</label><br>
+      <input type="number" step="any" name="quantity_used[]" value="{{ ingredient.quantity }}" placeholder="Actual amount used">
+      <span>{{ ingredient.unit }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <br>
 
   <label>Was the batch successful?</label><br>
   <input type="radio" name="success" value="yes" required> Yes
