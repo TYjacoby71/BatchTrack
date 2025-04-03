@@ -5,7 +5,11 @@ class UnitConversionService:
         "liters": "liter", "gallons": "gallon",
         "lbs": "lb", "kgs": "kg", "ozs": "oz",
         "milliliters": "ml", "grams": "g",
+        "units": "unit", "pieces": "piece", "piece": "unit",
+        "eggs": "unit", "jars": "unit", "jar": "unit"
     }
+
+    COUNT_UNITS = {"unit", "piece"}
 
     VOLUME_TO_ML = {
         "ml": 1,
@@ -79,6 +83,13 @@ class UnitConversionService:
         from_unit = self.normalize_unit(from_unit)
         to_unit = self.normalize_unit(to_unit)
 
+        # Handle count-based units
+        if from_unit in self.COUNT_UNITS or to_unit in self.COUNT_UNITS:
+            if from_unit in self.COUNT_UNITS and to_unit in self.COUNT_UNITS:
+                return amount  # 1:1 conversion for count units
+            print(f"[WARN] Cannot convert between count unit ({from_unit}) and measurement unit ({to_unit})")
+            return None
+
         if from_unit in self.VOLUME_TO_ML and to_unit in self.VOLUME_TO_ML:
             return self.convert_volume(amount, from_unit, to_unit)
         elif from_unit in self.WEIGHT_TO_G and to_unit in self.WEIGHT_TO_G:
@@ -120,17 +131,22 @@ def format_unit_value(value, unit):
         return f"{value}{' ' + unit if unit else ''}"
 
 def check_stock_availability(recipe_qty, recipe_unit, stock_qty, stock_unit):
+    """
+    Check if there's enough stock for a recipe
+    Returns: (bool available, float converted_stock_qty, float needed_qty)
+    """
     try:
-        if not recipe_qty or not stock_qty or not recipe_unit or not stock_unit:
-            return False, 0, 0
-
-        recipe_qty = float(recipe_qty)
-        stock_qty = float(stock_qty)
+        # Safe float fallback
+        recipe_qty = float(recipe_qty or 0)
+        stock_qty = float(stock_qty or 0)
 
         converted_stock = converter.convert(stock_qty, stock_unit, recipe_unit)
         if converted_stock is None:
+            print(f"[WARN] Unit mismatch: {stock_unit} → {recipe_unit}")
             return False, 0, recipe_qty
 
         return converted_stock >= recipe_qty, converted_stock, recipe_qty
-    except (ValueError, TypeError):
+
+    except (ValueError, TypeError) as e:
+        print(f"[ERROR] Stock check failed for {stock_qty} {stock_unit}: {e}")
         return False, 0, 0

@@ -88,3 +88,10 @@ def generate_qr_for_batch(batch_id):
     img_path = f"static/qr/{batch_id}.png"
     img.save(img_path)
     return img_path
+def safe_float(val):
+    """Safely convert value to float, return 0 if invalid"""
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        print(f"[WARN] Invalid quantity: {val} → defaulting to 0")
+        return 0
