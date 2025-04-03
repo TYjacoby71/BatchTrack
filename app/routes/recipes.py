@@ -249,26 +249,26 @@ def plan_production(recipe_id):
                 needed_qty = float(item['quantity']) * scale
                 unit = item.get('unit', 'units')
 
-        match = next((i for i in inventory if i['name'].lower() == name.lower()), None)
-        if match:
-            try:
-                check = check_stock_availability(
-                    needed_qty, unit,
-                    float(match['quantity']), match['unit'],
-                    material=name.lower()
-                )
-                if check['status'] == 'LOW':
-                    missing_items[name] = {
-                        'needed': needed_qty,
-                        'available': check['converted'],
-                        'unit': unit
-                    }
-                stock_check.append({
-                    'name': name,
-                    'needed': f"{needed_qty} {unit}",
-                    'available': f"{check['converted']} {check['unit']}",
-                    'status': check['status']
-                })
+                match = next((i for i in inventory if i['name'].lower() == name.lower()), None)
+                if match:
+                    try:
+                        check = check_stock_availability(
+                            needed_qty, unit,
+                            float(match['quantity']), match['unit'],
+                            material=name.lower()
+                        )
+                        if check['status'] == 'LOW':
+                            missing_items[name] = {
+                                'needed': needed_qty,
+                                'available': check['converted'],
+                                'unit': unit
+                            }
+                        stock_check.append({
+                            'name': name,
+                            'needed': f"{needed_qty} {unit}",
+                            'available': f"{check['converted']} {check['unit']}",
+                            'status': check['status']
+                        })
             except (ValueError, TypeError):
                 stock_check.append({
                     'name': name,
