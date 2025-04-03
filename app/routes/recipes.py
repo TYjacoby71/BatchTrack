@@ -223,3 +223,77 @@ def clone_recipe(recipe_id):
     data['recipes'].append(new_recipe)
     save_data(data)
     return redirect(f'/recipes/{new_recipe["id"]}')
+
+
+@recipes_bp.route('/recipes/plan/<int:recipe_id>', methods=['GET', 'POST'])
+def plan_production(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
+    if not recipe:
+        return "Recipe not found", 404
+
+    scale = float(request.args.get('scale', 1))
+    if request.method == 'POST':
+        scale = float(request.form.get('scale', 1))
+        if 'start_batch' in request.form:
+            return redirect(f'/start-batch/{recipe_id}?scale={scale}')
+
+    stock_check = []
+    missing_items = {}
+    inventory = data.get('ingredients', [])
+
+    for item in recipe.get('ingredients', []):
+        name = item['name']
+        needed_qty = float(item['quantity']) * scale
+        unit = item.get('unit', 'units')
+
+        match = next((i for i in inventory if i['name'].lower() == name.lower()), None)
+        if match:
+            try:
+                check = check_stock_availability(
+                    needed_qty, unit,
+                    float(match['quantity']), match['unit'],
+                    material=name.lower()
+                )
+                if check['status'] == 'LOW':
+                    missing_items[name] = {
+                        'needed': needed_qty,
+                        'available': check['converted'],
+                        'unit': unit
+                    }
+                stock_check.append({
+                    'name': name,
+                    'needed': f"{needed_qty} {unit}",
+                    'available': f"{check['converted']} {check['unit']}",
+                    'status': check['status']
+                })
+            except (ValueError, TypeError):
+                stock_check.append({
+                    'name': name,
+                    'needed': f"{needed_qty} {unit}",
+                    'available': "0",
+                    'status': 'LOW'
+                })
+                missing_items[name] = {
+                    'needed': needed_qty,
+                    'available': 0,
+                    'unit': unit
+                }
+        else:
+            stock_check.append({
+                'name': name,
+                'needed': f"{needed_qty} {unit}",
+                'available': "0",
+                'status': 'LOW'
+            })
+            missing_items[name] = {
+                'needed': needed_qty,
+                'available': 0,
+                'unit': unit
+            }
+
+    return render_template('plan_production.html', 
+                         recipe=recipe,
+                         scale=scale,
+                         stock_check=stock_check,
+                         missing_items=missing_items)
