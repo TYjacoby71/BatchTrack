@@ -516,9 +516,33 @@
             "success": "yes",
             "yield_qty": 1.0,
             "yield_unit": "12 oz jar"
+        },
+        {
+            "id": "batch_73",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-03T04:20:34.160506",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                },
+                {
+                    "name": "12 oz glass jar",
+                    "quantity": 1.0,
+                    "unit": "unit"
+                }
+            ],
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_73.png"
         }
     ],
-    "batch_counter": 72,
+    "batch_counter": 73,
     "recipe_only_ingredients": [
         {
             "name": "orange",
