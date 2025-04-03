@@ -122,7 +122,8 @@ def check_stock_bulk():
                     details['qty'],
                     details['unit'],
                     current['quantity'],
-                    current['unit']
+                    current['unit'],
+                    material=name.lower()
                 )
                 
                 stock_report.append({
