@@ -13,7 +13,27 @@ def update_stock():
     data = load_data()
     
     if request.method == 'POST':
-        # Process stock updates
+        ingredients = data.get('ingredients', [])
+        for i in ingredients:
+            name = i['name']
+            delta_key = f"delta_{name}"
+            if delta_key in request.form:
+                try:
+                    delta = float(request.form[delta_key])
+                    current_qty = float(i.get('quantity', 0))
+                    i['quantity'] = current_qty + delta
+                    
+                    # Log the change
+                    data.setdefault("inventory_log", []).append({
+                        "name": name,
+                        "change": delta,
+                        "unit": i['unit'],
+                        "reason": "Stock Update",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                except ValueError:
+                    continue
+                    
         save_data(data)
         return redirect('/ingredients')
         
