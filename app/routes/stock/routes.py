@@ -27,11 +27,14 @@ def check_stock_for_recipe(recipe_id):
 
         if match:
             # Pass material type for proper density conversion
-            check = check_stock_availability(
-                qty, unit,
-                match["quantity"], match["unit"],
-                material=name.lower()
-            )
+            try:
+                check = check_stock_availability(
+                    qty, unit,
+                    float(match["quantity"]), match["unit"],
+                    material=name.lower()
+                )
+            except (ValueError, TypeError) as e:
+                check = {"converted": 0, "unit": unit, "status": "ERROR"}
             stock_check.append({
                 "name": name,
                 "needed": f"{qty} {unit}",
@@ -87,9 +90,9 @@ def check_stock_bulk():
                     raise ValueError("No stock found")
 
                 check = check_stock_availability(
-                    details['qty'],
+                    float(details['qty']),
                     details['unit'],
-                    current['quantity'],
+                    float(current['quantity']),
                     current['unit'],
                     material=name.lower()
                 )
