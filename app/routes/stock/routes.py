@@ -27,17 +27,16 @@ def check_stock_for_recipe(recipe_id):
     stock_check = []
     for item in recipe.get("ingredients", []):
         name = item["name"]
-        qty = safe_float(item["quantity"]) # Use safe_float here
+        qty = safe_float(item["quantity"])
         unit = item.get("unit", "units")
 
         match = next((i for i in inventory if i["name"].lower() == name.lower()), None)
 
         if match:
-            # Pass material type for proper density conversion
             try:
                 check = check_stock_availability(
                     qty, unit,
-                    safe_float(match["quantity"]), match["unit"], # Use safe_float here
+                    safe_float(match["quantity"]), match["unit"],
                     material=name.lower()
                 )
             except (ValueError, TypeError) as e:
@@ -57,7 +56,6 @@ def check_stock_for_recipe(recipe_id):
             })
 
     return render_template("stock_status.html", recipe=recipe, stock_check=stock_check)
-
 
 
 @stock_bp.route('/check-bulk', methods=['GET', 'POST'])
@@ -127,61 +125,8 @@ def check_stock_bulk():
 
     return render_template('bulk_stock_check.html', recipes=recipes)
 
+
 @stock_bp.route('/inventory/adjust', methods=['GET', 'POST'])
-def adjust_inventory():
-    data = load_data()
-    ingredients = data.get("ingredients", [])
-
-    if request.method == 'POST':
-        ingredient_names = request.form.getlist('ingredient_name[]')
-        deltas = request.form.getlist('delta[]')
-        units = request.form.getlist('unit[]')
-
-        for name, delta_str, unit in zip(ingredient_names, deltas, units):
-            try:
-                if not delta_str:
-                    continue
-
-                delta = safe_float(delta_str) # Use safe_float here
-                ingredient = next((i for i in ingredients if i['name'] == name), None)
-
-                if ingredient:
-                    current_qty = safe_float(ingredient.get('quantity', 0)) # Use safe_float here
-
-                    # Convert units if they don't match
-                    if unit != ingredient['unit']:
-                        converted_delta = converter.convert(delta, unit, ingredient['unit'], material=name.lower())
-                        if converted_delta is not None:
-                            delta = converted_delta
-                            print(f"Converting {delta} {unit} to {converted_delta} {ingredient['unit']}")
-                        else:
-                            flash(f"Could not convert {unit} to {ingredient['unit']} - please check units.json for valid conversion")
-                            continue
-
-                    ingredient['quantity'] = round(current_qty + delta, 2)
-                    print(f"Updated {name} from {current_qty} to {ingredient['quantity']} {ingredient['unit']}")
-
-                    data.setdefault("inventory_log", []).append({
-                        "name": name,
-                        "change": delta,
-                        "unit": ingredient['unit'],
-                        "reason": "Stock Update",
-                        "timestamp": datetime.now().isoformat()
-                    })
-
-            except (ValueError, TypeError) as e:
-                flash(f"Error updating {name}: {str(e)}")
-                continue
-
-        save_data(data)
-        return redirect('/ingredients')
-
-    with open('units.json') as f:
-        units = json.load(f)
-
-    return render_template("update_stock.html", ingredients=ingredients, units=units)
-
-@stock_bp.route('/stock/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
     data = load_data()
     inventory = data.get("ingredients", [])
@@ -196,7 +141,7 @@ def adjust_inventory():
 
             if qty_delta:
                 try:
-                    delta = safe_float(qty_delta) # Use safe_float here
+                    delta = safe_float(qty_delta)
                     input_unit = request.form.get(f"unit_{name}", unit)
 
                     if input_unit != unit:
@@ -209,7 +154,7 @@ def adjust_inventory():
                             continue
 
                     if "quantity" in i:
-                        new_qty = safe_float(i["quantity"] or 0) + delta # Use safe_float here
+                        new_qty = safe_float(i["quantity"] or 0) + delta
                         if new_qty < 0:
                             flash("Error: Quantity cannot be negative")
                             return redirect('/stock/inventory/adjust')
