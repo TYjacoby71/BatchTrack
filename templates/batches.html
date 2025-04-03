@@ -18,7 +18,13 @@
   <tr>
     <td><input type="checkbox" name="batch_ids" value="{{ batch.id }}"></td>
     <td>{{ batch.recipe_name }}{% if batch.scale != 1 %} (Scaled x{{ batch.scale }}){% endif %}</td>
-    <td><a href="/batches/view/{{ batch.id }}">{{ batch.timestamp }}</a></td>
+    <td>
+      {% if batch.completed %}
+        <a href="/batches/view/{{ batch.id }}">{{ batch.timestamp }}</a>
+      {% else %}
+        <a href="/batches/in_progress/{{ batch.id }}">{{ batch.timestamp }}</a>
+      {% endif %}
+    </td>
     <td>
       {% if batch.completed %}
         {% if batch.success == 'yes' %}
