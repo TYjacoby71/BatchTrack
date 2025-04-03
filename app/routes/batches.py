@@ -259,6 +259,8 @@ def start_batch(recipe_id):
 
     if not recipe:
         return "Recipe not found", 404
+        
+    scale = float(request.args.get('scale', 1.0))
 
     # Check stock before allowing batch creation
     inventory = data.get("ingredients", [])
