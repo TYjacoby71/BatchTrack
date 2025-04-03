@@ -131,12 +131,11 @@ def update_inventory():
                 ingredient = next((i for i in ingredients if i['name'] == name), None)
 
                 if ingredient:
-                    from app.unit_conversion import convert_unit
                     current_qty = float(ingredient.get('quantity', 0))
 
                     # Convert units if they don't match
                     if unit != ingredient['unit']:
-                        converted_delta = convert_unit(delta, unit, ingredient['unit'])
+                        converted_delta = converter.convert(delta, unit, ingredient['unit'], material=name.lower())
                         if converted_delta is not None:
                             delta = converted_delta
                             print(f"Converting {delta} {unit} to {converted_delta} {ingredient['unit']}")
