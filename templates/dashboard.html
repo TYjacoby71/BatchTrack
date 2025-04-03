@@ -215,7 +215,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let touchActive = false;
   let touchStartX = 0;
   let scrollStartX = 0;
-  const scrollSpeed = 0.3;
+  let momentum = 0;
+  const scrollSpeed = 0.5;
+  const friction = 0.98;
   
   const scroll = (currentTime) => {
     if (!scrolling || touchActive) return;
@@ -223,10 +225,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!lastTime) lastTime = currentTime;
     const delta = currentTime - lastTime;
     
-    quickAccess.scrollLeft += scrollSpeed * (delta / 16);
+    momentum = momentum * friction + scrollSpeed;
+    quickAccess.scrollLeft += momentum;
     
-    if (quickAccess.scrollLeft >= (container.scrollWidth - quickAccess.offsetWidth) / 2) {
-      quickAccess.scrollLeft = quickAccess.offsetWidth / 4;
+    if (quickAccess.scrollLeft >= container.scrollWidth / 2) {
+      quickAccess.scrollLeft = 0;
     }
     
     lastTime = currentTime;
