@@ -635,7 +635,7 @@ def finish_batch(batch_id):
                 continue
 
     if request.method == "POST":
-        batch_type = request.form.get("batch_type")
+        batch_type = request.form.get("batch_type", "product") # Default to product type
         success = request.form.get("success")
         notes = request.form.get("notes")
         yield_qty = float(request.form.get("yield_qty"))
@@ -678,7 +678,7 @@ def finish_batch(batch_id):
                 if existing:
                     # Add to total quantity and update timestamp/batch
                     if "quantity_available" not in existing:
-                        existing["quantity_available"] = float(existing.get("yield", 0))
+                        existing["quantity_available"] = 0
                     existing["quantity_available"] = float(existing["quantity_available"]) + float(yield_qty)
                     existing["yield"] = float(yield_qty)  # Update yield with latest batch
                     existing["timestamp"] = datetime.now().isoformat()
