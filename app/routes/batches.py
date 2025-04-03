@@ -494,7 +494,22 @@ def view_batch(batch_id):
 @batches_bp.route('/batches/delete/<batch_id>')
 def delete_batch(batch_id):
     data = load_data()
-    # Simply remove the batch from the list without affecting inventory
+    batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+    
+    if batch and batch.get('completed') and batch.get('success') == 'yes':
+        # If this was a product batch, update product inventory
+        if batch.get('batch_type') == 'product':
+            products = data.get('products', [])
+            product = next((p for p in products if p.get('batch_id') == batch_id), None)
+            if product:
+                # Remove quantity from this batch
+                if 'quantity_available' in product:
+                    product['quantity_available'] = max(0, float(product['quantity_available']) - float(batch.get('yield_qty', 0)))
+                if float(product.get('quantity_available', 0)) <= 0:
+                    # Remove product if no quantity left
+                    data['products'] = [p for p in products if p.get('batch_id') != batch_id]
+
+    # Remove the batch
     data['batches'] = [b for b in data['batches'] if str(b['id']) != str(batch_id)]
     save_data(data)
     return redirect('/batches')
@@ -506,6 +521,20 @@ def bulk_delete_batches():
         return redirect('/batches')
 
     data = load_data()
+    products = data.get('products', [])
+    
+    for batch_id in batch_ids:
+        batch = next((b for b in data['batches'] if str(b['id']) == str(batch_id)), None)
+        if batch and batch.get('completed') and batch.get('success') == 'yes':
+            if batch.get('batch_type') == 'product':
+                product = next((p for p in products if p.get('batch_id') == batch_id), None)
+                if product:
+                    if 'quantity_available' in product:
+                        product['quantity_available'] = max(0, float(product['quantity_available']) - float(batch.get('yield_qty', 0)))
+                    if float(product.get('quantity_available', 0)) <= 0:
+                        products = [p for p in products if p.get('batch_id') != batch_id]
+    
+    data['products'] = products
     data['batches'] = [b for b in data['batches'] if str(b['id']) not in batch_ids]
     save_data(data)
     return redirect('/batches')
