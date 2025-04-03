@@ -252,11 +252,37 @@ def toggle_favorite(batch_id):
 
 @batches_bp.route('/start-batch/<int:recipe_id>', methods=['GET', 'POST'])
 def start_batch(recipe_id):
+    from flask import flash
     data = load_data()
     recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
 
     if not recipe:
         return "Recipe not found", 404
+
+    # Check stock before allowing batch creation
+    inventory = data.get("ingredients", [])
+    has_low_stock = False
+    for item in recipe.get("ingredients", []):
+        match = next((i for i in inventory if i["name"].lower() == item["name"].lower()), None)
+        if not match:
+            has_low_stock = True
+            break
+        try:
+            check = check_stock_availability(
+                float(item["quantity"]), item.get("unit", "units"),
+                float(match["quantity"]), match.get("unit", "units"),
+                material=item["name"].lower()
+            )
+            if check["status"] == "LOW":
+                has_low_stock = True
+                break
+        except (ValueError, TypeError):
+            has_low_stock = True
+            break
+
+    if has_low_stock:
+        flash("Cannot start batch due to insufficient stock. Please check inventory levels.", "error")
+        return redirect(f'/stock/check/{recipe_id}')
 
     if request.method == 'POST':
         # Check if we have sufficient stock
