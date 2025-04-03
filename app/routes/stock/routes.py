@@ -8,6 +8,23 @@ import json
 
 from . import stock_bp
 
+@stock_bp.route('/inventory/update', methods=['GET', 'POST'])
+def update_stock():
+    data = load_data()
+    
+    if request.method == 'POST':
+        # Process stock updates
+        save_data(data)
+        return redirect('/ingredients')
+        
+    # Load units from JSON file
+    with open('units.json') as f:
+        units = json.load(f)
+        
+    return render_template('update_stock.html', 
+                         ingredients=data.get('ingredients', []),
+                         units=units)
+
 def safe_float(value):
     try:
         return float(value)

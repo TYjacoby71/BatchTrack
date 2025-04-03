@@ -1,110 +1,330 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-  .dashboard-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-    text-align: center;
-  }
-  .dashboard-title {
-    font-size: 2.5em;
-    margin-bottom: 30px;
-    color: #333;
-  }
-  .quick-access-section {
-    margin-bottom: 40px;
-  }
-  .icon-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 25px;
-    flex-wrap: wrap;
-  }
-  .icon-btn {
-    font-size: 2em;
-    text-decoration: none;
-    padding: 15px;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  .icon-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
-</style>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-  th {
-    background: #f8f9fa;
-    padding: 12px;
-  }
-  td {
-    padding: 10px;
-    border: 1px solid #dee2e6;
-  }
-  .low-stock {
-    color: #dc3545;
-  }
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.welcome-panel {
+  margin: 40px auto;
+  text-align: center;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.welcome-title {
+  font-size: 2.2em;
+  color: #2d3748;
+  margin-bottom: 30px;
+}
+
+.main-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin: 30px 0;
+}
+
+.main-btn {
+  padding: 15px 30px;
+  font-size: 1.2em;
+  border-radius: 12px;
+  border: none;
+  background: #f0f4f8;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.main-btn:hover {
+  transform: translateY(-2px);
+  background: #e1e8f0;
+}
+
+.alert-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 16px;
+  margin: 20px auto;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  animation: slideIn 0.6s ease-out;
+}
+
+.alert-card h3 {
+  color: #4a5568;
+  margin-bottom: 15px;
+  font-size: 1.3em;
+}
+
+.alert-content {
+  color: #718096;
+  font-size: 1.1em;
+  margin-bottom: 15px;
+}
+
+.quick-access {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.9);
+  padding: 15px;
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.quick-access::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-access-container {
+  display: flex;
+  gap: 12px;
+}
+
+.quick-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #2d3748;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.quick-btn:hover {
+  background: #f7fafc;
+  transform: translateY(-2px);
+}
+
+.quick-btn i {
+  color: #4a5568;
+}
+
+.quick-access::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+#action-select, #recipe-select, #stock-status {
+  display: none;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.active {
+  display: block !important;
+}
+
+.stock-options {
+  display: none;
+  margin-top: 20px;
+}
 </style>
 
 <div class="dashboard-container">
-  <h1 class="dashboard-title">Dashboard</h1>
+  <div class="welcome-panel">
+    <h1 class="welcome-title">Hi Kandace! What would you like to do?</h1>
 
-  <div class="quick-access-section">
-    <div class="icon-buttons">
-      <a href="/ingredients" class="icon-btn" title="Ingredients">🧪</a>
-      <a href="/recipes" class="icon-btn" title="Recipes">📘</a>
-      <a href="/batches" class="icon-btn" title="Batches">📦</a>
-      <a href="/stock/check-bulk" class="icon-btn" title="Bulk Stock Check">📊</a>
-      <a href="/tags/manage" class="icon-btn" title="Tag Manager">🏷</a>
+    <div id="action-select" class="main-actions active">
+      <button onclick="startFlow()" class="main-btn">Start a Batch</button>
+      {% if has_unfinished_batches %}
+      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
+      {% endif %}
+    </div>
+
+    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+      <h3>Select Recipe</h3>
+      <select id="recipe" class="form-control" style="margin: 20px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+        <option value="">Choose a recipe...</option>
+      </select>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="startSelectedBatch()" class="main-btn">Start Batch</button>
+        <button onclick="cancelFlow()" class="main-btn" style="background: #f0f0f0;">Cancel</button>
+      </div>
+    </div>
+
+    <div id="stock-status" class="alert-card">
+      <h3>Stock Status</h3>
+      <p id="stock-message" class="alert-content"></p>
+      <div id="stock-options" class="stock-options">
+        <button onclick="startBatch()" class="main-btn">Start Batch</button>
+        <button onclick="goToShopping()" class="main-btn">Make Shopping List</button>
+        <button onclick="goToUpdate()" class="main-btn">Update Stock</button>
+        <button onclick="cancelFlow()" class="main-btn">Cancel</button>
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <h3>⚠️ Low Stock Ingredients</h3>
-    {% if low_stock %}
-    <div class="alert alert-warning">
-      <p>{{ low_stock | length }} ingredients need attention:</p>
-      <table>
-        <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
-        {% for ing in low_stock %}
-          <tr class="low-stock">
-            <td>{{ ing.name }}</td>
-            <td>{{ ing.quantity }}</td>
-            <td>{{ ing.unit }}</td>
-          </tr>
-        {% endfor %}
-      </table>
-    </div>
-    {% else %}
-    <div class="alert alert-success">
-      <p>All stock levels look good ✅</p>
-    </div>
-    {% endif %}
+  {% if low_stock %}
+  <div class="alert-card">
+    <h3>⚠️ Low Stock Alert</h3>
+    <p class="alert-content">
+      You're low on: {% for ing in low_stock %}{{ ing.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+    </p>
+    <a href="/stock/update" class="main-btn">Update Stock</a>
   </div>
+  {% endif %}
 
-  <div class="section">
-    <h3>🕒 Recent Batches</h3>
-    {% if recent_batches %}
-    <table>
-      <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
-      {% for b in recent_batches %}
-        <tr>
-          <td>{{ b.recipe_name }}</td>
-          <td>{{ b.formatted_time if b.formatted_time else 'Unknown' }}</td>
-          <td>${{ b.total_cost|default(0.00) }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-    {% else %}
-    <p>No batches yet.</p>
-    {% endif %}
+  <div class="quick-access" id="quickAccess">
+    <div class="quick-access-container">
+      <a href="/" class="quick-btn">🏠 Dashboard</a>
+      <a href="/stock/inventory/update" class="quick-btn">📦 Stock Update</a>
+      <a href="/stock/check-bulk" class="quick-btn">🔍 Bulk Check</a>
+      <a href="/recipes" class="quick-btn">📘 Recipes</a>
+      <a href="/batches" class="quick-btn">📝 Batches</a>
+      <a href="/products" class="quick-btn">🏭 Products</a>
+      <a href="/ingredients" class="quick-btn">🧪 Ingredients</a>
+      <a href="/settings" class="quick-btn">⚙️ Settings</a>
+    </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const quickAccess = document.getElementById('quickAccess');
+  const container = quickAccess.querySelector('.quick-access-container');
+  const originalItems = container.innerHTML;
+  container.innerHTML = originalItems.repeat(8);
+
+  let scrolling = true;
+  let lastTime = 0;
+  let touchActive = false;
+  let touchStartX = 0;
+  let scrollStartX = 0;
+  let momentum = 0;
+  const scrollSpeed = 0.5;
+  const friction = 0.98;
+
+  const scroll = (currentTime) => {
+    if (!scrolling || touchActive) return;
+
+    if (!lastTime) lastTime = currentTime;
+    const delta = currentTime - lastTime;
+
+    momentum = momentum * friction + scrollSpeed;
+    quickAccess.scrollLeft += momentum;
+
+    if (quickAccess.scrollLeft >= container.scrollWidth / 2) {
+      quickAccess.scrollLeft = 0;
+    }
+
+    lastTime = currentTime;
+    requestAnimationFrame(scroll);
+  };
+
+  quickAccess.addEventListener('touchstart', (e) => {
+    touchActive = true;
+    touchStartX = e.touches[0].clientX;
+    scrollStartX = quickAccess.scrollLeft;
+  }, { passive: true });
+
+  quickAccess.addEventListener('touchmove', (e) => {
+    if (!touchActive) return;
+    const touchDelta = touchStartX - e.touches[0].clientX;
+    quickAccess.scrollLeft = scrollStartX + touchDelta;
+  }, { passive: true });
+
+  quickAccess.addEventListener('touchend', () => {
+    touchActive = false;
+    requestAnimationFrame(scroll);
+  });
+
+  quickAccess.addEventListener('mousedown', (e) => {
+    touchActive = true;
+    touchStartX = e.clientX;
+    scrollStartX = quickAccess.scrollLeft;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!touchActive) return;
+    const touchDelta = touchStartX - e.clientX;
+    quickAccess.scrollLeft = scrollStartX + touchDelta;
+  });
+
+  window.addEventListener('mouseup', () => {
+    touchActive = false;
+    requestAnimationFrame(scroll);
+  });
+
+  requestAnimationFrame(scroll);
+});
+</script>
+
+<script>
+function toggleAll(source) {
+  const checkboxes = document.getElementsByName('batch_ids');
+  for(let checkbox of checkboxes) {
+    checkbox.checked = source.checked;
+  }
+}
+
+function startFlow() {
+  window.location.href = '/recipes';
+}
+
+function checkStock() {
+  window.location.href = '/stock/check-bulk';
+}
+
+function finishFlow() {
+  window.location.href = '/batches';
+}
+
+function startSelectedBatch() {
+  const recipeId = document.getElementById('recipe').value;
+  if (!recipeId) {
+    alert('Please select a recipe first');
+    return;
+  }
+  window.location.href = `/start-batch/${recipeId}`;
+}
+
+function cancelFlow() {
+  document.getElementById('recipe-select').style.display = 'none';
+  document.getElementById('recipe').value = '';
+}
+
+
+function startBatch() {
+  const recipeId = document.getElementById("recipe").value;
+  window.location.href = `/start-batch/${recipeId}`;
+}
+
+function goToShopping() {
+  const recipeId = document.getElementById("recipe").value;
+  window.location.href = `/stock/check-bulk?recipe=${recipeId}`;
+}
+
+function goToUpdate() {
+  window.location.href = "/stock/update";
+}
+
+</script>
 {% endblock %}
