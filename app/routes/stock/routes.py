@@ -11,16 +11,57 @@ from . import stock_bp
 @stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
     data = load_data()
-    
+
     if request.method == 'POST':
-        # Process stock updates
+        ingredients = data.get('ingredients', [])
+        ingredient_names = request.form.getlist('ingredient_name[]')
+        deltas = request.form.getlist('delta[]')
+        units = request.form.getlist('unit[]')
+        reasons = request.form.getlist('reason[]')
+
+        for name, delta_str, unit, reason in zip(ingredient_names, deltas, units, reasons):
+            if delta_str:  # Only process if delta is provided
+                try:
+                    delta = float(delta_str)
+                    ingredient = next((i for i in ingredients if i['name'] == name), None)
+                    if ingredient:
+                        # Convert units if necessary
+                        if unit != ingredient['unit']:
+                            from unit_converter import UnitConversionService
+                            converter = UnitConversionService()
+                            converted_delta = converter.convert(delta, unit, ingredient['unit'])
+                            if converted_delta is not None:
+                                delta = converted_delta
+                            else:
+                                continue
+
+                        # Apply the change based on reason
+                        if reason in ['Loss', 'Spoiled', 'Donation']:
+                            delta = -abs(delta)  # Make sure it's negative for removals
+                        else:
+                            delta = abs(delta)  # Make sure it's positive for additions
+
+                        current_qty = float(ingredient.get('quantity', 0))
+                        ingredient['quantity'] = current_qty + delta
+
+                        # Log the change
+                        data.setdefault('inventory_log', []).append({
+                            'name': name,
+                            'change': delta,
+                            'unit': ingredient['unit'],
+                            'reason': reason,
+                            'timestamp': datetime.now().isoformat()
+                        })
+                except ValueError:
+                    continue
+
         save_data(data)
         return redirect('/ingredients')
-        
+
     # Load units from JSON file
     with open('units.json') as f:
         units = json.load(f)
-        
+
     return render_template('update_stock.html', 
                          ingredients=data.get('ingredients', []),
                          units=units)
@@ -47,7 +88,7 @@ def check_stock_for_recipe(recipe_id):
 
     stock_check = []
     needed_items = {}
-    
+
     for item in recipe.get("ingredients", []):
         name = item["name"]
         qty = safe_float(item["quantity"])
@@ -85,7 +126,7 @@ def check_stock_for_recipe(recipe_id):
                 "status": "LOW"
             })
             needed_items[name] = {"total": qty, "unit": unit}
-    
+
     if needed_items:
         session['needed_items'] = needed_items
 
