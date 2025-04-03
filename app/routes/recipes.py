@@ -234,14 +234,16 @@ def plan_production(recipe_id):
         return "Recipe not found", 404
 
     scale = float(request.args.get('scale', 1))
+    stock_check = []
+    missing_items = {}
+    
     if request.method == 'POST':
         scale = float(request.form.get('scale', 1))
         if 'start_batch' in request.form:
             return redirect(f'/start-batch/{recipe_id}?scale={scale}')
-
-    stock_check = []
-    missing_items = {}
-    inventory = data.get('ingredients', [])
+        
+        if 'check_stock' in request.form:
+            inventory = data.get('ingredients', [])
 
     for item in recipe.get('ingredients', []):
         name = item['name']

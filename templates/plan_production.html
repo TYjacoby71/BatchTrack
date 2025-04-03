@@ -8,10 +8,12 @@
     <form method="post" class="mb-8">
         <div class="mb-4">
             <label class="block text-gray-700 mb-2">Scale Recipe:</label>
-            <input type="number" name="scale" step="0.1" min="0.1" value="{{ scale }}" class="border rounded px-3 py-2 w-32" onchange="this.form.submit()" style="max-width: 120px;">
+            <input type="number" name="scale" step="0.1" min="0.1" value="{{ scale }}" class="border rounded px-3 py-2 w-32" style="max-width: 120px;">
         </div>
+        <button type="submit" name="check_stock" class="bg-blue-500 text-white px-4 py-2 rounded">Check Stock</button>
     </form>
 
+    {% if stock_check %}
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-xl mb-4">Stock Check Results</h2>
         
@@ -62,5 +64,6 @@
         </form>
         {% endif %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}
