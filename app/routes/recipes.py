@@ -269,30 +269,30 @@ def plan_production(recipe_id):
                             'available': f"{check['converted']} {check['unit']}",
                             'status': check['status']
                         })
-            except (ValueError, TypeError):
-                stock_check.append({
-                    'name': name,
-                    'needed': f"{needed_qty} {unit}",
-                    'available': "0",
-                    'status': 'LOW'
-                })
-                missing_items[name] = {
-                    'needed': needed_qty,
-                    'available': 0,
-                    'unit': unit
-                }
-        else:
-            stock_check.append({
-                'name': name,
-                'needed': f"{needed_qty} {unit}",
-                'available': "0",
-                'status': 'LOW'
-            })
-            missing_items[name] = {
-                'needed': needed_qty,
-                'available': 0,
-                'unit': unit
-            }
+                    except (ValueError, TypeError):
+                        stock_check.append({
+                            'name': name,
+                            'needed': f"{needed_qty} {unit}",
+                            'available': "0",
+                            'status': 'LOW'
+                        })
+                        missing_items[name] = {
+                            'needed': needed_qty,
+                            'available': 0,
+                            'unit': unit
+                        }
+                else:
+                    stock_check.append({
+                        'name': name,
+                        'needed': f"{needed_qty} {unit}",
+                        'available': "0",
+                        'status': 'LOW'
+                    })
+                    missing_items[name] = {
+                        'needed': needed_qty,
+                        'available': 0,
+                        'unit': unit
+                    }
 
     return render_template('plan_production.html', 
                          recipe=recipe,
