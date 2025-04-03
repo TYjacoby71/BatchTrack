@@ -35,14 +35,20 @@ def save_settings():
 def save_stock_alerts():
     try:
         data = load_data()
+        ingredient_name = request.form.get('ingredient_name')
+        threshold = request.form.get('threshold')
+        
+        if not ingredient_name:
+            flash('No ingredient selected', 'error')
+            return redirect('/settings')
+            
         for ingredient in data.get('ingredients', []):
-            threshold_key = f"threshold_{ingredient['name']}"
-            if threshold_key in request.form:
-                threshold = request.form[threshold_key]
-                if threshold.strip():
+            if ingredient['name'] == ingredient_name:
+                if threshold and threshold.strip():
                     ingredient['low_stock_threshold'] = float(threshold)
                 else:
                     ingredient.pop('low_stock_threshold', None)
+                break
         
         save_data(data)
         flash('Stock alert thresholds updated successfully', 'success')

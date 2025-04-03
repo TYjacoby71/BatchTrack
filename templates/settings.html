@@ -20,64 +20,65 @@
 </div>
 
 <div class="settings-section">
-    <h3>Low Stock Alert Categories</h3>
+    <h3>Low Stock Alerts</h3>
     <form method="POST" action="{{ url_for('settings.save_stock_alerts') }}">
-        <select id="alert-category" name="alert_category" class="form-control">
-            <option value="">Select a category...</option>
-            <option value="volume">Volume (mL, L, fl oz)</option>
-            <option value="weight">Weight (g, kg, oz, lb)</option>
-            <option value="unit">Count (units, pieces)</option>
-        </select>
-
-        <div id="ingredients-list" style="margin-top: 20px;">
-            <table class="settings-table">
-                <tr>
-                    <th>Ingredient</th>
-                    <th>Current Stock</th>
-                    <th>Alert Threshold</th>
-                    <th>Unit</th>
-                </tr>
+        <div class="form-group">
+            <label for="ingredient-select">Select Ingredient:</label>
+            <select id="ingredient-select" name="ingredient_name" class="form-control">
+                <option value="">Choose an ingredient...</option>
                 {% for ingredient in ingredients %}
-                <tr data-unit="{{ ingredient.unit }}">
-                    <td>{{ ingredient.name }}</td>
-                    <td>{{ ingredient.quantity }}</td>
-                    <td>
-                        <input type="number" 
-                               name="threshold_{{ ingredient.name }}" 
-                               value="{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else '' }}"
-                               step="0.01"
-                               min="0">
-                    </td>
-                    <td>{{ ingredient.unit }}</td>
-                </tr>
+                <option value="{{ ingredient.name }}" 
+                        data-unit="{{ ingredient.unit }}"
+                        data-current="{{ ingredient.quantity }}"
+                        data-threshold="{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else '' }}">
+                    {{ ingredient.name }} ({{ ingredient.unit }})
+                </option>
                 {% endfor %}
-            </table>
+            </select>
+        </div>
+
+        <div id="alert-settings" style="display: none; margin-top: 20px;">
+            <div class="form-group">
+                <label>Current Stock:</label>
+                <span id="current-stock"></span>
+            </div>
+            <div class="form-group">
+                <label for="threshold">Alert Threshold:</label>
+                <input type="number" 
+                       id="threshold" 
+                       name="threshold" 
+                       step="0.01" 
+                       min="0" 
+                       class="form-control">
+                <span id="unit-display"></span>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Alert Setting</button>
         </div>
         <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Save Alert Settings</button>
     </form>
 </div>
 
 <script>
-document.getElementById('alert-category').addEventListener('change', function() {
-    const category = this.value;
-    const rows = document.querySelectorAll('#ingredients-list tr');
+document.getElementById('ingredient-select').addEventListener('change', function() {
+    const alertSettings = document.getElementById('alert-settings');
+    const currentStock = document.getElementById('current-stock');
+    const threshold = document.getElementById('threshold');
+    const unitDisplay = document.getElementById('unit-display');
     
-    const unitMappings = {
-        'volume': ['ml', 'l', 'fl oz', 'cup', 'gallon'],
-        'weight': ['g', 'kg', 'oz', 'lb'],
-        'unit': ['unit', 'piece', 'pieces', 'count']
-    };
+    if (this.value === '') {
+        alertSettings.style.display = 'none';
+        return;
+    }
     
-    rows.forEach(row => {
-        if (!row.dataset.unit) return;
-        const unit = row.dataset.unit.toLowerCase();
-        if (category === '') {
-            row.style.display = '';
-        } else {
-            const showRow = unitMappings[category].some(u => unit.includes(u));
-            row.style.display = showRow ? '' : 'none';
-        }
-    });
+    const selectedOption = this.options[this.selectedIndex];
+    const unit = selectedOption.dataset.unit;
+    const current = selectedOption.dataset.current;
+    const savedThreshold = selectedOption.dataset.threshold;
+    
+    currentStock.textContent = `${current} ${unit}`;
+    threshold.value = savedThreshold;
+    unitDisplay.textContent = unit;
+    alertSettings.style.display = 'block';
 });
 </script>
 
