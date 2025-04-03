@@ -28,34 +28,71 @@
       left: 0;
       right: 0;
       z-index: 1000;
-    }
-
-    nav {
       display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-1);
+      align-items: center;
+      justify-content: space-between;
+      height: 50px;
     }
 
-    nav a {
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      padding: var(--spacing-2);
       color: white;
       text-decoration: none;
-      font-weight: 600;
-      padding: var(--spacing-1) var(--spacing-2);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+    }
+
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .nav-button {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: var(--spacing-2) var(--spacing-3);
+      cursor: pointer;
       border-radius: var(--spacing-1);
-      transition: background 0.2s;
+      font-size: 16px;
+    }
+
+    .nav-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background-color: white;
+      min-width: 200px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border-radius: var(--spacing-1);
+      z-index: 1001;
+    }
+
+    .nav-content a {
+      color: var(--primary-color);
+      padding: var(--spacing-2) var(--spacing-3);
+      text-decoration: none;
+      display: block;
       font-size: 14px;
     }
 
-    nav a:hover {
-      background: rgba(255,255,255,0.1);
+    .nav-content a:hover {
+      background-color: #f5f5f5;
+    }
+
+    .nav-dropdown:hover .nav-content {
+      display: block;
     }
 
     main {
       padding: var(--spacing-3);
       max-width: 1000px;
-      margin: 45px auto 60px;
+      margin: 70px auto 60px;
       background: white;
-      min-height: calc(100vh - 105px);
+      min-height: calc(100vh - 130px);
       border-radius: var(--spacing-2);
     }
 
@@ -122,7 +159,7 @@
       form {
         padding: 0 var(--spacing-2);
       }
-      
+
       input[type="submit"],
       button {
         width: 100%;
@@ -155,66 +192,23 @@
       display: inline-block;
     }
 
-    .desktop-nav {
-      display: flex;
-      gap: var(--spacing-2);
-    }
-
-    .mobile-nav {
-      display: none;
-    }
-
     @media (max-width: 768px) {
-      .desktop-nav {
-        display: none;
-      }
-
       .mobile-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: var(--primary-color);
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: var(--spacing-2) 0;
-        z-index: 999;
-        height: 50px;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-      }
-
-      .mobile-nav a {
-        color: white;
-        text-decoration: none;
-        font-size: 24px;
-        padding: var(--spacing-1);
-      }
-
-      .mobile-nav a.active {
-        color: #fff;
-        background: rgba(255,255,255,0.1);
-        border-radius: var(--spacing-1);
-      }
-
-      table, th, td {
-        font-size: 14px;
+        display: none;
       }
 
       main {
         padding: var(--spacing-2);
-        margin-bottom: 60px;
-        margin-top: 45px;
+        margin-top: 60px;
       }
 
-      h1 { font-size: 24px; }
-      h2 { font-size: 20px; }
-      
-      input, select, textarea {
-        font-size: 16px;
+      .nav-content {
+        right: var(--spacing-2);
+        left: var(--spacing-2);
       }
     }
-  #floatBtn {
+
+    #floatBtn {
       display: none;
     }
 
@@ -223,7 +217,7 @@
         display: block;
         position: fixed;
         right: var(--spacing-4);
-        bottom: 70px;
+        bottom: var(--spacing-4);
         background: var(--primary-color);
         color: white;
         font-size: 28px;
@@ -242,27 +236,25 @@
 <body>
 
 <header>
-  <nav class="desktop-nav">
-    <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
-    <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
-    <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
-    <a href="/batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦 Batches</a>
-    <a href="/products" {% if '/products' in request.path %}class="active"{% endif %}>🏭 Products</a>
-    <a href="/tags/manage" {% if '/tags/manage' in request.path %}class="active"{% endif %}>🏷 Tags</a>
-  </nav>
+  <a href="/" class="logo">
+    📋 BatchTrack
+  </a>
+  <div class="nav-dropdown">
+    <button class="nav-button">Menu ▾</button>
+    <div class="nav-content">
+      <a href="/" {% if request.path == '/' %}class="active"{% endif %}>🏠 Dashboard</a>
+      <a href="/ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪 Ingredients</a>
+      <a href="/recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘 Recipes</a>
+      <a href="/batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦 Batches</a>
+      <a href="/products" {% if '/products' in request.path %}class="active"{% endif %}>🏭 Products</a>
+      <a href="/tags/manage" {% if '/tags/manage' in request.path %}class="active"{% endif %}>🏷 Tags</a>
+    </div>
+  </div>
 </header>
 
 <main>
   {% block content %}{% endblock %}
 </main>
-
-<nav class="mobile-nav">
-  <a href="/" title="Dashboard" {% if request.path == '/' %}class="active"{% endif %}>🏠</a>
-  <a href="/ingredients" title="Ingredients" {% if '/ingredients' in request.path %}class="active"{% endif %}>🧪</a>
-  <a href="/recipes" title="Recipes" {% if '/recipes' in request.path %}class="active"{% endif %}>📘</a>
-  <a href="/batches" title="Batches" {% if '/batches' in request.path %}class="active"{% endif %}>📦</a>
-  <a href="/products" title="Products" {% if '/products' in request.path %}class="active"{% endif %}>🏭</a>
-</nav>
 
 <a href="/recipes/add" id="floatBtn" title="Add New Recipe">➕</a>
 
