@@ -5,6 +5,8 @@ class UnitConversionService:
         "liters": "liter", "gallons": "gallon",
         "lbs": "lb", "kgs": "kg", "ozs": "oz",
         "milliliters": "ml", "grams": "g",
+        "units": "unit", "pieces": "piece",
+        "eggs": "unit"
     }
 
     VOLUME_TO_ML = {
