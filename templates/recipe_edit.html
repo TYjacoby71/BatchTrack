@@ -1,17 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Recipe</title>
-    <style>
-        .ingredient-row {
-            margin: 10px 0;
-        }
-        .ingredient-row input, .ingredient-row select {
-            margin-right: 10px;
-        }
-    </style>
-</head>
-<body>
+
+{% extends "layout.html" %}
+{% block content %}
     <h1>{% if is_clone %}Clone Recipe{% elif recipe.id %}Edit Recipe{% else %}New Recipe{% endif %}</h1>
     <form method="POST">
         <div>
@@ -147,25 +136,32 @@
         function removeIngredient(btn) {
             btn.parentElement.remove();
         }
-    function toggleCustomField(selectEl, targetId) {
+
+        function toggleCustomField(selectEl, targetId) {
             const customField = document.getElementById(targetId);
             customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
         }
 
-    document.addEventListener('change', function(e) {
-        if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
-            if (e.target.value === '__add_new__') {
-                const currentPath = window.location.pathname;
-                window.location.href = `/quickadd?next=${encodeURIComponent(currentPath)}`;
+        document.addEventListener('change', function(e) {
+            if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
+                if (e.target.value === '__add_new__') {
+                    const currentPath = window.location.pathname;
+                    window.location.href = `/quickadd?next=${encodeURIComponent(currentPath)}`;
+                }
             }
-        }
-        // Add handler for unit addition.
-        if (e.target.tagName === 'SELECT' && e.target.name.includes('ingredient_unit[]')) {
-            if (e.target.value === '__add_unit__') {
-                window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
+            if (e.target.tagName === 'SELECT' && e.target.name.includes('ingredient_unit[]')) {
+                if (e.target.value === '__add_unit__') {
+                    window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
+                }
             }
-        }
-    });
+        });
     </script>
-</body>
-</html>
+    <style>
+        .ingredient-row {
+            margin: 10px 0;
+        }
+        .ingredient-row input, .ingredient-row select {
+            margin-right: 10px;
+        }
+    </style>
+{% endblock %}
