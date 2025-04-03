@@ -56,7 +56,9 @@ def update_stock():
                     continue
 
         save_data(data)
-        return redirect('/ingredients')
+        # Get the previous page from the referer header, default to ingredients page
+        previous_page = request.referrer or '/ingredients'
+        return redirect(previous_page)
 
     # Load units from JSON file
     with open('units.json') as f:
