@@ -57,6 +57,7 @@
             {% endfor %}
           </optgroup>
           {% endfor %}
+          <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
         </select>
         <select name="reason[]" required>
           <option value="Purchase">Purchase (Add)</option>
@@ -97,6 +98,7 @@ function addIngredientRow() {
         {% endfor %}
       </optgroup>
       {% endfor %}
+      <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
     </select>
     <select name="reason[]" required>
       <option value="Purchase">Purchase (Add)</option>
@@ -113,6 +115,15 @@ function addIngredientRow() {
   $(row).find('select[name="ingredient_name[]"]').select2({
     placeholder: "Search for an ingredient...",
     width: '100%'
+  });
+
+  // Add unit selector handling
+  document.querySelectorAll('select[name="unit[]"]').forEach(select => {
+    select.addEventListener('change', function() {
+      if (this.value === '__add_unit__') {
+        window.location.href = '/units';
+      }
+    });
   });
 
   showAllDeleteButtons();

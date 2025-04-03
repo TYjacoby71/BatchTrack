@@ -1,0 +1,24 @@
+
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>➕ Add Count Unit</h2>
+<form method="POST" action="/units">
+    <input type="text" name="unit_name" placeholder="e.g. jar, bar" required>
+    <button type="submit" name="action" value="add">Add Unit</button>
+</form>
+
+<h3>Current Count Units</h3>
+<ul>
+    {% for unit in count_units %}
+    <li>
+        {{ unit }}
+        <form method="POST" action="/units" style="display:inline;">
+            <input type="hidden" name="unit_name" value="{{ unit }}">
+            <button type="submit" name="action" value="remove" style="color:red;">✖</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
