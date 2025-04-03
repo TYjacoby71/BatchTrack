@@ -21,7 +21,7 @@
         {
             "name": "pepper",
             "quantity": 7.0,
-            "unit": "pinch",
+            "unit": "g",
             "cost_per_unit": ""
         },
         {
@@ -85,7 +85,7 @@
                 {
                     "name": "pepper",
                     "quantity": 1.0,
-                    "unit": "pinch"
+                    "unit": "g"
                 }
             ],
             "instructions": "Fry, flip, eat"
