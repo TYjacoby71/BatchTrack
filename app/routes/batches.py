@@ -259,7 +259,7 @@ def start_batch(recipe_id):
 
     if not recipe:
         return "Recipe not found", 404
-        
+
     scale = float(request.args.get('scale', 1.0))
 
     # Check stock before allowing batch creation
@@ -402,28 +402,14 @@ def start_batch(recipe_id):
         save_data(data)
         return redirect('/batches')
 
-    return render_template('start_batch.html', recipe=recipe)
+    return render_template('start_batch.html', recipe=recipe, scale=scale) # Pass scale to template
 
-@batches_bp.route('/batches')
-@batches_bp.route('/ingredients/usage')
-def ingredient_usage():
+@batches_bp.route('/batches/in_progress')
+def batches_in_progress():
     data = load_data()
-    usage = {}
+    in_progress_batches = [batch for batch in data.get('batches', []) if not batch.get('completed')]
+    return render_template('batches_in_progress.html', batches=in_progress_batches)
 
-    def to_float(v):
-        try:
-            return float(v)
-        except:
-            return 0
-
-    for batch in data.get("batches", []):
-        for ing in batch.get("ingredients", []):
-            name = ing["name"]
-            qty = to_float(ing["quantity"])
-            usage[name] = usage.get(name, 0) + qty
-
-    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
-    return render_template("ingredient_usage.html", usage=sorted_usage)
 
 @batches_bp.route('/batches/<batch_id>/print')
 def print_batch(batch_id):
@@ -724,3 +710,23 @@ def finish_batch(batch_id):
         return redirect("/products")
 
     return render_template("finish_batch.html", batch=batch, batch_id=batch_id)
+
+@batches_bp.route('/ingredients/usage')
+def ingredient_usage():
+    data = load_data()
+    usage = {}
+
+    def to_float(v):
+        try:
+            return float(v)
+        except:
+            return 0
+
+    for batch in data.get("batches", []):
+        for ing in batch.get("ingredients", []):
+            name = ing["name"]
+            qty = to_float(ing["quantity"])
+            usage[name] = usage.get(name, 0) + qty
+
+    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
+    return render_template("ingredient_usage.html", usage=sorted_usage)
