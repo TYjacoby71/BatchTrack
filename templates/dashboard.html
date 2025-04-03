@@ -214,24 +214,48 @@ document.addEventListener('DOMContentLoaded', function() {
   container.innerHTML = originalItems + originalItems + originalItems;
   
   let scrolling = false;
-  const scroll = () => {
+  let lastTime = 0;
+  const scrollSpeed = 0.5; // Reduced speed
+  
+  const scroll = (currentTime) => {
     if (!scrolling) return;
-    quickAccess.scrollLeft += 1;
+    
+    if (!lastTime) lastTime = currentTime;
+    const delta = currentTime - lastTime;
+    
+    quickAccess.scrollLeft += scrollSpeed * (delta / 16); // Smooth speed based on frame time
+    
     if (quickAccess.scrollLeft >= (container.scrollWidth - quickAccess.offsetWidth) / 2) {
       quickAccess.scrollLeft = 0;
     }
+    
+    lastTime = currentTime;
     requestAnimationFrame(scroll);
   };
   
-  // Start automatic scrolling
-  scrolling = true;
-  scroll();
-  
-  // Pause on hover
-  quickAccess.addEventListener('mouseenter', () => scrolling = false);
-  quickAccess.addEventListener('mouseleave', () => {
+  // Start automatic scrolling with delay
+  setTimeout(() => {
     scrolling = true;
-    scroll();
+    requestAnimationFrame(scroll);
+  }, 1000);
+  
+  // Add debounce for hover events
+  let hoverTimeout;
+  quickAccess.addEventListener('mouseenter', () => {
+    clearTimeout(hoverTimeout);
+    hoverTimeout = setTimeout(() => {
+      scrolling = false;
+      lastTime = 0;
+    }, 100);
+  });
+  
+  quickAccess.addEventListener('mouseleave', () => {
+    clearTimeout(hoverTimeout);
+    hoverTimeout = setTimeout(() => {
+      scrolling = true;
+      lastTime = 0;
+      requestAnimationFrame(scroll);
+    }, 100);
   });
 });
 </script>
