@@ -2,8 +2,10 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="dashboard-container">
-  <h2>Welcome!</h2>
-  <p>What would you like to do?</p>
+  <div class="welcome-banner">
+    <h2>Welcome!</h2>
+    <p class="subtitle">What would you like to do?</p>
+  </div>
 
   <!-- Animated Panel Wrapper -->
   <div id="dashboard-flow">
@@ -18,7 +20,7 @@
       <label for="recipe">Select a Recipe:</label>
       <select id="recipe" class="form-control">
         {% for recipe in recipes %}
-        <option value="{{ recipe.name }}">{{ recipe.name }}</option>
+        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
         {% endfor %}
       </select>
       <button onclick="checkStock()" class="btn btn-primary">Check Stock</button>
@@ -38,17 +40,19 @@
   <!-- Scrollable Quick Access Bar -->
   <div class="quick-scroll-bar">
     <a href="/stock/update" class="quick-btn">Stock Update</a>
-    <a href="/stock/check" class="quick-btn">Bulk Check</a>
+    <a href="/stock/check-bulk" class="quick-btn">Bulk Check</a>
     <a href="/recipes" class="quick-btn">Recipes</a>
     <a href="/batches" class="quick-btn">Batches</a>
     <a href="/products" class="quick-btn">Products</a>
   </div>
 
+  {% if low_stock %}
   <div class="section">
-    <h3>⚠️ Low Stock Ingredients</h3>
-    {% if low_stock %}
     <div class="alert alert-warning">
-      <p>{{ low_stock | length }} ingredients need attention:</p>
+      <div class="alert-header">
+        <h3>⚠️ Low Stock Items</h3>
+        <a href="/stock/update" class="btn btn-sm">Update Stock</a>
+      </div>
       <table>
         <tr><th>Name</th><th>Qty</th><th>Unit</th></tr>
         {% for ing in low_stock %}
@@ -60,16 +64,12 @@
         {% endfor %}
       </table>
     </div>
-    {% else %}
-    <div class="alert alert-success">
-      <p>All stock levels look good ✅</p>
-    </div>
-    {% endif %}
   </div>
+  {% endif %}
 
+  {% if recent_batches %}
   <div class="section">
     <h3>🕒 Recent Batches</h3>
-    {% if recent_batches %}
     <table>
       <tr><th>Recipe</th><th>Time</th><th>Cost</th></tr>
       {% for b in recent_batches %}
@@ -80,30 +80,52 @@
         </tr>
       {% endfor %}
     </table>
-    {% else %}
-    <p>No batches yet.</p>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block styles %}
 <style>
 .dashboard-container {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
 
-/* Panels */
-.panel { 
-  display: none; 
-  transition: opacity 0.4s ease;
-  margin: 20px 0;
+.welcome-banner {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 32px;
+  background: linear-gradient(135deg, #f6f8fa 0%, #ffffff 100%);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
+
+.welcome-banner h2 {
+  font-size: 2.4em;
+  color: #2d3748;
+  margin: 0;
+}
+
+.subtitle {
+  color: #718096;
+  font-size: 1.1em;
+  margin: 8px 0 0;
+}
+
+/* Panels Animation */
+.panel { 
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s ease;
+}
+
 .panel.active { 
-  display: block; 
-  opacity: 1; 
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .action-buttons {
@@ -113,6 +135,41 @@
   margin: 20px 0;
 }
 
+.btn {
+  padding: 12px 24px;
+  font-size: 1em;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary {
+  background: #4a5568;
+  color: white;
+}
+
+.btn-secondary {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.btn-success {
+  background: #48bb78;
+  color: white;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.9em;
+}
+
+/* Quick Access Bar */
 .quick-scroll-bar {
   display: flex;
   overflow-x: auto;
@@ -120,76 +177,86 @@
   padding: 10px;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  margin-bottom: 30px;
+  margin: 30px 0;
+  scrollbar-width: none;
 }
 
-.quick-scroll-bar::-webkit-scrollbar { display: none; }
+.quick-scroll-bar::-webkit-scrollbar {
+  display: none;
+}
 
 .quick-btn {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  background-color: #f3f4f6;
-  padding: 12px 18px;
-  border-radius: 8px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 12px;
   text-decoration: none;
-  color: #333;
+  color: #2d3748;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  transition: background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.quick-btn:hover { background-color: #e0e7ff; }
+.quick-btn:hover {
+  background: #f7fafc;
+  transform: translateY(-2px);
+}
 
 .section {
-  margin: 30px 0;
-  padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .alert {
-  padding: 15px;
-  border-radius: 8px;
-  margin: 10px 0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.alert-header h3 {
+  margin: 0;
 }
 
 .alert-warning {
-  background-color: #fff3cd;
-  border: 1px solid #ffeeba;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin: 10px 0;
+  margin-top: 16px;
 }
 
 th, td {
-  padding: 8px;
+  padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  font-weight: 600;
+  color: #4a5568;
 }
 
 .form-control {
   width: 100%;
-  padding: 8px;
-  margin: 8px 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-#stock-options {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 20px;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1em;
 }
 </style>
 {% endblock %}
@@ -198,7 +265,9 @@ th, td {
 <script>
 function startFlow() {
   document.getElementById('action-select').classList.remove('active');
-  document.getElementById('recipe-select').classList.add('active');
+  setTimeout(() => {
+    document.getElementById('recipe-select').classList.add('active');
+  }, 100);
 }
 
 function finishFlow() {
@@ -206,23 +275,21 @@ function finishFlow() {
 }
 
 function checkStock() {
-  const selected = document.getElementById("recipe").value;
+  const recipeId = document.getElementById("recipe").value;
   document.getElementById("recipe-select").classList.remove('active');
   document.getElementById("stock-status").classList.add('active');
-
-  document.getElementById("stock-message").innerText = `Checking ingredients for ${selected}...`;
-  setTimeout(() => {
-    document.getElementById("stock-message").innerText = "You have everything you need! Ready to start?";
-    document.getElementById("stock-options").style.display = "block";
-  }, 1500);
+  
+  document.getElementById("stock-message").innerText = "Checking ingredients...";
+  window.location.href = `/stock/check/${recipeId}`;
 }
 
 function startBatch() {
-  window.location.href = "/batches/start";
+  const recipeId = document.getElementById("recipe").value;
+  window.location.href = `/start-batch/${recipeId}`;
 }
 
 function goToShopping() {
-  window.location.href = "/stock/check";
+  window.location.href = "/stock/check-bulk";
 }
 
 function goToUpdate() {
