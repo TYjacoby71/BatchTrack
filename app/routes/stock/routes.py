@@ -29,6 +29,8 @@ def check_stock_for_recipe(recipe_id):
         del session['needed_items']
 
     stock_check = []
+    needed_items = {}
+    
     for item in recipe.get("ingredients", []):
         name = item["name"]
         qty = safe_float(item["quantity"])
@@ -43,8 +45,15 @@ def check_stock_for_recipe(recipe_id):
                     safe_float(match["quantity"]), match["unit"],
                     material=name.lower()
                 )
+                if check["status"] == "LOW":
+                    needed_qty = qty - check["converted"]
+                    needed_items[name] = {
+                        "total": max(0, needed_qty),
+                        "unit": unit
+                    }
             except (ValueError, TypeError) as e:
                 check = {"converted": 0, "unit": unit, "status": "ERROR"}
+                needed_items[name] = {"total": qty, "unit": unit}
             stock_check.append({
                 "name": name,
                 "needed": f"{qty} {unit}",
@@ -58,6 +67,10 @@ def check_stock_for_recipe(recipe_id):
                 "available": f"0 {unit}",
                 "status": "LOW"
             })
+            needed_items[name] = {"total": qty, "unit": unit}
+    
+    if needed_items:
+        session['needed_items'] = needed_items
 
     return render_template("stock_status.html", recipe=recipe, stock_check=stock_check)
 
