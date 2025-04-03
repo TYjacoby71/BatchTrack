@@ -26,7 +26,7 @@
         },
         {
             "name": "milk",
-            "quantity": 4.812500099064567,
+            "quantity": 4.75000013208609,
             "unit": "gallon",
             "cost_per_unit": "3.49"
         },
@@ -75,7 +75,7 @@
         {
             "name": "12 oz glass jar",
             "unit": "unit",
-            "quantity": 26.5,
+            "quantity": 25.5,
             "cost_per_unit": "0.00"
         },
         {
@@ -212,7 +212,12 @@
             ],
             "scale": 1.0,
             "total_cost": 3.49,
-            "qr_code": "static/qr/batch_76.png"
+            "qr_code": "static/qr/batch_76.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "cup"
         }
     ],
     "batch_counter": 76,
@@ -697,10 +702,10 @@
             "unit": "cup",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-03T05:11:40.554936",
-            "quantity_available": 1.0,
+            "timestamp": "2025-04-03T05:18:16.889773",
+            "quantity_available": 2.0,
             "events": [],
-            "batch_id": "batch_75"
+            "batch_id": "batch_76"
         }
     ],
     "product_events": [

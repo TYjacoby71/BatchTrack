@@ -700,14 +700,13 @@ def finish_batch(batch_id):
                     # Handle expiration
                     is_perishable = request.form.get("is_perishable")
                     if is_perishable == "yes":
-                        try:
-                            expiry_days = int(request.form.get("expiry_days", 0))
-                            if expiry_days > 0:
-                                from datetime import datetime, timedelta
-                                expiry_date = datetime.now() + timedelta(days=expiry_days)
-                                new_product["expiration_date"] = expiry_date.isoformat()
-                        except (ValueError, TypeError):
-                            pass
+                        expiry_date = request.form.get("expiry_date")
+                        if expiry_date:
+                            try:
+                                from datetime import datetime
+                                new_product["expiration_date"] = datetime.fromisoformat(expiry_date).isoformat()
+                            except (ValueError, TypeError):
+                                pass
 
                     products.append(new_product)
             else:  # inventory type
