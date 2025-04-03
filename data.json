@@ -44,7 +44,7 @@
         },
         {
             "name": "orange juice",
-            "quantity": 49.995999999999995,
+            "quantity": 49.99399999999999,
             "unit": "L",
             "cost_per_unit": "0.00"
         },
@@ -218,9 +218,54 @@
             "success": "yes",
             "yield_qty": 1.0,
             "yield_unit": "cup"
+        },
+        {
+            "id": "batch_77",
+            "recipe_id": 6,
+            "recipe_name": "orange juice",
+            "timestamp": "2025-04-03T17:54:47.122570",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "orange juice",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_77.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 2.0,
+            "yield_unit": "mL"
+        },
+        {
+            "id": "batch_78",
+            "recipe_id": 7,
+            "recipe_name": "Copy of Cup of Milk",
+            "timestamp": "2025-04-03T18:12:11.911975",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 10.0,
+                    "unit": "L"
+                }
+            ],
+            "scale": 10.0,
+            "total_cost": 34.9,
+            "qr_code": "static/qr/batch_78.png"
         }
     ],
-    "batch_counter": 76,
+    "batch_counter": 78,
     "recipe_only_ingredients": [
         {
             "name": "orange",
@@ -706,6 +751,18 @@
             "quantity_available": 2.0,
             "events": [],
             "batch_id": "batch_76"
+        },
+        {
+            "product": "orange juice",
+            "yield": 2.0,
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-03T17:55:25.393562",
+            "quantity_available": 2.0,
+            "events": [],
+            "batch_id": "batch_77",
+            "expiration_date": null
         }
     ],
     "product_events": [
