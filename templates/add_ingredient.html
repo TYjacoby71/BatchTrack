@@ -38,7 +38,7 @@
     <script>
         document.querySelector('select[name="unit"]').addEventListener('change', function() {
             if (this.value === '__add_unit__') {
-                window.location.href = '/units';
+                window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
             }
         });
     </script>
