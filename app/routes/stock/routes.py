@@ -102,16 +102,22 @@ def check_stock_bulk():
                     material=name.lower()
                 )
 
+                needed_qty = float(details['qty'])
+                available_qty = float(check['converted'])
+
                 stock_report.append({
                     "name": name,
-                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
-                    "available": f"{check['converted']} {check['unit']}",
-                    "status": check['status']
+                    "needed": f"{round(needed_qty, 2)} {details['unit']}",
+                    "available": f"{available_qty} {check['unit']}",
+                    "status": check["status"]
                 })
 
                 if check['status'] == "LOW":
                     if name not in needed_items:
-                        needed_items[name] = {"total": 0, "unit": details['unit']}
+                        needed_items[name] = {"total": max(0, needed_qty - available_qty), "unit": details['unit']}
+                    else:
+                        needed_items[name]["total"] += max(0, needed_qty - available_qty)
+
             except (ValueError, TypeError):
                 stock_report.append({
                     "name": name,
