@@ -117,17 +117,22 @@ function addIngredientRow() {
     width: '100%'
   });
 
-  // Add unit selector handling
-  document.querySelectorAll('select[name="unit[]"]').forEach(select => {
-    select.addEventListener('change', function() {
-      if (this.value === '__add_unit__') {
-        window.location.href = '/units';
-      }
-    });
+  // Add unit selector handling for the new row
+  row.querySelector('select[name="unit[]"]').addEventListener('change', function() {
+    if (this.value === '__add_unit__') {
+      window.location.href = '/units';
+    }
   });
 
   showAllDeleteButtons();
 }
+
+// Add event handler for the initial row's unit dropdown
+document.querySelector('select[name="unit[]"]').addEventListener('change', function() {
+  if (this.value === '__add_unit__') {
+    window.location.href = '/units';
+  }
+});
 
 function setUnitFromIngredient(selectElement) {
   const selectedOption = selectElement.options[selectElement.selectedIndex];
