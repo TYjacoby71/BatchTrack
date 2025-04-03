@@ -103,6 +103,7 @@
                         {% endfor %}
                     </optgroup>
                     {% endfor %}
+                    <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
                 </select>
                 <button type="button" onclick="removeIngredient(this)">Remove</button>
             </div>
@@ -136,6 +137,7 @@
                         {% endfor %}
                     </optgroup>
                     {% endfor %}
+                    <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
                 </select>
                 <button type="button" onclick="removeIngredient(this)">Remove</button>
             `;
@@ -155,6 +157,13 @@
             if (e.target.value === '__add_new__') {
                 const currentPath = window.location.pathname;
                 window.location.href = `/quickadd?next=${encodeURIComponent(currentPath)}`;
+            }
+        }
+        // Add handler for unit addition.
+        if (e.target.tagName === 'SELECT' && e.target.name.includes('ingredient_unit[]')) {
+            if (e.target.value === '__add_unit__') {
+                // Handle adding a new unit here.  This would likely involve a prompt or redirect.
+                alert('Add unit functionality not yet implemented.'); // Placeholder - replace with actual implementation.
             }
         }
     });

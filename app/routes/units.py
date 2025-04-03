@@ -6,6 +6,7 @@ unit_bp = Blueprint('units', __name__)
 
 @unit_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
+    return_url = request.args.get('return_url')
     # Load existing units
     try:
         with open('units.json', 'r') as f:
@@ -34,6 +35,8 @@ def manage_units():
                     json.dump(units_data, f, indent=2)
                 flash(f'Removed unit: {unit_name}')
 
+        if return_url:
+            return redirect(return_url)
         return redirect('/units')
 
-    return render_template('unit_editor.html', count_units=count_units)
+    return render_template('unit_editor.html', count_units=count_units, return_url=return_url)

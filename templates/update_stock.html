@@ -120,7 +120,7 @@ function addIngredientRow() {
   // Add unit selector handling for the new row
   row.querySelector('select[name="unit[]"]').addEventListener('change', function() {
     if (this.value === '__add_unit__') {
-      window.location.href = '/units';
+      window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
     }
   });
 
@@ -130,7 +130,7 @@ function addIngredientRow() {
 // Add event handler for the initial row's unit dropdown
 document.querySelector('select[name="unit[]"]').addEventListener('change', function() {
   if (this.value === '__add_unit__') {
-    window.location.href = '/units';
+    window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
   }
 });
 

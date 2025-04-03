@@ -26,8 +26,8 @@
                     {% endfor %}
                 </optgroup>
                 {% endfor %}
+            <option value="__add_unit__" style="background-color: #4CAF50; color: white;">➕ Add Unit</option>
             </select>
-            <a href="/units" style="margin-left: 10px; font-size: 0.9em; color: #4CAF50;">➕ Add Unit</a>
         </div>
         <div>
             <label>Cost per unit:</label>
@@ -36,5 +36,12 @@
         <button type="submit">{% if ingredient %}Save Changes{% else %}Add Ingredient{% endif %}</button>
     </form>
     <a href="/ingredients">Back to Ingredients</a>
+    <script>
+        document.querySelector('select[name="unit"]').addEventListener('change', function() {
+            if (this.value === '__add_unit__') {
+                window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
+            }
+        });
+    </script>
 </body>
 </html>
