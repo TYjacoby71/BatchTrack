@@ -3,6 +3,25 @@
 {% block content %}
 <h1>📋 Stock Check for {{ recipe.name }}</h1>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{% if session.get('needed_items') %}
+<div class="alert alert-warning">
+    <h3>🛒 Shopping List:</h3>
+    <ul>
+        {% for name, info in session.get('needed_items').items() %}
+            <li>{{ name }}: {{ "%.2f"|format(info.total) }} {{ info.unit }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 {% if stock_check %}
 <table border="1">
     <tr>

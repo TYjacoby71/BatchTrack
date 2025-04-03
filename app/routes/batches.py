@@ -282,7 +282,37 @@ def start_batch(recipe_id):
             break
 
     if has_low_stock:
-        flash("⚠️ Cannot start batch - insufficient ingredients available. Please check the list below.", "error")
+        # Calculate missing items
+        needed_items = {}
+        for item in recipe.get("ingredients", []):
+            match = next((i for i in inventory if i["name"].lower() == item["name"].lower()), None)
+            if not match or match.get("quantity", 0) == 0:
+                needed_items[item["name"]] = {
+                    "total": float(item["quantity"]),
+                    "unit": item.get("unit", "units")
+                }
+            else:
+                try:
+                    check = check_stock_availability(
+                        float(item["quantity"]), item.get("unit", "units"),
+                        float(match["quantity"]), match.get("unit", "units"),
+                        material=item["name"].lower()
+                    )
+                    if check["status"] == "LOW":
+                        needed_qty = float(item["quantity"]) - float(check.get("converted", 0))
+                        needed_items[item["name"]] = {
+                            "total": max(0, needed_qty),
+                            "unit": item.get("unit", "units")
+                        }
+                except (ValueError, TypeError):
+                    needed_items[item["name"]] = {
+                        "total": float(item["quantity"]),
+                        "unit": item.get("unit", "units")
+                    }
+
+        # Store needed items in session for template
+        session["needed_items"] = needed_items
+        flash("⚠️ Cannot start batch - insufficient ingredients available. See shopping list below.", "error")
         return redirect(f'/stock/check/{recipe_id}')
 
     if request.method == 'POST':
