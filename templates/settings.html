@@ -1,0 +1,92 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>⚙️ Settings</h2>
+
+<div class="settings-section">
+    <h3>Expiration Alerts</h3>
+    <form method="POST" action="{{ url_for('settings.save_settings') }}">
+        <div class="form-group">
+            <label for="expiry_alert_days">Alert when products are within (days) of expiration:</label>
+            <input type="number" 
+                   id="expiry_alert_days" 
+                   name="expiry_alert_days" 
+                   value="{{ settings.get('expiry_alert_days', 30) }}" 
+                   min="1" 
+                   required>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+    </form>
+</div>
+
+<div class="settings-section">
+    <h3>Low Stock Alerts</h3>
+    <table class="settings-table">
+        <tr>
+            <th>Ingredient</th>
+            <th>Current Stock</th>
+            <th>Alert Threshold</th>
+            <th>Unit</th>
+            <th>Actions</th>
+        </tr>
+        {% for ingredient in ingredients %}
+        <tr>
+            <td>{{ ingredient.name }}</td>
+            <td>{{ ingredient.quantity }}</td>
+            <td>{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else 'Not set' }}</td>
+            <td>{{ ingredient.unit }}</td>
+            <td>
+                <a href="{{ url_for('ingredients.edit_ingredient', name=ingredient.name) }}" class="btn">Edit</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<style>
+.settings-section {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.settings-table th, .settings-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.btn {
+    padding: 5px 10px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+}
+</style>
+{% endblock %}
