@@ -1,4 +1,13 @@
 
+# ========================================================
+# ⚠️ DO NOT MODIFY THIS FILE WITHOUT REVIEW
+# This file contains core unit conversion logic.
+# All changes must be reviewed and approved manually.
+# Ask Jacoby before editing anything in this file.
+# ========================================================
+
+
+
 class UnitConversionService:
     UNIT_ALIASES = {
         "cups": "cup", "tbsps": "tbsp", "tsps": "tsp",
