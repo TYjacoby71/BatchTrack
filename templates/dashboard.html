@@ -176,7 +176,7 @@
   <div class="alert-card">
     <h3>⚠️ Low Stock Alert</h3>
     <p class="alert-content">
-      You're low on: {{ ", ".join([ing["name"] for ing in low_stock]) }}
+      You're low on: {% for ing in low_stock %}{{ ing.name }}{% if not loop.last %}, {% endif %}{% endfor %}
     </p>
     <a href="/stock/update" class="main-btn">Update Stock</a>
   </div>
@@ -192,6 +192,19 @@
 </div>
 
 <script>
+function checkStock() {
+  const recipeId = document.getElementById("recipe").value;
+  if (!recipeId) {
+    alert("Please select a recipe first");
+    return;
+  }
+  window.location.href = `/stock/check/${recipeId}`;
+}
+
+function finishFlow() {
+  window.location.href = "/batches";
+}
+
 function startFlow() {
   fetch('/recipes')
     .then(response => response.json())
