@@ -8,16 +8,10 @@
     <h1>Start Batch - {{ recipe.name }}</h1>
     
     <form method="POST">
-        <h3>Ingredients:</h3>
-        <ul>
-        {% for ingredient in recipe.ingredients %}
-            <li>{{ ingredient.name }}: {{ ingredient.quantity }} {{ ingredient.unit }}</li>
-        {% endfor %}
-        </ul>
-
         <div>
-            <label for="scale">Scale (how many batches):</label><br>
-            <input type="number" name="scale" id="scale" step="0.1" min="0.1" value="1" required><br><br>
+            <label>Scale:</label><br>
+            <strong>{{ "%.2f"|format(scale) }}x</strong>
+            <input type="hidden" name="scale" value="{{ "%.2f"|format(scale) }}">
         </div>
 
         <div>
@@ -30,17 +24,15 @@
             <input type="text" name="tags" id="tags">
         </div>
 
-        <button type="submit">Start Batch</button>
+        <div style="margin-top: 20px;">
+            <a href="/recipes" class="button">Back to Planning</a>
+            <button type="submit" name="continue_batch">Continue</button>
+        </div>
     </form>
-
-    <a href="/recipes">Back to Recipes</a>
-<label>Tags (comma-separated):</label>
-<input type="text" id="tagsInput" name="tags" placeholder="e.g. lavender, night-use">
-<ul id="tagSuggestions" style="list-style: none; padding: 0; margin: 0;"></ul>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  const input = document.getElementById("tagsInput");
+  const input = document.getElementById("tags");
   const suggestionsBox = document.getElementById("tagSuggestions");
   let allTags = [];
 
