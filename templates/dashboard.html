@@ -160,13 +160,15 @@
       {% endif %}
     </div>
 
-    <div id="recipe-select" class="alert-card">
-      <h3>Please select your recipe:</h3>
-      <select id="recipe" class="form-control" style="margin: 20px 0;">
+    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+      <h3>Select Recipe</h3>
+      <select id="recipe" class="form-control" style="margin: 20px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
         <option value="">Choose a recipe...</option>
       </select>
-      <button onclick="checkStock()" class="main-btn">Check Stock</button>
-      <button onclick="cancelFlow()" class="main-btn">Cancel</button>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="startSelectedBatch()" class="main-btn">Start Batch</button>
+        <button onclick="cancelFlow()" class="main-btn" style="background: #f0f0f0;">Cancel</button>
+      </div>
     </div>
 
     <div id="stock-status" class="alert-card">
@@ -295,15 +297,19 @@ function startFlow() {
     .then(response => response.json())
     .then(data => {
       const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = data.recipes.map(r => 
-        `<option value="${r.id}">${r.name}</option>`
-      ).join('');
-      
-      document.getElementById('action-select').classList.remove('active');
-      setTimeout(() => {
-        document.getElementById('recipe-select').classList.add('active');
-      }, 100);
+      recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
+        data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      document.getElementById('recipe-select').style.display = 'block';
     });
+}
+
+function startSelectedBatch() {
+  const recipeId = document.getElementById('recipe').value;
+  if (!recipeId) {
+    alert('Please select a recipe first');
+    return;
+  }
+  window.location.href = `/start-batch/${recipeId}`;
 }
 
 function finishFlow() {
@@ -340,9 +346,8 @@ function goToUpdate() {
 }
 
 function cancelFlow() {
-  document.getElementById("recipe-select").classList.remove('active');
-  document.getElementById("stock-status").classList.remove('active');
-  document.getElementById("action-select").classList.add('active');
+  document.getElementById('recipe-select').style.display = 'none';
+  document.getElementById('recipe').value = '';
 }
 </script>
 {% endblock %}
