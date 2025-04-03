@@ -125,7 +125,7 @@ def check_stock_bulk():
                     current['unit'],
                     material=name.lower()
                 )
-                
+
                 stock_report.append({
                     "name": name,
                     "needed": f"{round(details['qty'], 2)} {details['unit']}",
@@ -264,10 +264,11 @@ def start_batch(recipe_id):
         service = UnitConversionService()
         inventory = data.get("ingredients", [])
         insufficient = []
+        scale = float(request.form.get('scale', 1))
 
         for item in recipe['ingredients']:
             ing_name = item["name"]
-            req_qty = float(item["quantity"])
+            req_qty = float(item["quantity"]) * scale
             req_unit = item.get("unit", "").lower().strip()
 
             match = next((i for i in inventory if i["name"].lower() == ing_name.lower()), None)
@@ -296,17 +297,26 @@ def start_batch(recipe_id):
 
         notes = request.form.get('notes', '').strip()
         tags = request.form.get('tags', '').strip().split(',')
+        scale = float(request.form.get('scale', 1))
 
         data['batch_counter'] = data.get('batch_counter', 0) + 1
         batch_id = f"batch_{data['batch_counter']}"
 
+        # Scale recipe ingredients
+        scaled_ingredients = []
         total_cost = 0.0
         for item in recipe['ingredients']:
+            scaled_qty = float(item['quantity']) * scale
+            scaled_ingredients.append({
+                'name': item['name'],
+                'quantity': scaled_qty,
+                'unit': item.get('unit', '')
+            })
             inv_item = next((i for i in data['ingredients'] if i['name'] == item['name']), None)
             if inv_item:
                 try:
                     cost_per_unit = float(inv_item.get('cost_per_unit', '') or 0)
-                    quantity = float(item.get('quantity', '') or 0)
+                    quantity = float(item.get('quantity', '') or 0) * scale
                     cost = cost_per_unit * quantity
                     total_cost += cost
                 except ValueError:
@@ -323,7 +333,8 @@ def start_batch(recipe_id):
             "timestamp": datetime.utcnow().isoformat(),
             "notes": notes,
             "tags": tags,
-            "ingredients": recipe['ingredients'],
+            "ingredients": scaled_ingredients,
+            "scale": scale,
             "total_cost": round(total_cost, 2),
             "qr_code": qr_path
         }
@@ -511,7 +522,7 @@ def finish_batch(batch_id):
         # Handle ingredient usage adjustments
         ingredient_names = request.form.getlist("ingredient_name[]")
         quantities_used = request.form.getlist("quantity_used[]")
-        
+
         # Process each ingredient adjustment
         for name, qty_used_str in zip(ingredient_names, quantities_used):
             try:
