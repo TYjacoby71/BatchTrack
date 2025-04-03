@@ -26,12 +26,12 @@
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
+      width: 200px;
+      height: 100vh;
       z-index: 1000;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 50px;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .logo {
@@ -43,33 +43,24 @@
       display: flex;
       align-items: center;
       gap: var(--spacing-2);
+      margin-bottom: 20px;
     }
 
     .nav-dropdown {
-      position: relative;
-      display: inline-block;
+      width: 100%;
     }
 
     .nav-button {
-      background: transparent;
-      color: white;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: var(--spacing-2) var(--spacing-3);
-      cursor: pointer;
-      border-radius: var(--spacing-1);
-      font-size: 16px;
+      display: none;
     }
 
     .nav-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      background-color: white;
-      min-width: 200px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-      border-radius: var(--spacing-1);
-      z-index: 1001;
-      max-width: calc(100vw - 32px);
+      display: block;
+      position: static;
+      background-color: transparent;
+      min-width: auto;
+      box-shadow: none;
+      width: 100%;
     }
 
     @media (max-width: 768px) {
@@ -79,28 +70,40 @@
     }
 
     .nav-content a {
-      color: var(--primary-color);
+      color: white;
       padding: var(--spacing-2) var(--spacing-3);
       text-decoration: none;
       display: block;
       font-size: 14px;
+      border-radius: var(--spacing-1);
     }
 
     .nav-content a:hover {
-      background-color: #f5f5f5;
-    }
-
-    .nav-dropdown:hover .nav-content {
-      display: block;
+      background-color: rgba(255,255,255,0.1);
     }
 
     main {
       padding: var(--spacing-3);
       max-width: 1000px;
-      margin: 70px auto 60px;
+      margin: 20px 20px 20px 220px;
       background: white;
-      min-height: calc(100vh - 130px);
+      min-height: calc(100vh - 40px);
       border-radius: var(--spacing-2);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        width: 60px;
+      }
+      .logo {
+        font-size: 16px;
+      }
+      .nav-content a span {
+        display: none;
+      }
+      main {
+        margin-left: 80px;
+      }
     }
 
     h1, h2, h3 {
