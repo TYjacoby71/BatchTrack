@@ -231,12 +231,13 @@ def plan_production(recipe_id):
         if 'check_stock' in request.form:
             from app.routes.stock.routes import check_stock_for_recipes
             stock_report, needed_items = check_stock_for_recipes([recipe_id], [scale])
-            stock_check = stock_report
+            return render_template('bulk_stock_results.html',
+                                recipe=recipe,
+                                stock_report=stock_report,
+                                missing_summary=needed_items)
 
-    return render_template('plan_production.html', 
+    return render_template('plan_production.html',
                          recipe=recipe,
-                         scale=scale,
-                         stock_check=stock_check,
-                         missing_items=missing_items)
+                         scale=scale)
 
 # Batch routes moved to batches.py
