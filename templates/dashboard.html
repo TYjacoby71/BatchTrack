@@ -168,10 +168,10 @@
   <div class="welcome-panel">
     <h1 class="welcome-title">Hi Kandace! What would you like to do?</h1>
 
-    <div id="action-select" class="main-actions active">
-      <button onclick="startFlow()" class="main-btn" id="startButton">Start a Batch</button>
+    <div id="action-select" class="main-actions active" style="flex-direction: column; align-items: center;">
+      <button onclick="startFlow()" class="main-btn" id="startButton" style="margin: 10px 0;">Start a Batch</button>
       {% if has_unfinished_batches %}
-      <button onclick="finishFlow()" class="main-btn" id="finishButton">Finish a Batch</button>
+      <button onclick="finishFlow()" class="main-btn" id="finishButton" style="margin: 10px 0;">Finish a Batch</button>
       {% endif %}
     </div>
 
