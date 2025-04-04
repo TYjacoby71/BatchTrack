@@ -118,7 +118,7 @@ def check_stock_for_recipe(recipe_id):
     if not recipe:
         return "Recipe not found", 404
 
-    stock_report, needed_items = check_stock_for_recipes(recipe_id)
+    stock_report, needed_items = check_stock_for_recipes([recipe_id], [1.0])
     if needed_items:
         session['needed_items'] = needed_items
 
@@ -129,7 +129,7 @@ def check_stock_bulk():
     data = load_data()
     if request.method == 'POST':
         recipe_ids = [int(id) for id in request.form.getlist('recipe_id')]
-        batch_counts = [float(count) for count in request.form.getlist('batch_count') if float(count or 0) > 0]
+        batch_counts = [float(count or 1) for count in request.form.getlist('batch_count')]
 
         stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
         return render_template('bulk_stock_results.html', 
