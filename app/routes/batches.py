@@ -90,9 +90,9 @@ from app.error_tools import safe_route
 # Bulk stock check route moved to stock blueprint
 
         stock_report = []
-        from unit_converter import check_stock_availability
+    from unit_converter import check_stock_availability
 
-        for name, details in usage.items():
+    for name, details in usage.items():
             current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
             try:
                 if not current or not current.get('quantity'):
