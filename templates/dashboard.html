@@ -32,7 +32,8 @@
 }
 
 .main-btn {
-  padding: 15px 30px;
+  padding: 20px 40px;
+  min-width: 200px;
   font-size: 1.2em;
   border-radius: 12px;
   border: none;
@@ -41,6 +42,9 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin: 5px;
+  text-align: center;
+  display: inline-block;
 }
 
 .main-btn:hover {
@@ -78,23 +82,22 @@
   background: rgba(255,255,255,0.9);
   padding: 15px;
   display: flex;
-  overflow-x: auto;
-  gap: 12px;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  scroll-behavior: smooth;
 }
 
 @media (min-width: 1200px) {
   .quick-access {
     justify-content: center;
-    overflow-x: visible;
   }
   .quick-access-container {
-    flex-wrap: nowrap;
+    display: flex;
     justify-content: center;
+    gap: 12px;
     max-width: 1200px;
     margin: 0 auto;
+    flex-wrap: nowrap;
   }
 }
 
@@ -167,10 +170,12 @@
 
     <div id="action-select" class="main-actions active">
       <button onclick="startFlow()" class="main-btn">Start a Batch</button>
-      {% if has_unfinished_batches %}
-      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
-      {% endif %}
     </div>
+    {% if has_unfinished_batches %}
+    <div style="margin-top: 10px;">
+      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
+    </div>
+    {% endif %}
 
     <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
       <h3>Select Recipe</h3>
@@ -223,70 +228,53 @@
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
-  const originalItems = container.innerHTML;
-  container.innerHTML = originalItems.repeat(8);
+  
+  if (window.innerWidth < 1200) {
+    const originalItems = container.innerHTML;
+    container.innerHTML = originalItems.repeat(3);
+  }
 
-  let scrolling = true;
-  let lastTime = 0;
   let touchActive = false;
   let touchStartX = 0;
-  let scrollStartX = 0;
+  let prevTouchX = 0;
   let momentum = 0;
-  const scrollSpeed = 0.5;
-  const friction = 0.98;
+  let position = 0;
+  const friction = 0.95;
 
-  const scroll = (currentTime) => {
-    if (!scrolling || touchActive) return;
-
-    if (!lastTime) lastTime = currentTime;
-    const delta = currentTime - lastTime;
-
-    momentum = momentum * friction + scrollSpeed;
-    quickAccess.scrollLeft += momentum;
-
-    if (quickAccess.scrollLeft >= container.scrollWidth / 2) {
-      quickAccess.scrollLeft = 0;
+  function update() {
+    if (!touchActive) {
+      momentum *= friction;
+      position += momentum;
     }
+    
+    if (window.innerWidth < 1200) {
+      container.style.transform = `translateX(${position}px)`;
+      requestAnimationFrame(update);
+    }
+  }
 
-    lastTime = currentTime;
-    requestAnimationFrame(scroll);
-  };
+  if (window.innerWidth < 1200) {
+    quickAccess.addEventListener('touchstart', (e) => {
+      touchActive = true;
+      touchStartX = prevTouchX = e.touches[0].clientX;
+      momentum = 0;
+    }, { passive: true });
 
-  quickAccess.addEventListener('touchstart', (e) => {
-    touchActive = true;
-    touchStartX = e.touches[0].clientX;
-    scrollStartX = quickAccess.scrollLeft;
-  }, { passive: true });
+    quickAccess.addEventListener('touchmove', (e) => {
+      if (!touchActive) return;
+      const touchX = e.touches[0].clientX;
+      const delta = touchX - prevTouchX;
+      position += delta;
+      momentum = delta;
+      prevTouchX = touchX;
+    }, { passive: true });
 
-  quickAccess.addEventListener('touchmove', (e) => {
-    if (!touchActive) return;
-    const touchDelta = touchStartX - e.touches[0].clientX;
-    quickAccess.scrollLeft = scrollStartX + touchDelta;
-  }, { passive: true });
+    quickAccess.addEventListener('touchend', () => {
+      touchActive = false;
+    });
 
-  quickAccess.addEventListener('touchend', () => {
-    touchActive = false;
-    requestAnimationFrame(scroll);
-  });
-
-  quickAccess.addEventListener('mousedown', (e) => {
-    touchActive = true;
-    touchStartX = e.clientX;
-    scrollStartX = quickAccess.scrollLeft;
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!touchActive) return;
-    const touchDelta = touchStartX - e.clientX;
-    quickAccess.scrollLeft = scrollStartX + touchDelta;
-  });
-
-  window.addEventListener('mouseup', () => {
-    touchActive = false;
-    requestAnimationFrame(scroll);
-  });
-
-  requestAnimationFrame(scroll);
+    requestAnimationFrame(update);
+  }
 });
 </script>
 
