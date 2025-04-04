@@ -179,10 +179,9 @@
 
     <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; max-height: 80vh; background: white; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 25px; overflow-y: auto; border-radius: 12px;">
       <h3 style="margin-bottom: 20px;">Which recipe would you like to use?</h3>
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 20px; position: relative;">
         <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-      </div>
-      <div id="recipe-list" style="display: grid; gap: 15px;">
+        <div id="recipe-list" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; z-index: 1001;">
         <!-- Recipes will be populated here -->
       </div>
       <div style="position: sticky; bottom: 0; padding-top: 20px; background: white;">
@@ -299,25 +298,43 @@ function startFlow() {
       const searchInput = document.getElementById('recipe-search');
       searchInput.focus();
       
+      const recipeList = document.getElementById('recipe-list');
+      
+      // Show dropdown on focus
+      searchInput.addEventListener('focus', () => {
+        recipeList.style.display = 'block';
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !recipeList.contains(e.target)) {
+          recipeList.style.display = 'none';
+        }
+      });
+
       searchInput.addEventListener('input', (e) => {
         const search = e.target.value.toLowerCase();
-        const recipeList = document.getElementById('recipe-list');
+        recipeList.style.display = 'block';
         
-        if (search.length > 0) {
-          const filteredRecipes = recipes.filter(r => 
-            r.name.toLowerCase().includes(search) || 
-            (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
-          );
-          
-          recipeList.innerHTML = filteredRecipes.map(r => `
-            <div class="recipe-card" onclick="startSelectedBatch(${r.id})" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-              <h4 style="margin: 0 0 10px 0;">${r.name}</h4>
-              ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
-            </div>
-          `).join('');
-        } else {
-          recipeList.innerHTML = '';
-        }
+        const filteredRecipes = recipes.filter(r => 
+          r.name.toLowerCase().includes(search) || 
+          (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
+        );
+        
+        recipeList.innerHTML = filteredRecipes.map(r => `
+          <div class="recipe-card" onclick="startSelectedBatch(${r.id})" 
+               style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
+            <h4 style="margin: 0 0 5px 0;">${r.name}</h4>
+            ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
+          </div>
+        `).join('');
+
+        // Add hover effect
+        const cards = recipeList.getElementsByClassName('recipe-card');
+        Array.from(cards).forEach(card => {
+          card.addEventListener('mouseover', () => card.style.background = '#f5f5f5');
+          card.addEventListener('mouseout', () => card.style.background = 'white');
+        });
       });
     });
 }
