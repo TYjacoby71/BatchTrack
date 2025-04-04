@@ -1,17 +1,18 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <h2>🧪 Bulk Stock Check</h2>
 
 <form method="POST" action="/stock/check-bulk">
     {% for recipe in recipes %}
-    <div class="recipe-input">
-        <label>{{ recipe.name }}:</label>
-        <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-        <input type="number" name="batch_count" value="0" min="0">
+    <div class="recipe-input" style="margin-bottom: 15px;">
+        <label>
+            <input type="checkbox" name="recipe_id" value="{{ recipe.id }}">
+            {{ recipe.name }}
+        </label>
+        <input type="number" name="batch_count" value="1" min="0.1" step="0.1" style="margin-left: 10px;">
     </div>
     {% endfor %}
-    <button type="submit">Check Stock</button>
+    <button type="submit" class="btn btn-primary">Check Stock</button>
 </form>
 
 {% if stock_report is defined %}
@@ -34,7 +35,7 @@
     {% endfor %}
 {% endif %}
 
-<br>
-<a href="/">Back to Dashboard</a> |
-<a href="/stock/check-bulk">Check Another Recipe</a>
+<div style="margin-top: 20px;">
+    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+</div>
 {% endblock %}
