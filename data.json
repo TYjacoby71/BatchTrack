@@ -8,19 +8,19 @@
         },
         {
             "name": "oil",
-            "quantity": 49.0,
+            "quantity": 48.0,
             "unit": "mL",
             "cost_per_unit": ""
         },
         {
             "name": "eggs",
-            "quantity": 11.0,
+            "quantity": 8.0,
             "unit": "unit",
             "cost_per_unit": "0.00"
         },
         {
             "name": "pepper",
-            "quantity": 6.0,
+            "quantity": 5.0,
             "unit": "g",
             "cost_per_unit": ""
         },
@@ -424,7 +424,7 @@
             "recipe_id": 2,
             "recipe_name": "Fried Egs",
             "timestamp": "2025-04-04T00:03:20.524860",
-            "notes": "",
+            "notes": null,
             "tags": [
                 ""
             ],
@@ -447,7 +447,12 @@
             ],
             "scale": 1.0,
             "total_cost": 0.0,
-            "qr_code": "static/qr/batch_84.png"
+            "qr_code": "static/qr/batch_84.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "unit"
         }
     ],
     "batch_counter": 84,
@@ -993,14 +998,14 @@
         },
         {
             "product": "Fried Egs",
-            "yield": 4.5,
+            "yield": 1.0,
             "unit": "unit",
             "notes": "",
             "label_info": "",
-            "timestamp": "2025-04-03T23:40:57.977935",
-            "quantity_available": 4.5,
+            "timestamp": "2025-04-04T00:10:53.731903",
+            "quantity_available": 5.5,
             "events": [],
-            "batch_id": "batch_83",
+            "batch_id": "batch_84",
             "expiration_date": "2026-04-03T00:00:00"
         }
     ],
