@@ -147,16 +147,8 @@ def check_all_stock():
     return render_template('bulk_stock_results.html', 
                          stock_report=stock_report, 
                          missing_summary=needed_items)
-
-@stock_bp.route('/check/quick/<int:recipe_id>')
-def quick_stock_check(recipe_id):
-    stock_report, needed_items = check_stock_for_recipes([recipe_id], [1.0])
-    return render_template('bulk_stock_results.html',
-                         stock_report=stock_report,
-                         missing_summary=needed_items,
-                         return_url=request.args.get('return_url', '/'))
-
-if request.method == 'POST':
+    
+    if request.method == 'POST':
         recipe_ids = request.form.getlist('recipe_id')
         if recipe_ids:
             recipe_ids = [int(id) for id in recipe_ids]
