@@ -343,19 +343,40 @@ function toggleAll(source) {
 }
 
 function startFlow() {
-  fetch('/recipes.json')
+  fetch('/api/recipes/list')
     .then(response => response.json())
     .then(data => {
       const recipeList = document.getElementById('recipe-list');
       recipeList.innerHTML = '';
-
-      // Load each recipe with its stock status
+      
       data.recipes.forEach(recipe => {
-        fetch(`/api/check-stock/${encodeURIComponent(recipe.name)}`)
+        const recipeItem = document.createElement('div');
+        recipeItem.className = 'recipe-item';
+        recipeItem.style.cssText = 'padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;';
+        
+        fetch(`/api/stock/check/${recipe.id}`)
           .then(response => response.json())
           .then(stockData => {
-            const hasLowStock = stockData.stock_check.some(item => item.status === "Insufficient");
-            const stockStatus = hasLowStock ? 
+            const statusClass = stockData.has_low_stock ? 'low-stock' : 'stock-ok';
+            recipeItem.innerHTML = `
+              <div class="recipe-name">${recipe.name}</div>
+              <div class="stock-status ${statusClass}">
+                ${stockData.stock_status.map(item => `
+                  <div class="ingredient-status ${item.status.toLowerCase()}">
+                    ${item.ingredient}: ${item.available}/${item.needed} ${item.unit}
+                  </div>
+                `).join('')}
+              </div>
+            `;
+            recipeItem.onclick = () => startSelectedBatch(recipe.id);
+          });
+        recipeList.appendChild(recipeItem);
+      });
+      
+      document.getElementById('recipe-select').style.display = 'block';
+      document.querySelector('.modal-overlay').style.display = 'block';
+    });
+}asLowStock ? 
               '<span class="stock-status low">⚠️ Low Stock</span>' : 
               '<span class="stock-status ok">✅ Stock OK</span>';
 
