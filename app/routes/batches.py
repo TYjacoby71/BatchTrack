@@ -96,9 +96,9 @@ def process_stock_report():
         current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
         try:
             if not current or not current.get('quantity'):
-                    raise ValueError("No stock found")
+                raise ValueError("No stock found")
 
-                check = check_stock_availability(
+            check = check_stock_availability(
                     details['qty'],
                     details['unit'],
                     current['quantity'],
