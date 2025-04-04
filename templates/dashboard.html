@@ -169,15 +169,13 @@
     <h1 class="welcome-title">Hi Kandace! What would you like to do?</h1>
 
     <div id="action-select" class="main-actions active">
-      <button onclick="startFlow()" class="main-btn">Start a Batch</button>
+      <button onclick="startFlow()" class="main-btn" id="startButton">Start a Batch</button>
+      {% if has_unfinished_batches %}
+      <button onclick="finishFlow()" class="main-btn" id="finishButton">Finish a Batch</button>
+      {% endif %}
     </div>
-    {% if has_unfinished_batches %}
-    <div style="margin-top: 10px;">
-      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
-    </div>
-    {% endif %}
 
-    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 50%; background: white; z-index: 1000; box-shadow: -4px 0 20px rgba(0,0,0,0.15); padding: 25px; overflow-y: auto;">
+    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; max-height: 80vh; background: white; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 25px; overflow-y: auto; border-radius: 16px;">
       <h3 style="margin-bottom: 20px;">Which recipe would you like to use?</h3>
       <div style="margin-bottom: 20px;">
         <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
@@ -289,7 +287,13 @@ function toggleAll(source) {
 }
 
 function startFlow() {
-  fetch('/recipes.json')
+  const actionSelect = document.getElementById('action-select');
+  actionSelect.style.transition = 'opacity 0.3s ease';
+  actionSelect.style.opacity = '0';
+  
+  setTimeout(() => {
+    actionSelect.style.display = 'none';
+    fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
       const recipeList = document.getElementById('recipe-list');
@@ -345,7 +349,12 @@ function startSelectedBatch() {
 function cancelFlow() {
   document.getElementById('recipe-select').style.display = 'none';
   document.getElementById('stock-status').style.display = 'none';
-  document.getElementById('recipe').value = '';
+  
+  const actionSelect = document.getElementById('action-select');
+  actionSelect.style.display = 'flex';
+  setTimeout(() => {
+    actionSelect.style.opacity = '1';
+  }, 50);
 }
 
 
