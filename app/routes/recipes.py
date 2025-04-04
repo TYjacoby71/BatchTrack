@@ -301,50 +301,6 @@ def plan_production(recipe_id):
                          stock_check=stock_check,
                          missing_items=missing_items)
 
-@recipes_bp.route('/start-batch/<int:recipe_id>', methods=['GET', 'POST'])
-def start_batch(recipe_id):
-    data = load_data()
-    recipe = next((r for r in data['recipes'] if r['id'] == recipe_id), None)
-    if not recipe:
-        return "Recipe not found", 404
-
-    scale = float(request.args.get('scale', 1))
-
-    if request.method == 'POST':
-        scale = float(request.form.get('scale', 1.0))
-        # Scale ingredients for new batch
-        scaled_ingredients = []
-        for ing in recipe['ingredients']:
-            scaled_ingredients.append({
-                'name': ing['name'],
-                'quantity': float(ing['quantity']) * scale,
-                'unit': ing['unit']
-            })
-
-        # Create new batch entry
-        batch_id = data.get('batch_counter', 0) + 1
-        data['batch_counter'] = batch_id
-
-        new_batch = {
-            'id': f'batch_{batch_id}',
-            'recipe_id': recipe['id'],
-            'recipe_name': recipe['name'],
-            'scale': scale,
-            'ingredients': scaled_ingredients,
-            'notes': request.form.get('notes', ''),
-            'tags': [t.strip() for t in request.form.get('tags', '').split(',') if t.strip()],
-            'timestamp': datetime.now().isoformat(),
-            'status': 'in_progress'
-        }
-
-        data.setdefault('batches', []).append(new_batch)
-        save_data(data)
-        return redirect(f'/batches/in_progress/{new_batch["id"]}')
-
-
-    return render_template('start_batch.html', recipe=recipe, scale=scale)
-
-
 @recipes_bp.route('/batches', methods=['GET'])
 def list_batches():
     data = load_data()
