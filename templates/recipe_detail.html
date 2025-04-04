@@ -15,11 +15,11 @@
     <h2>Instructions:</h2>
     <p>{{ recipe.instructions }}</p>
     <div class="actions">
-        <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
-        <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
         <a href="/recipes">Back to Recipes</a> |
-        <a href="/stock/check/{{ recipe.id }}" class="button">Check Stock Availability</a> |
-        <a href="/recipes/plan/{{ recipe.id }}" class="button">Plan Production</a>
+        <a href="/recipes/plan/{{ recipe.id }}" class="button">Plan Production</a> |
+        <form style="display: inline;" action="/recipes/{{ recipe.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+            <button type="submit">Delete</button>
+        </form>
     </div>
 </body>
 </html>
