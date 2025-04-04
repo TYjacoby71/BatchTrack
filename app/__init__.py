@@ -10,7 +10,9 @@ def create_app():
 
     app.register_blueprint(batches_bp)
     app.register_blueprint(ingredients_bp)
+    from app.routes.start_flow import start_flow_bp
     app.register_blueprint(recipes_bp)
+    app.register_blueprint(start_flow_bp)
     from app.routes.auth import auth_bp
     from app.routes.export_missings import export_bp
     from app.routes.inventory_adjust import adjust_bp
