@@ -304,14 +304,18 @@ function startFlow() {
       // After buttons fade out, show modal with fade in
       setTimeout(() => {
         actionButtons.style.display = 'none';
-        recipeSelect.style.opacity = '0';
-        recipeSelect.style.display = 'block';
-        recipeSelect.style.transition = 'opacity 0.3s ease';
         
-        // Trigger fade in
+        // Add delay before showing modal
         setTimeout(() => {
-          recipeSelect.style.opacity = '1';
-        }, 50);
+          recipeSelect.style.opacity = '0';
+          recipeSelect.style.display = 'block';
+          recipeSelect.style.transition = 'opacity 0.3s ease';
+          
+          // Trigger fade in
+          setTimeout(() => {
+            recipeSelect.style.opacity = '1';
+          }, 50);
+        }, 200);
       }, 300);
       
       const searchInput = document.getElementById('recipe-search');
