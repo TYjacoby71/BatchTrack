@@ -87,28 +87,6 @@
     ],
     "recipes": [
         {
-            "id": 2,
-            "name": "Fried Egs",
-            "ingredients": [
-                {
-                    "name": "eggs",
-                    "quantity": 3.0,
-                    "unit": "unit"
-                },
-                {
-                    "name": "oil",
-                    "quantity": 1.0,
-                    "unit": "mL"
-                },
-                {
-                    "name": "pepper",
-                    "quantity": 1.0,
-                    "unit": "g"
-                }
-            ],
-            "instructions": "Fry, flip, eat"
-        },
-        {
             "id": 3,
             "name": "Cup of Milk",
             "ingredients": [
@@ -155,9 +133,33 @@
                     "unit": "L"
                 }
             ]
+        },
+        {
+            "id": 8,
+            "name": "Fried Eggs",
+            "description": "",
+            "instructions": "crack flip eat",
+            "tags": [],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": "3",
+                    "unit": "unit"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": "1",
+                    "unit": "tsp"
+                },
+                {
+                    "name": "oil",
+                    "quantity": "1",
+                    "unit": "mL"
+                }
+            ]
         }
     ],
-    "recipe_counter": 7,
+    "recipe_counter": 8,
     "batches": [
         {
             "id": "batch_75",

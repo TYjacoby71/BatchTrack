@@ -16,7 +16,6 @@
     {% if stock_check %}
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-xl mb-4">Stock Check Results</h2>
-        
         <div class="mb-4">
             {% for item in stock_check %}
             <div class="flex items-center py-2 border-b">
@@ -34,36 +33,76 @@
             {% endfor %}
         </div>
 
-        {% if missing_items %}
+        {% if missing_summary %}
         <div class="bg-red-50 border border-red-200 rounded p-4 mb-4">
             <h3 class="text-red-700 font-semibold mb-2">Missing Ingredients:</h3>
-            {% for name, details in missing_items.items() %}
-            <div class="text-red-600">
-                {{ name }}: {{ details.needed - details.available }} {{ details.unit }}
+            <ul>
+                {% for name, info in missing_summary.items() %}
+                    <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+                {% endfor %}
+            </ul>
+            <div class="flex gap-4 mt-4">
+                <button type="button" onclick="downloadCSV()" class="bg-blue-500 text-white px-4 py-2 rounded">⬇ Export CSV</button>
+                <button type="button" onclick="printList()" class="bg-green-500 text-white px-4 py-2 rounded">🖨 Print List</button>
             </div>
-            {% endfor %}
-        </div>
-
-        <div class="flex gap-4">
-            <a href="/stock/inventory/update" class="bg-blue-500 text-white px-4 py-2 rounded">Update Stock</a>
-            <form method="post" action="/missing/export/print" class="inline">
-                <input type="hidden" name="items" value="{{ missing_items|tojson }}">
-                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Make Shopping List</button>
-            </form>
-            <a href="/recipes" class="bg-gray-500 text-white px-4 py-2 rounded">Cancel</a>
         </div>
         {% else %}
         <div class="bg-green-50 border border-green-200 rounded p-4 mb-4">
-            <p class="text-green-700">✅ You're good to go!</p>
+            <p class="text-green-700">✅ All ingredients are in stock!</p>
         </div>
-
         <form method="post" class="inline">
             <input type="hidden" name="scale" value="{{ scale }}">
             <button type="submit" name="start_batch" class="bg-green-500 text-white px-4 py-2 rounded">Start Batch</button>
-            <a href="/recipes" class="bg-gray-500 text-white px-4 py-2 rounded ml-2">Cancel</a>
         </form>
         {% endif %}
+        <a href="/recipes" class="bg-gray-500 text-white px-4 py-2 rounded ml-2">Cancel</a>
     </div>
     {% endif %}
 </div>
+
+<script>
+function getItems() {
+    const items = [];
+    {% if missing_summary %}
+        {% for name, info in missing_summary.items() %}
+            items.push({
+                name: "{{ name }}",
+                total: {{ info.total }},
+                unit: "{{ info.unit }}"
+            });
+        {% endfor %}
+    {% endif %}
+    return items;
+}
+
+function downloadCSV() {
+    fetch('/missing/export/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: getItems() })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "missing_items.csv";
+        a.click();
+    });
+}
+
+function printList() {
+    fetch('/missing/export/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: getItems() })
+    })
+    .then(res => res.text())
+    .then(html => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(html);
+        printWindow.document.close();
+    });
+}
+</script>
 {% endblock %}
