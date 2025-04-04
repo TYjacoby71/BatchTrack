@@ -1,0 +1,29 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Batch In Progress - {{ recipe.name }}</h2>
+
+<div class="scaled-ingredients">
+    <h3>Scaled Ingredients</h3>
+    <ul>
+    {% for ingredient in batch.ingredients %}
+        <li>{{ ingredient.quantity }} {{ ingredient.unit }} {{ ingredient.name }}</li>
+    {% endfor %}
+    </ul>
+</div>
+
+<div class="recipe-instructions">
+    <h3>Instructions</h3>
+    {% if recipe and recipe.instructions %}
+        {{ recipe.instructions|safe }}
+    {% else %}
+        <p>No instructions available.</p>
+    {% endif %}
+</div>
+
+<div class="batch-actions" style="margin-top: 20px;">
+    <a href="/batches/finish/{{ batch.id }}" class="button">Finish Batch</a>
+    <a href="/batches" class="button">Resume Later</a>
+    <a href="/batches" class="button">Back to Batches</a>
+</div>
+{% endblock %}

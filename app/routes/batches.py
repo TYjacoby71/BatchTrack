@@ -408,10 +408,10 @@ def start_batch(recipe_id):
 def batch_in_progress(batch_id):
     data = load_data()
     batch = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
-    
+
     if not batch:
         return "Batch not found", 404
-        
+
     recipe = next((r for r in data.get("recipes", []) if r["id"] == batch.get("recipe_id")), None)
     return render_template('batch_in_progress.html', batch=batch, recipe=recipe)
 
