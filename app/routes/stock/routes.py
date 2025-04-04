@@ -205,7 +205,9 @@ def update_stock():
                     continue
 
         save_data(data)
-        previous_page = request.form.get('referrer') or request.referrer or '/ingredients'
+        previous_page = request.form.get('referrer')
+        if not previous_page or "/quickadd" in previous_page:
+            previous_page = "/stock/inventory/update"
         return redirect(previous_page)
 
     with open('units.json') as f:
