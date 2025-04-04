@@ -226,6 +226,90 @@
 </div>
 
 <script>
+function startFlow() {
+  let recipes = [];
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  const lowStockAlert = document.querySelector('.alert-card');
+  
+  // First fade out low stock alert if it exists
+  if (lowStockAlert) {
+    lowStockAlert.style.transition = 'opacity 0.3s ease';
+    lowStockAlert.style.opacity = '0';
+  }
+  
+  // Then fade out finish batch button after delay
+  setTimeout(() => {
+    const finishBatchBtn = document.querySelector('button[onclick="finishFlow()"]');
+    if (finishBatchBtn) {
+      finishBatchBtn.style.transition = 'opacity 0.3s ease';
+      finishBatchBtn.style.opacity = '0';
+    }
+    
+    // Finally fade out start batch button
+    setTimeout(() => {
+      actionButtons.style.transition = 'opacity 0.3s ease';
+      actionButtons.style.opacity = '0';
+      
+      fetch('/recipes')
+        .then(response => response.json())
+        .then(data => {
+          if (!data.recipes) {
+            console.error('No recipes found:', data);
+            return;
+          }
+          recipes = data.recipes;
+          
+          // After all buttons fade out
+          setTimeout(() => {
+            if (lowStockAlert) lowStockAlert.style.display = 'none';
+            if (finishBatchBtn) finishBatchBtn.parentElement.style.display = 'none';
+            actionButtons.style.display = 'none';
+            
+            // Show modal with fade in
+            setTimeout(() => {
+              recipeSelect.style.opacity = '0';
+              recipeSelect.style.display = 'block';
+              recipeSelect.style.transition = 'opacity 0.4s ease';
+              
+              setTimeout(() => {
+                recipeSelect.style.opacity = '1';
+              }, 100);
+            }, 200);
+          }, 300);
+          
+          const searchInput = document.getElementById('recipe-search');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        })
+        .catch(error => {
+          console.error('Error loading recipes:', error);
+        });
+    }, 300);
+  }, 200);
+}
+
+function finishFlow() {
+  window.location.href = "/batches";
+}
+
+function cancelFlow() {
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  
+  recipeSelect.style.opacity = '0';
+  
+  setTimeout(() => {
+    recipeSelect.style.display = 'none';
+    actionButtons.style.display = 'flex';
+    actionButtons.style.opacity = '0';
+    setTimeout(() => {
+      actionButtons.style.opacity = '1';
+    }, 50);
+  }, 300);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
