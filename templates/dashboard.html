@@ -301,21 +301,21 @@ function startFlow() {
     .then(data => {
       recipes = data.recipes;
       
-      // After buttons fade out, show modal with fade in
+      // After buttons fade out
       setTimeout(() => {
         actionButtons.style.display = 'none';
         
-        // Add delay before showing modal
+        // Longer delay before showing modal to ensure buttons are gone
         setTimeout(() => {
           recipeSelect.style.opacity = '0';
           recipeSelect.style.display = 'block';
-          recipeSelect.style.transition = 'opacity 0.3s ease';
+          recipeSelect.style.transition = 'opacity 0.4s ease';
           
-          // Trigger fade in
+          // Trigger fade in with slight delay
           setTimeout(() => {
             recipeSelect.style.opacity = '1';
-          }, 50);
-        }, 200);
+          }, 100);
+        }, 400);
       }, 300);
       
       const searchInput = document.getElementById('recipe-search');
