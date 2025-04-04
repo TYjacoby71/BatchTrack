@@ -19,6 +19,10 @@
 <div class="batch-actions" style="margin-top: 20px;">
     <form method="POST" action="/batches/finish/{{ batch.id }}">
         <input type="hidden" name="batch_id" value="{{ batch.id }}">
+        <input type="hidden" name="batch_type" value="product">
+        <input type="hidden" name="success" value="yes">
+        <input type="hidden" name="yield_qty" value="1">
+        <input type="hidden" name="yield_unit" value="unit">
         <button type="submit" name="finish_batch" class="button">Finish Batch</button>
         <button type="submit" name="resume_later" class="button">Resume Later</button>
     </form>
