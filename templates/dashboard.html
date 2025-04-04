@@ -397,20 +397,26 @@ function backToRecipeSelect() {
 
 function checkRecipeStock() {
   const scale = document.getElementById('scale').value;
-  fetch(`/recipes/plan/${selectedRecipe.id}?scale=${scale}`)
+  fetch(`/stock/check/${selectedRecipe.id}`)
     .then(response => response.text())
     .then(html => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const stockCheck = doc.querySelector('.stock-check-results');
+      const stockCheck = doc.querySelector('table');
       if (stockCheck) {
-        document.getElementById('stock-check-results').innerHTML = stockCheck.innerHTML;
-        document.getElementById('stock-check-results').style.display = 'block';
+        const resultsDiv = document.getElementById('stock-check-results');
+        resultsDiv.innerHTML = stockCheck.outerHTML;
+        resultsDiv.style.display = 'block';
         
-        // Show start batch button only if there are no missing ingredients
-        const missingItems = doc.querySelector('.bg-red-50');
-        document.getElementById('start-batch-button').style.display = missingItems ? 'none' : 'block';
+        // Check if any ingredients have LOW status
+        const lowStock = doc.querySelectorAll('td[style="color: red;"]');
+        const startBatchBtn = document.getElementById('start-batch-button');
+        startBatchBtn.style.display = lowStock.length > 0 ? 'none' : 'block';
       }
+    })
+    .catch(error => {
+      console.error('Error checking stock:', error);
+      document.getElementById('stock-check-results').innerHTML = 'Error checking stock availability';
     });
 }
 
