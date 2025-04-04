@@ -287,12 +287,28 @@ function toggleAll(source) {
 }
 
 function startFlow() {
+  // Fade out buttons
   const actionSelect = document.getElementById('action-select');
-  actionSelect.style.transition = 'opacity 0.3s ease';
+  actionSelect.style.transition = 'all 0.3s ease';
   actionSelect.style.opacity = '0';
+  actionSelect.style.transform = 'scale(0.95)';
   
   setTimeout(() => {
     actionSelect.style.display = 'none';
+    
+    // Show and fade in recipe select
+    const recipeSelect = document.getElementById('recipe-select');
+    recipeSelect.style.display = 'block';
+    recipeSelect.style.opacity = '0';
+    recipeSelect.style.transform = 'translate(-50%, -48%) scale(0.95)';
+    
+    // Trigger reflow
+    recipeSelect.offsetHeight;
+    
+    recipeSelect.style.transition = 'all 0.3s ease';
+    recipeSelect.style.opacity = '1';
+    recipeSelect.style.transform = 'translate(-50%, -50%) scale(1)';
+    
     fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
@@ -347,14 +363,29 @@ function startSelectedBatch() {
 }
 
 function cancelFlow() {
-  document.getElementById('recipe-select').style.display = 'none';
-  document.getElementById('stock-status').style.display = 'none';
-  
+  const recipeSelect = document.getElementById('recipe-select');
+  const stockStatus = document.getElementById('stock-status');
   const actionSelect = document.getElementById('action-select');
-  actionSelect.style.display = 'flex';
+  
+  // Fade out modal
+  recipeSelect.style.opacity = '0';
+  recipeSelect.style.transform = 'translate(-50%, -48%) scale(0.95)';
+  stockStatus.style.display = 'none';
+  
   setTimeout(() => {
+    recipeSelect.style.display = 'none';
+    
+    // Show and fade in buttons
+    actionSelect.style.display = 'flex';
+    actionSelect.style.opacity = '0';
+    actionSelect.style.transform = 'scale(0.95)';
+    
+    // Trigger reflow
+    actionSelect.offsetHeight;
+    
     actionSelect.style.opacity = '1';
-  }, 50);
+    actionSelect.style.transform = 'scale(1)';
+  }, 300);
 }
 
 
