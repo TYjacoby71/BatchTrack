@@ -301,34 +301,4 @@ def plan_production(recipe_id):
                          stock_check=stock_check,
                          missing_items=missing_items)
 
-@recipes_bp.route('/batches', methods=['GET'])
-def list_batches():
-    data = load_data()
-    return render_template('batch_list.html', batches=data.get('batches', []))
-
-@recipes_bp.route('/batches/in-progress/<batch_id>', methods=['GET'])
-def batch_in_progress(batch_id):
-    data = load_data()
-    batch = next((b for b in data["batches"] if b["id"] == batch_id), None)
-
-    if not batch:
-        return "Batch not found", 404
-
-    recipe = next((r for r in data.get("recipes", []) if r["id"] == batch.get("recipe_id")), None)
-
-    return render_template('batch_in_progress.html', batch=batch, recipe=recipe)
-
-@recipes_bp.route('/batches/finish/<batch_id>', methods=['GET', 'POST'])
-def finish_batch(batch_id):
-    data = load_data()
-    batch = next((b for b in data.get('batches', []) if b['id'] == batch_id), None)
-
-    if not batch:
-        return "Batch not found", 404
-
-    if request.method == 'POST':
-        batch['status'] = 'finished'
-        save_data(data)
-        return redirect('/batches')
-
-    return render_template('finish_batch.html', batch=batch)
+# Batch routes moved to batches.py
