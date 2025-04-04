@@ -1,12 +1,148 @@
 from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash, session
 from app.routes.utils import load_data, save_data
 from unit_converter import UnitConversionService, check_stock_availability, can_fulfill
-
-converter = UnitConversionService()
 from datetime import datetime
 import json
 
-from . import stock_bp
+stock_bp = Blueprint('stock', __name__)
+converter = UnitConversionService()
+
+def safe_float(value):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
+
+def check_stock_for_recipes(recipe_ids=None, batch_counts=None):
+    """Unified stock checking service"""
+    data = load_data()
+    inventory = data.get("ingredients", [])
+    recipes = data.get("recipes", [])
+
+    # Initialize tracking
+    usage = {}
+    stock_report = []
+    needed_items = {}
+
+    # Handle single recipe case
+    if isinstance(recipe_ids, int):
+        recipe_ids = [recipe_ids]
+        batch_counts = [1.0]
+
+    # If no recipes specified, check all inventory
+    if not recipe_ids:
+        for ingredient in inventory:
+            name = ingredient["name"]
+            qty = safe_float(ingredient.get("quantity", 0))
+            unit = ingredient.get("unit", "units")
+
+            status = "OK" if qty > 10 else "LOW"  # Simple threshold check
+            stock_report.append({
+                "name": name,
+                "needed": "0",
+                "available": f"{qty} {unit}",
+                "status": status
+            })
+            if status == "LOW":
+                needed_items[name] = {"total": 10 - qty, "unit": unit}
+        return stock_report, needed_items
+
+    # Calculate total requirements
+    for r_id, count in zip(recipe_ids, batch_counts):
+        count = safe_float(count or 0)
+        if count > 0:
+            recipe = next((r for r in recipes if r["id"] == int(r_id)), None)
+            if recipe:
+                for item in recipe['ingredients']:
+                    base_qty = safe_float(item['quantity'])
+                    total_qty = base_qty * count
+                    name = item['name']
+                    if name not in usage:
+                        usage[name] = {
+                            'qty': total_qty,
+                            'unit': item.get('unit', 'units')
+                        }
+                    else:
+                        usage[name]['qty'] += total_qty
+
+    # Check availability
+    for name, details in usage.items():
+        current = next((i for i in inventory if i['name'].lower() == name.lower()), None)
+        try:
+            if not current or not current.get('quantity'):
+                raise ValueError("No stock found")
+
+            check = check_stock_availability(
+                safe_float(details['qty']),
+                details['unit'],
+                safe_float(current['quantity']),
+                current['unit'],
+                material=name.lower()
+            )
+
+            needed_qty = float(details['qty'])
+            available_qty = float(check['converted'])
+
+            if check['status'] == "LOW":
+                needed_items[name] = {
+                    "total": max(0, needed_qty - available_qty),
+                    "unit": details['unit']
+                }
+
+            stock_report.append({
+                "name": name,
+                "needed": f"{round(needed_qty, 2)} {details['unit']}",
+                "available": f"{available_qty} {check['unit']}",
+                "status": check["status"]
+            })
+
+        except (ValueError, TypeError):
+            stock_report.append({
+                "name": name,
+                "needed": f"{details['qty']} {details['unit']}",
+                "available": "0",
+                "status": "LOW"
+            })
+            needed_items[name] = {
+                "total": details['qty'],
+                "unit": details['unit']
+            }
+
+    return stock_report, needed_items
+
+@stock_bp.route('/check/<int:recipe_id>')
+def check_stock_for_recipe(recipe_id):
+    data = load_data()
+    recipe = next((r for r in data.get("recipes", []) if r["id"] == recipe_id), None)
+    if not recipe:
+        return "Recipe not found", 404
+
+    stock_report, needed_items = check_stock_for_recipes(recipe_id)
+    if needed_items:
+        session['needed_items'] = needed_items
+
+    return render_template("stock_status.html", recipe=recipe, stock_check=stock_report)
+
+@stock_bp.route('/check-bulk', methods=['GET', 'POST'])
+def check_stock_bulk():
+    data = load_data()
+    if request.method == 'POST':
+        recipe_ids = [int(id) for id in request.form.getlist('recipe_id')]
+        batch_counts = [float(count) for count in request.form.getlist('batch_count') if float(count or 0) > 0]
+
+        stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
+        return render_template('bulk_stock_results.html', 
+                             stock_report=stock_report, 
+                             missing_summary=needed_items)
+
+    return render_template('bulk_stock_check.html', recipes=data.get('recipes', []))
+
+@stock_bp.route('/inventory/check')
+def check_all_stock():
+    stock_report, needed_items = check_stock_for_recipes()
+    return render_template('bulk_stock_results.html', 
+                         stock_report=stock_report, 
+                         missing_summary=needed_items)
 
 @stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
@@ -27,8 +163,6 @@ def update_stock():
                     if ingredient:
                         # Convert units if necessary
                         if unit != ingredient['unit']:
-                            from unit_converter import UnitConversionService
-                            converter = UnitConversionService()
                             converted_delta = converter.convert(delta, unit, ingredient['unit'])
                             if converted_delta is not None:
                                 delta = converted_delta
@@ -68,146 +202,20 @@ def update_stock():
                          ingredients=data.get('ingredients', []),
                          units=units)
 
-def safe_float(value):
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return 0.0
-
-
-@stock_bp.route('/check/<int:recipe_id>')
-def check_stock_for_recipe(recipe_id):
-    data = load_data()
-    inventory = data.get("ingredients", [])
-    recipe = next((r for r in data.get("recipes", []) if r["id"] == recipe_id), None)
-
-    if not recipe:
-        return "Recipe not found", 404
-
-    # Clear any existing stock alerts from session
-    if 'needed_items' in session:
-        del session['needed_items']
-
-    stock_check = []
-    needed_items = {}
-
-    for item in recipe.get("ingredients", []):
-        name = item["name"]
-        qty = safe_float(item["quantity"])
-        unit = item.get("unit", "units")
-
-        match = next((i for i in inventory if i["name"].lower() == name.lower()), None)
-
-        if match:
-            try:
-                check = check_stock_availability(
-                    qty, unit,
-                    safe_float(match["quantity"]), match["unit"],
-                    material=name.lower()
-                )
-                if check["status"] == "LOW":
-                    needed_qty = qty - check["converted"]
-                    needed_items[name] = {
-                        "total": max(0, needed_qty),
-                        "unit": unit
-                    }
-            except (ValueError, TypeError) as e:
-                check = {"converted": 0, "unit": unit, "status": "ERROR"}
-                needed_items[name] = {"total": qty, "unit": unit}
-            stock_check.append({
-                "name": name,
-                "needed": f"{qty} {unit}",
-                "available": f"{check['converted']} {check['unit']}",
-                "status": check["status"]
-            })
-        else:
-            stock_check.append({
-                "name": name,
-                "needed": f"{qty} {unit}",
-                "available": f"0 {unit}",
-                "status": "LOW"
-            })
-            needed_items[name] = {"total": qty, "unit": unit}
-
-    if needed_items:
-        session['needed_items'] = needed_items
-
-    return render_template("stock_status.html", recipe=recipe, stock_check=stock_check)
-
 
 @stock_bp.route('/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
     data = load_data()
-    inventory = data.get("ingredients", [])
-    recipes = data.get("recipes", [])
-
     if request.method == 'POST':
-        recipe_ids = request.form.getlist('recipe_id')
-        batch_counts = request.form.getlist('batch_count')
-        usage = {}
+        recipe_ids = [int(id) for id in request.form.getlist('recipe_id')]
+        batch_counts = [float(count) for count in request.form.getlist('batch_count') if float(count or 0) > 0]
 
-        for r_id, count in zip(recipe_ids, batch_counts):
-            count = safe_float(count or 0)
-            if count > 0:
-                recipe = next((r for r in data['recipes'] if r['id'] == int(r_id)), None)
-                if recipe:
-                    for item in recipe['ingredients']:
-                        base_qty = safe_float(item['quantity'])
-                        total_qty = base_qty * count
-                        if item['name'] not in usage:
-                            usage[item['name']] = {
-                                'qty': total_qty,
-                                'unit': item.get('unit', 'units')
-                            }
-                        else:
-                            usage[item['name']]['qty'] += total_qty
+        stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
+        return render_template('bulk_stock_results.html', 
+                             stock_report=stock_report, 
+                             missing_summary=needed_items)
 
-        stock_report = []
-        needed_items = {}
-
-        for name, details in usage.items():
-            current = next((i for i in inventory if i['name'].lower() == name.lower()), None)
-            try:
-                if not current or not current.get('quantity'):
-                    raise ValueError("No stock found")
-
-                check = check_stock_availability(
-                    safe_float(details['qty']),
-                    details['unit'],
-                    safe_float(current['quantity']),
-                    current['unit'],
-                    material=name.lower()
-                )
-
-                needed_qty = float(details['qty'])
-                available_qty = float(check['converted'])
-
-                stock_report.append({
-                    "name": name,
-                    "needed": f"{round(needed_qty, 2)} {details['unit']}",
-                    "available": f"{available_qty} {check['unit']}",
-                    "status": check["status"]
-                })
-
-                if check['status'] == "LOW":
-                    if name not in needed_items:
-                        needed_items[name] = {"total": max(0, needed_qty - available_qty), "unit": details['unit']}
-                    else:
-                        needed_items[name]["total"] += max(0, needed_qty - available_qty)
-
-            except (ValueError, TypeError):
-                stock_report.append({
-                    "name": name,
-                    "needed": details['qty'],
-                    "available": 0,
-                    "unit": details['unit'],
-                    "status": "LOW"
-                })
-
-        return render_template('bulk_stock_results.html', stock_report=stock_report, missing_summary=needed_items)
-
-    return render_template('bulk_stock_check.html', recipes=recipes)
-
+    return render_template('bulk_stock_check.html', recipes=data.get('recipes', []))
 
 @stock_bp.route('/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
@@ -228,8 +236,6 @@ def adjust_inventory():
                     input_unit = request.form.get(f"unit_{name}", unit)
 
                     if input_unit != unit:
-                        from unit_converter import UnitConversionService
-                        converter = UnitConversionService()
                         converted_delta = converter.convert(delta, input_unit, unit)
                         if converted_delta is not None:
                             delta = converted_delta

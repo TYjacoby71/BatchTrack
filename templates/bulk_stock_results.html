@@ -1,7 +1,7 @@
 
 {% extends "layout.html" %}
 {% block content %}
-<h2>📋 Bulk Stock Check Results</h2>
+<h2>📋 Stock Check Results</h2>
 
 {% if stock_report and stock_report|length > 0 %}
 <table border="1">
@@ -26,6 +26,7 @@
     </tr>
     {% endfor %}
 </table>
+
 <h3>🛒 Stock Check Summary:</h3>
 {% if missing_summary %}
     <ul>
@@ -33,56 +34,60 @@
             <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
         {% endfor %}
     </ul>
+    <form id="exportForm">
+        <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
+        <button type="button" onclick="printList()">🖨 Print List</button>
+    </form>
+
+    <script>
+    function getItems() {
+        const items = [];
+        {% for name, info in missing_summary.items() %}
+            items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
+        {% endfor %}
+        return items;
+    }
+
+    function downloadCSV() {
+        fetch('/missing/export/csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: getItems() })
+        })
+        .then(res => res.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "missing_items.csv";
+            a.click();
+        });
+    }
+
+    function printList() {
+        fetch('/missing/export/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: getItems() })
+        })
+        .then(res => res.text())
+        .then(html => {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(html);
+            printWindow.document.close();
+        });
+    }
+    </script>
 {% else %}
     <p>✅ All ingredients are in stock!</p>
 {% endif %}
-<form id="exportForm">
-    <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
-    <button type="button" onclick="printList()">🖨 Print List</button>
-</form>
-
-<script>
-function getItems() {
-    const items = [];
-    {% for name, info in missing_summary.items() %}
-        items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
-    {% endfor %}
-    return items;
-}
-
-function downloadCSV() {
-    fetch('/missing/export/csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: getItems() })
-    })
-    .then(res => res.blob())
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "missing_items.csv";
-        a.click();
-    });
-}
-
-function printList() {
-    fetch('/missing/export/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: getItems() })
-    })
-    .then(res => res.text())
-    .then(html => {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(html);
-        printWindow.document.close();
-    });
-}
-</script>
 {% endif %}
 
 <br>
-<a href="/stock/check-bulk">Check Another Recipe</a> |
-<a href="/">Back to Home</a>
+{% if recipe %}
+    <a href="/recipes">← Back to Recipes</a>
+{% else %}
+    <a href="/stock/check-bulk">Check Another Recipe</a> |
+    <a href="/">Back to Home</a>
+{% endif %}
 {% endblock %}
