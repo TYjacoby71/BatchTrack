@@ -87,69 +87,39 @@ def dashboard():
 from unit_converter import can_fulfill
 from app.error_tools import safe_route
 
-@batches_bp.route('/check-stock-bulk', methods=['GET', 'POST'])
-@safe_route
-def check_stock_bulk():
-    data = load_data()
-    inventory = data.get("ingredients", [])
-    recipes = data.get("recipes", [])
+# Bulk stock check route moved to stock blueprint
+from unit_converter import check_stock_availability
 
-    if request.method == 'POST':
-        recipe_ids = request.form.getlist('recipe_id')
-        batch_counts = request.form.getlist('batch_count')
-        usage = {}
+def process_stock_report():
+    stock_report = []
+    for name, details in usage.items():
+        current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
+        try:
+            if not current or not current.get('quantity'):
+                raise ValueError("No stock found")
 
-        for r_id, count in zip(recipe_ids, batch_counts):
-            count = float(count or 0)
-            if count > 0:
-                recipe = next((r for r in data['recipes'] if r['id'] == int(r_id)), None)
-                if recipe:
-                    for item in recipe['ingredients']:
-                        # Get base quantity for one batch
-                        base_qty = float(item['quantity'])
-                        # Calculate total needed for all batches
-                        total_qty = base_qty * count
-                        # Store with unit for conversion later
-                        if item['name'] not in usage:
-                            usage[item['name']] = {
-                                'qty': total_qty,
-                                'unit': item.get('unit', 'units')
-                            }
-                        else:
-                            # Add to existing quantity in same unit
-                            usage[item['name']]['qty'] += total_qty
+            check = check_stock_availability(
+                details['qty'],
+                details['unit'],
+                current['quantity'],
+                current['unit'],
+                material=name.lower()
+            )
 
-        stock_report = []
-        from unit_converter import check_stock_availability
-
-        for name, details in usage.items():
-            current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
-            try:
-                if not current or not current.get('quantity'):
-                    raise ValueError("No stock found")
-
-                check = check_stock_availability(
-                    details['qty'],
-                    details['unit'],
-                    current['quantity'],
-                    current['unit'],
-                    material=name.lower()
-                )
-
-                stock_report.append({
-                    "name": name,
-                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
-                    "available": f"{check['converted']} {check['unit']}",
-                    "status": check['status']
-                })
-            except (ValueError, TypeError):
-                stock_report.append({
-                    "name": name,
-                    "needed": details['qty'],
-                    "available": 0,
-                    "unit": details['unit'],
-                    "status": "LOW"
-                })
+            stock_report.append({
+                "name": name,
+                "needed": f"{round(details['qty'], 2)} {details['unit']}",
+                "available": f"{check['converted']} {check['unit']}",
+                "status": check['status']
+            })
+        except (ValueError, TypeError):
+            stock_report.append({
+                "name": name,
+                "needed": details['qty'],
+                "available": 0,
+                "unit": details['unit'],
+                "status": "LOW"
+            })
 
         # Calculate missing items summary
         from collections import defaultdict
