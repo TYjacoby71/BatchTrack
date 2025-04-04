@@ -404,11 +404,16 @@ def start_batch(recipe_id):
 
     return render_template('start_batch.html', recipe=recipe, scale=scale) # Pass scale to template
 
-@batches_bp.route('/batches/in_progress')
-def batches_in_progress():
+@batches_bp.route('/batches/in-progress/<batch_id>')
+def batch_in_progress(batch_id):
     data = load_data()
-    in_progress_batches = [batch for batch in data.get('batches', []) if not batch.get('completed')]
-    return render_template('batches_in_progress.html', batches=in_progress_batches)
+    batch = next((b for b in data["batches"] if str(b["id"]) == str(batch_id)), None)
+    
+    if not batch:
+        return "Batch not found", 404
+        
+    recipe = next((r for r in data.get("recipes", []) if r["id"] == batch.get("recipe_id")), None)
+    return render_template('batch_in_progress.html', batch=batch, recipe=recipe)
 
 
 @batches_bp.route('/batches/<batch_id>/print')
