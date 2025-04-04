@@ -289,17 +289,11 @@ function toggleAll(source) {
 }
 
 function startFlow() {
+  let recipes = [];
   fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
-      const recipeList = document.getElementById('recipe-list');
-      recipeList.innerHTML = data.recipes.map(r => `
-        <div class="recipe-card" onclick="startSelectedBatch(${r.id})" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-          <h4 style="margin: 0 0 10px 0;">${r.name}</h4>
-          ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
-        </div>
-      `).join('');
-      
+      recipes = data.recipes;
       document.getElementById('recipe-select').style.display = 'block';
       
       const searchInput = document.getElementById('recipe-search');
@@ -307,11 +301,23 @@ function startFlow() {
       
       searchInput.addEventListener('input', (e) => {
         const search = e.target.value.toLowerCase();
-        document.querySelectorAll('.recipe-card').forEach(card => {
-          const recipeName = card.querySelector('h4').textContent.toLowerCase();
-          const tags = card.querySelector('small')?.textContent.toLowerCase() || '';
-          card.style.display = recipeName.includes(search) || tags.includes(search) ? 'block' : 'none';
-        });
+        const recipeList = document.getElementById('recipe-list');
+        
+        if (search.length > 0) {
+          const filteredRecipes = recipes.filter(r => 
+            r.name.toLowerCase().includes(search) || 
+            (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
+          );
+          
+          recipeList.innerHTML = filteredRecipes.map(r => `
+            <div class="recipe-card" onclick="startSelectedBatch(${r.id})" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+              <h4 style="margin: 0 0 10px 0;">${r.name}</h4>
+              ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
+            </div>
+          `).join('');
+        } else {
+          recipeList.innerHTML = '';
+        }
       });
     });
 }
