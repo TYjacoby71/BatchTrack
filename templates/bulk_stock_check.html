@@ -15,6 +15,10 @@
     <button type="submit" class="btn btn-primary">Check Stock</button>
 </form>
 
+<div style="margin-top: 20px;">
+    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
 {% if stock_report is defined %}
     {% for item in stock_report %}
     <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc;">

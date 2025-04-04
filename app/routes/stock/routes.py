@@ -148,16 +148,19 @@ def check_all_stock():
 @stock_bp.route('/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
     data = load_data()
+    recipes = data.get('recipes', [])
+    
     if request.method == 'POST':
-        recipe_ids = [int(id) for id in request.form.getlist('recipe_id')]
-        batch_counts = [float(count or 1) for count in request.form.getlist('batch_count')]
+        recipe_ids = request.form.getlist('recipe_id')
+        if recipe_ids:
+            recipe_ids = [int(id) for id in recipe_ids]
+            batch_counts = [float(count or 1) for count in request.form.getlist('batch_count')]
+            stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
+            return render_template('bulk_stock_results.html',
+                                stock_report=stock_report,
+                                missing_summary=needed_items)
 
-        stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
-        return render_template('bulk_stock_results.html',
-                             stock_report=stock_report,
-                             missing_summary=needed_items)
-
-    return render_template('bulk_stock_check.html', recipes=data.get('recipes', []))
+    return render_template('bulk_stock_check.html', recipes=recipes)
 
 @stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
