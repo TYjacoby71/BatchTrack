@@ -319,22 +319,19 @@ function startFlow() {
       
       const recipeList = document.getElementById('recipe-list');
       
-      // Show dropdown on focus
+      // Show dropdown and initial list on focus
       searchInput.addEventListener('focus', () => {
-        recipeList.style.display = 'block';
+        setTimeout(() => {
+          recipeList.style.display = 'block';
+          displayRecipes(recipes);
+        }, 0);
       });
 
       // Hide dropdown when clicking outside
-      document.addEventListener('click', (e) => {
+      document.addEventListener('mousedown', (e) => {
         if (!searchInput.contains(e.target) && !recipeList.contains(e.target)) {
           recipeList.style.display = 'none';
         }
-      });
-
-      // Show initial list on focus
-      searchInput.addEventListener('focus', () => {
-        recipeList.style.display = 'block';
-        displayRecipes(recipes);
       });
       
       searchInput.addEventListener('input', (e) => {
