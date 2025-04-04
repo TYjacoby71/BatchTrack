@@ -187,8 +187,10 @@
         </div>
         <div id="stock-check-results" class="bg-white rounded-lg shadow p-6 mb-6" style="display: none;"></div>
         <button onclick="checkRecipeStock()" class="main-btn">Check Stock</button>
-        <button onclick="startSelectedBatch()" class="main-btn" style="background: #4CAF50; color: white;">Start Batch</button>
         <button onclick="backToRecipeSelect()" class="main-btn">Back</button>
+        <div id="start-batch-button" style="display: none; margin-top: 10px;">
+          <button onclick="startSelectedBatch()" class="main-btn" style="background: #4CAF50; color: white;">Start Batch</button>
+        </div>
       </div>
       <div style="margin-bottom: 20px; position: relative;">
         <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
@@ -404,6 +406,10 @@ function checkRecipeStock() {
       if (stockCheck) {
         document.getElementById('stock-check-results').innerHTML = stockCheck.innerHTML;
         document.getElementById('stock-check-results').style.display = 'block';
+        
+        // Show start batch button only if there are no missing ingredients
+        const missingItems = doc.querySelector('.bg-red-50');
+        document.getElementById('start-batch-button').style.display = missingItems ? 'none' : 'block';
       }
     });
 }
