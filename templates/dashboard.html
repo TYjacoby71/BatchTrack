@@ -331,16 +331,26 @@ function startFlow() {
         }
       });
 
+      // Show initial list on focus
+      searchInput.addEventListener('focus', () => {
+        recipeList.style.display = 'block';
+        displayRecipes(recipes);
+      });
+      
       searchInput.addEventListener('input', (e) => {
         const search = e.target.value.toLowerCase();
-        recipeList.style.display = 'block';
-        
-        const filteredRecipes = recipes.filter(r => 
+        const filteredRecipes = search ? recipes.filter(r => 
           r.name.toLowerCase().includes(search) || 
           (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
-        );
+        ) : recipes;
         
-        recipeList.innerHTML = filteredRecipes.map(r => `
+        displayRecipes(filteredRecipes);
+      });
+
+      function displayRecipes(recipesToShow) {
+        recipeList.style.maxHeight = '300px';
+        recipeList.style.overflowY = 'auto';
+        recipeList.innerHTML = recipesToShow.slice(0, 5).map(r => `
           <div class="recipe-card" onclick="startSelectedBatch(${r.id})" 
                style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
             <h4 style="margin: 0 0 5px 0;">${r.name}</h4>
