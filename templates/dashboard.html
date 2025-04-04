@@ -179,6 +179,17 @@
 
     <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; max-height: 80vh; background: white; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 25px; overflow-y: auto; border-radius: 12px;">
       <h3 style="margin-bottom: 20px;">Which recipe would you like to use?</h3>
+      <div id="plan-production" style="display: none;">
+        <h3 id="selected-recipe-name" style="margin-bottom: 20px;"></h3>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Scale Recipe:</label>
+          <input type="number" id="scale" step="0.1" min="0.1" value="1" class="border rounded px-3 py-2 w-32" style="max-width: 120px;">
+        </div>
+        <div id="stock-check-results" class="bg-white rounded-lg shadow p-6 mb-6" style="display: none;"></div>
+        <button onclick="checkRecipeStock()" class="main-btn">Check Stock</button>
+        <button onclick="startSelectedBatch()" class="main-btn" style="background: #4CAF50; color: white;">Start Batch</button>
+        <button onclick="backToRecipeSelect()" class="main-btn">Back</button>
+      </div>
       <div style="margin-bottom: 20px; position: relative;">
         <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
         <div id="recipe-list" style="position: relative; margin-top: 8px; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;">
@@ -348,7 +359,7 @@ function startFlow() {
         recipeList.style.maxHeight = '300px';
         recipeList.style.overflowY = 'auto';
         recipeList.innerHTML = recipesToShow.slice(0, 5).map(r => `
-          <div class="recipe-card" onclick="startSelectedBatch(${r.id})" 
+          <div class="recipe-card" onclick="showPlanProduction(${JSON.stringify(r)})" 
                style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
             <h4 style="margin: 0 0 5px 0;">${r.name}</h4>
             ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
@@ -365,8 +376,41 @@ function startFlow() {
     });
 }
 
-function startSelectedBatch(recipeId) {
-  window.location.href = `/stock/check/${recipeId}`;
+let selectedRecipe = null;
+
+function showPlanProduction(recipe) {
+  selectedRecipe = recipe;
+  document.getElementById('recipe-list').style.display = 'none';
+  document.getElementById('recipe-search').style.display = 'none';
+  document.getElementById('plan-production').style.display = 'block';
+  document.getElementById('selected-recipe-name').textContent = recipe.name;
+}
+
+function backToRecipeSelect() {
+  document.getElementById('recipe-list').style.display = 'block';
+  document.getElementById('recipe-search').style.display = 'block';
+  document.getElementById('plan-production').style.display = 'none';
+  document.getElementById('stock-check-results').style.display = 'none';
+}
+
+function checkRecipeStock() {
+  const scale = document.getElementById('scale').value;
+  fetch(`/recipes/plan/${selectedRecipe.id}?scale=${scale}`)
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const stockCheck = doc.querySelector('.stock-check-results');
+      if (stockCheck) {
+        document.getElementById('stock-check-results').innerHTML = stockCheck.innerHTML;
+        document.getElementById('stock-check-results').style.display = 'block';
+      }
+    });
+}
+
+function startSelectedBatch() {
+  const scale = document.getElementById('scale').value;
+  window.location.href = `/start-batch/${selectedRecipe.id}?scale=${scale}`;
 }
 
 function checkStock() {
