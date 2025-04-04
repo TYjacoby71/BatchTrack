@@ -88,14 +88,14 @@ from unit_converter import can_fulfill
 from app.error_tools import safe_route
 
 # Bulk stock check route moved to stock blueprint
+from unit_converter import check_stock_availability
 
-        stock_report = []
-    from unit_converter import check_stock_availability
-
+def process_stock_report():
+    stock_report = []
     for name, details in usage.items():
-            current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
-            try:
-                if not current or not current.get('quantity'):
+        current = next((i for i in data['ingredients'] if i['name'].lower() == name.lower()), None)
+        try:
+            if not current or not current.get('quantity'):
                     raise ValueError("No stock found")
 
                 check = check_stock_availability(
