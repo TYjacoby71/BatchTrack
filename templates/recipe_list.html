@@ -22,8 +22,8 @@
         {% endif %}
         <div class="actions">
             <a href="/recipes/{{ recipe.id }}">View</a> |
-            <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
             <a href="/recipes/{{ recipe.id }}/clone">📄 Clone</a> |
+            <a href="/recipes/plan/{{ recipe.id }}">Plan Production</a> |
             <a href="/start-batch/{{ recipe.id }}">Start Batch</a> |
             <a href="/stock/check/{{ recipe.id }}">Check Stock</a> |
             <form style="display: inline;" action="/recipes/{{ recipe.id }}/delete" method="POST">
@@ -38,7 +38,7 @@
 function filterByTag() {
   const selected = document.getElementById('tagFilter').value.toLowerCase();
   const recipes = document.querySelectorAll('.recipe');
-  
+
   recipes.forEach(recipe => {
     const recipeTags = recipe.getAttribute('data-tags') || '';
     const match = !selected || recipeTags.toLowerCase().includes(selected);
