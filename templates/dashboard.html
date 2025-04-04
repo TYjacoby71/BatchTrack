@@ -167,10 +167,12 @@
 
     <div id="action-select" class="main-actions active">
       <button onclick="startFlow()" class="main-btn">Start a Batch</button>
-      {% if has_unfinished_batches %}
-      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
-      {% endif %}
     </div>
+    {% if has_unfinished_batches %}
+    <div style="margin-top: 10px;">
+      <button onclick="finishFlow()" class="main-btn">Finish a Batch</button>
+    </div>
+    {% endif %}
 
     <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
       <h3>Select Recipe</h3>
