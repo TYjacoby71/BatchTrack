@@ -339,7 +339,7 @@ def start_batch(recipe_id):
 
         data.setdefault('batches', []).append(new_batch)
         save_data(data)
-        return redirect(f'/batches/in-progress/{new_batch["id"]}')
+        return redirect(f'/batches/in_progress/{new_batch["id"]}')
 
 
     return render_template('start_batch.html', recipe=recipe, scale=scale)
