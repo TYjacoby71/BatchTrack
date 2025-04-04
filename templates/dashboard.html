@@ -289,11 +289,30 @@ function toggleAll(source) {
 
 function startFlow() {
   let recipes = [];
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  
+  // Fade out buttons
+  actionButtons.style.transition = 'opacity 0.3s ease';
+  actionButtons.style.opacity = '0';
+  
   fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
       recipes = data.recipes;
-      document.getElementById('recipe-select').style.display = 'block';
+      
+      // After buttons fade out, show modal with fade in
+      setTimeout(() => {
+        actionButtons.style.display = 'none';
+        recipeSelect.style.opacity = '0';
+        recipeSelect.style.display = 'block';
+        recipeSelect.style.transition = 'opacity 0.3s ease';
+        
+        // Trigger fade in
+        setTimeout(() => {
+          recipeSelect.style.opacity = '1';
+        }, 50);
+      }, 300);
       
       const searchInput = document.getElementById('recipe-search');
       searchInput.focus();
@@ -366,9 +385,25 @@ function startSelectedBatch() {
 }
 
 function cancelFlow() {
-  document.getElementById('recipe-select').style.display = 'none';
-  document.getElementById('stock-status').style.display = 'none';
-  document.getElementById('recipe').value = '';
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  const stockStatus = document.getElementById('stock-status');
+  
+  // Fade out modal
+  recipeSelect.style.opacity = '0';
+  stockStatus.style.opacity = '0';
+  
+  setTimeout(() => {
+    recipeSelect.style.display = 'none';
+    stockStatus.style.display = 'none';
+    
+    // Fade in buttons
+    actionButtons.style.display = 'flex';
+    actionButtons.style.opacity = '0';
+    setTimeout(() => {
+      actionButtons.style.opacity = '1';
+    }, 50);
+  }, 300);
 }
 
 
