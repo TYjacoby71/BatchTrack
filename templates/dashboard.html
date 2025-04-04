@@ -177,14 +177,16 @@
     </div>
     {% endif %}
 
-    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-      <h3>Select Recipe</h3>
-      <select id="recipe" class="form-control" style="margin: 20px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-        <option value="">Choose a recipe...</option>
-      </select>
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button onclick="startSelectedBatch()" class="main-btn">Start Batch</button>
-        <button onclick="cancelFlow()" class="main-btn" style="background: #f0f0f0;">Cancel</button>
+    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 50%; background: white; z-index: 1000; box-shadow: -4px 0 20px rgba(0,0,0,0.15); padding: 25px; overflow-y: auto;">
+      <h3 style="margin-bottom: 20px;">Which recipe would you like to use?</h3>
+      <div style="margin-bottom: 20px;">
+        <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+      </div>
+      <div id="recipe-list" style="display: grid; gap: 15px;">
+        <!-- Recipes will be populated here -->
+      </div>
+      <div style="position: sticky; bottom: 0; padding-top: 20px; background: white;">
+        <button onclick="cancelFlow()" class="main-btn" style="width: 100%; background: #f0f0f0;">Cancel</button>
       </div>
     </div>
 
@@ -290,11 +292,32 @@ function startFlow() {
   fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
-      const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
-        data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      const recipeList = document.getElementById('recipe-list');
+      recipeList.innerHTML = data.recipes.map(r => `
+        <div class="recipe-card" onclick="startSelectedBatch(${r.id})" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+          <h4 style="margin: 0 0 10px 0;">${r.name}</h4>
+          ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
+        </div>
+      `).join('');
+      
       document.getElementById('recipe-select').style.display = 'block';
+      
+      const searchInput = document.getElementById('recipe-search');
+      searchInput.focus();
+      
+      searchInput.addEventListener('input', (e) => {
+        const search = e.target.value.toLowerCase();
+        document.querySelectorAll('.recipe-card').forEach(card => {
+          const recipeName = card.querySelector('h4').textContent.toLowerCase();
+          const tags = card.querySelector('small')?.textContent.toLowerCase() || '';
+          card.style.display = recipeName.includes(search) || tags.includes(search) ? 'block' : 'none';
+        });
+      });
     });
+}
+
+function startSelectedBatch(recipeId) {
+  window.location.href = `/stock/check/${recipeId}`;
 }
 
 function checkStock() {
