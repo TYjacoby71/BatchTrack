@@ -50,6 +50,12 @@
   font-style: italic;
   margin-left: 10px;
 }
+
+.settings-item {
+  padding-left: 20px;
+  color: #666;
+  margin: 5px 0;
+}
 </style>
 
 <div class="settings-container">
@@ -61,7 +67,12 @@
     <div class="settings-group">
       <h3>Unit Editor</h3>
       <a href="/units" class="settings-link">🔠 Manage Count Units</a>
+      <div class="settings-item">• Add/Edit/Delete units</div>
+      <div class="settings-item">• Count units (e.g., jars, labels, containers)</div>
+      
       <a href="/units?type=yield" class="settings-link">📊 Configure Yield Units</a>
+      <div class="settings-item">• Default display units for batch yields</div>
+      <div class="settings-item">• "Count" units for products (e.g., "12 oz Jar")</div>
     </div>
 
     <div class="settings-group">
@@ -71,6 +82,8 @@
           <input type="checkbox" name="require_stock_check" {% if settings.get('require_stock_check') %}checked{% endif %}>
           Require stock check before starting batch
         </label>
+        <div class="settings-item">• Allow notes/tags at batch start</div>
+        <div class="settings-item">• Set default yield unit for each recipe</div>
         <button type="submit" class="btn btn-primary">Save Settings</button>
       </form>
     </div>
@@ -111,7 +124,18 @@
 
   <div class="settings-section">
     <h2>🔐 User & Permission Settings</h2>
-    <p class="coming-soon">Coming in future update</p>
+    <div class="settings-group">
+      <h3>User Management <span class="coming-soon">(Coming soon)</span></h3>
+      <div class="settings-item">• Add/remove users</div>
+      <div class="settings-item">• Assign roles (Owner, Manager, Maker)</div>
+      <div class="settings-item">• Role-based access controls</div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Login Authentication <span class="coming-soon">(Coming soon)</span></h3>
+      <div class="settings-item">• Local password auth (for offline app)</div>
+      <div class="settings-item">• Optional OAuth / email login integration</div>
+    </div>
   </div>
 
   <div class="settings-section">
@@ -131,19 +155,59 @@
             Show unfinished batch prompts
           </label>
         </div>
+        <div class="settings-item">• Show quick access bar carousel</div>
         <button type="submit" class="btn btn-primary">Save Display Settings</button>
       </form>
+    </div>
+
+    <div class="settings-group">
+      <h3>Email Notifications <span class="coming-soon">(Coming soon)</span></h3>
+      <div class="settings-item">• Email notifications on low stock</div>
+      <div class="settings-item">• Weekly summary reports</div>
+      <div class="settings-item">• Batch success/fail reports</div>
     </div>
   </div>
 
   <div class="settings-section">
     <h2>🧠 Neurodivergent UX Modes</h2>
-    <p class="coming-soon">Coming in future update</p>
+    <div class="settings-group">
+      <h3>Simple View Toggle <span class="coming-soon">(Coming soon)</span></h3>
+      <div class="settings-item">• Minimizes tables</div>
+      <div class="settings-item">• Enables guided flows</div>
+      <div class="settings-item">• Disables clutter-heavy pages</div>
+    </div>
+
+    <div class="settings-group">
+      <h3>Instruction Display <span class="coming-soon">(Coming soon)</span></h3>
+      <div class="settings-item">• Always show recipe steps after batch start</div>
+      <div class="settings-item">• Collapse/expand ingredient lists</div>
+      <div class="settings-item">• Optional animations to reduce anxiety</div>
+    </div>
   </div>
 
   <div class="settings-section">
     <h2>🗂️ Tag Management</h2>
     <a href="/tags/manage" class="settings-link">🏷️ Manage Tags</a>
+    <div class="settings-item">• Merge/Delete tags</div>
+    <div class="settings-item">• Tag suggestion list</div>
+    <div class="settings-item">• Default tags for new batches</div>
+  </div>
+
+  <div class="settings-section">
+    <h2>🔌 API & Integration Prep <span class="coming-soon">(Coming soon)</span></h2>
+    <div class="settings-group">
+      <h3>Third-party Integrations</h3>
+      <div class="settings-item">• Shopify, Etsy, Square integration settings</div>
+      <div class="settings-item">• Webhook toggles</div>
+      <div class="settings-item">• SKU/product sync controls</div>
+    </div>
+
+    <div class="settings-group">
+      <h3>Export Data Controls</h3>
+      <div class="settings-item">• Choose formats (CSV, JSON)</div>
+      <div class="settings-item">• Batch history exports</div>
+      <div class="settings-item">• Ingredient usage reports</div>
+    </div>
   </div>
 </div>
 
