@@ -160,7 +160,453 @@
         }
     ],
     "recipe_counter": 8,
-    "batches": [],
+    "batches": [
+        {
+            "id": "batch_75",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-03T05:11:14.032862",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                },
+                {
+                    "name": "12 oz glass jar",
+                    "quantity": 1.0,
+                    "unit": "unit"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_75.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "cup"
+        },
+        {
+            "id": "batch_76",
+            "recipe_id": 3,
+            "recipe_name": "Cup of Milk",
+            "timestamp": "2025-04-03T05:14:31.194898",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 1.0,
+                    "unit": "cup"
+                },
+                {
+                    "name": "12 oz glass jar",
+                    "quantity": 1.0,
+                    "unit": "unit"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 3.49,
+            "qr_code": "static/qr/batch_76.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "cup"
+        },
+        {
+            "id": "batch_77",
+            "recipe_id": 6,
+            "recipe_name": "orange juice",
+            "timestamp": "2025-04-03T17:54:47.122570",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "orange juice",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_77.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 2.0,
+            "yield_unit": "mL"
+        },
+        {
+            "id": "batch_78",
+            "recipe_id": 7,
+            "recipe_name": "Copy of Cup of Milk",
+            "timestamp": "2025-04-03T18:12:11.911975",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "milk",
+                    "quantity": 10.0,
+                    "unit": "L"
+                }
+            ],
+            "scale": 10.0,
+            "total_cost": 34.9,
+            "qr_code": "static/qr/batch_78.png"
+        },
+        {
+            "id": "batch_79",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T22:35:02.235163",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 6.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 2.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 2.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_79.png"
+        },
+        {
+            "id": "batch_80",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T22:37:51.368686",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 6.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 2.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 2.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 2.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_80.png"
+        },
+        {
+            "id": "batch_81",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T22:38:08.634378",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_81.png"
+        },
+        {
+            "id": "batch_82",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T23:33:02.502446",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_82.png"
+        },
+        {
+            "id": "batch_83",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-03T23:38:46.761747",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 4.5,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.5,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.5,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.5,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_83.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 4.5,
+            "yield_unit": "unit"
+        },
+        {
+            "id": "batch_84",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T00:03:20.524860",
+            "notes": null,
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_84.png",
+            "completed": true,
+            "batch_type": "product",
+            "success": "yes",
+            "yield_qty": 1.0,
+            "yield_unit": "unit"
+        },
+        {
+            "id": "batch_85",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T03:45:32.726515",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_85.png"
+        },
+        {
+            "id": "batch_86",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T03:52:02.258352",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_86.png"
+        },
+        {
+            "id": "batch_87",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T03:52:35.479923",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_87.png"
+        },
+        {
+            "id": "batch_88",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T03:54:12.485457",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_88.png"
+        },
+        {
+            "id": "batch_89",
+            "recipe_id": 2,
+            "recipe_name": "Fried Egs",
+            "timestamp": "2025-04-04T04:15:07.438433",
+            "notes": "",
+            "tags": [
+                ""
+            ],
+            "ingredients": [
+                {
+                    "name": "eggs",
+                    "quantity": 3.0,
+                    "unit": "unit"
+                },
+                {
+                    "name": "oil",
+                    "quantity": 1.0,
+                    "unit": "mL"
+                },
+                {
+                    "name": "pepper",
+                    "quantity": 1.0,
+                    "unit": "g"
+                }
+            ],
+            "scale": 1.0,
+            "total_cost": 0.0,
+            "qr_code": "static/qr/batch_89.png"
+        }
+    ],
     "batch_counter": 89,
     "recipe_only_ingredients": [
         {
@@ -678,7 +1124,43 @@
             "timestamp": "2025-04-03T22:43:16.455541"
         }
     ],
-    "products": [],
+    "products": [
+        {
+            "product": "Cup of Milk",
+            "yield": 1.0,
+            "unit": "cup",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-03T05:18:16.889773",
+            "quantity_available": 2.0,
+            "events": [],
+            "batch_id": "batch_76"
+        },
+        {
+            "product": "orange juice",
+            "yield": 2.0,
+            "unit": "mL",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-03T17:55:25.393562",
+            "quantity_available": 2.0,
+            "events": [],
+            "batch_id": "batch_77",
+            "expiration_date": null
+        },
+        {
+            "product": "Fried Egs",
+            "yield": 1.0,
+            "unit": "unit",
+            "notes": "",
+            "label_info": "",
+            "timestamp": "2025-04-04T00:10:53.731903",
+            "quantity_available": 5.5,
+            "events": [],
+            "batch_id": "batch_84",
+            "expiration_date": "2026-04-03T00:00:00"
+        }
+    ],
     "product_events": [
         {
             "product": "Cup of Milk",
