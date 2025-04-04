@@ -339,7 +339,7 @@ def start_batch(recipe_id):
 
         data.setdefault('batches', []).append(new_batch)
         save_data(data)
-        return redirect(f'/batches/in_progress/{new_batch["id"]}')
+        return redirect(f'/batches/in_progress/{new_batch["id"]}') #Corrected redirect
 
 
     return render_template('start_batch.html', recipe=recipe, scale=scale)
@@ -358,4 +358,3 @@ def view_batch_in_progress(batch_id):
         return "Batch not found", 404
     recipe = next((r for r in data['recipes'] if r['id'] == batch['recipe_id']), None)
     return render_template('batch_in_process.html', batch=batch, recipe=recipe)
-
