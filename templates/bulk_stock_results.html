@@ -27,62 +27,59 @@
     {% endfor %}
 </table>
 <h3>🛒 Stock Check Summary:</h3>
-    {% if missing_summary %}
-        <ul>
-            {% for name, info in missing_summary.items() %}
-                <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>✅ All ingredients are in stock!</p>
-    {% endif %}
-    <form id="exportForm">
-      <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
-      <button type="button" onclick="printList()">🖨 Print List</button>
-    </form>
+{% if missing_summary %}
+    <ul>
+        {% for name, info in missing_summary.items() %}
+            <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>✅ All ingredients are in stock!</p>
+{% endif %}
+<form id="exportForm">
+    <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
+    <button type="button" onclick="printList()">🖨 Print List</button>
+</form>
 
-    <script>
-    function getItems() {
-      const items = [];
-      {% for name, info in missing_summary.items() %}
+<script>
+function getItems() {
+    const items = [];
+    {% for name, info in missing_summary.items() %}
         items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
-      {% endfor %}
-      return items;
-    }
+    {% endfor %}
+    return items;
+}
 
-    function downloadCSV() {
-      fetch('/missing/export/csv', {
+function downloadCSV() {
+    fetch('/missing/export/csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: getItems() })
-      })
-      .then(res => res.blob())
-      .then(blob => {
+    })
+    .then(res => res.blob())
+    .then(blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = "missing_items.csv";
         a.click();
-      });
-    }
+    });
+}
 
-    function printList() {
-      fetch('/missing/export/print', {
+function printList() {
+    fetch('/missing/export/print', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: getItems() })
-      })
-      .then(res => res.text())
-      .then(html => {
+    })
+    .then(res => res.text())
+    .then(html => {
         const printWindow = window.open('', '_blank');
         printWindow.document.write(html);
         printWindow.document.close();
-      });
-    }
-    </script>
-{% endif %}
-{% else %}
-<p>Please select at least one recipe and enter batch quantities to check stock.</p>
+    });
+}
+</script>
 {% endif %}
 
 <br>
