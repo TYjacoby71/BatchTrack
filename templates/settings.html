@@ -1,60 +1,150 @@
 
 {% extends "layout.html" %}
 {% block content %}
-<h2>⚙️ Settings</h2>
+<style>
+.settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
 
-<div class="settings-section">
-    <h3>Expiration Alerts</h3>
-    <form method="POST" action="{{ url_for('settings.save_settings') }}">
-        <div class="form-group">
-            <label for="expiry_alert_days">Alert when products are within (days) of expiration:</label>
-            <input type="number" 
-                   id="expiry_alert_days" 
-                   name="expiry_alert_days" 
-                   value="{{ settings.get('expiry_alert_days', 30) }}" 
-                   min="1" 
-                   required>
-        </div>
+.settings-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.settings-section h2 {
+  color: #2d3748;
+  border-bottom: 2px solid #edf2f7;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-section h3 {
+  color: #4a5568;
+  margin: 15px 0;
+}
+
+.settings-link {
+  display: block;
+  padding: 10px;
+  margin: 5px 0;
+  color: #4299e1;
+  text-decoration: none;
+}
+
+.settings-link:hover {
+  background: #ebf8ff;
+  border-radius: 4px;
+}
+
+.settings-group {
+  margin-bottom: 20px;
+}
+
+.coming-soon {
+  color: #718096;
+  font-style: italic;
+  margin-left: 10px;
+}
+</style>
+
+<div class="settings-container">
+  <h1>⚙️ Settings</h1>
+
+  <div class="settings-section">
+    <h2>⚙️ Core Settings</h2>
+    
+    <div class="settings-group">
+      <h3>Unit Editor</h3>
+      <a href="/units" class="settings-link">🔠 Manage Count Units</a>
+      <a href="/units?type=yield" class="settings-link">📊 Configure Yield Units</a>
+    </div>
+
+    <div class="settings-group">
+      <h3>Default Batch Behavior</h3>
+      <form method="POST" action="{{ url_for('settings.save_settings') }}" class="form-group">
+        <label>
+          <input type="checkbox" name="require_stock_check" {% if settings.get('require_stock_check') %}checked{% endif %}>
+          Require stock check before starting batch
+        </label>
         <button type="submit" class="btn btn-primary">Save Settings</button>
-    </form>
-</div>
+      </form>
+    </div>
 
-<div class="settings-section">
-    <h3>Low Stock Alerts</h3>
-    <form method="POST" action="{{ url_for('settings.save_stock_alerts') }}">
+    <div class="settings-group">
+      <h3>Stock Alerts</h3>
+      <form method="POST" action="{{ url_for('settings.save_stock_alerts') }}">
         <div class="form-group">
-            <label for="ingredient-select">Select Ingredient:</label>
-            <select id="ingredient-select" name="ingredient_name" class="form-control">
-                <option value="">Choose an ingredient...</option>
-                {% for ingredient in ingredients %}
-                <option value="{{ ingredient.name }}" 
-                        data-unit="{{ ingredient.unit }}"
-                        data-current="{{ ingredient.quantity }}"
-                        data-threshold="{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else '' }}">
-                    {{ ingredient.name }} ({{ ingredient.unit }})
-                </option>
-                {% endfor %}
-            </select>
+          <label for="ingredient-select">Configure Low Stock Alerts:</label>
+          <select id="ingredient-select" name="ingredient_name" class="form-control">
+            <option value="">Choose an ingredient...</option>
+            {% for ingredient in ingredients %}
+            <option value="{{ ingredient.name }}" 
+                    data-unit="{{ ingredient.unit }}"
+                    data-current="{{ ingredient.quantity }}"
+                    data-threshold="{{ ingredient.low_stock_threshold if ingredient.low_stock_threshold else '' }}">
+                {{ ingredient.name }} ({{ ingredient.unit }})
+            </option>
+            {% endfor %}
+          </select>
         </div>
 
         <div id="alert-settings" style="display: none; margin-top: 20px;">
-            <div class="form-group">
-                <label>Current Stock:</label>
-                <span id="current-stock"></span>
-            </div>
-            <div class="form-group">
-                <label for="threshold">Alert Threshold:</label>
-                <input type="number" 
-                       id="threshold" 
-                       name="threshold" 
-                       step="0.01" 
-                       min="0" 
-                       class="form-control">
-                <span id="unit-display"></span>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Alert Setting</button>
+          <div class="form-group">
+            <label>Current Stock:</label>
+            <span id="current-stock"></span>
+          </div>
+          <div class="form-group">
+            <label for="threshold">Alert Threshold:</label>
+            <input type="number" id="threshold" name="threshold" step="0.01" min="0" class="form-control">
+            <span id="unit-display"></span>
+          </div>
+          <button type="submit" class="btn btn-primary">Save Alert Setting</button>
         </div>
-    </form>
+      </form>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>🔐 User & Permission Settings</h2>
+    <p class="coming-soon">Coming in future update</p>
+  </div>
+
+  <div class="settings-section">
+    <h2>🔔 Alerts & Notifications</h2>
+    <div class="settings-group">
+      <h3>Dashboard Display Toggles</h3>
+      <form method="POST" action="{{ url_for('settings.save_settings') }}">
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="show_low_stock" {% if settings.get('show_low_stock', True) %}checked{% endif %}>
+            Show low stock alerts
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="show_unfinished" {% if settings.get('show_unfinished', True) %}checked{% endif %}>
+            Show unfinished batch prompts
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Display Settings</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>🧠 Neurodivergent UX Modes</h2>
+    <p class="coming-soon">Coming in future update</p>
+  </div>
+
+  <div class="settings-section">
+    <h2>🗂️ Tag Management</h2>
+    <a href="/tags/manage" class="settings-link">🏷️ Manage Tags</a>
+  </div>
 </div>
 
 <script>
@@ -80,51 +170,4 @@ document.getElementById('ingredient-select').addEventListener('change', function
     alertSettings.style.display = 'block';
 });
 </script>
-
-<style>
-.settings-section {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.settings-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.settings-table th, .settings-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-.btn {
-    padding: 5px 10px;
-    background: #4CAF50;
-    color: white;
-    border-radius: 4px;
-    text-decoration: none;
-}
-</style>
 {% endblock %}
