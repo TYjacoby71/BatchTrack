@@ -16,10 +16,7 @@
     <div class="actions">
         <a href="/recipes">Back to Recipes</a> |
         <a href="/recipes/{{ recipe.id }}/edit">Edit</a> |
-        <a href="/recipes/plan/{{ recipe.id }}">Plan Production</a> |
-        <form style="display: inline;" action="/recipes/{{ recipe.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
-            <button type="submit">Delete</button>
-        </form>
+        <a href="/recipes/plan/{{ recipe.id }}">Plan Production</a>
     </div>
 </body>
 </html>
