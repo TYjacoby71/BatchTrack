@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <h2>Batch In Process - {{ recipe.name }}</h2>
@@ -18,7 +17,7 @@
 </div>
 
 <div class="batch-actions" style="margin-top: 20px;">
-    <form method="POST">
+    <form method="POST" action="/batches/finish/{{ batch_id }}">
         <input type="hidden" name="batch_id" value="{{ batch_id }}">
         <button type="submit" name="finish_batch" class="button">Finish Batch</button>
         <button type="submit" name="resume_later" class="button">Resume Later</button>
