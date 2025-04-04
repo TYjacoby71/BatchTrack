@@ -67,13 +67,22 @@ def dashboard():
         reverse=True
     )[:5]
 
-    # Format timestamps
+    # Format timestamps and check for unfinished batches
+    has_unfinished_batches = False
+    for batch in data.get("batches", []):
+        if not batch.get("completed", False):
+            has_unfinished_batches = True
+            break
+
     for batch in recent_batches:
         if batch.get('timestamp'):
             dt = datetime.fromisoformat(batch['timestamp'])
             batch['formatted_time'] = dt.strftime('%B %d, %Y at %I:%M %p')
 
-    return render_template("dashboard.html", low_stock=low_stock, recent_batches=recent_batches)
+    return render_template("dashboard.html", 
+                         low_stock=low_stock, 
+                         recent_batches=recent_batches,
+                         has_unfinished_batches=has_unfinished_batches)
 
 from unit_converter import can_fulfill
 from app.error_tools import safe_route
