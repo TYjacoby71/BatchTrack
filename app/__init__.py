@@ -5,7 +5,7 @@ from app.routes.batches import batches_bp
 import os
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='../templates')
     app.secret_key = 'dev'
 
     # Register blueprints
