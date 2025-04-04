@@ -162,64 +162,6 @@
   display: none;
   margin-top: 20px;
 }
-
-.recipe-item {
-  border: 1px solid #ddd;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.recipe-item:hover {
-  background: #f7fafc;
-  transform: translateY(-2px);
-}
-
-.recipe-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.recipe-name {
-  font-weight: 600;
-}
-
-.stock-status {
-  font-size: 0.9em;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.stock-status.ok {
-  background: #e6f4ea;
-  color: #1e7e34;
-}
-
-.stock-status.low {
-  background: #fef3cd;
-  color: #856404;
-}
-
-.recipe-stock-details {
-  font-size: 0.85em;
-  color: #666;
-}
-
-.ingredient-status {
-  padding: 2px 0;
-}
-
-.ingredient-status.low {
-  color: #dc3545;
-}
-
-.ingredient-status.ok {
-  color: #28a745;
-}
 </style>
 
 <div class="dashboard-container">
@@ -235,12 +177,28 @@
     </div>
     {% endif %}
 
-    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-      <h3>Select Recipe</h3>
-      <div id="recipe-list"></div>
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button onclick="startSelectedBatch()" class="main-btn">Start Batch</button>
-        <button onclick="cancelFlow()" class="main-btn" style="background: #f0f0f0;">Cancel</button>
+    <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; max-height: 80vh; background: white; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 25px; overflow-y: auto; border-radius: 12px;">
+      <h3 style="margin-bottom: 20px;">Which recipe would you like to use?</h3>
+      <div id="plan-production" style="display: none;">
+        <h3 id="selected-recipe-name" style="margin-bottom: 20px;"></h3>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Scale Recipe:</label>
+          <input type="number" id="scale" step="0.1" min="0.1" value="1" class="border rounded px-3 py-2 w-32" style="max-width: 120px;">
+        </div>
+        <div id="stock-check-results" class="bg-white rounded-lg shadow p-6 mb-6" style="display: none;"></div>
+        <button onclick="backToRecipeSelect()" class="main-btn">Back</button>
+        <button onclick="checkRecipeStock()" class="main-btn">Check Stock</button>
+        <div id="start-batch-button" style="display: none; margin-top: 10px;">
+          <button onclick="startSelectedBatch()" class="main-btn" style="background: #4CAF50; color: white;">Start Batch</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 20px; position: relative;">
+        <input type="text" id="recipe-search" placeholder="Search recipes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+        <div id="recipe-list" style="position: relative; margin-top: 8px; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;">
+        <!-- Recipes will be populated here -->
+      </div>
+      <div style="position: sticky; bottom: 0; padding-top: 20px; background: white;">
+        <button onclick="cancelFlow()" class="main-btn" style="width: 100%; background: #f0f0f0;">Cancel</button>
       </div>
     </div>
 
@@ -284,7 +242,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
-
+  
   if (window.innerWidth < 1200) {
     const originalItems = container.innerHTML;
     container.innerHTML = originalItems.repeat(3);
@@ -302,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
       momentum *= friction;
       position += momentum;
     }
-
+    
     if (window.innerWidth < 1200) {
       container.style.transform = `translateX(${position}px)`;
       requestAnimationFrame(update);
@@ -343,43 +301,131 @@ function toggleAll(source) {
 }
 
 function startFlow() {
+  let recipes = [];
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  
+  // Fade out buttons
+  actionButtons.style.transition = 'opacity 0.3s ease';
+  actionButtons.style.opacity = '0';
+  
   fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
+      recipes = data.recipes;
+      
+      // After buttons fade out, show modal with fade in
+      setTimeout(() => {
+        actionButtons.style.display = 'none';
+        recipeSelect.style.opacity = '0';
+        recipeSelect.style.display = 'block';
+        recipeSelect.style.transition = 'opacity 0.3s ease';
+        
+        // Trigger fade in
+        setTimeout(() => {
+          recipeSelect.style.opacity = '1';
+        }, 50);
+      }, 300);
+      
+      const searchInput = document.getElementById('recipe-search');
+      searchInput.focus();
+      
       const recipeList = document.getElementById('recipe-list');
-      recipeList.innerHTML = '';
-
-      // Load each recipe with its stock status
-      data.recipes.forEach(recipe => {
-        fetch(`/api/check-stock/${encodeURIComponent(recipe.name)}`)
-          .then(response => response.json())
-          .then(stockData => {
-            const hasLowStock = stockData.stock_check.some(item => item.status === "Insufficient");
-            const stockStatus = hasLowStock ? 
-              '<span class="stock-status low">⚠️ Low Stock</span>' : 
-              '<span class="stock-status ok">✅ Stock OK</span>';
-
-            const recipeItem = document.createElement('div');
-            recipeItem.className = 'recipe-item';
-            recipeItem.innerHTML = `
-              <div class="recipe-header">
-                <span class="recipe-name">${recipe.name}</span>
-                ${stockStatus}
-              </div>
-              <div class="recipe-stock-details">
-                ${stockData.stock_check.map(item => `
-                  <div class="ingredient-status ${item.status === 'Insufficient' ? 'low' : 'ok'}">
-                    ${item.ingredient}: ${item.status}
-                  </div>
-                `).join('')}
-              </div>
-            `;
-            recipeItem.onclick = () => startSelectedBatch(recipe.id);
-            recipeList.appendChild(recipeItem);
-          });
+      
+      // Show dropdown and initial list on focus
+      searchInput.addEventListener('focus', () => {
+        setTimeout(() => {
+          recipeList.style.display = 'block';
+          displayRecipes(recipes);
+        }, 0);
       });
-      document.getElementById('recipe-select').style.display = 'flex';
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('mousedown', (e) => {
+        if (!searchInput.contains(e.target) && !recipeList.contains(e.target)) {
+          recipeList.style.display = 'none';
+        }
+      });
+      
+      searchInput.addEventListener('input', (e) => {
+        const search = e.target.value.toLowerCase();
+        const filteredRecipes = search ? recipes.filter(r => 
+          r.name.toLowerCase().includes(search) || 
+          (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
+        ) : recipes;
+        
+        displayRecipes(filteredRecipes);
+      });
+
+      function displayRecipes(recipesToShow) {
+        recipeList.style.maxHeight = '300px';
+        recipeList.style.overflowY = 'auto';
+        recipeList.innerHTML = recipesToShow.slice(0, 5).map(r => `
+          <div class="recipe-card" onclick="showPlanProduction(${r.id}, '${r.name}')" 
+               style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
+            <h4 style="margin: 0 0 5px 0;">${r.name}</h4>
+            ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
+          </div>
+        `).join('');
+
+        // Add hover effect
+        const cards = recipeList.getElementsByClassName('recipe-card');
+        Array.from(cards).forEach(card => {
+          card.addEventListener('mouseover', () => card.style.background = '#f5f5f5');
+          card.addEventListener('mouseout', () => card.style.background = 'white');
+        });
+      }
     });
+}
+
+let selectedRecipe = null;
+
+function showPlanProduction(recipeId, recipeName) {
+  selectedRecipe = { id: recipeId, name: recipeName };
+  document.getElementById('recipe-list').style.display = 'none';
+  document.getElementById('recipe-search').style.display = 'none';
+  document.getElementById('plan-production').style.display = 'block';
+  document.getElementById('selected-recipe-name').textContent = recipeName;
+}
+
+function backToRecipeSelect() {
+  document.getElementById('recipe-list').style.display = 'block';
+  document.getElementById('recipe-search').style.display = 'block';
+  document.getElementById('plan-production').style.display = 'none';
+  document.getElementById('stock-check-results').style.display = 'none';
+}
+
+function checkRecipeStock() {
+  const scale = document.getElementById('scale').value;
+  document.getElementById('start-batch-button').style.display = 'none';
+  
+  fetch(`/stock/check/${selectedRecipe.id}`)
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const stockCheck = doc.querySelector('table');
+      if (stockCheck) {
+        const resultsDiv = document.getElementById('stock-check-results');
+        resultsDiv.innerHTML = stockCheck.outerHTML;
+        resultsDiv.style.display = 'block';
+        
+        // Only show start batch button if no ingredients have LOW status
+        const lowStock = doc.querySelectorAll('td[style="color: red;"]');
+        if (lowStock.length === 0) {
+          document.getElementById('start-batch-button').style.display = 'block';
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error checking stock:', error);
+      document.getElementById('stock-check-results').innerHTML = 'Error checking stock availability';
+    });
+}
+
+function startSelectedBatch() {
+  const scale = document.getElementById('scale').value;
+  window.location.href = `/start-batch/${selectedRecipe.id}?scale=${scale}`;
 }
 
 function checkStock() {
@@ -395,18 +441,35 @@ function finishFlow() {
   window.location.href = "/batches";
 }
 
-function startSelectedBatch(recipeId) { // Added recipeId parameter
+function startSelectedBatch() {
+  const recipeId = document.getElementById('recipe').value;
   if (!recipeId) {
     alert('Please select a recipe first');
     return;
   }
-  checkStock(recipeId); // Pass recipeId to checkStock
+  checkStock();
 }
 
 function cancelFlow() {
-  document.getElementById('recipe-select').style.display = 'none';
-  document.getElementById('stock-status').style.display = 'none';
-  //  Removed: document.getElementById('recipe').value = '';  //This line was causing issues
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  const stockStatus = document.getElementById('stock-status');
+  
+  // Fade out modal
+  recipeSelect.style.opacity = '0';
+  stockStatus.style.opacity = '0';
+  
+  setTimeout(() => {
+    recipeSelect.style.display = 'none';
+    stockStatus.style.display = 'none';
+    
+    // Fade in buttons
+    actionButtons.style.display = 'flex';
+    actionButtons.style.opacity = '0';
+    setTimeout(() => {
+      actionButtons.style.opacity = '1';
+    }, 50);
+  }, 300);
 }
 
 

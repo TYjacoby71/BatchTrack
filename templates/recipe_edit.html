@@ -17,8 +17,8 @@
         <div>
             <label>Name:</label><br>
             <input type="text" name="name" value="{{ recipe.name }}" required><br>
-            <label for="tags">Tags (comma-separated):</label>
-            <input type="text" name="tags" value="{{ recipe.tags | join(', ') if recipe.tags else '' }}" placeholder="e.g. face, calming, night-use"><br>
+                <label for="tags">Tags (comma-separated):</label>
+                <input type="text" name="tags" value="{{ recipe.tags | join(', ') if recipe.tags else '' }}" placeholder="e.g. face, calming, night-use"><br>
         </div>
         <div>
             <label>Description:</label><br>
@@ -28,7 +28,56 @@
             <label>Instructions:</label><br>
             <textarea name="instructions" required>{{ recipe.instructions }}</textarea>
         </div>
-
+        <div>
+            <label>Product Type:</label><br>
+            <select name="product_type" onchange="toggleCustomField(this, 'customProductType')">
+                <option value="">-- Select --</option>
+                {% for pt in category_options.product_types %}
+                    <option value="{{ pt }}" {% if recipe and recipe.product_type == pt %}selected{% endif %}>{{ pt }}</option>
+                {% endfor %}
+                <option value="__custom__">+ Add New</option>
+            </select>
+            <div id="customProductType" style="display:none;">
+                <label>New Product Type:</label>
+                <input type="text" name="custom_product_type">
+            </div>
+        </div>
+        <div>
+            <label>Use Area:</label><br>
+            <select name="use_area" onchange="toggleCustomField(this, 'customUseArea')">
+                <option value="">-- Select --</option>
+                {% for ua in category_options.use_areas %}
+                    <option value="{{ ua }}" {% if recipe and recipe.use_area == ua %}selected{% endif %}>{{ ua }}</option>
+                {% endfor %}
+                <option value="__custom__">+ Add New</option>
+            </select>
+            <div id="customUseArea" style="display:none;">
+                <label>New Use Area:</label>
+                <input type="text" name="custom_use_area">
+            </div>
+        </div>
+        <div>
+            <label>Use Case:</label><br>
+            <select name="use_case" onchange="toggleCustomField(this, 'customUseCase')">
+                <option value="">-- Select --</option>
+                {% for uc in category_options.use_cases %}
+                    <option value="{{ uc }}" {% if recipe and recipe.use_case == uc %}selected{% endif %}>{{ uc }}</option>
+                {% endfor %}
+                <option value="__custom__">+ Add New</option>
+            </select>
+            <div id="customUseCase" style="display:none;">
+                <label>New Use Case:</label>
+                <input type="text" name="custom_use_case">
+            </div>
+        </div>
+        <div>
+            <label>Primary Ingredient:</label><br>
+            <select name="primary_ingredient">
+                {% for pi in category_options.primary_ingredients %}
+                    <option value="{{ pi }}" {% if recipe and recipe.primary_ingredient == pi %}selected{% endif %}>{{ pi }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <h2>Ingredients:</h2>
         <div id="ingredient-list">
             {% for ingredient in recipe.ingredients %}
@@ -98,14 +147,24 @@
         function removeIngredient(btn) {
             btn.parentElement.remove();
         }
+    function toggleCustomField(selectEl, targetId) {
+            const customField = document.getElementById(targetId);
+            customField.style.display = (selectEl.value === '__custom__') ? 'block' : 'none';
+        }
 
-        document.addEventListener('change', function(e) {
-            if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
-                if (e.target.value === '__add_new__') {
-                    const currentPath = window.location.pathname;
-                    window.location.href = `/quickadd?next=${encodeURIComponent(currentPath)}`;
-                }
+    document.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' && e.target.name === 'ingredient_name[]') {
+            if (e.target.value === '__add_new__') {
+                const currentPath = window.location.pathname;
+                window.location.href = `/quickadd?next=${encodeURIComponent(currentPath)}`;
             }
-            if (e.target.tagName === 'SELECT' && e.target.name.includes('ingredient_unit[]')) {
-                if (e.target.value === '__add_unit__') {
-                    window.location.href = '/units?return_url=' + encodeURIComponent(window_
+        }
+        if (e.target.tagName === 'SELECT' && e.target.name.includes('ingredient_unit[]')) {
+            if (e.target.value === '__add_unit__') {
+                window.location.href = '/units?return_url=' + encodeURIComponent(window.location.pathname);
+            }
+        }
+    });
+    </script>
+</body>
+</html>
