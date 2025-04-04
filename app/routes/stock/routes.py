@@ -145,6 +145,7 @@ def check_all_stock():
                          stock_report=stock_report, 
                          missing_summary=needed_items)
 
+@stock_bp.route('/update', methods=['GET', 'POST'])
 @stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
     data = load_data()
