@@ -6,9 +6,8 @@ import os
 
 def create_app():
     app = Flask(__name__, template_folder='../templates')
-    app.secret_key = 'dev'
+    app.secret_key = 'supersecretkey'  # Replace with a secure key in production
 
-    # Register blueprints
     app.register_blueprint(batches_bp)
     app.register_blueprint(ingredients_bp)
     from app.routes.start_flow import start_flow_bp

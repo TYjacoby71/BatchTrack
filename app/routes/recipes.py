@@ -229,15 +229,60 @@ def plan_production(recipe_id):
             return redirect(f'/start-batch/{recipe_id}?scale={scale}')
 
         if 'check_stock' in request.form:
-            from app.routes.stock.routes import check_stock_for_recipes
-            stock_report, needed_items = check_stock_for_recipes([recipe_id], [scale])
-            return render_template('bulk_stock_results.html',
-                                recipe=recipe,
-                                stock_report=stock_report,
-                                missing_summary=needed_items)
+            for item in recipe.get('ingredients', []):
+                name = item['name']
+                needed_qty = float(item['quantity']) * scale
+                unit = item.get('unit', 'units')
 
-    return render_template('plan_production.html',
+                match = next((i for i in inventory if i['name'].lower() == name.lower()), None)
+                if match:
+                    try:
+                        check = check_stock_availability(
+                            needed_qty, unit,
+                            float(match['quantity']), match['unit'],
+                            material=name.lower()
+                        )
+                        if check['status'] == 'LOW':
+                            missing_items[name] = {
+                                'needed': needed_qty,
+                                'available': check['converted'],
+                                'unit': unit
+                            }
+                        stock_check.append({
+                            'name': name,
+                            'needed': f"{needed_qty} {unit}",
+                            'available': f"{check['converted']} {check['unit']}",
+                            'status': check['status']
+                        })
+                    except (ValueError, TypeError):
+                        stock_check.append({
+                            'name': name,
+                            'needed': f"{needed_qty} {unit}",
+                            'available': "0",
+                            'status': 'LOW'
+                        })
+                        missing_items[name] = {
+                            'needed': needed_qty,
+                            'available': 0,
+                            'unit': unit
+                        }
+                else:
+                    stock_check.append({
+                        'name': name,
+                        'needed': f"{needed_qty} {unit}",
+                        'available': "0",
+                        'status': 'LOW'
+                    })
+                    missing_items[name] = {
+                        'needed': needed_qty,
+                        'available': 0,
+                        'unit': unit
+                    }
+
+    return render_template('plan_production.html', 
                          recipe=recipe,
-                         scale=scale)
+                         scale=scale,
+                         stock_check=stock_check,
+                         missing_items=missing_items)
 
 # Batch routes moved to batches.py
