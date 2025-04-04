@@ -312,9 +312,13 @@ function startFlow() {
       actionButtons.style.transition = 'opacity 0.3s ease';
       actionButtons.style.opacity = '0';
       
-      fetch('/recipes.json')
+      fetch('/recipes')
         .then(response => response.json())
         .then(data => {
+          if (!data.recipes) {
+            console.error('No recipes found:', data);
+            return;
+          }
           recipes = data.recipes;
           
           // After all buttons fade out
@@ -336,9 +340,39 @@ function startFlow() {
           }, 300);
       
       const searchInput = document.getElementById('recipe-search');
-      searchInput.focus();
-      
-      const recipeList = document.getElementById('recipe-list');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        })
+        .catch(error => {
+          console.error('Error loading recipes:', error);
+        });
+    }, 300);
+  }, 200);
+}
+
+function finishFlow() {
+  window.location.href = "/batches";
+}
+
+function cancelFlow() {
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  
+  recipeSelect.style.opacity = '0';
+  
+  setTimeout(() => {
+    recipeSelect.style.display = 'none';
+    actionButtons.style.display = 'flex';
+    actionButtons.style.opacity = '0';
+    setTimeout(() => {
+      actionButtons.style.opacity = '1';
+    }, 50);
+  }, 300);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const recipeList = document.getElementById('recipe-list');
       
       // Show dropdown and initial list on focus
       searchInput.addEventListener('focus', () => {
