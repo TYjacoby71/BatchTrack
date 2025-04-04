@@ -291,32 +291,49 @@ function startFlow() {
   let recipes = [];
   const actionButtons = document.getElementById('action-select');
   const recipeSelect = document.getElementById('recipe-select');
+  const lowStockAlert = document.querySelector('.alert-card');
   
-  // Fade out buttons
-  actionButtons.style.transition = 'opacity 0.3s ease';
-  actionButtons.style.opacity = '0';
+  // First fade out low stock alert if it exists
+  if (lowStockAlert) {
+    lowStockAlert.style.transition = 'opacity 0.3s ease';
+    lowStockAlert.style.opacity = '0';
+  }
   
-  fetch('/recipes.json')
-    .then(response => response.json())
-    .then(data => {
-      recipes = data.recipes;
+  // Then fade out finish batch button after delay
+  setTimeout(() => {
+    const finishBatchBtn = document.querySelector('button[onclick="finishFlow()"]');
+    if (finishBatchBtn) {
+      finishBatchBtn.style.transition = 'opacity 0.3s ease';
+      finishBatchBtn.style.opacity = '0';
+    }
+    
+    // Finally fade out start batch button
+    setTimeout(() => {
+      actionButtons.style.transition = 'opacity 0.3s ease';
+      actionButtons.style.opacity = '0';
       
-      // After buttons fade out
-      setTimeout(() => {
-        actionButtons.style.display = 'none';
-        
-        // Longer delay before showing modal to ensure buttons are gone
-        setTimeout(() => {
-          recipeSelect.style.opacity = '0';
-          recipeSelect.style.display = 'block';
-          recipeSelect.style.transition = 'opacity 0.4s ease';
+      fetch('/recipes.json')
+        .then(response => response.json())
+        .then(data => {
+          recipes = data.recipes;
           
-          // Trigger fade in with slight delay
+          // After all buttons fade out
           setTimeout(() => {
-            recipeSelect.style.opacity = '1';
-          }, 100);
-        }, 400);
-      }, 300);
+            if (lowStockAlert) lowStockAlert.style.display = 'none';
+            if (finishBatchBtn) finishBatchBtn.parentElement.style.display = 'none';
+            actionButtons.style.display = 'none';
+            
+            // Show modal with fade in
+            setTimeout(() => {
+              recipeSelect.style.opacity = '0';
+              recipeSelect.style.display = 'block';
+              recipeSelect.style.transition = 'opacity 0.4s ease';
+              
+              setTimeout(() => {
+                recipeSelect.style.opacity = '1';
+              }, 100);
+            }, 200);
+          }, 300);
       
       const searchInput = document.getElementById('recipe-search');
       searchInput.focus();
