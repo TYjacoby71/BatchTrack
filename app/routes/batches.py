@@ -400,7 +400,7 @@ def start_batch(recipe_id):
 
         data.setdefault('batches', []).append(new_batch)
         save_data(data)
-        return redirect('/batches')
+        return redirect(f'/batches/in_progress/{batch_id}')
 
     return render_template('start_batch.html', recipe=recipe, scale=scale) # Pass scale to template
 
