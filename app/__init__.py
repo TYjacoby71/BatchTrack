@@ -8,9 +8,7 @@ def create_app():
     app = Flask(__name__, template_folder='../templates')
     app.secret_key = 'supersecretkey'  # Replace with a secure key in production
 
-    from app.routes.batch_management import batch_mgmt_bp
     app.register_blueprint(batches_bp)
-    app.register_blueprint(batch_mgmt_bp)
     app.register_blueprint(ingredients_bp)
     app.register_blueprint(recipes_bp)
     from app.routes.auth import auth_bp
