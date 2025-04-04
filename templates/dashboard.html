@@ -226,106 +226,10 @@
 </div>
 
 <script>
-function toggleAll(source) {
-  const checkboxes = document.getElementsByName('batch_ids');
-  for(let checkbox of checkboxes) {
-    checkbox.checked = source.checked;
-  }
-}
-
-let recipes = [];
-
-function startFlow() {
-  const actionButtons = document.getElementById('action-select');
-  const recipeSelect = document.getElementById('recipe-select');
-  const lowStockAlert = document.querySelector('.alert-card');
-
-  if (lowStockAlert) {
-    lowStockAlert.style.transition = 'opacity 0.3s ease';
-    lowStockAlert.style.opacity = '0';
-  }
-
-  setTimeout(() => {
-    const finishBatchBtn = document.querySelector('button[onclick="finishFlow()"]');
-    if (finishBatchBtn) {
-      finishBatchBtn.style.transition = 'opacity 0.3s ease';
-      finishBatchBtn.style.opacity = '0';
-    }
-
-    setTimeout(() => {
-      actionButtons.style.transition = 'opacity 0.3s ease';
-      actionButtons.style.opacity = '0';
-
-      fetch('/recipes')
-        .then(response => response.json())
-        .then(data => {
-          if (!data.recipes) {
-            console.error('No recipes found:', data);
-            return;
-          }
-          recipes = data.recipes;
-
-          setTimeout(() => {
-            if (lowStockAlert) lowStockAlert.style.display = 'none';
-            if (finishBatchBtn) finishBatchBtn.parentElement.style.display = 'none';
-            actionButtons.style.display = 'none';
-
-            setTimeout(() => {
-              recipeSelect.style.opacity = '0';
-              recipeSelect.style.display = 'block';
-              recipeSelect.style.transition = 'opacity 0.4s ease';
-
-              setTimeout(() => {
-                recipeSelect.style.opacity = '1';
-                const searchInput = document.getElementById('recipe-search');
-                if (searchInput) {
-                  searchInput.focus();
-                  searchInput.value = '';
-                  const recipeList = document.getElementById('recipe-list');
-                  if (recipeList) {
-                    recipeList.style.display = 'block';
-                    displayRecipes(recipes);
-                  }
-                }
-              }, 100);
-            }, 200);
-          }, 300);
-        })
-        .catch(error => {
-          console.error('Error loading recipes:', error);
-        });
-    }, 300);
-  }, 200);
-}
-
-function finishFlow() {
-  window.location.href = "/batches";
-}
-
-function cancelFlow() {
-  const actionButtons = document.getElementById('action-select');
-  const recipeSelect = document.getElementById('recipe-select');
-
-  recipeSelect.style.opacity = '0';
-
-  setTimeout(() => {
-    recipeSelect.style.display = 'none';
-    actionButtons.style.display = 'flex';
-    actionButtons.style.opacity = '0';
-    setTimeout(() => {
-      actionButtons.style.opacity = '1';
-    }, 50);
-  }, 300);
-}
-
-function startSelectedBatch(recipeId) {
-  window.location.href = `/stock/check/${recipeId}`;
-}
-
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
-
+  
   if (window.innerWidth < 1200) {
     const originalItems = container.innerHTML;
     container.innerHTML = originalItems.repeat(3);
@@ -343,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
       momentum *= friction;
       position += momentum;
     }
-
+    
     if (window.innerWidth < 1200) {
       container.style.transform = `translateX(${position}px)`;
       requestAnimationFrame(update);
@@ -372,11 +276,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
     requestAnimationFrame(update);
   }
+});
+</script>
 
-  function displayRecipes(recipesToShow) {
-        const recipeList = document.getElementById('recipe-list');
-        if (!recipeList) return;
+<script>
+function toggleAll(source) {
+  const checkboxes = document.getElementsByName('batch_ids');
+  for(let checkbox of checkboxes) {
+    checkbox.checked = source.checked;
+  }
+}
 
+function startFlow() {
+  let recipes = [];
+  const actionButtons = document.getElementById('action-select');
+  const recipeSelect = document.getElementById('recipe-select');
+  
+  // Fade out buttons
+  actionButtons.style.transition = 'opacity 0.3s ease';
+  actionButtons.style.opacity = '0';
+  
+  fetch('/recipes.json')
+    .then(response => response.json())
+    .then(data => {
+      recipes = data.recipes;
+      
+      // After buttons fade out, show modal with fade in
+      setTimeout(() => {
+        actionButtons.style.display = 'none';
+        recipeSelect.style.opacity = '0';
+        recipeSelect.style.display = 'block';
+        recipeSelect.style.transition = 'opacity 0.3s ease';
+        
+        // Trigger fade in
+        setTimeout(() => {
+          recipeSelect.style.opacity = '1';
+        }, 50);
+      }, 300);
+      
+      const searchInput = document.getElementById('recipe-search');
+      searchInput.focus();
+      
+      const recipeList = document.getElementById('recipe-list');
+      
+      // Show dropdown and initial list on focus
+      searchInput.addEventListener('focus', () => {
+        setTimeout(() => {
+          recipeList.style.display = 'block';
+          displayRecipes(recipes);
+        }, 0);
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('mousedown', (e) => {
+        if (!searchInput.contains(e.target) && !recipeList.contains(e.target)) {
+          recipeList.style.display = 'none';
+        }
+      });
+      
+      searchInput.addEventListener('input', (e) => {
+        const search = e.target.value.toLowerCase();
+        const filteredRecipes = search ? recipes.filter(r => 
+          r.name.toLowerCase().includes(search) || 
+          (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
+        ) : recipes;
+        
+        displayRecipes(filteredRecipes);
+      });
+
+      function displayRecipes(recipesToShow) {
         recipeList.style.maxHeight = '300px';
         recipeList.style.overflowY = 'auto';
         recipeList.innerHTML = recipesToShow.slice(0, 5).map(r => `
@@ -387,26 +355,19 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
         `).join('');
 
+        // Add hover effect
         const cards = recipeList.getElementsByClassName('recipe-card');
         Array.from(cards).forEach(card => {
           card.addEventListener('mouseover', () => card.style.background = '#f5f5f5');
           card.addEventListener('mouseout', () => card.style.background = 'white');
         });
       }
-
-      const searchInput = document.getElementById('recipe-search');
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          const search = e.target.value.toLowerCase();
-          const filteredRecipes = search ? recipes.filter(r => 
-            r.name.toLowerCase().includes(search) || 
-            (r.tags && r.tags.some(tag => tag.toLowerCase().includes(search)))
-          ) : recipes;
-          displayRecipes(filteredRecipes);
-        });
-      }
     });
+}
 
+function startSelectedBatch(recipeId) {
+  window.location.href = `/stock/check/${recipeId}`;
+}
 
 function checkStock() {
   const recipeId = document.getElementById("recipe").value;
@@ -415,6 +376,10 @@ function checkStock() {
     return;
   }
   window.location.href = `/stock/check/${recipeId}`;
+}
+
+function finishFlow() {
+  window.location.href = "/batches";
 }
 
 function startSelectedBatch() {
@@ -430,15 +395,15 @@ function cancelFlow() {
   const actionButtons = document.getElementById('action-select');
   const recipeSelect = document.getElementById('recipe-select');
   const stockStatus = document.getElementById('stock-status');
-
+  
   // Fade out modal
   recipeSelect.style.opacity = '0';
   stockStatus.style.opacity = '0';
-
+  
   setTimeout(() => {
     recipeSelect.style.display = 'none';
     stockStatus.style.display = 'none';
-
+    
     // Fade in buttons
     actionButtons.style.display = 'flex';
     actionButtons.style.opacity = '0';
