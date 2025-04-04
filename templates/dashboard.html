@@ -359,7 +359,7 @@ function startFlow() {
         recipeList.style.maxHeight = '300px';
         recipeList.style.overflowY = 'auto';
         recipeList.innerHTML = recipesToShow.slice(0, 5).map(r => `
-          <div class="recipe-card" onclick="showPlanProduction(${JSON.stringify(r)})" 
+          <div class="recipe-card" onclick="showPlanProduction(${r.id}, '${r.name}')" 
                style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
             <h4 style="margin: 0 0 5px 0;">${r.name}</h4>
             ${r.tags ? `<small style="color: #666;">[${r.tags.join(', ')}]</small>` : ''}
@@ -378,12 +378,12 @@ function startFlow() {
 
 let selectedRecipe = null;
 
-function showPlanProduction(recipe) {
-  selectedRecipe = recipe;
+function showPlanProduction(recipeId, recipeName) {
+  selectedRecipe = { id: recipeId, name: recipeName };
   document.getElementById('recipe-list').style.display = 'none';
   document.getElementById('recipe-search').style.display = 'none';
   document.getElementById('plan-production').style.display = 'block';
-  document.getElementById('selected-recipe-name').textContent = recipe.name;
+  document.getElementById('selected-recipe-name').textContent = recipeName;
 }
 
 function backToRecipeSelect() {
