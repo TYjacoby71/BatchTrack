@@ -1,8 +1,0 @@
-{% extends "layout.html" %}
-{% block content %}
-    <h1>📋 Stock Check for {{ recipe.name }}</h1>
-    {% include 'bulk_stock_results.html' %}
-    <br>
-    <a href="/recipes">← Back to Recipes</a> |
-    <a href="/start-batch/{{ recipe.id }}" class="button">Start Batch</a>
-{% endblock %}
