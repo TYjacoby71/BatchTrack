@@ -99,27 +99,27 @@ def process_stock_report():
                 raise ValueError("No stock found")
 
             check = check_stock_availability(
-                    details['qty'],
-                    details['unit'],
-                    current['quantity'],
-                    current['unit'],
-                    material=name.lower()
-                )
+                details['qty'],
+                details['unit'],
+                current['quantity'],
+                current['unit'],
+                material=name.lower()
+            )
 
-                stock_report.append({
-                    "name": name,
-                    "needed": f"{round(details['qty'], 2)} {details['unit']}",
-                    "available": f"{check['converted']} {check['unit']}",
-                    "status": check['status']
-                })
-            except (ValueError, TypeError):
-                stock_report.append({
-                    "name": name,
-                    "needed": details['qty'],
-                    "available": 0,
-                    "unit": details['unit'],
-                    "status": "LOW"
-                })
+            stock_report.append({
+                "name": name,
+                "needed": f"{round(details['qty'], 2)} {details['unit']}",
+                "available": f"{check['converted']} {check['unit']}",
+                "status": check['status']
+            })
+        except (ValueError, TypeError):
+            stock_report.append({
+                "name": name,
+                "needed": details['qty'],
+                "available": 0,
+                "unit": details['unit'],
+                "status": "LOW"
+            })
 
         # Calculate missing items summary
         from collections import defaultdict
