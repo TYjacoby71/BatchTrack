@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, request, redirect, Response, jsonify, flash, session
 from app.routes.utils import load_data, save_data
 from unit_converter import UnitConversionService, check_stock_availability, can_fulfill
@@ -147,6 +148,8 @@ def check_all_stock():
 @stock_bp.route('/inventory/update', methods=['GET', 'POST'])
 def update_stock():
     data = load_data()
+    inventory = data.get("ingredients", [])
+    reasons = ["Purchase", "Donation", "Spoiled", "Sample", "Test Batch", "Error", "Sync", "Other"]
 
     if request.method == 'POST':
         ingredients = data.get('ingredients', [])
@@ -161,7 +164,6 @@ def update_stock():
                     delta = float(delta_str)
                     ingredient = next((i for i in ingredients if i['name'] == name), None)
                     if ingredient:
-                        # Convert units if necessary
                         if unit != ingredient['unit']:
                             converted_delta = converter.convert(delta, unit, ingredient['unit'])
                             if converted_delta is not None:
@@ -169,16 +171,14 @@ def update_stock():
                             else:
                                 continue
 
-                        # Apply the change based on reason
                         if reason in ['Loss', 'Spoiled', 'Donation']:
-                            delta = -abs(delta)  # Make sure it's negative for removals
+                            delta = -abs(delta)
                         else:
-                            delta = abs(delta)  # Make sure it's positive for additions
+                            delta = abs(delta)
 
                         current_qty = float(ingredient.get('quantity', 0))
                         ingredient['quantity'] = current_qty + delta
 
-                        # Log the change
                         data.setdefault('inventory_log', []).append({
                             'name': name,
                             'change': delta,
@@ -190,32 +190,15 @@ def update_stock():
                     continue
 
         save_data(data)
-        # Get the referrer from form data, fallback to HTTP referrer, then ingredients page
         previous_page = request.form.get('referrer') or request.referrer or '/ingredients'
         return redirect(previous_page)
 
-    # Load units from JSON file
     with open('units.json') as f:
         units = json.load(f)
 
     return render_template('update_stock.html', 
                          ingredients=data.get('ingredients', []),
                          units=units)
-
-
-@stock_bp.route('/check-bulk', methods=['GET', 'POST'])
-def check_stock_bulk():
-    data = load_data()
-    if request.method == 'POST':
-        recipe_ids = [int(id) for id in request.form.getlist('recipe_id')]
-        batch_counts = [float(count) for count in request.form.getlist('batch_count') if float(count or 0) > 0]
-
-        stock_report, needed_items = check_stock_for_recipes(recipe_ids, batch_counts)
-        return render_template('bulk_stock_results.html', 
-                             stock_report=stock_report, 
-                             missing_summary=needed_items)
-
-    return render_template('bulk_stock_check.html', recipes=data.get('recipes', []))
 
 @stock_bp.route('/inventory/adjust', methods=['GET', 'POST'])
 def adjust_inventory():
