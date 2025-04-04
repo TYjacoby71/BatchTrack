@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>📋 Stock Check for {{ recipe.name }}</h1>
+
+{% if stock_check %}
+<table border="1">
+    <tr>
+        <th>Ingredient</th>
+        <th>Needed</th>
+        <th>Available Stock</th>
+        <th>Status</th>
+    </tr>
+    {% for item in stock_check %}
+    <tr>
+        <td>{{ item.name }}</td>
+        <td>{{ item.needed }}</td>
+        <td>{{ item.available }}</td>
+        <td{% if item.status != 'OK' %} style="color: red;"{% endif %}>
+            {% if item.status == 'OK' %}
+                ✅ OK
+            {% else %}
+                ❌ {{ item.status }}
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if session.get('needed_items') %}
+    <div class="alert alert-warning">
+        <h3>🛒 Needed Items Summary:</h3>
+        <ul>
+            {% for name, info in (session.get('needed_items') or {}).items() %}
+                <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+            {% endfor %}
+        </ul>
+        <form id="exportForm">
+            <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
+            <button type="button" onclick="printList()">🖨 Print List</button>
+        </form>
+
+        <script>
+        function getItems() {
+            const items = [];
+            {% for name, info in (session.get('needed_items') or {}).items() %}
+                items.push({ name: "{{ name }}", total: {{ info.total }}, unit: "{{ info.unit }}" });
+            {% endfor %}
+            return items;
+        }
+
+        function downloadCSV() {
+            fetch('/missing/export/csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: getItems() })
+            })
+            .then(res => res.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "missing_items.csv";
+                a.click();
+            });
+        }
+
+        function printList() {
+            fetch('/missing/export/print', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: getItems() })
+            })
+            .then(res => res.text())
+            .then(html => {
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(html);
+                printWindow.document.close();
+            });
+        }
+        </script>
+    </div>
+{% endif %}
+{% else %}
+<p>No stock check data available.</p>
+{% endif %}
+
+<br>
+<a href="/recipes">← Back to Recipes</a> |
+<a href="/start-batch/{{ recipe.id }}" class="button">Start Batch</a>
+{% endblock %}
