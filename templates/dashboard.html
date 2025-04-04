@@ -397,6 +397,8 @@ function backToRecipeSelect() {
 
 function checkRecipeStock() {
   const scale = document.getElementById('scale').value;
+  document.getElementById('start-batch-button').style.display = 'none';
+  
   fetch(`/stock/check/${selectedRecipe.id}`)
     .then(response => response.text())
     .then(html => {
@@ -408,10 +410,11 @@ function checkRecipeStock() {
         resultsDiv.innerHTML = stockCheck.outerHTML;
         resultsDiv.style.display = 'block';
         
-        // Check if any ingredients have LOW status
+        // Only show start batch button if no ingredients have LOW status
         const lowStock = doc.querySelectorAll('td[style="color: red;"]');
-        const startBatchBtn = document.getElementById('start-batch-button');
-        startBatchBtn.style.display = lowStock.length > 0 ? 'none' : 'block';
+        if (lowStock.length === 0) {
+          document.getElementById('start-batch-button').style.display = 'block';
+        }
       }
     })
     .catch(error => {
