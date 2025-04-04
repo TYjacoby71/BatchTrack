@@ -121,7 +121,7 @@ def check_stock_for_recipe(recipe_id):
     if needed_items:
         session['needed_items'] = needed_items
 
-    return render_template("stock_status.html", recipe=recipe, stock_check=stock_report)
+    return render_template("bulk_stock_results.html", recipe=recipe, stock_report=stock_report, missing_summary=needed_items)
 
 @stock_bp.route('/check-bulk', methods=['GET', 'POST'])
 def check_stock_bulk():
