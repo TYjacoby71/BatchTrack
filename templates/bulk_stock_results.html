@@ -26,13 +26,16 @@
     </tr>
     {% endfor %}
 </table>
-{% if missing_summary %}
-    <h3>🛒 Needed Items Summary:</h3>
-    <ul>
-        {% for name, info in missing_summary.items() %}
-            <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
-        {% endfor %}
-    </ul>
+<h3>🛒 Stock Check Summary:</h3>
+    {% if missing_summary %}
+        <ul>
+            {% for name, info in missing_summary.items() %}
+                <li>{{ name }} — need {{ info.total | round(2) }} {{ info.unit }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>✅ All ingredients are in stock!</p>
+    {% endif %}
     <form id="exportForm">
       <button type="button" onclick="downloadCSV()">⬇ Export CSV</button>
       <button type="button" onclick="printList()">🖨 Print List</button>
