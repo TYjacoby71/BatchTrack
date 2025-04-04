@@ -84,10 +84,23 @@
         background: var(--primary-color);
         flex-direction: column;
         padding: var(--spacing-2);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
       }
 
       .nav-menu.active {
         display: flex;
+      }
+
+      .nav-menu a {
+        padding: 12px var(--spacing-3);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .nav-menu a:last-child {
+        border-bottom: none;
       }
 
       .menu-toggle {
@@ -97,6 +110,7 @@
         border: none;
         font-size: 24px;
         cursor: pointer;
+        padding: var(--spacing-2);
       }
 
       main {
@@ -161,7 +175,7 @@
       background: var(--secondary-color);
     }
 
-    
+
   </style>
 </head>
 <body>
