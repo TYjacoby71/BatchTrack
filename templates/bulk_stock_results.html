@@ -1,8 +1,11 @@
 
+{% extends "layout.html" %}
+{% block content %}
+
 {% if recipe %}
 <h1>📋 Stock Check for {{ recipe.name }}</h1>
 {% else %}
-<h1>📋 Bulk Stock Check Results</h1>
+<h1>📋 Stock Check Results</h1>
 {% endif %}
 
 <table class="w-full border-collapse mb-6">
@@ -99,3 +102,4 @@ function printList() {
     });
 }
 </script>
+{% endblock %}
