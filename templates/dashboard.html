@@ -162,6 +162,64 @@
   display: none;
   margin-top: 20px;
 }
+
+.recipe-item {
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.recipe-item:hover {
+  background: #f7fafc;
+  transform: translateY(-2px);
+}
+
+.recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.recipe-name {
+  font-weight: 600;
+}
+
+.stock-status {
+  font-size: 0.9em;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.stock-status.ok {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.stock-status.low {
+  background: #fef3cd;
+  color: #856404;
+}
+
+.recipe-stock-details {
+  font-size: 0.85em;
+  color: #666;
+}
+
+.ingredient-status {
+  padding: 2px 0;
+}
+
+.ingredient-status.low {
+  color: #dc3545;
+}
+
+.ingredient-status.ok {
+  color: #28a745;
+}
 </style>
 
 <div class="dashboard-container">
@@ -179,9 +237,7 @@
 
     <div id="recipe-select" class="alert-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
       <h3>Select Recipe</h3>
-      <select id="recipe" class="form-control" style="margin: 20px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-        <option value="">Choose a recipe...</option>
-      </select>
+      <div id="recipe-list"></div>
       <div style="display: flex; gap: 10px; justify-content: flex-end;">
         <button onclick="startSelectedBatch()" class="main-btn">Start Batch</button>
         <button onclick="cancelFlow()" class="main-btn" style="background: #f0f0f0;">Cancel</button>
@@ -228,7 +284,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const quickAccess = document.getElementById('quickAccess');
   const container = quickAccess.querySelector('.quick-access-container');
-  
+
   if (window.innerWidth < 1200) {
     const originalItems = container.innerHTML;
     container.innerHTML = originalItems.repeat(3);
@@ -246,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
       momentum *= friction;
       position += momentum;
     }
-    
+
     if (window.innerWidth < 1200) {
       container.style.transform = `translateX(${position}px)`;
       requestAnimationFrame(update);
@@ -290,10 +346,39 @@ function startFlow() {
   fetch('/recipes.json')
     .then(response => response.json())
     .then(data => {
-      const recipeSelect = document.getElementById('recipe');
-      recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>' + 
-        data.recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      document.getElementById('recipe-select').style.display = 'block';
+      const recipeList = document.getElementById('recipe-list');
+      recipeList.innerHTML = '';
+
+      // Load each recipe with its stock status
+      data.recipes.forEach(recipe => {
+        fetch(`/api/check-stock/${encodeURIComponent(recipe.name)}`)
+          .then(response => response.json())
+          .then(stockData => {
+            const hasLowStock = stockData.stock_check.some(item => item.status === "Insufficient");
+            const stockStatus = hasLowStock ? 
+              '<span class="stock-status low">⚠️ Low Stock</span>' : 
+              '<span class="stock-status ok">✅ Stock OK</span>';
+
+            const recipeItem = document.createElement('div');
+            recipeItem.className = 'recipe-item';
+            recipeItem.innerHTML = `
+              <div class="recipe-header">
+                <span class="recipe-name">${recipe.name}</span>
+                ${stockStatus}
+              </div>
+              <div class="recipe-stock-details">
+                ${stockData.stock_check.map(item => `
+                  <div class="ingredient-status ${item.status === 'Insufficient' ? 'low' : 'ok'}">
+                    ${item.ingredient}: ${item.status}
+                  </div>
+                `).join('')}
+              </div>
+            `;
+            recipeItem.onclick = () => startSelectedBatch(recipe.id);
+            recipeList.appendChild(recipeItem);
+          });
+      });
+      document.getElementById('recipe-select').style.display = 'flex';
     });
 }
 
@@ -310,19 +395,18 @@ function finishFlow() {
   window.location.href = "/batches";
 }
 
-function startSelectedBatch() {
-  const recipeId = document.getElementById('recipe').value;
+function startSelectedBatch(recipeId) { // Added recipeId parameter
   if (!recipeId) {
     alert('Please select a recipe first');
     return;
   }
-  checkStock();
+  checkStock(recipeId); // Pass recipeId to checkStock
 }
 
 function cancelFlow() {
   document.getElementById('recipe-select').style.display = 'none';
   document.getElementById('stock-status').style.display = 'none';
-  document.getElementById('recipe').value = '';
+  //  Removed: document.getElementById('recipe').value = '';  //This line was causing issues
 }
 
 
