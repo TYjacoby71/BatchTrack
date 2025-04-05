@@ -1,8 +1,9 @@
-from flask import Flask
+from flask import Flask, render_template
 from app.routes.ingredients import ingredients_bp
 from app.routes.recipes import recipes_bp
 from app.routes.batches import batches_bp
 import os
+from app.routes.utils import load_data
 
 def create_app():
     app = Flask(__name__, template_folder='../templates')
@@ -45,6 +46,39 @@ def create_app():
 
     @app.route('/')
     def dashboard():
-        return render_template('dashboard.html')
+        from datetime import datetime
+        data = load_data()
+        ingredients = data.get('ingredients', [])
+        
+        low_stock = []
+        for ing in ingredients:
+            try:
+                qty = float(ing.get("quantity", 0))
+                if qty < 10:
+                    low_stock.append(ing)
+            except:
+                pass
+
+        recent_batches = sorted(
+            data.get("batches", []),
+            key=lambda b: b.get("timestamp", ""),
+            reverse=True
+        )[:5]
+
+        has_unfinished_batches = False
+        for batch in data.get("batches", []):
+            if not batch.get("completed", False):
+                has_unfinished_batches = True
+                break
+
+        for batch in recent_batches:
+            if batch.get('timestamp'):
+                dt = datetime.fromisoformat(batch['timestamp'])
+                batch['formatted_time'] = dt.strftime('%B %d, %Y at %I:%M %p')
+
+        return render_template("dashboard.html", 
+                            low_stock=low_stock, 
+                            recent_batches=recent_batches,
+                            has_unfinished_batches=has_unfinished_batches)
 
     return app

@@ -113,7 +113,12 @@
         <br><br>
         <button type="submit">Save Changes</button>
     </form>
-    <a href="/recipes">Back to Recipes</a>
+    <div class="actions" style="margin-top: 20px;">
+        <a href="/recipes">Back to Recipes</a> |
+        <form style="display: inline;" action="/recipes/{{ recipe.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+            <button type="submit">Delete</button>
+        </form>
+    </div>
 
     <script>
         function addIngredient() {
