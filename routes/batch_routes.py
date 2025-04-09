@@ -20,21 +20,24 @@ def start_batch():
                 return redirect(url_for('batches.start_batch'))
                 
             recipe = Recipe.query.get_or_404(recipe_id)
+            
+            # Generate label_code
+            year = datetime.utcnow().year
+            count = Batch.query.filter_by(recipe_name=recipe.name).count() + 1
+            label_code = f"{recipe.label_prefix}-{year}{count:02d}"
 
-        # Generate label_code
-        year = datetime.utcnow().year
-        count = Batch.query.filter_by(recipe_name=recipe.name).count() + 1
-        label_code = f"{recipe.label_prefix}-{year}{count:02d}"
-
-        batch = Batch(
-            recipe_id=recipe.id,
-            recipe_name=recipe.name,
-            scale=scale,
-            label_code=label_code
-        )
-        db.session.add(batch)
-        db.session.commit()
-        return redirect(url_for('batches.view_batch_in_progress'))
+            batch = Batch(
+                recipe_id=recipe.id,
+                recipe_name=recipe.name,
+                scale=scale,
+                label_code=label_code
+            )
+            db.session.add(batch)
+            db.session.commit()
+            return redirect(url_for('batches.view_batch_in_progress'))
+        except Exception as e:
+            flash(f'Error starting batch: {str(e)}')
+            return redirect(url_for('batches.start_batch'))
 
     recipes = Recipe.query.all()
     return render_template('start_batch.html', recipes=recipes)
@@ -67,36 +70,39 @@ def finish_batch(batch_id):
             flash('Invalid quantity value')
             return redirect(url_for('batches.view_batch_in_progress'))
 
-    if action == 'fail':
-        batch.total_cost = 0
+        if action == 'fail':
+            batch.total_cost = 0
+            db.session.commit()
+            flash("Batch marked as failed.")
+            return redirect(url_for('home'))
+
+        cost = 5.0 * batch.scale
+        batch.total_cost = cost
+
+        img_file = request.files.get('product_image')
+        image_path = None
+        if img_file and img_file.filename:
+            filename = f"prod_{uuid.uuid4().hex}_{secure_filename(img_file.filename)}"
+            save_path = os.path.join('static/product_images', filename)
+            img_file.save(save_path)
+            image_path = filename
+
+        product = Product(
+            batch_id=batch.id,
+            name=batch.recipe_name,
+            label_code=batch.label_code,
+            image=image_path,
+            expiration_date=datetime.utcnow().date(),
+            quantity=quantity,
+            unit=unit
+        )
+        db.session.add(product)
         db.session.commit()
-        flash("Batch marked as failed.")
+        flash("Batch finished and product created.")
         return redirect(url_for('home'))
-
-    cost = 5.0 * batch.scale
-    batch.total_cost = cost
-
-    img_file = request.files.get('product_image')
-    image_path = None
-    if img_file and img_file.filename:
-        filename = f"prod_{uuid.uuid4().hex}_{secure_filename(img_file.filename)}"
-        save_path = os.path.join('static/product_images', filename)
-        img_file.save(save_path)
-        image_path = filename
-
-    product = Product(
-        batch_id=batch.id,
-        name=batch.recipe_name,
-        label_code=batch.label_code,
-        image=image_path,
-        expiration_date=datetime.utcnow().date(),
-        quantity=quantity,
-        unit=unit
-    )
-    db.session.add(product)
-    db.session.commit()
-    flash("Batch finished and product created.")
-    return redirect(url_for('home'))
+    except Exception as e:
+        flash(f'Error finishing batch: {str(e)}')
+        return redirect(url_for('batches.view_batch_in_progress'))
 
 @batches_bp.route('/batches/cancel/<int:batch_id>', methods=['POST'])
 @login_required

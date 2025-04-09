@@ -1,8 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db
-from ingredient_routes import Ingredient  # Reuse ingredient model
+from models import db, Ingredient
 
 adjust_bp = Blueprint('adjust', __name__)
 
