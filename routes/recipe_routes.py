@@ -15,6 +15,7 @@ def list_recipes():
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
+    all_ingredients = Ingredient.query.all()
     if request.method == 'POST':
         try:
             recipe = Recipe(
@@ -22,13 +23,31 @@ def new_recipe():
                 instructions=request.form['instructions'],
                 label_prefix=request.form['label_prefix']
             )
+            
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+            
+            for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+                ingredient = Ingredient.query.get(ing_id)
+                if ingredient:
+                    recipe.ingredients.append(ingredient)
+                    db.session.execute(
+                        recipe_ingredients.insert().values(
+                            recipe_id=recipe.id,
+                            ingredient_id=ing_id,
+                            amount=float(amount),
+                            unit=unit
+                        )
+                    )
+            
             db.session.add(recipe)
             db.session.commit()
             flash('Recipe created successfully')
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error creating recipe: {str(e)}')
-    return render_template('recipe_form.html', recipe=None)
+    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients)
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
