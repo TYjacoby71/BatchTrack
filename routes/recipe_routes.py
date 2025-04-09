@@ -15,7 +15,7 @@ def list_recipes():
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
-    all_ingredients = Ingredient.query.all()
+    all_ingredients = Ingredient.query.all()  # Make sure this query returns ingredients
     if request.method == 'POST':
         try:
             recipe = Recipe(
