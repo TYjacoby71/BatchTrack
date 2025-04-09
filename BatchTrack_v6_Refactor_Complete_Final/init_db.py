@@ -1,34 +1,39 @@
-
-from app import app
+from app import app, db
 from models import db, InventoryUnit, ProductUnit, User
 from werkzeug.security import generate_password_hash
 
-with app.app_context():
-    db.create_all()
+def init_db():
+    with app.app_context():
+        db.create_all()
 
-    # Seed default units if not present
-    if not InventoryUnit.query.first():
-        defaults = [
-            InventoryUnit(name="ml", type="volume", base_equivalent=1.0, aliases="milliliter", density_required=False),
-            InventoryUnit(name="l", type="volume", base_equivalent=1000.0, aliases="liter", density_required=False),
-            InventoryUnit(name="g", type="weight", base_equivalent=1.0, aliases="gram", density_required=False),
-            InventoryUnit(name="kg", type="weight", base_equivalent=1000.0, aliases="kilogram", density_required=False),
-            InventoryUnit(name="count", type="count", base_equivalent=1.0, aliases="each", density_required=False),
-        ]
-        db.session.add_all(defaults)
+        # Seed default units if not present
+        if not InventoryUnit.query.first():
+            defaults = [
+                InventoryUnit(name="ml", type="volume", base_equivalent=1.0, aliases="milliliter", density_required=False),
+                InventoryUnit(name="l", type="volume", base_equivalent=1000.0, aliases="liter", density_required=False),
+                InventoryUnit(name="g", type="weight", base_equivalent=1.0, aliases="gram", density_required=False),
+                InventoryUnit(name="kg", type="weight", base_equivalent=1000.0, aliases="kilogram", density_required=False),
+                InventoryUnit(name="count", type="count", base_equivalent=1.0, aliases="each", density_required=False),
+            ]
+            db.session.add_all(defaults)
 
-    if not ProductUnit.query.first():
-        db.session.add(ProductUnit(name="jar"))
-        db.session.add(ProductUnit(name="bar"))
+        if not ProductUnit.query.first():
+            db.session.add(ProductUnit(name="jar"))
+            db.session.add(ProductUnit(name="bar"))
 
-    # Create default admin user if not exists
-    if not User.query.filter_by(username='admin').first():
-        admin = User(
-            username='admin',
-            password_hash=generate_password_hash('admin'),
-            role='admin'
-        )
-        db.session.add(admin)
+        # Create default admin user if not exists
+        if not User.query.filter_by(username='admin').first():
+            admin = User(
+                username='admin',
+                password_hash=generate_password_hash('admin'),
+                role='admin'
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print("Created admin user")
 
-    db.session.commit()
-    print("Database initialized and seeded with default admin user.")
+        db.session.commit()
+        print("Database initialized and seeded.")
+
+if __name__ == '__main__':
+    init_db()

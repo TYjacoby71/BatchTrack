@@ -21,22 +21,9 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Register blueprints
-from admin_routes import admin_bp
-from recipe_routes import recipes_bp
-from batch_view_route import batch_view_bp
-from fault_log_routes import faults_bp
-from tag_manager_routes import tag_bp
-from product_log_routes import product_log_bp
-from inventory_adjust_routes import adjust_bp
-
-app.register_blueprint(admin_bp)
-app.register_blueprint(recipes_bp)
-app.register_blueprint(batch_view_bp)
-app.register_blueprint(faults_bp)
-app.register_blueprint(tag_bp)
-app.register_blueprint(product_log_bp)
-app.register_blueprint(adjust_bp)
+# Register all blueprints
+from app_routes import register_blueprints
+register_blueprints(app)
 
 # User loader
 @login_manager.user_loader
