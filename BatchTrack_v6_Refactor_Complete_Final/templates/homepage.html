@@ -11,5 +11,25 @@
         <a href="/batches/in-progress">Finish Batch</a>
     </div>
     {% endif %}
+    <div class="tile">
+        <a href="/ingredients">Manage Ingredients</a>
+    </div>
+    <div class="tile">
+        <a href="/stock/bulk-check">Check Stock</a>
+    </div>
+    <div class="tile">
+        <a href="/logs/faults">View Fault Log</a>
+    </div>
 </div>
+{% if current_user.is_admin %}
+<div class="admin-panel">
+    <h3>Admin Controls</h3>
+    <div class="tile">
+        <a href="/admin/units">Manage Units</a>
+    </div>
+    <div class="tile">
+        <a href="/tags">Manage Tags</a>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

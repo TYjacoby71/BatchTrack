@@ -12,6 +12,8 @@ bulk_stock_bp = Blueprint('bulk_stock', __name__)
 
 @bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
 @login_required
+@bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
+@login_required
 def bulk_stock_check():
     recipes = Recipe.query.all()
     summary = {}
