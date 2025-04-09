@@ -1,0 +1,44 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>All Batches</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Label Code</th>
+            <th>Recipe Name</th>
+            <th>Scale</th>
+            <th>Timestamp</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for batch in batches %}
+        <tr>
+            <td>{{ batch.label_code }}</td>
+            <td>{{ batch.recipe_name }}</td>
+            <td>{{ batch.scale }}</td>
+            <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+                {% if batch.total_cost == None %}
+                    🟡 In Progress
+                {% elif batch.total_cost == 0 %}
+                    ❌ Failed
+                {% else %}
+                    ✅ Completed
+                {% endif %}
+            </td>
+            <td>
+                {% if batch.total_cost == None %}
+                    <a href="{{ url_for('batches.view_batch_in_progress') }}" class="button">Resume</a>
+                {% else %}
+                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="button">View</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

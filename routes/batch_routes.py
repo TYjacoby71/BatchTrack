@@ -8,6 +8,12 @@ from werkzeug.utils import secure_filename
 
 batches_bp = Blueprint('batches', __name__)
 
+@batches_bp.route('/batches')
+@login_required
+def list_batches():
+    batches = Batch.query.order_by(Batch.timestamp.desc()).all()
+    return render_template('batches_list.html', batches=batches)
+
 @batches_bp.route('/batches/start', methods=['GET', 'POST'])
 @login_required
 def start_batch():
