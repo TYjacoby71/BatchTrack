@@ -88,10 +88,7 @@ def quick_add_unit():
         return jsonify({'error': str(e)}), 400
 
 
-    else: #added else block for GET request
-        all_ingredients = Ingredient.query.all()
-        inventory_units = InventoryUnit.query.all()
-        return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units) #added inventory_units
+    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units)
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
