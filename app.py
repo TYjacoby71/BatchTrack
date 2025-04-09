@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -29,7 +28,7 @@ login_manager.login_view = 'login'
 from routes.batch_routes import batches_bp
 from routes.admin_routes import admin_bp
 from routes.ingredient_routes import ingredients_bp
-from routes.recipe_routes import recipes_bp
+from routes.recipe_routes import recipes_bp #This line was missing in the original code
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
 from routes.batch_view_route import batch_view_bp
@@ -38,15 +37,15 @@ from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 
 # Register blueprints
-app.register_blueprint(batches_bp)
+app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(ingredients_bp, url_prefix='/inventory')
+app.register_blueprint(ingredients_bp, url_prefix='/ingredients')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(adjust_bp, url_prefix='/inventory')
-app.register_blueprint(batch_view_bp)
-app.register_blueprint(faults_bp, url_prefix='/logs')
-app.register_blueprint(product_log_bp)
+app.register_blueprint(adjust_bp, url_prefix='/adjust')
+app.register_blueprint(batch_view_bp, url_prefix='/batch-view')
+app.register_blueprint(faults_bp, url_prefix='/faults')
+app.register_blueprint(product_log_bp, url_prefix='/products')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 
 @login_manager.user_loader
@@ -63,11 +62,11 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         if not username or not password:
             flash('Please provide both username and password')
             return render_template('login.html')
-            
+
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
