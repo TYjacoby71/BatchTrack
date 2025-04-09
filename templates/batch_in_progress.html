@@ -3,35 +3,81 @@
 {% block content %}
 <h2>Batch In Progress</h2>
 
-<p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
-<p><strong>Scale:</strong> {{ batch.scale }}</p>
-<p><strong>Batch Code:</strong> {{ batch.label_code }}</p>
+<div class="batch-details">
+    <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+    <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+    <p><strong>Scale:</strong> {{ batch.scale }}</p>
+    <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+</div>
 
-<form method="post" action="/batches/finish/{{ batch.id }}" enctype="multipart/form-data">
-    <label for="notes">Notes:</label><br>
-    <textarea name="notes" rows="4" cols="50">{{ batch.notes or '' }}</textarea><br>
+<div class="notes-section">
+    <h3>Batch Notes</h3>
+    <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
+        <textarea name="notes" rows="4" cols="50">{{ batch.notes or '' }}</textarea>
+        <button type="submit" class="button secondary">Update Notes</button>
+    </form>
+</div>
 
-    <label for="tags">Tags:</label><br>
-    <input type="text" name="tags" value="{{ batch.tags or '' }}"><br><br>
-
-    <label for="product_quantity">Product Quantity:</label>
-    <input type="number" name="product_quantity" value="1"><br>
-
-    <label for="product_unit">Product Unit:</label>
-    <select name="product_unit">
-        {% for unit in product_units %}
-        <option value="{{ unit.name }}">{{ unit.name }}</option>
+<div class="actions-section">
+    <h3>Finish Batch</h3>
+    <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+    <div class="ingredients-used">
+        <h3>Confirm Ingredients Used</h3>
+        {% for ingredient in recipe.ingredients %}
+        <div class="ingredient-row">
+            <input type="hidden" name="ingredient_{{ loop.index0 }}" value="{{ ingredient.name }}">
+            <label>{{ ingredient.name }}:</label>
+            <input type="number" name="amount_{{ loop.index0 }}" 
+                   value="{{ (ingredient.amount * batch.scale) | round(2) }}" step="0.01">
+            <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ ingredient.unit }}">
+        </div>
         {% endfor %}
-    </select><br>
+        <input type="hidden" name="total_ingredients" value="{{ recipe.ingredients | length }}">
+    </div>
+        <div class="form-group">
+            <label for="product_quantity">Product Quantity:</label>
+            <input type="number" name="product_quantity" value="1" min="1" required>
+        </div>
 
-    <label for="product_image">Upload Product Image:</label>
-    <input type="file" name="product_image"><br><br>
+        <div class="form-group">
+            <label for="product_unit">Product Unit:</label>
+            <select name="product_unit" required>
+                {% for unit in product_units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-    <button type="submit" name="action" value="finish">✓ Finish Batch</button>
-    <button type="submit" name="action" value="fail">✕ Mark as Failed</button>
-</form>
+        <div class="form-group">
+            <label for="product_image">Product Image:</label>
+            <input type="file" name="product_image" accept="image/*">
+        </div>
 
-<form method="post" action="/batches/cancel/{{ batch.id }}">
-    <button type="submit">↩ Cancel Batch</button>
-</form>
+        <div class="form-group">
+            <label for="tags">Tags (comma-separated):</label>
+            <input type="text" name="tags" value="{{ batch.tags or '' }}">
+        </div>
+
+        <div class="extra-ingredients">
+            <h4>Additional Ingredients Used</h4>
+            <div id="ingredientInputs">
+                <div class="ingredient-row">
+                    <input type="text" name="extra_ingredients[]" placeholder="Ingredient name">
+                    <input type="number" name="extra_amounts[]" placeholder="Amount" step="0.01">
+                    <input type="text" name="extra_units[]" placeholder="Unit">
+                </div>
+            </div>
+            <button type="button" onclick="addIngredientRow()" class="button secondary">+ Add Ingredient</button>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" name="action" value="finish" class="button primary">✓ Complete Batch</button>
+            <button type="submit" name="action" value="fail" class="button warning">✕ Mark as Failed</button>
+        </div>
+    </form>
+
+    <form method="post" action="{{ url_for('batches.cancel_batch', batch_id=batch.id) }}" class="cancel-form">
+        <button type="submit" class="button danger">↩ Cancel Batch</button>
+    </form>
+</div>
 {% endblock %}

@@ -1,3 +1,69 @@
+
+.flow-container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.stock-results {
+  margin-top: 2rem;
+}
+
+.stock-results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.stock-results th,
+.stock-results td {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.stock-results tr.ok { background-color: #e8f5e9; }
+.stock-results tr.low { background-color: #fff3e0; }
+.stock-results tr.needed { background-color: #ffebee; }
+
+.warning {
+  padding: 1rem;
+  background: #fff3e0;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+
+.extra-ingredients {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ingredient-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.ingredient-row input {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;

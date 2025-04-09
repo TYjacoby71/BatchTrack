@@ -1,35 +1,39 @@
 
-from flask import flash
-from routes.batch_routes import batches_bp
-from routes.admin_routes import admin_bp
-from routes.ingredient_routes import ingredients_bp
-from routes.recipe_routes import recipes_bp
-from routes.bulk_stock_routes import bulk_stock_bp
-from routes.inventory_adjust_routes import adjust_bp
-from routes.batch_view_route import batch_view_bp
-from routes.fault_log_routes import faults_bp
-from routes.product_log_routes import product_log_bp
-from routes.tag_manager_routes import tag_bp
+from flask import Blueprint, render_template, request, redirect, url_for, session
+from models import Recipe, Ingredient, Batch
+from stock_check_utils import check_stock_for_recipe
+from flask_login import login_required, current_user
 
-def register_blueprints(app):
-    """Register all blueprints with proper URL prefixes"""
-    blueprints = [
-        (batches_bp, ''),  # Root routes for batches
-        (admin_bp, '/admin'),
-        (ingredients_bp, '/inventory'),
-        (recipes_bp, '/recipes'),
-        (bulk_stock_bp, '/stock'),
-        (adjust_bp, '/inventory'),
-        (batch_view_bp, ''),  # Root routes for batch views
-        (faults_bp, '/logs'),
-        (product_log_bp, ''),  # Root routes for products
-        (tag_bp, '/tags')
-    ]
-    
-    for blueprint, url_prefix in blueprints:
-        try:
-            app.register_blueprint(blueprint, url_prefix=url_prefix)
-        except Exception as e:
-            flash(f'Error registering blueprint: {str(e)}')
-            app.logger.error(f'Failed to register blueprint: {str(e)}')
+app_routes_bp = Blueprint('home', __name__)
 
+@app_routes_bp.route("/", methods=["GET", "POST"])
+@login_required
+def homepage():
+    recipes = Recipe.query.all()
+    active_batch = Batch.query.filter(Batch.total_cost == None).first()
+    stock_check = None
+    selected_recipe = None
+    scale = 1
+    status = None
+
+    if request.method == "POST":
+        recipe_id = request.form.get("recipe_id")
+        scale = float(request.form.get("scale", 1))
+        selected_recipe = Recipe.query.get(recipe_id)
+        if selected_recipe:
+            stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
+            if all_ok:
+                status = "ok"
+            elif any(item["status"] == "NEEDED" for item in stock_check):
+                status = "bad"
+            else:
+                status = "low"
+
+    return render_template("homepage.html", 
+                         recipes=recipes,
+                         stock_check=stock_check,
+                         selected_recipe=selected_recipe,
+                         scale=scale,
+                         status=status,
+                         active_batch=active_batch,
+                         current_user=current_user)
