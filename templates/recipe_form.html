@@ -202,12 +202,10 @@
                 if (response.ok) {
                     const newUnit = await response.json();
                     // Add to all unit dropdowns
-                    const selects = document.querySelectorAll('select[id="newIngUnit"]');
-                    selects.forEach(select => {
-                        const option = new Option(newUnit.name, newUnit.name);
-                        select.add(option);
-                        select.value = newUnit.name;
-                    });
+                    const unitSelect = document.getElementById('newIngUnit');
+                    const option = new Option(newUnit.name, newUnit.name);
+                    unitSelect.add(option);
+                    unitSelect.value = newUnit.name;
                     
                     document.getElementById('newUnitName').value = '';
                     closeQuickAddUnitModal();
