@@ -13,13 +13,25 @@
 
 <!-- Modal for Start Flow -->
 <div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
-  <form method="post" action="{{ url_for('recipes.plan_production') }}">
+  <form method="post" action="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" id="productionForm">
     <label for="recipe_id">Select Recipe:</label>
-    <select name="recipe_id" required>
+    <select name="recipe_id" id="recipeSelect" required onchange="updateFormAction(this.value)">
       {% for recipe in recipes %}
         <option value="{{ recipe.id }}">{{ recipe.name }}</option>
       {% endfor %}
     </select><br><br>
+
+    <script>
+    function updateFormAction(recipeId) {
+      document.getElementById('productionForm').action = "{{ url_for('recipes.plan_production', recipe_id=0) }}".replace('0', recipeId);
+    }
+    window.onload = function() {
+      var select = document.getElementById('recipeSelect');
+      if(select.value) {
+        updateFormAction(select.value);
+      }
+    }
+    </script>
 
     <label for="scale">Scale:</label>
     <input type="number" step="0.1" name="scale" value="1.0" required><br><br>
