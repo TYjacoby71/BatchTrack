@@ -39,14 +39,14 @@ from routes.tag_manager_routes import tag_bp
 # Register blueprints
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(ingredients_bp, url_prefix='/ingredients')
+app.register_blueprint(ingredients_bp)  # No prefix to match /ingredients URLs
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(batch_view_bp, url_prefix='/batch-view')
-app.register_blueprint(faults_bp, url_prefix='/faults')
+app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/products')
-app.register_blueprint(tag_bp, url_prefix='/tags')
+app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
 
 @login_manager.user_loader
 def load_user(user_id):
