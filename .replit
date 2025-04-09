@@ -11,7 +11,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "cd BatchTrack_v6_Refactor_Complete_Final && python app.py"]
+run = ["sh", "-c", "python app.py"]
 deploymentTarget = "cloudrun"
 
 [[ports]]
