@@ -109,17 +109,17 @@
                         option.dataset.quantity = 0;
                         select.add(option);
                     });
-                    
+
                     // Select the new ingredient in the current dropdown
                     if (currentSelect) {
                         currentSelect.value = newIngredient.id;
                         updateUnit(currentSelect);
                     }
-                    
+
                     // Clear the form and close modal
                     document.getElementById('newIngName').value = '';
                     document.getElementById('newIngUnit').value = '';
-                    closeQuickAddModal();
+                    closeQuickAddModal(); // Added to close the ingredient modal
                 } else {
                     alert('Failed to add ingredient');
                 }
@@ -172,6 +172,44 @@
 
             function closeQuickAddUnitModal() {
                 document.getElementById('quickAddUnitModal').style.display = 'none';
+            }
+
+            async function submitQuickAddUnit(event) {
+                event.preventDefault();
+                const unitName = document.getElementById('newUnitName').value;
+                const targetSelectId = window.currentUnitSelectId;
+
+                const response = await fetch('/units/quick-add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: unitName })
+                });
+
+                if (response.ok) {
+                    const newUnit = await response.json();
+                    const unitSelect = document.getElementById(targetSelectId);
+                    if (unitSelect) {
+                        const newOption = document.createElement('option');
+                        newOption.value = newUnit.name;
+                        newOption.text = newUnit.name;
+                        unitSelect.add(newOption, unitSelect.options[unitSelect.options.length - 1]);
+                        unitSelect.value = newUnit.name;
+                    }
+
+                    // Reset and close unit modal
+                    document.getElementById('newUnitName').value = '';
+                    closeQuickAddUnitModal();
+
+                    // Reset ingredient form if this was called from there
+                    if (targetSelectId === 'newIngUnit') {
+                        document.getElementById('newIngName').value = '';
+                    }
+                } else {
+                    alert('Failed to add unit');
+                }
+                return false;
             }
 
             document.getElementById('newIngUnit').addEventListener('change', function(e) {
