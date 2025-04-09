@@ -45,6 +45,18 @@
             <input type="text" name="tags" value="{{ batch.tags or '' }}">
         </div>
 
+        <div class="extra-ingredients">
+            <h4>Additional Ingredients Used</h4>
+            <div id="ingredientInputs">
+                <div class="ingredient-row">
+                    <input type="text" name="extra_ingredients[]" placeholder="Ingredient name">
+                    <input type="number" name="extra_amounts[]" placeholder="Amount" step="0.01">
+                    <input type="text" name="extra_units[]" placeholder="Unit">
+                </div>
+            </div>
+            <button type="button" onclick="addIngredientRow()" class="button secondary">+ Add Ingredient</button>
+        </div>
+
         <div class="button-group">
             <button type="submit" name="action" value="finish" class="button primary">✓ Complete Batch</button>
             <button type="submit" name="action" value="fail" class="button warning">✕ Mark as Failed</button>

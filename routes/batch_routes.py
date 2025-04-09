@@ -92,7 +92,29 @@ def finish_batch(batch_id):
             flash("Batch marked as failed.")
             return redirect(url_for('home'))
 
-        cost = 5.0 * batch.scale
+        # Handle extra ingredients
+        extra_ingredients = request.form.getlist('extra_ingredients[]')
+        extra_amounts = request.form.getlist('extra_amounts[]')
+        extra_units = request.form.getlist('extra_units[]')
+        
+        extra_usage = []
+        for i in range(len(extra_ingredients)):
+            if extra_ingredients[i]:
+                extra_usage.append({
+                    'ingredient': extra_ingredients[i],
+                    'amount': float(extra_amounts[i]),
+                    'unit': extra_units[i]
+                })
+        
+        # Store extra ingredients in batch notes
+        if extra_usage:
+            extra_notes = "\nExtra ingredients used:\n"
+            for usage in extra_usage:
+                extra_notes += f"- {usage['ingredient']}: {usage['amount']} {usage['unit']}\n"
+            batch.notes = (batch.notes or '') + extra_notes
+        
+        # Calculate total cost (you may want to implement actual cost calculation)
+        cost = 5.0 * batch.scale  # Currently hardcoded
         batch.total_cost = cost
 
         img_file = request.files.get('product_image')
