@@ -3,20 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 
-# Initialize SQLAlchemy first
-db = SQLAlchemy()
-
-# Import models after db initialization
-from models import User
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///batchtrack.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
-# Initialize db with app
-db.init_app(app)
+# Initialize SQLAlchemy with app
+db = SQLAlchemy(app)
+
+# Import models after db initialization
+from models import User
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
