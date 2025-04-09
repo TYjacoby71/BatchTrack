@@ -21,6 +21,19 @@
 <div class="actions-section">
     <h3>Finish Batch</h3>
     <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+    <div class="ingredients-used">
+        <h3>Confirm Ingredients Used</h3>
+        {% for ingredient in recipe.ingredients %}
+        <div class="ingredient-row">
+            <input type="hidden" name="ingredient_{{ loop.index0 }}" value="{{ ingredient.name }}">
+            <label>{{ ingredient.name }}:</label>
+            <input type="number" name="amount_{{ loop.index0 }}" 
+                   value="{{ (ingredient.amount * batch.scale) | round(2) }}" step="0.01">
+            <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ ingredient.unit }}">
+        </div>
+        {% endfor %}
+        <input type="hidden" name="total_ingredients" value="{{ recipe.ingredients | length }}">
+    </div>
         <div class="form-group">
             <label for="product_quantity">Product Quantity:</label>
             <input type="number" name="product_quantity" value="1" min="1" required>
