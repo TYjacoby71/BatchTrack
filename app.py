@@ -13,8 +13,8 @@ app.config['UPLOAD_FOLDER'] = 'static/product_images'
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Import db instance from models
-from models import db, User
+# Import db instance and models
+from models import db, User, Recipe, Batch
 
 # Initialize db with app
 db.init_app(app)
