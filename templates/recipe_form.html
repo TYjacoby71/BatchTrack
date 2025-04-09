@@ -60,14 +60,14 @@
                 <!-- Quick Add Unit Modal -->
                 <div id="quickAddUnitModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 2000;">
                     <h3>Add New Count Unit</h3>
-                    <form id="quickAddUnitForm" onsubmit="return submitQuickAddUnit(event)" style="z-index: 2001;">
+                    <div id="quickAddUnitForm">
                         <div>
                             <label for="newUnitName">Unit Name:</label>
                             <input type="text" id="newUnitName" required>
                         </div>
-                        <button type="submit">Save Unit</button>
+                        <button type="button" onclick="submitQuickAddUnit(event)">Save Unit</button>
                         <button type="button" onclick="closeQuickAddUnitModal()">Cancel</button>
-                    </form>
+                    </div>
                 </div>
                 <button type="submit">Save Ingredient</button>
                 <button type="button" onclick="closeQuickAddModal()">Cancel</button>
