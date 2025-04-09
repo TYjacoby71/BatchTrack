@@ -12,12 +12,14 @@ batches_bp = Blueprint('batches', __name__)
 @login_required
 def start_batch():
     if request.method == 'POST':
-        recipe_id = request.form.get('recipe_id')
-        scale = float(request.form.get('scale', 1.0))
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            flash('Invalid recipe selected')
-            return redirect(url_for('batches.start_batch'))
+        try:
+            recipe_id = request.form.get('recipe_id')
+            scale = float(request.form.get('scale', 1.0))
+            if scale <= 0:
+                flash('Scale must be greater than 0')
+                return redirect(url_for('batches.start_batch'))
+                
+            recipe = Recipe.query.get_or_404(recipe_id)
 
         # Generate label_code
         year = datetime.utcnow().year
@@ -49,12 +51,21 @@ def view_batch_in_progress():
 @batches_bp.route('/batches/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    action = request.form.get('action')
-    batch.notes = request.form.get('notes')
-    batch.tags = request.form.get('tags')
-    unit = request.form.get('product_unit')
-    quantity = int(request.form.get('product_quantity', 1))
+    try:
+        batch = Batch.query.get_or_404(batch_id)
+        action = request.form.get('action')
+        batch.notes = request.form.get('notes')
+        batch.tags = request.form.get('tags')
+        unit = request.form.get('product_unit')
+        
+        try:
+            quantity = int(request.form.get('product_quantity', 1))
+            if quantity <= 0:
+                flash('Quantity must be greater than 0')
+                return redirect(url_for('batches.view_batch_in_progress'))
+        except ValueError:
+            flash('Invalid quantity value')
+            return redirect(url_for('batches.view_batch_in_progress'))
 
     if action == 'fail':
         batch.total_cost = 0
