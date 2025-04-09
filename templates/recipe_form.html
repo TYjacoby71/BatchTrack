@@ -40,8 +40,10 @@
         </div>
         <script>
             function updateUnit(select) {
-                const unit = select.options[select.selectedIndex].dataset.unit;
-                select.parentElement.querySelector('input[name="units[]"]').value = unit;
+                if (select && select.selectedIndex >= 0) {
+                    const unit = select.options[select.selectedIndex].dataset.unit;
+                    select.parentElement.querySelector('input[name="units[]"]').value = unit || '';
+                }
             }
 
             function addIngredient() {

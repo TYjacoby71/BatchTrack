@@ -53,6 +53,7 @@ def new_recipe():
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
+    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
     if request.method == 'POST':
         try:
             recipe.name = request.form['name']
@@ -63,7 +64,7 @@ def edit_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error updating recipe: {str(e)}')
-    return render_template('recipe_form.html', recipe=recipe)
+    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients)
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
