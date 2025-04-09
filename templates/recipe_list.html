@@ -1,0 +1,19 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Recipes</h2>
+<a href="{{ url_for('recipes.new_recipe') }}" class="button">New Recipe</a>
+
+<div class="recipe-list">
+    {% for recipe in recipes %}
+    <div class="recipe-card">
+        <h3>{{ recipe.name }}</h3>
+        <p>Label Prefix: {{ recipe.label_prefix }}</p>
+        <div class="recipe-actions">
+            <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="button">Edit</a>
+            <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="button">Plan Production</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
