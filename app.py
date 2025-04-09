@@ -13,8 +13,8 @@ app.config['UPLOAD_FOLDER'] = 'static/product_images'
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Import db instance from models
-from models import db, User
+# Import db instance and models
+from models import db, User, Recipe, Batch
 
 # Initialize db with app
 db.init_app(app)
@@ -55,7 +55,12 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def home():
-    return render_template('homepage.html', current_user=current_user)
+    recipes = Recipe.query.all()
+    active_batch = Batch.query.filter(Batch.total_cost == None).first()
+    return render_template('homepage.html', 
+                         current_user=current_user,
+                         recipes=recipes,
+                         active_batch=active_batch)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

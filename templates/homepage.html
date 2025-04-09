@@ -1,35 +1,47 @@
+
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Welcome, {{ current_user.username }}!</h2>
 
-<div class="flow-panel">
-    <div class="tile">
-        <a href="/batches/start">Start Batch</a>
-    </div>
-    {% if batch_in_progress %}
-    <div class="tile">
-        <a href="/batches/in-progress">Finish Batch</a>
-    </div>
-    {% endif %}
-    <div class="tile">
-        <a href="/ingredients">Manage Ingredients</a>
-    </div>
-    <div class="tile">
-        <a href="/stock/bulk-check">Check Stock</a>
-    </div>
-    <div class="tile">
-        <a href="/logs/faults">View Fault Log</a>
-    </div>
+<h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+
+<div style="margin-top: 2rem;">
+  {% if active_batch %}
+    <a href="{{ url_for('batch_view.view_batch', batch_id=active_batch.id) }}" class="button" style="margin-right: 1rem;">Finish Batch</a>
+  {% endif %}
+  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="button">Start Flow</button>
 </div>
-{% if current_user.is_admin %}
-<div class="admin-panel">
-    <h3>Admin Controls</h3>
-    <div class="tile">
-        <a href="/admin/units">Manage Units</a>
-    </div>
-    <div class="tile">
-        <a href="/tags">Manage Tags</a>
-    </div>
+
+<!-- Modal for Start Flow -->
+<div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
+  <form method="post" id="productionForm">
+    <label for="recipe_id">Select Recipe:</label>
+    <select name="recipe_id" id="recipeSelect" required>
+      {% for recipe in recipes %}
+        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+      {% endfor %}
+    </select><br><br>
+
+    <script>
+    document.getElementById('productionForm').onsubmit = function(e) {
+      e.preventDefault();
+      var recipeId = document.getElementById('recipeSelect').value;
+      var scale = document.getElementById('scaleInput').value;
+      window.location.href = "{{ url_for('recipes.plan_production', recipe_id=0) }}".replace('0', recipeId) + "?scale=" + scale;
+    }
+    </script>
+
+    <label for="scale">Scale:</label>
+    <input type="number" step="0.1" name="scale" id="scaleInput" value="1.0" required><br><br>
+
+    <button type="submit" class="button">Continue</button>
+    <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
+  </form>
+</div>
+
+{% if alert %}
+<div style="margin-top: 2rem; background-color: #ffe0e0; padding: 1rem; border-radius: 8px;">
+  ⚠️ <strong>{{ alert }}</strong>
 </div>
 {% endif %}
+
 {% endblock %}
