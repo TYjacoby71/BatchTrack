@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit
@@ -24,9 +23,9 @@ def start_batch():
             if scale <= 0:
                 flash('Scale must be greater than 0')
                 return redirect(url_for('batches.start_batch'))
-                
+
             recipe = Recipe.query.get_or_404(recipe_id)
-            
+
             # Generate label_code
             year = datetime.utcnow().year
             count = Batch.query.filter_by(recipe_name=recipe.name).count() + 1
@@ -40,7 +39,7 @@ def start_batch():
             )
             db.session.add(batch)
             db.session.commit()
-            return redirect(url_for('batches.view_batch_in_progress'))
+            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch.id)) #Added batch_id
         except Exception as e:
             flash(f'Error starting batch: {str(e)}')
             return redirect(url_for('batches.start_batch'))
@@ -55,8 +54,9 @@ def view_batch_in_progress(batch_id):
     if batch.total_cost is not None:
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
+    recipe = Recipe.query.get(batch.recipe_id)
     product_units = ProductUnit.query.all()
-    return render_template('batch_in_progress.html', batch=batch, product_units=product_units)
+    return render_template('batch_in_progress.html', batch=batch, recipe=recipe, product_units=product_units)
 
 @batches_bp.route('/batches/in-progress/<int:batch_id>/notes', methods=['POST'])
 @login_required
@@ -73,7 +73,7 @@ def finish_batch(batch_id):
     try:
         batch = Batch.query.get_or_404(batch_id)
         action = request.form.get('action')
-        
+
         if action == 'fail':
             batch.total_cost = 0
             db.session.commit()
@@ -84,12 +84,12 @@ def finish_batch(batch_id):
         total = int(request.form.get('total_ingredients', 0))
         used_ingredients = []
         total_cost = 0
-        
+
         for i in range(total):
             name = request.form.get(f'ingredient_{i}')
             amount = float(request.form.get(f'amount_{i}', 0))
             unit = request.form.get(f'unit_{i}')
-            
+
             if name and amount > 0:
                 ingredient = Ingredient.query.filter_by(name=name).first()
                 if ingredient:
@@ -109,7 +109,7 @@ def finish_batch(batch_id):
         extra_ingredients = request.form.getlist('extra_ingredients[]')
         extra_amounts = request.form.getlist('extra_amounts[]')
         extra_units = request.form.getlist('extra_units[]')
-        
+
         for i in range(len(extra_ingredients)):
             if extra_ingredients[i] and extra_amounts[i]:
                 ingredient = Ingredient.query.filter_by(name=extra_ingredients[i]).first()
@@ -129,10 +129,10 @@ def finish_batch(batch_id):
         usage_notes = "Ingredients used:\n"
         for usage in used_ingredients:
             usage_notes += f"- {usage['name']}: {usage['amount']} {usage['unit']}\n"
-        
+
         batch.notes = request.form.get('notes', '') + "\n" + usage_notes
         batch.tags = request.form.get('tags', '')
-        
+
         # Calculate final cost
         batch.total_cost = total_cost if total_cost > 0 else (5.0 * batch.scale)
 
@@ -165,7 +165,7 @@ def finish_batch(batch_id):
         return redirect(url_for('home'))
     except Exception as e:
         flash(f'Error finishing batch: {str(e)}')
-        return redirect(url_for('batches.view_batch_in_progress'))
+        return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
 @batches_bp.route('/batches/cancel/<int:batch_id>', methods=['POST'])
 @login_required
