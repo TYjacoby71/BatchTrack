@@ -1,0 +1,34 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Bulk Stock Check</h2>
+
+<form method="post">
+    <label for="recipe_ids">Select Recipes:</label><br>
+    <select name="recipe_ids" multiple size="6" required>
+        {% for recipe in recipes %}
+        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label for="scale">Scale (applied to all):</label>
+    <input type="number" step="0.1" name="scale" value="1.0"><br><br>
+
+    <button type="submit">Check Stock</button>
+</form>
+
+{% if summary %}
+<h3>Stock Summary</h3>
+<table>
+    <tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr>
+    {% for row in summary %}
+    <tr>
+        <td>{{ row.name }}</td>
+        <td>{{ row.needed }}</td>
+        <td>{{ row.available }}</td>
+        <td>{{ row.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

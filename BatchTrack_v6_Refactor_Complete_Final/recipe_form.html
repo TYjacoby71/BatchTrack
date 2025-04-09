@@ -1,0 +1,23 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>{{ 'Edit' if recipe else 'Create' }} Recipe</h2>
+<form method="post" enctype="multipart/form-data">
+    <label for="name">Recipe Name:</label><br>
+    <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required><br>
+
+    <label for="label_prefix">Label Prefix (e.g. LB):</label><br>
+    <input type="text" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}"><br>
+
+    <label for="qr_image">Upload QR Code or Barcode Image:</label><br>
+    <input type="file" name="qr_image"><br>
+    {% if recipe and recipe.qr_image %}
+        <img src="{{ url_for('static', filename='qr/' ~ recipe.qr_image) }}" width="120"><br>
+    {% endif %}
+
+    <label for="instructions">Instructions:</label><br>
+    <textarea name="instructions" rows="4" cols="50">{{ recipe.instructions if recipe else '' }}</textarea><br>
+
+    <button type="submit">Save Recipe</button>
+</form>
+{% endblock %}

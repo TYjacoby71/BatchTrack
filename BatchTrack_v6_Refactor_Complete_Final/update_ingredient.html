@@ -1,0 +1,22 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Update Ingredient</h2>
+<form method="post">
+    <label for="name">Name:</label>
+    <input type="text" value="{{ ing.name }}" disabled><br>
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" step="0.01" name="quantity" value="{{ ing.quantity }}"><br>
+
+    <label for="unit">Unit:</label>
+    <select name="unit">
+        {% for unit in units %}
+        <option value="{{ unit.name }}" {% if unit.name == ing.unit %}selected{% endif %}>{{ unit.name }}</option>
+        {% endfor %}
+    </select><br>
+
+    <button type="submit">Save Changes</button>
+</form>
+<a href="{{ url_for('ingredients.ingredient_list') }}">Back to Ingredients</a>
+{% endblock %}
