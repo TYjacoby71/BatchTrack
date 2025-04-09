@@ -9,8 +9,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///batchtrack.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
-# Initialize SQLAlchemy with app
-db = SQLAlchemy(app)
+# Import db instance from models
+from models import db
+
+# Initialize db with app
+db.init_app(app)
 
 # Import models after db initialization
 from models import User
