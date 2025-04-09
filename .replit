@@ -28,4 +28,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask run --host=0.0.0.0 --port=5000"
+args = "PYTHONPATH=. flask run --host=0.0.0.0 --port=5000"

@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, make_response, redirect, url_for, session, flash
 from flask_login import login_required
 from models import db, Recipe
-from ingredient_routes import Ingredient
+from routes.ingredient_routes import Ingredient
 from stock_check_utils import check_stock_for_recipe
 from unit_conversion_utils import convert_units
 import csv
