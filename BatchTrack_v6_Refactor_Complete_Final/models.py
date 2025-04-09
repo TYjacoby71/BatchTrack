@@ -10,6 +10,10 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(32), default='user')
+    
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, password)
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,6 +43,12 @@ class Product(db.Model):
     quantity = db.Column(db.Integer)
     unit = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Ingredient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    quantity = db.Column(db.Float)
+    unit = db.Column(db.String(32))
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)

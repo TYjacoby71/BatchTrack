@@ -2,10 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, sen
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-from datetime import datetime, date
-import os, uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
@@ -13,7 +9,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///batchtrack.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
+# Initialize SQLAlchemy with app
 db = SQLAlchemy(app)
+
+# Import models after db initialization
+from models import User
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'

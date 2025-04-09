@@ -3,11 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, InventoryUnit
 
-class Ingredient(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    quantity = db.Column(db.Float)
-    unit = db.Column(db.String(32))
+from models import Ingredient
 
 ingredients_bp = Blueprint('ingredients', __name__)
 
