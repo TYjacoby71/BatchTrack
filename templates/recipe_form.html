@@ -203,8 +203,10 @@
                     const newUnit = await response.json();
                     // Add to all unit dropdowns
                     const unitSelect = document.getElementById('newIngUnit');
-                    const option = new Option(newUnit.name, newUnit.name);
-                    unitSelect.add(option);
+                    const newOption = document.createElement('option');
+                    newOption.value = newUnit.name;
+                    newOption.text = newUnit.name;
+                    unitSelect.add(newOption, unitSelect.options[unitSelect.options.length - 1]);
                     unitSelect.value = newUnit.name;
                     
                     document.getElementById('newUnitName').value = '';
