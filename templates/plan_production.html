@@ -26,7 +26,15 @@
         
         {% if all_ok %}
         <div class="action-buttons">
-            <a href="{{ url_for('batches.start_batch', recipe_id=recipe.id, scale=scale) }}" class="button">Start Batch</a>
+            <form method="post" action="{{ url_for('batches.start_batch') }}">
+                <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+                <input type="hidden" name="scale" value="{{ scale }}">
+                <div class="form-group">
+                    <label>Batch Notes:</label><br>
+                    <textarea name="notes" rows="3"></textarea>
+                </div>
+                <button type="submit" class="button">Start Batch</button>
+            </form>
         </div>
         {% else %}
         <div class="warning">
