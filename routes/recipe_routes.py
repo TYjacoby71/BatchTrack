@@ -1,7 +1,6 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Recipe, Ingredient, recipe_ingredients
+from models import db, Recipe, Ingredient, recipe_ingredients, InventoryUnit # Added InventoryUnit import
 from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
@@ -23,11 +22,11 @@ def new_recipe():
                 instructions=request.form['instructions'],
                 label_prefix=request.form['label_prefix']
             )
-            
+
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
             units = request.form.getlist('units[]')
-            
+
             for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
                 ingredient = Ingredient.query.get(ing_id)
                 if ingredient:
@@ -40,14 +39,17 @@ def new_recipe():
                             unit=unit
                         )
                     )
-            
+
             db.session.add(recipe)
             db.session.commit()
             flash('Recipe created successfully')
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error creating recipe: {str(e)}')
-    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients)
+    else: #added else block for GET request
+        all_ingredients = Ingredient.query.all()
+        inventory_units = InventoryUnit.query.all()
+        return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units) #added inventory_units
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -64,7 +66,10 @@ def edit_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error updating recipe: {str(e)}')
-    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients)
+    else: #added else block for GET request
+        all_ingredients = Ingredient.query.all()
+        inventory_units = InventoryUnit.query.all()
+        return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units) #added inventory_units
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required

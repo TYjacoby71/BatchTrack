@@ -49,7 +49,12 @@
                 </div>
                 <div>
                     <label for="newIngUnit">Base Unit:</label>
-                    <input type="text" id="newIngUnit" required>
+                    <select id="newIngUnit" required>
+                        <option value="">Select a unit</option>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <button type="submit">Save Ingredient</button>
                 <button type="button" onclick="closeQuickAddModal()">Cancel</button>
