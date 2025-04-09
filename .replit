@@ -11,7 +11,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "cd BatchTrack_v6_Refactor_Complete_Final && python app.py"]
 deploymentTarget = "cloudrun"
 
 [[ports]]
@@ -28,4 +28,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "cd BatchTrack_v6_Refactor_Complete_Final && python app.py"
