@@ -40,6 +40,12 @@ class Product(db.Model):
     unit = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Ingredient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    quantity = db.Column(db.Float)
+    unit = db.Column(db.String(32))
+
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
