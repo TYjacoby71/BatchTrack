@@ -179,43 +179,10 @@
             document.getElementById('newIngUnit').addEventListener('change', function(e) {
                 if (e.target.value === 'quick_add_unit') {
                     e.target.value = '';
+                    window.currentUnitSelectId = e.target.id;
                     showQuickAddUnitModal();
                 }
             });
-
-            async function submitQuickAddUnit(event) {
-                event.preventDefault();
-                const name = document.getElementById('newUnitName').value.trim();
-                if (!name) {
-                    alert('Please enter a unit name');
-                    return false;
-                }
-                
-                const response = await fetch('/recipes/units/quick-add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name })
-                });
-
-                if (response.ok) {
-                    const newUnit = await response.json();
-                    // Add to all unit dropdowns
-                    const unitSelect = document.getElementById('newIngUnit');
-                    const newOption = document.createElement('option');
-                    newOption.value = newUnit.name;
-                    newOption.text = newUnit.name;
-                    unitSelect.add(newOption, unitSelect.options[unitSelect.options.length - 1]);
-                    unitSelect.value = newUnit.name;
-                    
-                    document.getElementById('newUnitName').value = '';
-                    closeQuickAddUnitModal();
-                } else {
-                    alert('Failed to add unit');
-                }
-                return false;
-            }
         </script>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
     </div>
