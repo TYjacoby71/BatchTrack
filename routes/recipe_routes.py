@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, Recipe, Ingredient, recipe_ingredients, InventoryUnit # Added InventoryUnit import
+from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
@@ -66,6 +67,27 @@ def edit_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error updating recipe: {str(e)}')
+
+
+@recipes_bp.route('/units/quick-add', methods=['POST'])
+@login_required
+def quick_add_unit():
+    data = request.get_json()
+    name = data.get('name')
+    
+    try:
+        unit = InventoryUnit(name=name, type='count')
+        db.session.add(unit)
+        db.session.commit()
+        return jsonify({
+            'id': unit.id,
+            'name': unit.name
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
     else: #added else block for GET request
         all_ingredients = Ingredient.query.all()
         inventory_units = InventoryUnit.query.all()

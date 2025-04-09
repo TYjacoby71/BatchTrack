@@ -51,10 +51,23 @@
                     <label for="newIngUnit">Base Unit:</label>
                     <select id="newIngUnit" required>
                         <option value="">Select a unit</option>
+                        <option value="quick_add_unit">+ Quick Add Count Unit</option>
                         {% for unit in inventory_units %}
                         <option value="{{ unit.name }}">{{ unit.name }}</option>
                         {% endfor %}
                     </select>
+                </div>
+                <!-- Quick Add Unit Modal -->
+                <div id="quickAddUnitModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000;">
+                    <h3>Add New Count Unit</h3>
+                    <form id="quickAddUnitForm" onsubmit="return submitQuickAddUnit(event)">
+                        <div>
+                            <label for="newUnitName">Unit Name:</label>
+                            <input type="text" id="newUnitName" required>
+                        </div>
+                        <button type="submit">Save Unit</button>
+                        <button type="button" onclick="closeQuickAddUnitModal()">Cancel</button>
+                    </form>
                 </div>
                 <button type="submit">Save Ingredient</button>
                 <button type="button" onclick="closeQuickAddModal()">Cancel</button>
@@ -152,6 +165,52 @@
                 } else {
                     updateUnit(select);
                 }
+            }
+
+            // Quick Add Unit Functions
+            function showQuickAddUnitModal() {
+                document.getElementById('quickAddUnitModal').style.display = 'block';
+            }
+
+            function closeQuickAddUnitModal() {
+                document.getElementById('quickAddUnitModal').style.display = 'none';
+            }
+
+            document.getElementById('newIngUnit').addEventListener('change', function(e) {
+                if (e.target.value === 'quick_add_unit') {
+                    e.target.value = '';
+                    showQuickAddUnitModal();
+                }
+            });
+
+            async function submitQuickAddUnit(event) {
+                event.preventDefault();
+                const name = document.getElementById('newUnitName').value;
+                
+                const response = await fetch('/units/quick-add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                if (response.ok) {
+                    const newUnit = await response.json();
+                    // Add to all unit dropdowns
+                    const selects = document.querySelectorAll('select[id="newIngUnit"]');
+                    selects.forEach(select => {
+                        const option = new Option(newUnit.name, newUnit.name);
+                        select.add(option);
+                        select.value = newUnit.name;
+                    });
+                    
+                    document.getElementById('newUnitName').value = '';
+                    closeQuickAddUnitModal();
+                } else {
+                    alert('Failed to add unit');
+                }
+                return false;
             }
         </script>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
