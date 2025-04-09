@@ -84,14 +84,12 @@ def quick_add_unit():
         db.session.commit()
         return jsonify({
             'id': unit.id,
-            'name': unit.name
+            'name': unit.name,
+            'type': 'count'
         })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
-
-
-    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units)
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
