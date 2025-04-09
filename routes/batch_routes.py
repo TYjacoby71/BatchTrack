@@ -48,14 +48,24 @@ def start_batch():
     recipes = Recipe.query.all()
     return render_template('start_batch.html', recipes=recipes)
 
-@batches_bp.route('/batches/in-progress')
+@batches_bp.route('/batches/in-progress/<int:batch_id>')
 @login_required
-def view_batch_in_progress():
-    batch = Batch.query.filter(Batch.total_cost == 0).first()
-    if not batch:
-        flash('No batch in progress.')
-        return redirect(url_for('home'))
-    return render_template('batch_in_progress.html', batch=batch)
+def view_batch_in_progress(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    if batch.total_cost is not None:
+        flash('This batch is already completed.')
+        return redirect(url_for('batches.list_batches'))
+    product_units = ProductUnit.query.all()
+    return render_template('batch_in_progress.html', batch=batch, product_units=product_units)
+
+@batches_bp.route('/batches/in-progress/<int:batch_id>/notes', methods=['POST'])
+@login_required
+def update_batch_notes(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    batch.notes = request.form.get('notes', '')
+    db.session.commit()
+    flash('Notes updated successfully.')
+    return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
 @batches_bp.route('/batches/finish/<int:batch_id>', methods=['POST'])
 @login_required
