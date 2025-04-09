@@ -10,14 +10,14 @@
     <header>
         <nav>
             <a href="/">Home</a>
-            <a href="/batches/start">Start Batch</a>
+            <a href="{{ url_for('batches.start_batch') }}">Start Batch</a>
             <a href="{{ url_for('recipes.list_recipes') }}">Recipes</a>
-            <a href="/ingredients">Ingredients</a>
-            <a href="/stock/bulk-check">Bulk Stock</a>
-            <a href="/admin/units">Unit Manager</a>
-            <a href="/tags">Tags</a>
-            <a href="/logs/faults">Fault Log</a>
-            <a href="/logout">Logout</a>
+            <a href="{{ url_for('ingredients.ingredient_list') }}">Ingredients</a>
+            <a href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock</a>
+            <a href="{{ url_for('admin.unit_manager') }}">Unit Manager</a>
+            <a href="{{ url_for('tags.manage_tags') }}">Tags</a>
+            <a href="{{ url_for('faults.view_fault_log') }}">Fault Log</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
         </nav>
     </header>
     <main class="container">
