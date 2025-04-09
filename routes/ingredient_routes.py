@@ -1,5 +1,5 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from models import db, InventoryUnit
 
@@ -37,6 +37,26 @@ def update_ingredient(id):
         return redirect(url_for('ingredients.ingredient_list'))
     units = InventoryUnit.query.all()
     return render_template('update_ingredient.html', ing=ing, units=units)
+
+@ingredients_bp.route('/ingredients/quick-add', methods=['POST'])
+@login_required
+def quick_add_ingredient():
+    data = request.get_json()
+    name = data.get('name')
+    unit = data.get('unit')
+    
+    try:
+        ingredient = Ingredient(name=name, quantity=0, unit=unit)
+        db.session.add(ingredient)
+        db.session.commit()
+        return jsonify({
+            'id': ingredient.id,
+            'name': ingredient.name,
+            'unit': ingredient.unit
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 @ingredients_bp.route('/ingredients/delete/<int:id>')
 @login_required

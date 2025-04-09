@@ -19,6 +19,7 @@
 
     <div class="form-group">
         <label>Ingredients:</label>
+        <button type="button" onclick="showQuickAddModal()">Quick Add New Ingredient</button>
         <div id="ingredients-container">
             {% if recipe and recipe.ingredients %}
                 {% for ing in recipe.ingredients %}
@@ -38,7 +39,65 @@
                 {% endfor %}
             {% endif %}
         </div>
+        <!-- Quick Add Ingredient Modal -->
+        <div id="quickAddIngredientModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000;">
+            <h3>Add New Ingredient</h3>
+            <form id="quickAddIngredientForm" onsubmit="return submitQuickAddIngredient(event)">
+                <div>
+                    <label for="newIngName">Name:</label>
+                    <input type="text" id="newIngName" required>
+                </div>
+                <div>
+                    <label for="newIngUnit">Base Unit:</label>
+                    <input type="text" id="newIngUnit" required>
+                </div>
+                <button type="submit">Add Ingredient</button>
+                <button type="button" onclick="closeQuickAddModal()">Cancel</button>
+            </form>
+        </div>
+
         <script>
+            function showQuickAddModal() {
+                document.getElementById('quickAddIngredientModal').style.display = 'block';
+            }
+
+            function closeQuickAddModal() {
+                document.getElementById('quickAddIngredientModal').style.display = 'none';
+            }
+
+            async function submitQuickAddIngredient(event) {
+                event.preventDefault();
+                const name = document.getElementById('newIngName').value;
+                const unit = document.getElementById('newIngUnit').value;
+                
+                const response = await fetch('/ingredients/quick-add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, unit })
+                });
+
+                if (response.ok) {
+                    const newIngredient = await response.json();
+                    // Add to all ingredient dropdowns
+                    const selects = document.querySelectorAll('select[name="ingredient_ids[]"]');
+                    selects.forEach(select => {
+                        const option = new Option(
+                            `${newIngredient.name} (0 ${newIngredient.unit})`, 
+                            newIngredient.id
+                        );
+                        option.dataset.unit = newIngredient.unit;
+                        option.dataset.quantity = 0;
+                        select.add(option);
+                    });
+                    closeQuickAddModal();
+                } else {
+                    alert('Failed to add ingredient');
+                }
+                return false;
+            }
+
             function updateUnit(select) {
                 if (select && select.selectedIndex >= 0) {
                     const unit = select.options[select.selectedIndex].dataset.unit;
