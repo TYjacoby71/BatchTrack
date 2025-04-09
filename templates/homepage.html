@@ -6,7 +6,7 @@
 
 <div style="margin-top: 2rem;">
   {% if active_batch %}
-    <a href="{{ url_for('batch_view.view_batch', batch_id=active_batch.id) }}" class="button" style="margin-right: 1rem;">Finish Batch</a>
+    <a href="{{ url_for('batches.view_batch_in_progress', batch_id=active_batch.id) }}" class="button" style="margin-right: 1rem;">Complete Batch</a>
   {% endif %}
   <button onclick="document.getElementById('startFlowModal').style.display='block'" class="button">Start Flow</button>
 </div>
