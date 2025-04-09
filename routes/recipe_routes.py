@@ -6,13 +6,13 @@ from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
 
-@recipes_bp.route('/recipes', methods=['GET'])
+@recipes_bp.route('/', methods=['GET'])
 @login_required
 def list_recipes():
     recipes = Recipe.query.all()
     return render_template('recipe_list.html', recipes=recipes)
 
-@recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
+@recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
     if request.method == 'POST':
@@ -30,7 +30,7 @@ def new_recipe():
             flash(f'Error creating recipe: {str(e)}')
     return render_template('recipe_form.html', recipe=None)
 
-@recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
@@ -46,7 +46,7 @@ def edit_recipe(recipe_id):
             flash(f'Error updating recipe: {str(e)}')
     return render_template('recipe_form.html', recipe=recipe)
 
-@recipes_bp.route('/recipes/<int:recipe_id>/plan', methods=['GET', 'POST'])
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
