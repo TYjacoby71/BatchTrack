@@ -13,14 +13,27 @@ bulk_stock_bp = Blueprint('bulk_stock', __name__)
 @bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
 @login_required
 def bulk_stock_check():
-    recipes = Recipe.query.all()
-    summary = {}
+    try:
+        recipes = Recipe.query.all()
+        summary = {}
 
-    if request.method == 'POST':
-        selected_ids = request.form.getlist('recipe_ids')
-        scale = float(request.form.get('scale', 1.0))
-        session['bulk_recipe_ids'] = selected_ids
-        session['bulk_scale'] = scale
+        if request.method == 'POST':
+            selected_ids = request.form.getlist('recipe_ids')
+            if not selected_ids:
+                flash('Please select at least one recipe')
+                return redirect(url_for('bulk_stock.bulk_stock_check'))
+                
+            try:
+                scale = float(request.form.get('scale', 1.0))
+                if scale <= 0:
+                    flash('Scale must be greater than 0')
+                    return redirect(url_for('bulk_stock.bulk_stock_check'))
+            except ValueError:
+                flash('Invalid scale value')
+                return redirect(url_for('bulk_stock.bulk_stock_check'))
+                
+            session['bulk_recipe_ids'] = selected_ids
+            session['bulk_scale'] = scale
 
         for rid in selected_ids:
             recipe = Recipe.query.get(int(rid))
@@ -69,8 +82,16 @@ def bulk_stock_check():
 @bulk_stock_bp.route('/stock/bulk-check/csv')
 @login_required
 def export_shopping_list_csv():
-    summary = session.get('bulk_summary', [])
-    missing = [item for item in summary if item['status'] in ['LOW', 'NEEDED']]
+    try:
+        summary = session.get('bulk_summary', [])
+        if not summary:
+            flash('No stock check results available')
+            return redirect(url_for('bulk_stock.bulk_stock_check'))
+            
+        missing = [item for item in summary if item['status'] in ['LOW', 'NEEDED']]
+        if not missing:
+            flash('No items need restocking')
+            return redirect(url_for('bulk_stock.bulk_stock_check'))
 
     si = io.StringIO()
     cw = csv.writer(si)
