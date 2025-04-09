@@ -56,7 +56,7 @@ def load_user(user_id):
 @login_required
 def home():
     recipes = Recipe.query.all()
-    active_batch = Batch.query.filter_by(status='in_progress').first()
+    active_batch = Batch.query.filter(Batch.total_cost == None).first()
     return render_template('homepage.html', 
                          current_user=current_user,
                          recipes=recipes,
