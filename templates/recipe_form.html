@@ -19,6 +19,14 @@
             <textarea id="instructions" name="instructions" rows="4">{{ recipe.instructions if recipe else '' }}</textarea>
         </div>
 
+        <div class="form-group">
+            <label for="qr_code">QR Code Image:</label>
+            <input type="file" id="qr_code" name="qr_code" accept="image/*">
+            {% if recipe and recipe.qr_image %}
+            <p>Current QR code: {{ recipe.qr_image }}</p>
+            {% endif %}
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="button">Save Recipe</button>
             <a href="{{ url_for('recipes.list_recipes') }}" class="button secondary">Cancel</a>

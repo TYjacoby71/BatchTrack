@@ -9,9 +9,18 @@
     <div class="recipe-card">
         <h3>{{ recipe.name }}</h3>
         <p>Label Prefix: {{ recipe.label_prefix }}</p>
+        {% if recipe.instructions %}
+        <div class="recipe-instructions">
+            <strong>Instructions:</strong>
+            <p>{{ recipe.instructions[:100] }}{% if recipe.instructions|length > 100 %}...{% endif %}</p>
+        </div>
+        {% endif %}
         <div class="recipe-actions">
             <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="button">Edit</a>
             <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="button">Plan Production</a>
+            {% if recipe.qr_image %}
+            <a href="{{ url_for('static', filename=recipe.qr_image) }}" class="button" target="_blank">View QR</a>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
