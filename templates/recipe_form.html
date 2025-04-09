@@ -116,9 +116,12 @@
             }
 
             function updateUnit(select) {
-                if (select && select.selectedIndex >= 0) {
-                    const unit = select.options[select.selectedIndex].dataset.unit;
-                    select.parentElement.querySelector('input[name="units[]"]').value = unit || '';
+                if (select && select.selectedIndex >= 0 && select.value && select.value !== 'quick_add') {
+                    const selectedOption = select.options[select.selectedIndex];
+                    if (selectedOption && selectedOption.dataset) {
+                        const unit = selectedOption.dataset.unit;
+                        select.parentElement.querySelector('input[name="units[]"]').value = unit || '';
+                    }
                 }
             }
 
@@ -141,9 +144,6 @@
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
                 `;
                 container.appendChild(div);
-                if (div.querySelector('select').options.length > 0) {
-                    updateUnit(div.querySelector('select'));
-                }
             }
 
             function handleIngredientSelect(select) {
