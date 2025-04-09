@@ -1,0 +1,37 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Batch In Progress</h2>
+
+<p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+<p><strong>Scale:</strong> {{ batch.scale }}</p>
+<p><strong>Batch Code:</strong> {{ batch.label_code }}</p>
+
+<form method="post" action="/batches/finish/{{ batch.id }}" enctype="multipart/form-data">
+    <label for="notes">Notes:</label><br>
+    <textarea name="notes" rows="4" cols="50">{{ batch.notes or '' }}</textarea><br>
+
+    <label for="tags">Tags:</label><br>
+    <input type="text" name="tags" value="{{ batch.tags or '' }}"><br><br>
+
+    <label for="product_quantity">Product Quantity:</label>
+    <input type="number" name="product_quantity" value="1"><br>
+
+    <label for="product_unit">Product Unit:</label>
+    <select name="product_unit">
+        {% for unit in product_units %}
+        <option value="{{ unit.name }}">{{ unit.name }}</option>
+        {% endfor %}
+    </select><br>
+
+    <label for="product_image">Upload Product Image:</label>
+    <input type="file" name="product_image"><br><br>
+
+    <button type="submit" name="action" value="finish">✓ Finish Batch</button>
+    <button type="submit" name="action" value="fail">✕ Mark as Failed</button>
+</form>
+
+<form method="post" action="/batches/cancel/{{ batch.id }}">
+    <button type="submit">↩ Cancel Batch</button>
+</form>
+{% endblock %}

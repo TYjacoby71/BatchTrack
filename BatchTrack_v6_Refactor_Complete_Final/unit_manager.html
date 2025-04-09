@@ -1,0 +1,45 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Unit Manager</h2>
+
+<h3>Inventory Units</h3>
+<table>
+<tr><th>Name</th><th>Type</th><th>Base Eqv.</th><th>Aliases</th><th>Density?</th></tr>
+{% for unit in inventory_units %}
+<tr>
+  <td>{{ unit.name }}</td>
+  <td>{{ unit.type }}</td>
+  <td>{{ unit.base_equivalent }}</td>
+  <td>{{ unit.aliases }}</td>
+  <td>{{ 'Yes' if unit.density_required else 'No' }}</td>
+</tr>
+{% endfor %}
+</table>
+<form method="post" action="/admin/units/add/inventory">
+  <input name="name" placeholder="Name" required>
+  <select name="type">
+    <option value="volume">Volume</option>
+    <option value="weight">Weight</option>
+    <option value="count">Count</option>
+    <option value="length">Length</option>
+  </select>
+  <input name="base_equivalent" placeholder="Base Eqv." type="number" step="0.01">
+  <input name="aliases" placeholder="Aliases (comma-separated)">
+  <label><input type="checkbox" name="density_required"> Density?</label>
+  <button type="submit">Add Inventory Unit</button>
+</form>
+
+<h3>Product Units</h3>
+<table>
+<tr><th>Name</th></tr>
+{% for unit in product_units %}
+<tr><td>{{ unit.name }}</td></tr>
+{% endfor %}
+</table>
+<form method="post" action="/admin/units/add/product">
+  <input name="name" placeholder="Product Unit" required>
+  <button type="submit">Add Product Unit</button>
+</form>
+
+{% endblock %}

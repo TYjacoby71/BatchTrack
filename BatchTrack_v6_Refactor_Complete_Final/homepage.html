@@ -1,0 +1,16 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Welcome, {{ current_user.username }}!</h2>
+
+<div class="flow-panel">
+    <div class="tile">
+        <a href="/batches/start">Start Batch</a>
+    </div>
+    {% if batch_in_progress %}
+    <div class="tile">
+        <a href="/batches/in-progress">Finish Batch</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

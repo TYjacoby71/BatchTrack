@@ -1,7 +1,0 @@
-
-{
-    "product_types": ["Balm", "Lotion", "Cream", "Oil", "Scrub", "Mask"],
-    "use_areas": ["Face", "Body", "Hands", "Hair", "Feet"],
-    "primary_ingredients": ["Shea Butter", "Coconut Oil", "Aloe Vera", "Essential Oils", "Clay"],
-    "use_cases": ["Moisturizing", "Exfoliating", "Cleansing", "Treatment", "Protection"]
-}
