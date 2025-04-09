@@ -60,8 +60,9 @@
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
                 `;
                 container.appendChild(div);
-                const select = div.querySelector('select');
-                updateUnit(select);
+                if (div.querySelector('select').options.length > 0) {
+                    updateUnit(div.querySelector('select'));
+                }
             }
         </script>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
