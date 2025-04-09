@@ -57,6 +57,7 @@ def new_recipe():
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    inventory_units = InventoryUnit.query.all()
     if request.method == 'POST':
         try:
             recipe.name = request.form['name']
@@ -67,6 +68,8 @@ def edit_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
             flash(f'Error updating recipe: {str(e)}')
+            
+    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units)
 
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
