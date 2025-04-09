@@ -1,6 +1,7 @@
 
 from app import app
-from models import db, InventoryUnit, ProductUnit
+from models import db, InventoryUnit, ProductUnit, User
+from werkzeug.security import generate_password_hash
 
 with app.app_context():
     db.create_all()
@@ -20,5 +21,14 @@ with app.app_context():
         db.session.add(ProductUnit(name="jar"))
         db.session.add(ProductUnit(name="bar"))
 
+    # Create default admin user if not exists
+    if not User.query.filter_by(username='admin').first():
+        admin = User(
+            username='admin',
+            password_hash=generate_password_hash('admin'),
+            role='admin'
+        )
+        db.session.add(admin)
+
     db.session.commit()
-    print("Database initialized and seeded.")
+    print("Database initialized and seeded with default admin user.")
