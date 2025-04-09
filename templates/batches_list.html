@@ -32,7 +32,7 @@
             </td>
             <td>
                 {% if batch.total_cost == None %}
-                    <a href="{{ url_for('batches.view_batch_in_progress') }}" class="button">Resume</a>
+                    <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="button">Resume</a>
                 {% else %}
                     <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="button">View</a>
                 {% endif %}
