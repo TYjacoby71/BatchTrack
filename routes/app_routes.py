@@ -14,16 +14,16 @@ from routes.tag_manager_routes import tag_bp
 def register_blueprints(app):
     """Register all blueprints with proper URL prefixes"""
     blueprints = [
-        (batches_bp, ''),  # Root routes for batches
+        (batches_bp, '/batches'),
         (admin_bp, '/admin'),
-        (ingredients_bp, '/inventory'),
+        (ingredients_bp, '/ingredients'),
         (recipes_bp, '/recipes'),
         (bulk_stock_bp, '/stock'),
-        (adjust_bp, '/inventory'),
-        (batch_view_bp, ''),  # Root routes for batch views
+        (adjust_bp, '/adjust'),
+        (batch_view_bp, '/batch-view'),
         (faults_bp, '/logs'),
-        (product_log_bp, ''),  # Root routes for products
-        (tag_bp, '/tags')
+        (product_log_bp, '/products'),
+        (tag_bp, '')
     ]
     
     for blueprint, url_prefix in blueprints:
