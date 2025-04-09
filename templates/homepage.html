@@ -4,66 +4,66 @@
 
 <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 
-<div style="margin-top: 2rem;">
-  {% if active_batch %}
-    <a href="{{ url_for('batch_view.list_batches') }}" class="button" style="margin-right: 1rem;">View Batches</a>
-  {% endif %}
+<div class="flow-container">
+  <form method="post">
+    <div class="form-group">
+      <label>Choose Recipe:</label>
+      <select name="recipe_id" required>
+        {% for r in recipes %}
+          <option value="{{ r.id }}" {% if selected_recipe and r.id == selected_recipe.id %}selected{% endif %}>
+            {{ r.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <div class="flow-container">
-    <form method="post">
-      <div class="form-group">
-        <label>Choose Recipe:</label>
-        <select name="recipe_id" required>
-          {% for r in recipes %}
-            <option value="{{ r.id }}" {% if selected_recipe and r.id == selected_recipe.id %}selected{% endif %}>
-              {{ r.name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
+    <div class="form-group">
+      <label>Scale:</label>
+      <input type="number" name="scale" step="0.1" value="{{ scale }}" required>
+    </div>
 
-      <div class="form-group">
-        <label>Scale:</label>
-        <input type="number" name="scale" step="0.1" value="{{ scale }}" required>
-      </div>
+    <button type="submit" class="button">Check Stock</button>
+  </form>
 
-      <button type="submit" class="button">Check Stock</button>
-    </form>
+  {% if stock_check %}
+    <div class="stock-results">
+      <h3>Stock Check Results</h3>
+      <table>
+        <tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr>
+        {% for i in stock_check %}
+        <tr class="{{ i.status.lower() }}">
+          <td>{{ i.name }}</td>
+          <td>{{ i.needed }} {{ i.unit }}</td>
+          <td>{{ i.available }} {{ i.unit }}</td>
+          <td>{{ i.status }}</td>
+        </tr>
+        {% endfor %}
+      </table>
 
-    {% if stock_check %}
-      <div class="stock-results">
-        <h3>Stock Check Results</h3>
-        <table>
-          <tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr>
-          {% for i in stock_check %}
-          <tr class="{{ i.status.lower() }}">
-            <td>{{ i.name }}</td>
-            <td>{{ i.needed }} {{ i.unit }}</td>
-            <td>{{ i.available }} {{ i.unit }}</td>
-            <td>{{ i.status }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-
-        {% if status == "ok" %}
-          <form method="post" action="{{ url_for('batches.start_batch') }}">
-            <input type="hidden" name="recipe_id" value="{{ selected_recipe.id }}">
-            <input type="hidden" name="scale" value="{{ scale }}">
-            <div class="form-group">
-              <label>Batch Notes:</label><br>
-              <textarea name="notes" rows="3"></textarea>
-            </div>
-            <button type="submit" class="button">Start Batch</button>
-          </form>
-        {% else %}
-          <div class="warning">
-            <p><strong>Some ingredients are low or missing.</strong> Please update stock.</p>
+      {% if status == "ok" %}
+        <form method="post" action="{{ url_for('batches.start_batch') }}">
+          <input type="hidden" name="recipe_id" value="{{ selected_recipe.id }}">
+          <input type="hidden" name="scale" value="{{ scale }}">
+          <div class="form-group">
+            <label>Batch Notes:</label><br>
+            <textarea name="notes" rows="3"></textarea>
           </div>
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
+          <button type="submit" class="button">Start Batch</button>
+        </form>
+      {% else %}
+        <div class="warning">
+          <p><strong>Some ingredients are low or missing.</strong> Please update stock.</p>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
+
+{% if active_batch %}
+  <div style="margin-top: 2rem;">
+    <a href="{{ url_for('batch_view.list_batches') }}" class="button">View Batches</a>
+  </div>
+{% endif %}
 
 {% if alert %}
 <div style="margin-top: 2rem; background-color: #ffe0e0; padding: 1rem; border-radius: 8px;">
