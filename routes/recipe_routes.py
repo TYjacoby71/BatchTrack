@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Recipe
+from models import db, Recipe, Ingredient, recipe_ingredients
 from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
