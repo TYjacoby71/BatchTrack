@@ -10,11 +10,16 @@
     <header>
         <nav>
             <a href="/">Home</a>
+            <a href="/batches/start">Start Batch</a>
+            <a href="/ingredients">Ingredients</a>
+            <a href="/stock/bulk-check">Bulk Stock</a>
             <a href="/admin/units">Unit Manager</a>
+            <a href="/tags">Tags</a>
+            <a href="/logs/faults">Fault Log</a>
             <a href="/logout">Logout</a>
         </nav>
     </header>
-    <main>
+    <main class="container">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <ul class="flashes">
