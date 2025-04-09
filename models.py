@@ -15,12 +15,21 @@ class User(UserMixin, db.Model):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
 
+recipe_ingredients = db.Table('recipe_ingredients',
+    db.Column('recipe_id', db.Integer, db.ForeignKey('recipe.id')),
+    db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id')),
+    db.Column('amount', db.Float),
+    db.Column('unit', db.String(32))
+)
+
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
     qr_image = db.Column(db.String(128))
+    ingredients = db.relationship('Ingredient', secondary=recipe_ingredients,
+                                backref=db.backref('recipes', lazy='dynamic'))
 
 class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
