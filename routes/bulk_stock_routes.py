@@ -12,6 +12,15 @@ bulk_stock_bp = Blueprint('bulk_stock', __name__)
 
 @bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
 @login_required
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask_login import login_required
+from models import Recipe, Ingredient
+from unit_conversion_utils import convert_units
+
+bulk_stock_bp = Blueprint('bulk_stock', __name__)
+
+@bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
+@login_required
 def bulk_stock_check():
     try:
         recipes = Recipe.query.all()

@@ -61,3 +61,8 @@ class InventoryUnit(db.Model):
 class ProductUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(32), unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
