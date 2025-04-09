@@ -24,8 +24,9 @@
                 {% for ing in recipe.ingredients %}
                 <div class="ingredient-entry">
                     <select name="ingredient_ids[]" required onchange="updateUnit(this)">
+                        <option value="">Select an ingredient</option>
                         {% for available_ing in all_ingredients %}
-                        <option value="{{ available_ing.id }}" data-unit="{{ available_ing.unit }}" {% if available_ing.id == ing.id %}selected{% endif %}>
+                        <option value="{{ available_ing.id }}" data-unit="{{ available_ing.unit }}" data-quantity="{{ available_ing.quantity }}" {% if available_ing.id == ing.id %}selected{% endif %}>
                             {{ available_ing.name }} ({{ available_ing.quantity }} {{ available_ing.unit }})
                         </option>
                         {% endfor %}
@@ -49,8 +50,9 @@
                 div.className = 'ingredient-entry';
                 div.innerHTML = `
                     <select name="ingredient_ids[]" required onchange="updateUnit(this)">
+                        <option value="">Select an ingredient</option>
                         {% for ing in all_ingredients %}
-                        <option value="{{ ing.id }}" data-unit="{{ ing.unit }}">
+                        <option value="{{ ing.id }}" data-unit="{{ ing.unit }}" data-quantity="{{ ing.quantity }}">
                             {{ ing.name }} ({{ ing.quantity }} {{ ing.unit }})
                         </option>
                         {% endfor %}
