@@ -51,7 +51,7 @@
                     <label for="newIngUnit">Base Unit:</label>
                     <input type="text" id="newIngUnit" required>
                 </div>
-                <button type="submit">Add Ingredient</button>
+                <button type="submit">Save Ingredient</button>
                 <button type="button" onclick="closeQuickAddModal()">Cancel</button>
             </form>
         </div>
@@ -69,6 +69,8 @@
                 event.preventDefault();
                 const name = document.getElementById('newIngName').value;
                 const unit = document.getElementById('newIngUnit').value;
+                const currentSelect = document.querySelector('select[name="ingredient_ids[]"]:focus') || 
+                                    document.querySelector('select[name="ingredient_ids[]"]:last-of-type');
 
                 const response = await fetch('/ingredients/quick-add', {
                     method: 'POST',
@@ -91,6 +93,16 @@
                         option.dataset.quantity = 0;
                         select.add(option);
                     });
+                    
+                    // Select the new ingredient in the current dropdown
+                    if (currentSelect) {
+                        currentSelect.value = newIngredient.id;
+                        updateUnit(currentSelect);
+                    }
+                    
+                    // Clear the form and close modal
+                    document.getElementById('newIngName').value = '';
+                    document.getElementById('newIngUnit').value = '';
                     closeQuickAddModal();
                 } else {
                     alert('Failed to add ingredient');
