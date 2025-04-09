@@ -55,7 +55,12 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def home():
-    return render_template('homepage.html', current_user=current_user)
+    recipes = Recipe.query.all()
+    active_batch = Batch.query.filter_by(status='in_progress').first()
+    return render_template('homepage.html', 
+                         current_user=current_user,
+                         recipes=recipes,
+                         active_batch=active_batch)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
