@@ -52,7 +52,12 @@ def view_batch_in_progress(batch_id):
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get(batch.recipe_id)
     product_units = ProductUnit.query.all()
-    return render_template('batch_in_progress.html', batch=batch, recipe=recipe, product_units=product_units)
+    return render_template('batch_in_progress.html', 
+                         batch=batch, 
+                         recipe=recipe, 
+                         product_units=product_units,
+                         batch_cost=batch.total_cost if batch else None,
+                         product_quantity=batch.product_quantity if hasattr(batch, 'product_quantity') else None)
 
 @batches_bp.route('/batches/in-progress/<int:batch_id>/notes', methods=['POST'])
 @login_required
