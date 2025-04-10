@@ -61,5 +61,6 @@ def check_stock():
     return jsonify({
         "stock_check": stock_check,
         "status": status,
-        "all_ok": all_ok
+        "all_ok": all_ok,
+        "recipe_name": recipe.name
     }), 200
