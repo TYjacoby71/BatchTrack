@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient
@@ -105,3 +104,21 @@ def delete_recipe(recipe_id):
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('plan_production.html', recipe=recipe, scale=1.0)
+
+@recipes_bp.route('/units/quick-add', methods=['POST'])
+def quick_add_unit():
+    data = request.get_json()
+    name = data.get('name')
+    type = data.get('type', 'volume')
+
+    try:
+        unit = InventoryUnit(name=name, type=type)
+        db.session.add(unit)
+        db.session.commit()
+        return jsonify({
+            'name': unit.name,
+            'type': unit.type
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
