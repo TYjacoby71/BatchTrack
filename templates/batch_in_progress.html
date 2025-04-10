@@ -85,8 +85,8 @@
             <li><strong>Total Batch Cost:</strong> ${{ "%.2f"|format(batch_cost|float) if batch_cost is not none else "0.00" }}</li>
             <li><strong>Product Quantity:</strong> {{ product_quantity or "—" }}</li>
             <li><strong>Unit Cost:</strong>
-                {% if product_quantity and product_quantity > 0 %}
-                    ${{ "%.2f"|format((batch_cost or 0) / product_quantity) }}
+                {% if product_quantity and product_quantity > 0 and batch_cost %}
+                    ${{ "%.2f"|format(batch_cost / product_quantity) }}
                 {% else %}
                     $0.00
                 {% endif %}

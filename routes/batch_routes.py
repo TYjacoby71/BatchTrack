@@ -69,3 +69,25 @@ def view_batch_in_progress(batch_id):
                          batch_cost=round(total_cost, 2),
                          product_quantity=batch.product_quantity if hasattr(batch, 'product_quantity') else None,
                          ingredient_costs=ingredient_costs)
+
+@batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
+@login_required
+def finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    if batch.total_cost is not None:
+        flash('This batch is already completed.')
+        return redirect(url_for('batches.list_batches'))
+
+    batch.total_cost = request.form.get('total_cost', type=float)
+    batch.notes = request.form.get('notes', '')
+    db.session.commit()
+    return redirect(url_for('batches.view_batch', batch_id=batch_id))
+
+@batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
+@login_required
+def cancel_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    db.session.delete(batch)
+    db.session.commit()
+    flash('Batch cancelled successfully.')
+    return redirect(url_for('batches.list_batches'))
