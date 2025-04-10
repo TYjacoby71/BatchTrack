@@ -37,7 +37,11 @@
                         {% endfor %}
                     </select>
                     <input type="number" step="0.01" name="amounts[]" value="{{ ing.amount }}" placeholder="Amount" required>
-                    <input type="text" name="units[]" value="{{ ing.unit }}" placeholder="Unit" readonly>
+                    <select name="units[]" required>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}" {% if ing and ing.unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
                 </div>
                 {% endfor %}
@@ -240,9 +244,27 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     form.addEventListener('submit', function(e) {
+        e.preventDefault();
         const submitBtn = document.getElementById('saveRecipeBtn');
         submitBtn.disabled = true;
-        return true;
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = "{{ url_for('recipes.list_recipes') }}";
+            } else {
+                submitBtn.disabled = false;
+                throw new Error('Failed to save recipe');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitBtn.disabled = false;
+            alert('Failed to save recipe. Please try again.');
+        });
     });
 });
 </script>
