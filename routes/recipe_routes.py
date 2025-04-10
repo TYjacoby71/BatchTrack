@@ -99,3 +99,9 @@ def delete_recipe(recipe_id):
     db.session.commit()
     flash('Recipe deleted.')
     return redirect(url_for('recipes.list_recipes'))
+
+@recipes_bp.route('/plan-production/<int:recipe_id>')
+@login_required
+def plan_production(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('plan_production.html', recipe=recipe, scale=1.0)
