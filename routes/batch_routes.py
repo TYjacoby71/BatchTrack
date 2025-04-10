@@ -15,7 +15,7 @@ def list_batches():
 
 @batches_bp.route('/start', methods=['POST'])
 @login_required
-def start_batch_api():
+def start_batch():
     data = request.json
     recipe_id = data.get('recipe_id')
     scale = float(data.get('scale', 1.0))

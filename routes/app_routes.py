@@ -32,7 +32,13 @@ def homepage():
             flash("Invalid scale value")
 
     return render_template("homepage.html", 
-
+                         recipes=recipes,
+                         stock_check=stock_check,
+                         selected_recipe=selected_recipe,
+                         scale=scale,
+                         status=status,
+                         active_batch=active_batch,
+                         current_user=current_user)
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
@@ -57,11 +63,3 @@ def check_stock():
         "status": status,
         "all_ok": all_ok
     }), 200
-
-                         recipes=recipes,
-                         stock_check=stock_check,
-                         selected_recipe=selected_recipe,
-                         scale=scale,
-                         status=status,
-                         active_batch=active_batch,
-                         current_user=current_user)

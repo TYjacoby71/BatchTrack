@@ -7,6 +7,8 @@ def check_stock_for_recipe(recipe, scale=1.0):
 
     for assoc in recipe.recipe_ingredients:
         ing = assoc.ingredient
+        if not ing:
+            continue
         needed = assoc.amount * scale
         try:
             needed_converted = UnitConversionService.convert(needed, assoc.unit, ing.unit)
