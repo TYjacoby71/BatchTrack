@@ -134,11 +134,11 @@ let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
 
+// Functions
 function setUnitReturnContext(context) {
   unitReturnContext = context;
 }
 
-// Functions
 function setIngredientReturnContext(source, dropdown = null) {
   ingredientReturnContext = source;
   lastIngredientDropdown = dropdown;
@@ -250,44 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
     button.innerText = "Add Unit";
   });
 });
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) return alert('Error: ' + data.error);
-
-      // Add to all unit dropdowns
-      document.querySelectorAll("select[name='units[]']").forEach(select => {
-        select.add(new Option(data.name, data.name, false, true));
-      });
-
-      // Add to quick ingredient unit dropdown
-      const quickUnit = document.getElementById('quickIngredientUnit');
-      quickUnit.add(new Option(data.name, data.name, false, true));
-      quickUnit.value = data.name;
-
-      // Handle modal transitions
-      const unitModalEl = document.getElementById('quickAddUnitModal');
-      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
-      if (unitModal) {
-        unitModal.hide();
-
-        // Clean up modal artifacts
-        document.body.classList.remove('modal-open');
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-
-        if (unitReturnContext === 'ingredient') {
-          // Wait for unit modal to fully close
-          setTimeout(() => {
-            const ingredientModalEl = document.getElementById('quickAddIngredientModal');
-            const ingredientModal = new bootstrap.Modal(ingredientModalEl);
-            ingredientModal.show();
-            unitReturnContext = 'main'; // Reset context
-          }, 250);
-        }
-      }
-
-      // Reset form
-      document.getElementById('unitName').value = '';
-      document.getElementById('unitType').selectedIndex = 0;
     });
   });
 
