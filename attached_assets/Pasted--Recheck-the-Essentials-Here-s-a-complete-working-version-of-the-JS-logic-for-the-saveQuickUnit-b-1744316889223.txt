@@ -1,0 +1,83 @@
+🧪 Recheck the Essentials
+Here’s a complete working version of the JS logic for the #saveQuickUnit button.
+
+✅ Drop this into your <script> block inside recipe_form.html
+js
+Copy
+Edit
+document.getElementById('saveQuickUnit').addEventListener('click', function () {
+  const name = document.getElementById('unitName').value.trim();
+  const type = document.getElementById('unitType').value;
+  const button = this;
+
+  if (!name) return alert('Unit name required.');
+
+  button.disabled = true;
+  button.innerText = "Saving...";
+
+  fetch('/quick-add/unit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, type })
+  })
+  .then(async response => {
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      alert("Error: " + data.error);
+      return;
+    }
+
+    // Add new unit to all unit dropdowns in the main form
+    document.querySelectorAll("select[name='units[]']").forEach(select => {
+      const option = new Option(data.name, data.name, false, true);
+      select.add(option);
+    });
+
+    // Add it to the unit dropdown in the ingredient modal
+    const quickUnit = document.getElementById('quickIngredientUnit');
+    const quickOption = new Option(data.name, data.name, false, true);
+    quickUnit.add(quickOption);
+    quickUnit.value = data.name;
+
+    // Close modal and remove overlay
+    const unitModalEl = document.getElementById('quickAddUnitModal');
+    const unitModal = bootstrap.Modal.getOrCreateInstance(unitModalEl);
+    unitModal.hide();
+    document.body.classList.remove('modal-open');
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+    // Reopen ingredient modal if needed
+    if (unitReturnContext === 'ingredient') {
+      setTimeout(() => {
+        const ingredientModalEl = document.getElementById('quickAddIngredientModal');
+        bootstrap.Modal.getOrCreateInstance(ingredientModalEl).show();
+      }, 250);
+    }
+
+    // Reset form + state
+    document.getElementById('unitName').value = '';
+    document.getElementById('unitType').selectedIndex = 0;
+    unitReturnContext = 'main';
+  })
+  .catch(error => {
+    console.error("Unit Add Error:", error);
+    alert("Something went wrong while adding the unit.");
+  })
+  .finally(() => {
+    button.disabled = false;
+    button.innerText = "Add Unit";
+  });
+});
+✅ Also Confirm This HTML Line Exists
+html
+Copy
+Edit
+<a href="#" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal" onclick="setUnitReturnContext('ingredient')" data-bs-dismiss="modal">
+  + Add New Unit
+</a>
