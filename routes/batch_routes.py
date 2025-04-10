@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit
 from datetime import datetime
@@ -170,4 +170,4 @@ def cancel_batch(batch_id):
     db.session.delete(batch)
     db.session.commit()
     flash("Batch canceled and inventory restored.")
-    return redirect(url_for('home'))
+    return redirect(url_for('batches.list_batches'))
