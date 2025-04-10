@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="batch-view">
@@ -7,20 +8,56 @@
         <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
         <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
         <p><strong>Scale:</strong> {{ batch.scale }}</p>
-        <p><strong>Status:</strong> {{ "Completed" if batch.total_cost else "In Progress" }}</p>
-        {% if batch.total_cost %}
+        <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+        <p><strong>Status:</strong> Completed</p>
         <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
-        {% endif %}
-        {% if batch.notes %}
-        <p><strong>Notes:</strong><br>{{ batch.notes|nl2br }}</p>
-        {% endif %}
-        {% if batch.tags %}
-        <p><strong>Tags:</strong> {{ batch.tags }}</p>
+        {% if batch.product_quantity %}
+            <p><strong>Product Yield:</strong> {{ batch.product_quantity }} {{ batch.product_unit }}</p>
+            <p><strong>Cost Per Unit:</strong> ${{ "%.2f"|format(batch.total_cost / batch.product_quantity) }}</p>
         {% endif %}
     </div>
 
+    <div class="ingredients-used">
+        <h3>Ingredients Used</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Amount</th>
+                    <th>Unit</th>
+                    <th>Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ingredient in batch.ingredients_used %}
+                <tr>
+                    <td>{{ ingredient.name }}</td>
+                    <td>{{ "%.2f"|format(ingredient.amount) }}</td>
+                    <td>{{ ingredient.unit }}</td>
+                    <td>${{ "%.2f"|format(ingredient.cost) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if batch.notes %}
+    <div class="notes-section">
+        <h3>Notes</h3>
+        <p class="batch-notes">{{ batch.notes|replace('\n', '<br>')|safe }}</p>
+    </div>
+    {% endif %}
+
+    {% if batch.tags %}
+    <div class="tags-section">
+        <h3>Tags</h3>
+        <p>{{ batch.tags }}</p>
+    </div>
+    {% endif %}
+
     <div class="actions">
         <a href="{{ url_for('batch_view.list_batches') }}" class="button">Back to Batches</a>
+        <button onclick="window.print()" class="button secondary">Print</button>
     </div>
 </div>
 {% endblock %}
