@@ -36,8 +36,10 @@ from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
+from blueprints.quick_add.routes import quick_add_bp
 
 # Register blueprints
+app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
