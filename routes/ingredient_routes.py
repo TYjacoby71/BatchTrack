@@ -51,11 +51,9 @@ def quick_add_ingredient():
         # Check for existing ingredient
         existing = Ingredient.query.filter_by(name=name).first()
         if existing:
-            return jsonify({
-                'id': existing.id,
-                'name': existing.name,
-                'unit': existing.unit
-            })
+            session['preselect_ingredient_id'] = existing.id
+            session['add_ingredient_line'] = True
+            return jsonify({'redirect': request.referrer})
 
         # Create new ingredient with quantity 0 for placeholder
         ingredient = Ingredient(name=name, quantity=0.0, unit=unit)
@@ -63,15 +61,10 @@ def quick_add_ingredient():
         db.session.commit()
 
         # Store in session for recipe form auto-population
-        session['last_added_ingredient_id'] = ingredient.id
+        session['preselect_ingredient_id'] = ingredient.id
         session['add_ingredient_line'] = True
 
-        return jsonify({
-            'id': ingredient.id,
-            'name': ingredient.name,
-            'unit': ingredient.unit,
-            'quantity': ingredient.quantity
-        })
+        return jsonify({'redirect': request.referrer})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
