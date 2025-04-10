@@ -6,7 +6,7 @@ batch_view_bp = Blueprint('batch_view', __name__)
 
 @batch_view_bp.route('/batches/<int:batch_id>')
 @login_required
-def view_batch(batch_id):
+def finished_batch(batch_id):
     try:
         batch = Batch.query.get_or_404(batch_id)
         if not batch.total_cost:
