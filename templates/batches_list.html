@@ -1,44 +1,65 @@
 
 {% extends 'layout.html' %}
 {% block content %}
-<h2>All Batches</h2>
+<h2>Batches</h2>
 
-<table>
-    <thead>
-        <tr>
-            <th>Label Code</th>
-            <th>Recipe Name</th>
-            <th>Scale</th>
-            <th>Timestamp</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
+<!-- Toggle Buttons -->
+<div class="mb-3 text-end">
+    <button class="btn btn-outline-secondary" onclick="showView('tableView')">Table View</button>
+    <button class="btn btn-outline-secondary" onclick="showView('cardView')">Card View</button>
+</div>
+
+<!-- Table View -->
+<div id="tableView" style="display: block;">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Recipe</th>
+                <th>Label Code</th>
+                <th>Scale</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for batch in batches %}
+            <tr>
+                <td>{{ batch.recipe_name }}</td>
+                <td>{{ batch.label_code }}</td>
+                <td>{{ batch.scale }}</td>
+                <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
+                <td>
+                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Card View -->
+<div id="cardView" style="display: none;">
+    <div class="row">
         {% for batch in batches %}
-        <tr>
-            <td>{{ batch.label_code }}</td>
-            <td>{{ batch.recipe_name }}</td>
-            <td>{{ batch.scale }}</td>
-            <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>
-                {% if batch.total_cost == None %}
-                    🟡 In Progress
-                {% elif batch.total_cost == 0 %}
-                    ❌ Failed
-                {% else %}
-                    ✅ Completed
-                {% endif %}
-            </td>
-            <td>
-                {% if batch.total_cost == None %}
-                    <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="button">Resume</a>
-                {% else %}
-                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="button">View</a>
-                {% endif %}
-            </td>
-        </tr>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ batch.recipe_name }}</h5>
+                    <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
+                    <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
+                    <p class="card-text text-muted">{{ batch.timestamp.strftime("%Y-%m-%d") }}</p>
+                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                </div>
+            </div>
+        </div>
         {% endfor %}
-    </tbody>
-</table>
+    </div>
+</div>
+
+<script>
+function showView(viewId) {
+    document.getElementById('tableView').style.display = viewId === 'tableView' ? 'block' : 'none';
+    document.getElementById('cardView').style.display = viewId === 'cardView' ? 'block' : 'none';
+}
+</script>
 {% endblock %}
