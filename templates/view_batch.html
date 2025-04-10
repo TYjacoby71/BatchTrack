@@ -1,34 +1,22 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div class="batch-view">
     <h2>Batch Details</h2>
-    
-    <div class="batch-info">
-        <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-        <p><strong>Scale:</strong> {{ batch.scale }}</p>
-        <p><strong>Status:</strong> {{ "In Progress" if batch.total_cost is none else "Completed" }}</p>
-        {% if batch.notes %}
-        <p><strong>Notes:</strong> {{ batch.notes }}</p>
-        {% endif %}
-    </div>
 
-    <div class="ingredients-used">
-        <h3>Ingredients Used</h3>
-        <table>
-            <tr>
-                <th>Ingredient</th>
-                <th>Amount</th>
-                <th>Unit</th>
-            </tr>
-            {% for assoc in batch.recipe.recipe_ingredients %}
-            <tr>
-                <td>{{ assoc.ingredient.name }}</td>
-                <td>{{ assoc.amount * batch.scale }}</td>
-                <td>{{ assoc.unit }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+    <div class="batch-info">
+        <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+        <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+        <p><strong>Scale:</strong> {{ batch.scale }}</p>
+        <p><strong>Status:</strong> {{ "Completed" if batch.total_cost else "In Progress" }}</p>
+        {% if batch.total_cost %}
+        <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
+        {% endif %}
+        {% if batch.notes %}
+        <p><strong>Notes:</strong><br>{{ batch.notes|nl2br }}</p>
+        {% endif %}
+        {% if batch.tags %}
+        <p><strong>Tags:</strong> {{ batch.tags }}</p>
+        {% endif %}
     </div>
 
     <div class="actions">

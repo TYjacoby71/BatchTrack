@@ -9,12 +9,13 @@ batch_view_bp = Blueprint('batch_view', __name__)
 def view_batch(batch_id):
     try:
         batch = Batch.query.get_or_404(batch_id)
+        if not batch.total_cost:
+            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
         return render_template('view_batch.html', 
-                             batch=batch,
-                             current_user=current_user)
+                             batch=batch)
     except Exception as e:
         flash(f'Error viewing batch: {str(e)}')
-        abort(500)
+        return redirect(url_for('batch_view.list_batches'))
 
 @batch_view_bp.route('/batches/list')
 @login_required
