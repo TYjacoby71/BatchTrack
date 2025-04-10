@@ -152,7 +152,7 @@ function addIngredient(preselectId = null) {
     <select name="ingredient_ids[]" required>
       <option value="">Select an ingredient</option>
       {% for ing in all_ingredients %}
-      <option value="{{ ing.id }}" ${preselectId == {{ ing.id }} ? 'selected' : ''}>{{ ing.name }}</option>
+      <option value="{{ ing.id }}" ${preselectId === {{ ing.id }} ? 'selected' : ''}>{{ ing.name }}</option>
       {% endfor %}
     </select>
     <input type="number" step="0.01" name="amounts[]" required>
