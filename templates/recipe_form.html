@@ -79,7 +79,7 @@
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
-          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
+          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal" onclick="unitReturnContext = 'ingredient';">+ Add New Unit</button>
         </div>
       </div>
       <div class="modal-footer">
@@ -128,8 +128,8 @@
 
 <script>
 // Global variables
-const PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
-const SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
+let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
+let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
 let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
@@ -305,6 +305,15 @@ document.addEventListener('DOMContentLoaded', function() {
       button.disabled = false;
       button.innerText = 'Add Ingredient';
     });
+  });
+
+  // Added event listener for closing the unit modal
+  document.getElementById('quickAddUnitModal').addEventListener('hidden.bs.modal', function () {
+    if (unitReturnContext === 'ingredient') {
+      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+      setTimeout(() => ingredientModal.show(), 300);
+      unitReturnContext = 'main';
+    }
   });
 });
 </script>
