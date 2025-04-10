@@ -32,6 +32,7 @@ def update_ingredient(id):
         ing.name = request.form.get('name')
         ing.quantity = float(request.form.get('quantity'))
         ing.unit = request.form.get('unit')
+        ing.cost_per_unit = float(request.form.get('cost_per_unit', 0.0))
         db.session.commit()
         flash('Ingredient updated successfully.', 'success')
         return redirect(url_for('ingredients.list_ingredients'))
