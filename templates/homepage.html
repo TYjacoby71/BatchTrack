@@ -6,7 +6,7 @@
 
 <div class="mb-3">
   {% if active_batch %}
-    <a href="{{ url_for('batch_view.view_batch', batch_id=active_batch.id) }}" class="button">Finish Batch</a>
+    <a href="{{ url_for('batches.view_batch', batch_id=active_batch.id) }}" class="button">Finish Batch</a>
   {% endif %}
   <button onclick="openPlanBatchModal()" class="button">Start Batch</button>
 </div>
