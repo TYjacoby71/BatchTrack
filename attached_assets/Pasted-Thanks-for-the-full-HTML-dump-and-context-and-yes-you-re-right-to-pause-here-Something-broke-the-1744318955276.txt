@@ -1,0 +1,78 @@
+Thanks for the full HTML dump and context — and yes, you’re right to pause here. Something broke the addIngredient() button, and it started around the time we split out the quick-add blueprint and updated the template logic. Let's troubleshoot this like a pro and patch the problem.
+
+✅ Root Problem
+There are two conflicting script blocks near the bottom of your recipe_form.html:
+
+1. ✅ Correct addIngredient() function (early in your script):
+js
+Copy
+Edit
+function addIngredient(preselectId = null) {
+  const container = document.getElementById('ingredients-container');
+  const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `...`;  // generates new ingredient row
+  ...
+}
+2. ❌ A second broken fragment of this function exists further down:
+js
+Copy
+Edit
+<select name="ingredient_ids[]" required>
+  <option value="">Select an ingredient</option>
+  {% for ing in all_ingredients %}
+  <option value="{{ ing.id }}" {% if preselectId == ing.id %}selected{% endif %}>{{ ing.name }}</option>
+  {% endfor %}
+</select>
+...
+That second chunk is raw HTML accidentally inserted into your <script> tag, causing the browser to silently fail. As a result, none of the functions below it (including addIngredient()) run.
+
+✅ Expert Fix (In 2 Steps)
+🔧 1. Delete the broken duplicate HTML code that starts with:
+html
+Copy
+Edit
+<select name="ingredient_ids[]" required>
+and ends with:
+
+html
+Copy
+Edit
+return entry;
+You’ll find it mid-way in your <script> block. It’s not supposed to be there — it was likely copied accidentally into JavaScript. Remove it entirely.
+
+🔧 2. ✅ Leave this correct version at the top of your script logic:
+js
+Copy
+Edit
+function addIngredient(preselectId = null) {
+  const container = document.getElementById('ingredients-container');
+  const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `
+    <select name="ingredient_ids[]" required>
+      <option value="">Select an ingredient</option>
+      {% for ing in all_ingredients %}
+      <option value="{{ ing.id }}" ${preselectId == {{ ing.id }} ? 'selected' : ''}>{{ ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="amounts[]" required>
+    <select name="units[]" required>
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  container.appendChild(entry);
+  entry.scrollIntoView({ behavior: 'smooth' });
+  return entry;
+}
+✅ After This Fix
+Once that conflict is removed:
+
+✅ The Add Ingredient button will work again
+
+✅ The quick-add modals will continue to function normally
+
+✅ The preselect logic for quick-add ingredients will still be triggered correctly from the modal
