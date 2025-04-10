@@ -13,39 +13,30 @@ def list_batches():
     batches = Batch.query.order_by(Batch.timestamp.desc()).all()
     return render_template('batches_list.html', batches=batches)
 
-@batches_bp.route('/batches/start', methods=['GET', 'POST'])
+@batches_bp.route('/start', methods=['POST'])
 @login_required
-def start_batch():
-    if request.method == 'POST':
-        try:
-            recipe_id = request.form.get('recipe_id')
-            scale = float(request.form.get('scale', 1.0))
-            if scale <= 0:
-                flash('Scale must be greater than 0')
-                return redirect(url_for('batches.start_batch'))
+def start_batch_api():
+    data = request.json
+    recipe_id = data.get('recipe_id')
+    scale = float(data.get('scale', 1.0))
 
-            recipe = Recipe.query.get_or_404(recipe_id)
+    if not recipe_id or scale <= 0:
+        return jsonify({"error": "Invalid input"}), 400
 
-            # Generate label_code
-            year = datetime.utcnow().year
-            count = Batch.query.filter_by(recipe_name=recipe.name).count() + 1
-            label_code = f"{recipe.label_prefix}-{year}{count:02d}"
+    recipe = Recipe.query.get_or_404(recipe_id)
+    year = datetime.utcnow().year
+    count = Batch.query.filter_by(recipe_name=recipe.name).count() + 1
+    label_code = f"{recipe.label_prefix}-{year}{count:02d}"
 
-            batch = Batch(
-                recipe_id=recipe.id,
-                recipe_name=recipe.name,
-                scale=scale,
-                label_code=label_code
-            )
-            db.session.add(batch)
-            db.session.commit()
-            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch.id)) #Added batch_id
-        except Exception as e:
-            flash(f'Error starting batch: {str(e)}')
-            return redirect(url_for('batches.start_batch'))
-
-    recipes = Recipe.query.all()
-    return render_template('start_batch.html', recipes=recipes)
+    batch = Batch(
+        recipe_id=recipe.id,
+        recipe_name=recipe.name,
+        scale=scale,
+        label_code=label_code
+    )
+    db.session.add(batch)
+    db.session.commit()
+    return jsonify({"batch_id": batch.id}), 201
 
 @batches_bp.route('/batches/in-progress/<int:batch_id>')
 @login_required
