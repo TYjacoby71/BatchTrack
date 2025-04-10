@@ -79,7 +79,7 @@
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
-          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
+          <a href="#" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal" onclick="setUnitReturnContext('ingredient')" data-bs-dismiss="modal">+ Add New Unit</a>
         </div>
       </div>
       <div class="modal-footer">
@@ -134,6 +134,10 @@ let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
 
+function setUnitReturnContext(context) {
+  unitReturnContext = context;
+}
+
 // Functions
 function setIngredientReturnContext(source, dropdown = null) {
   ingredientReturnContext = source;
@@ -177,16 +181,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Quick Add Unit Handler
   document.getElementById('saveQuickUnit').addEventListener('click', function() {
-    const name = document.getElementById('unitName').value;
-    const type = document.getElementById('unitType').value;
+  const name = document.getElementById('unitName').value.trim();
+  const type = document.getElementById('unitType').value;
+  const button = this;
 
-    if (!name) return alert('Unit name required.');
+  if (!name) return alert('Unit name required.');
 
-    fetch('/recipes/units/quick-add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type })
-    })
+  button.disabled = true;
+  button.innerText = "Saving...";
+
+  fetch('/quick-add/unit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, type })
+  })
+  .then(async response => {
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      alert("Error: " + data.error);
+      return;
+    }
+
+    // Add new unit to all unit dropdowns in the main form
+    document.querySelectorAll("select[name='units[]']").forEach(select => {
+      const option = new Option(data.name, data.name, false, true);
+      select.add(option);
+    });
+
+    // Add it to the unit dropdown in the ingredient modal
+    const quickUnit = document.getElementById('quickIngredientUnit');
+    const quickOption = new Option(data.name, data.name, false, true);
+    quickUnit.add(quickOption);
+    quickUnit.value = data.name;
+
+    // Close modal and remove overlay
+    const unitModalEl = document.getElementById('quickAddUnitModal');
+    const unitModal = bootstrap.Modal.getInstance(unitModalEl) || new bootstrap.Modal(unitModalEl);
+    unitModal.hide();
+    document.body.classList.remove('modal-open');
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+    // Reopen ingredient modal if needed
+    if (unitReturnContext === 'ingredient') {
+      setTimeout(() => {
+        const ingredientModalEl = document.getElementById('quickAddIngredientModal');
+        const ingredientModal = bootstrap.Modal.getInstance(ingredientModalEl) || new bootstrap.Modal(ingredientModalEl);
+        ingredientModal.show();
+      }, 250);
+    }
+
+    // Reset form + state
+    document.getElementById('unitName').value = '';
+    document.getElementById('unitType').selectedIndex = 0;
+    unitReturnContext = 'main';
+  })
+  .catch(error => {
+    console.error("Unit Add Error:", error);
+    alert("Something went wrong while adding the unit.");
+  })
+  .finally(() => {
+    button.disabled = false;
+    button.innerText = "Add Unit";
+  });
+});
     .then(r => r.json())
     .then(data => {
       if (data.error) return alert('Error: ' + data.error);
