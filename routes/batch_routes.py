@@ -13,12 +13,9 @@ def list_batches():
     batches = Batch.query.order_by(Batch.timestamp.desc()).all()
     return render_template('batches_list.html', batches=batches)
 
-@batches_bp.route('/start', methods=['GET', 'POST'])
+@batches_bp.route('/start', methods=['POST'])
 @login_required
 def start_batch():
-    if request.method == 'GET':
-        recipes = Recipe.query.all()
-        return render_template('start_batch.html', recipes=recipes)
     data = request.json
     recipe_id = data.get('recipe_id')
     scale = float(data.get('scale', 1.0))
