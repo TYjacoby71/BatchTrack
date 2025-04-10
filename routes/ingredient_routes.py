@@ -29,6 +29,7 @@ def add_ingredient():
 def update_ingredient(id):
     ing = Ingredient.query.get_or_404(id)
     if request.method == 'POST':
+        ing.name = request.form.get('name')
         ing.quantity = float(request.form.get('quantity'))
         ing.unit = request.form.get('unit')
         db.session.commit()
