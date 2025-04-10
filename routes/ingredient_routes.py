@@ -32,8 +32,8 @@ def update_ingredient(id):
         ing.quantity = float(request.form.get('quantity'))
         ing.unit = request.form.get('unit')
         db.session.commit()
-        flash('Ingredient updated.')
-        return redirect(url_for('ingredients.ingredient_list'))
+        flash('Ingredient updated successfully.', 'success')
+        return redirect(url_for('ingredients.list_ingredients'))
     units = InventoryUnit.query.all()
     return render_template('update_ingredient.html', ing=ing, units=units)
 
