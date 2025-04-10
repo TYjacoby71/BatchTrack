@@ -1,15 +1,8 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Product
+from models import db, Product, ProductEvent
 from datetime import datetime
-
-class ProductEvent(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, nullable=False)
-    event_type = db.Column(db.String(32))  # e.g. sold, spoiled, sample
-    note = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 product_log_bp = Blueprint('product_log', __name__)
 
