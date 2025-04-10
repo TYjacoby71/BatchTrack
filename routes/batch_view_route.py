@@ -20,4 +20,4 @@ def view_batch(batch_id):
 @login_required
 def list_batches():
     batches = Batch.query.order_by(Batch.timestamp.desc()).all()
-    return render_template('batch_list.html', batches=batches)
+    return render_template('batches_list.html', batches=batches)
