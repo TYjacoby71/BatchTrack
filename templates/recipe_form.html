@@ -133,10 +133,44 @@ const SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
 let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
+let ingredientReturnContext = 'main';
 
 function addIngredient(preselectId = null) {
   const container = document.getElementById('ingredients-container');
   const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `
+    <select name="ingredient_ids[]" required>
+      <option value="">Select an ingredient</option>
+      {% for ing in all_ingredients %}
+      <option value="{{ ing.id }}" {% if preselect_ingredient_id == ing.id %}selected{% endif %}>{{ ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="amounts[]" required>
+    <select name="units[]" required>
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  container.appendChild(entry);
+  if (preselectId) {
+    const select = entry.querySelector('select[name="ingredient_ids[]"]');
+    if (select) select.value = preselectId;
+  }
+  entry.scrollIntoView({ behavior: 'smooth' });
+  return entry;
+}
+
+function setUnitReturnContext(context) {
+  unitReturnContext = context;
+}
+
+function setIngredientReturnContext(source, dropdown = null) {
+  ingredientReturnContext = source;
+  lastIngredientDropdown = dropdown;
+}
   entry.classList.add('ingredient-entry');
   entry.innerHTML = `
     <div class="ingredient-entry">
@@ -173,39 +207,9 @@ function setIngredientReturnContext(source, dropdown = null) {
   lastIngredientDropdown = dropdown;
 }
 
-// Functions
-function setUnitReturnContext(context) {
-  unitReturnContext = context;
-}
-
-function setIngredientReturnContext(source, dropdown = null) {
-  ingredientReturnContext = source;
-  lastIngredientDropdown = dropdown;
-}
-
-function addIngredient(preselectId = null) {
-  const container = document.getElementById('ingredients-container');
-  const entry = document.createElement('div');
-  entry.classList.add('ingredient-entry');
-  entry.innerHTML = `
-    <div class="ingredient-entry">
-      <select name="ingredient_ids[]" required>
-        <option value="">Select an ingredient</option>
-        {% for ing in all_ingredients %}
-        <option value="{{ ing.id }}" {% if preselectId == ing.id %}selected{% endif %}>{{ ing.name }}</option>
-        {% endfor %}
-      </select>
-      <input type="number" step="0.01" name="amounts[]" required>
-      <select name="units[]" required>
-        {% for unit in inventory_units %}
-        <option value="{{ unit.name }}">{{ unit.name }}</option>
-        {% endfor %}
-      </select>
-      <button type="button" onclick="this.parentElement.remove()">Remove</button>
-    </div>
-  `;
-  container.appendChild(entry);
-  if (preselectId) {
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+  if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
     const select = entry.querySelector('select[name="ingredient_ids[]"]');
     if (select) select.value = preselectId;
   }
