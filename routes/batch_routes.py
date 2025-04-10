@@ -19,6 +19,7 @@ def start_batch():
     data = request.json
     recipe_id = data.get('recipe_id')
     scale = float(data.get('scale', 1.0))
+    notes = data.get('notes', '')
 
     if not recipe_id or scale <= 0:
         return jsonify({"error": "Invalid input"}), 400
@@ -32,11 +33,15 @@ def start_batch():
         recipe_id=recipe.id,
         recipe_name=recipe.name,
         scale=scale,
-        label_code=label_code
+        label_code=label_code,
+        notes=notes
     )
     db.session.add(batch)
     db.session.commit()
-    return jsonify({"batch_id": batch.id}), 201
+    return jsonify({
+        "batch_id": batch.id,
+        "redirect_url": url_for('batches.view_batch_in_progress', batch_id=batch.id)
+    }), 201
 
 @batches_bp.route('/batches/in-progress/<int:batch_id>')
 @login_required

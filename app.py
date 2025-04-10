@@ -56,15 +56,7 @@ app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-@app.route('/')
-@login_required
-def home():
-    recipes = Recipe.query.all()
-    active_batch = Batch.query.filter(Batch.total_cost == None).first()
-    return render_template('homepage.html', 
-                         current_user=current_user,
-                         recipes=recipes,
-                         active_batch=active_batch)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -1,7 +1,11 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
-<form method="post">
+{% if recipe %}
+<form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+{% else %}
+<form method="post" action="{{ url_for('recipes.new_recipe') }}">
+{% endif %}
     <div class="form-group">
         <label for="name">Recipe Name:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
@@ -33,7 +37,11 @@
                         {% endfor %}
                     </select>
                     <input type="number" step="0.01" name="amounts[]" value="{{ ing.amount }}" placeholder="Amount" required>
-                    <input type="text" name="units[]" value="{{ ing.unit }}" placeholder="Unit" readonly>
+                    <select name="units[]" required>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}" {% if ing and ing.unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
                 </div>
                 {% endfor %}
@@ -223,7 +231,41 @@
         </script>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
     </div>
-
-    <button type="submit">Save Recipe</button>
+    <div class="form-group mt-3">
+        <button type="submit" class="btn btn-primary" id="saveRecipeBtn">Save Recipe</button>
+    </div>
 </form>
+
+<!-- Add Bootstrap JS dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('saveRecipeBtn');
+        submitBtn.disabled = true;
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = "{{ url_for('recipes.list_recipes') }}";
+            } else {
+                submitBtn.disabled = false;
+                throw new Error('Failed to save recipe');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitBtn.disabled = false;
+            alert('Failed to save recipe. Please try again.');
+        });
+    });
+});
+</script>
 {% endblock %}

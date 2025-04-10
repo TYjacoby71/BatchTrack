@@ -9,7 +9,7 @@ ingredients_bp = Blueprint('ingredients', __name__)
 
 @ingredients_bp.route('/ingredients')
 @login_required
-def ingredient_list():
+def list_ingredients():
     ingredients = Ingredient.query.all()
     units = InventoryUnit.query.all()
     return render_template('ingredients.html', ingredients=ingredients, units=units)
