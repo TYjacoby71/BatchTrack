@@ -1,0 +1,104 @@
+✅ Step 13, Part 1 – Created:
+tests/conftest.py
+Sets up an in-memory SQLite database for isolated testing. This is now complete and usable.
+
+⚠️ Step 13, Part 2 – Attempted:
+tests/test_unit_conversion.py
+
+I tried to generate the full unit test file for UnitConversionService, but the system requires a new document declaration first (not just an update). Let me correct that now by creating the full test file cleanly.
+
+👉 Proceeding to do that now…
+
+Test Unit Conversion
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+# tests/test_unit_conversion.py
+import pytest
+from models import InventoryUnit, db
+from services.unit_conversion import UnitConversionService
+from app import app
+
+@pytest.fixture
+def setup_units():
+    with app.app_context():
+        db.create_all()
+        db.session.add_all([
+            InventoryUnit(name="ml", type="volume", base_equivalent=1.0),
+            InventoryUnit(name="l", type="volume", base_equivalent=1000.0),
+            InventoryUnit(name="g", type="weight", base_equivalent=1.0)
+        ])
+        db.session.commit()
+        yield
+        db.drop_all()
+
+def test_ml_to_l_conversion(setup_units):
+    result = UnitConversionService.convert(1000, "ml", "l")
+    assert result == 1.0
+
+def test_unknown_unit_raises():
+    with pytest.raises(ValueError, match="Unknown units"):
+        UnitConversionService.convert(100, "ml", "banana")
+
+def test_cross_type_conversion_with_density(setup_units):
+    result = UnitConversionService.convert(1, "ml", "g", density=1.0)
+    assert result == 1.0
+
+def test_incompatible_types_without_density(setup_units):
+    with pytest.raises(ValueError):
+        UnitConversionService.convert(1, "ml", "g")
+
+✅ test_unit_conversion.py is now created with 4 high-value tests for:
+
+Standard volume-to-volume conversion
+
+Error for unknown units
+
+Density-based conversion across types
+
+Fails cleanly if density is missing but needed
+
+🔜 Next: Step 13, Part 3
+Would you like me to now generate the final test suite:
+
+→ tests/test_check_stock.py
+To verify your check_stock_for_recipe() logic handles:
+
+Empty recipes
+
+Full stock
+
+Low or needed ingredients
