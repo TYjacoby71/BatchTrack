@@ -18,16 +18,18 @@ def homepage():
 
     if request.method == "POST":
         recipe_id = request.form.get("recipe_id")
-        scale = float(request.form.get("scale", 1))
-        selected_recipe = Recipe.query.get(recipe_id)
-        if selected_recipe:
-            stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-            if all_ok:
-                status = "ok"
-            elif any(item["status"] == "NEEDED" for item in stock_check):
-                status = "bad"
-            else:
-                status = "low"
+        try:
+            scale = float(request.form.get("scale", 1))
+            selected_recipe = Recipe.query.get(recipe_id)
+            if selected_recipe:
+                stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
+                status = "ok" if all_ok else "bad"
+                for item in stock_check:
+                    if item["status"] == "LOW" and status != "bad":
+                        status = "low"
+                        break
+        except ValueError as e:
+            flash("Invalid scale value")
 
     return render_template("homepage.html", 
                          recipes=recipes,

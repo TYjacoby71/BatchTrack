@@ -1,26 +1,20 @@
 
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Batch Details</h2>
+<div class="batch-view">
+    <h2>Batch Details</h2>
+    
+    <div class="batch-info">
+        <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+        <p><strong>Scale:</strong> {{ batch.scale }}</p>
+        <p><strong>Status:</strong> {{ "In Progress" if batch.total_cost is none else "Completed" }}</p>
+        {% if batch.notes %}
+        <p><strong>Notes:</strong> {{ batch.notes }}</p>
+        {% endif %}
+    </div>
 
-<p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-<p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
-<p><strong>Scale:</strong> {{ batch.scale }}</p>
-<p><strong>Timestamp:</strong> {{ batch.timestamp }}</p>
-<p><strong>Notes:</strong><br>{{ batch.notes }}</p>
-<p><strong>Tags:</strong> {{ batch.tags }}</p>
-<p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
-
-{% if product %}
-<hr>
-<h3>Product Created</h3>
-<p><strong>Name:</strong> {{ product.name }}</p>
-<p><strong>Quantity:</strong> {{ product.quantity }} {{ product.unit }}</p>
-<p><strong>Expiration:</strong> {{ product.expiration_date }}</p>
-{% if product.image %}
-    <p><img src="{{ url_for('static', filename='product_images/' ~ product.image) }}" width="120"></p>
-{% endif %}
-{% endif %}
-
-<a href="/">Back to Home</a>
+    <div class="actions">
+        <a href="{{ url_for('batches.batches_list') }}" class="button">Back to Batches</a>
+    </div>
+</div>
 {% endblock %}

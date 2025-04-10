@@ -4,66 +4,100 @@
 
 <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 
-<div style="margin-top: 2rem;">
+<div class="flow-container">
   {% if active_batch %}
-    <a href="{{ url_for('batch_view.list_batches') }}" class="button" style="margin-right: 1rem;">View Batches</a>
+    <a href="{{ url_for('batch_view.view_batch', batch_id=active_batch.id) }}" class="button" style="margin-right: 1rem;">Finish Batch</a>
+  {% else %}
+    <a href="{{ url_for('batches.start_batch') }}" class="button" style="margin-right: 1rem;">Start Batch</a>
   {% endif %}
-
-  <div class="flow-container">
-    <form method="post">
-      <div class="form-group">
-        <label>Choose Recipe:</label>
-        <select name="recipe_id" required>
-          {% for r in recipes %}
-            <option value="{{ r.id }}" {% if selected_recipe and r.id == selected_recipe.id %}selected{% endif %}>
-              {{ r.name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Scale:</label>
-        <input type="number" name="scale" step="0.1" value="{{ scale }}" required>
-      </div>
-
-      <button type="submit" class="button">Check Stock</button>
-    </form>
-
-    {% if stock_check %}
-      <div class="stock-results">
-        <h3>Stock Check Results</h3>
-        <table>
-          <tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr>
-          {% for i in stock_check %}
-          <tr class="{{ i.status.lower() }}">
-            <td>{{ i.name }}</td>
-            <td>{{ i.needed }} {{ i.unit }}</td>
-            <td>{{ i.available }} {{ i.unit }}</td>
-            <td>{{ i.status }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-
-        {% if status == "ok" %}
-          <form method="post" action="{{ url_for('batches.start_batch') }}">
-            <input type="hidden" name="recipe_id" value="{{ selected_recipe.id }}">
-            <input type="hidden" name="scale" value="{{ scale }}">
-            <div class="form-group">
-              <label>Batch Notes:</label><br>
-              <textarea name="notes" rows="3"></textarea>
-            </div>
-            <button type="submit" class="button">Start Batch</button>
-          </form>
-        {% else %}
-          <div class="warning">
-            <p><strong>Some ingredients are low or missing.</strong> Please update stock.</p>
-          </div>
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
+  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="button">Start Flow</button>
 </div>
+
+<!-- Flow Modal -->
+<div id="startFlowModal" style="display:none; padding: 1rem; background: #f9f9f9;">
+  <h3>Start Production Flow</h3>
+  <form method="post">
+    <label for="recipe_id">Select Recipe:</label>
+    <select name="recipe_id" id="recipe_id" required>
+      {% for recipe in recipes %}
+        <option value="{{ recipe.id }}" {% if selected_recipe and selected_recipe.id == recipe.id %}selected{% endif %}>
+          {{ recipe.name }}
+        </option>
+      {% endfor %}
+    </select><br><br>
+
+    <label for="scale">Scale:</label>
+    <input type="number" name="scale" step="0.1" value="{{ scale or 1.0 }}" min="0.1" required><br><br>
+
+    <button type="submit" class="button">Check Stock</button>
+    <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
+  </form>
+
+  {% if stock_check %}
+    <div class="stock-results" style="margin-top: 1rem;">
+      <h4>Stock Check Results</h4>
+      <table>
+        <tr>
+          <th>Ingredient</th>
+          <th>Needed</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+        {% for item in stock_check %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ "%.2f"|format(item.needed) }} {{ item.unit }}</td>
+          <td>{{ "%.2f"|format(item.available) }} {{ item.unit }}</td>
+          <td>{{ item.status }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+
+      {% if status == 'ok' %}
+        <form method="post" action="{{ url_for('batches.start_batch') }}" style="margin-top: 1rem;">
+          <input type="hidden" name="recipe_id" value="{{ selected_recipe.id }}">
+          <input type="hidden" name="scale" value="{{ scale }}">
+          <div class="form-group">
+            <label>Batch Notes:</label><br>
+            <textarea name="notes" rows="3"></textarea>
+          </div>
+          <button type="submit" class="button">Start Batch</button>
+        </form>
+      {% else %}
+        <div class="warning" style="margin-top: 1rem; color: #721c24; background-color: #f8d7da; padding: 0.75rem; border-radius: 4px;">
+          <strong>Cannot start batch - insufficient ingredients</strong>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% if stock_check %}
+  <h3>Stock Check Results</h3>
+  <table>
+    <tr><th>Ingredient</th><th>Need</th><th>Have</th><th>Status</th></tr>
+    {% for i in stock_check %}
+      <tr>
+        <td>{{ i.name }}</td>
+        <td>{{ i.needed }}</td>
+        <td>{{ i.available }}</td>
+        <td>{{ i.status }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  {% if status == 'ok' %}
+    <form method="post" action="{{ url_for('batches.start_batch') }}">
+      <input type="hidden" name="recipe_id" value="{{ selected_recipe.id }}">
+      <input type="hidden" name="scale" value="{{ scale }}">
+      <label>Batch Notes:</label><br>
+      <textarea name="notes" rows="3"></textarea><br>
+      <button type="submit" class="button">Start Batch</button>
+    </form>
+  {% else %}
+    <p><strong>Some ingredients are low or missing.</strong></p>
+  {% endif %}
+{% endif %}
 
 {% if alert %}
 <div style="margin-top: 2rem; background-color: #ffe0e0; padding: 1rem; border-radius: 8px;">
