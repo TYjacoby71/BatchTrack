@@ -8,6 +8,7 @@
     <th>Name</th>
     <th>Quantity</th>
     <th>Unit</th>
+    <th>Cost/Unit</th>
     <th>Actions</th>
 </tr>
 {% for ing in ingredients %}
@@ -15,6 +16,7 @@
     <td>{{ ing.name }}</td>
     <td>{{ ing.quantity }}</td>
     <td>{{ ing.unit }}</td>
+    <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>
     <td>
         <a href="/ingredients/update/{{ ing.id }}">Update</a> |
         <a href="/ingredients/delete/{{ ing.id }}">Delete</a>

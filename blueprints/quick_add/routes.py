@@ -17,7 +17,7 @@ def quick_add_ingredient():
     if existing:
         return jsonify({'error': 'Ingredient already exists.'}), 409
 
-    ingredient = Ingredient(name=name, quantity=0.0, unit=unit)
+    ingredient = Ingredient(name=name, quantity=0.0, unit=unit, cost_per_unit=0.0)
     db.session.add(ingredient)
     db.session.commit()
 

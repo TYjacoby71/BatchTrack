@@ -66,6 +66,7 @@ class Ingredient(db.Model):
     name = db.Column(db.String(64), unique=True)
     quantity = db.Column(db.Float)
     unit = db.Column(db.String(32))
+    cost_per_unit = db.Column(db.Float, default=0.0)
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
