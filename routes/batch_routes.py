@@ -52,7 +52,12 @@ def view_batch_in_progress(batch_id):
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get(batch.recipe_id)
     product_units = ProductUnit.query.all()
-    return render_template('batch_in_progress.html', batch=batch, recipe=recipe, product_units=product_units)
+    return render_template('batch_in_progress.html', 
+                         batch=batch, 
+                         recipe=recipe, 
+                         product_units=product_units,
+                         batch_cost=batch.total_cost if batch else None,
+                         product_quantity=batch.product_quantity if hasattr(batch, 'product_quantity') else None)
 
 @batches_bp.route('/batches/in-progress/<int:batch_id>/notes', methods=['POST'])
 @login_required
@@ -79,7 +84,7 @@ def finish_batch(batch_id):
         # Update actual ingredient usage
         total = int(request.form.get('total_ingredients', 0))
         used_ingredients = []
-        total_cost = 0
+        total_cost = 0.0
 
         for i in range(total):
             name = request.form.get(f'ingredient_{i}')
@@ -91,12 +96,15 @@ def finish_batch(batch_id):
                 if ingredient:
                     if ingredient.quantity >= amount:
                         ingredient.quantity -= amount
+                        ingredient_cost = getattr(ingredient, 'cost_per_unit', 0) or 0
+                        cost = amount * ingredient_cost
+                        total_cost += cost
                         used_ingredients.append({
                             'name': name,
                             'amount': amount,
-                            'unit': unit
+                            'unit': unit,
+                            'cost': cost
                         })
-                        # Add to cost calculation here if needed
                     else:
                         flash(f'Insufficient quantity of {name}')
                         return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
