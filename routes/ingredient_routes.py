@@ -46,13 +46,15 @@ def quick_add_ingredient():
     unit = data.get('unit')
     
     try:
-        ingredient = Ingredient(name=name, quantity=0, unit=unit)
+        # Always create with quantity 0 for placeholder
+        ingredient = Ingredient(name=name, quantity=0.0, unit=unit)
         db.session.add(ingredient)
         db.session.commit()
         return jsonify({
             'id': ingredient.id,
             'name': ingredient.name,
-            'unit': ingredient.unit
+            'unit': ingredient.unit,
+            'quantity': ingredient.quantity
         })
     except Exception as e:
         db.session.rollback()

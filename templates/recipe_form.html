@@ -103,7 +103,7 @@
                     const selects = document.querySelectorAll('select[name="ingredient_ids[]"]');
                     selects.forEach(select => {
                         const option = new Option(
-                            `${newIngredient.name} (0 ${newIngredient.unit})`, 
+                            `${newIngredient.name} (${newIngredient.quantity} ${newIngredient.unit})`, 
                             newIngredient.id
                         );
                         option.dataset.unit = newIngredient.unit;
