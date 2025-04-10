@@ -56,7 +56,7 @@ def new_recipe():
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
-    inventory_units = InventoryUnit.query.all()
+    inventory_units = InventoryUnit.query.order_by(InventoryUnit.name).all()
 
     if request.method == 'POST':
         try:
@@ -65,7 +65,7 @@ def edit_recipe(recipe_id):
             recipe.label_prefix = request.form['label_prefix']
 
             # Clear previous ingredients
-            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+            db.session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).delete()
 
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
@@ -75,7 +75,7 @@ def edit_recipe(recipe_id):
                 if ing_id:
                     assoc = RecipeIngredient(
                         recipe_id=recipe.id,
-                        ingredient_id=ing_id,
+                        ingredient_id=int(ing_id),
                         amount=float(amount),
                         unit=unit
                     )
@@ -83,12 +83,22 @@ def edit_recipe(recipe_id):
 
             db.session.commit()
             flash('Recipe updated successfully.')
-            return redirect(url_for('recipes.list_recipes'))
+            return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating recipe: {str(e)}')
 
-    return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units)
+    # Read session variables for preselection logic
+    preselect_ingredient_id = session.pop('last_added_ingredient_id', None)
+    add_ingredient_line = session.pop('add_ingredient_line', False)
+
+    return render_template('recipe_form.html',
+        recipe=recipe,
+        all_ingredients=all_ingredients,
+        inventory_units=inventory_units,
+        preselect_ingredient_id=preselect_ingredient_id,
+        add_ingredient_line=add_ingredient_line
+    )
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
 @login_required
