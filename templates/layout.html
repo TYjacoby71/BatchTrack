@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,7 +24,7 @@
                 alert('Please enter a unit name');
                 return false;
             }
-            
+
             const response = await fetch('/recipes/units/quick-add', {
                 method: 'POST',
                 headers: {
@@ -44,7 +43,7 @@
                     unitSelect.add(newOption, unitSelect.options[unitSelect.options.length - 1]);
                     unitSelect.value = newUnit.name;
                 }
-                
+
                 document.getElementById('newUnitName').value = '';
                 closeQuickAddUnitModal();
             } else {
@@ -53,46 +52,6 @@
             return false;
         }
     </script>
-</head>
-<body>
-    <!-- Quick Add Unit Modal -->
-    <div id="quickAddUnitModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 2000;">
-        <h3>Add New Count Unit</h3>
-        <form id="quickAddUnitForm" onsubmit="return submitQuickAddUnit(event, window.currentUnitSelectId)" style="z-index: 2001;">
-            <div>
-                <label for="newUnitName">Unit Name:</label>
-                <input type="text" id="newUnitName" required>
-            </div>
-            <button type="submit">Save Unit</button>
-            <button type="button" onclick="closeQuickAddUnitModal()">Cancel</button>
-        </form>
-    </div>
-    <header>
-        <nav>
-            <a href="{{ url_for('home') }}">Home</a>
-            <a href="{{ url_for('batches.list_batches') }}">Batches</a>
-            <a href="{{ url_for('batches.start_batch') }}">Start Batch</a>
-            <a href="{{ url_for('recipes.list_recipes') }}">Recipes</a>
-            <a href="{{ url_for('ingredients.ingredient_list') }}">Ingredients</a>
-            <a href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock</a>
-            <a href="{{ url_for('product.list_products') }}">Products</a>
-            <a href="{{ url_for('admin.unit_manager') }}">Unit Manager</a>
-            <a href="{{ url_for('tags.manage_tags') }}">Tags</a>
-            <a href="{{ url_for('faults.view_fault_log') }}">Fault Log</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
-        </nav>
-    </header>
-    <main class="container">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul class="flashes">
-                {% for message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-    </main>
-</body>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
 </html>
