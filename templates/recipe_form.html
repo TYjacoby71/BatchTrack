@@ -177,8 +177,16 @@ document.getElementById('saveQuickIngredient').addEventListener('click', functio
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-  const unitModal = new bootstrap.Modal(document.getElementById('quickAddUnitModal'));
-  const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+  let unitReturnContext = 'main';
+  
+  function setUnitReturnContext(source) {
+    unitReturnContext = source;
+  }
+
+  // Add event listener to unit modal trigger button
+  document.querySelector('[data-bs-target="#quickAddUnitModal"]').addEventListener('click', function() {
+    setUnitReturnContext('ingredient');
+  });
 
   document.getElementById('saveQuickUnit').addEventListener('click', function () {
     const name = document.getElementById('unitName').value;
@@ -207,9 +215,18 @@ document.addEventListener('DOMContentLoaded', function() {
       quickUnit.add(newOpt);
       quickUnit.value = data.name;
 
-      // Close unit modal and reopen ingredient modal
+      // Close the unit modal
+      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
       unitModal.hide();
-      ingredientModal.show();
+
+      // If this came from ingredient modal, reopen it
+      if (unitReturnContext === 'ingredient') {
+        const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+        setTimeout(() => ingredientModal.show(), 150);
+      }
+
+      // Reset context
+      unitReturnContext = 'main';
     });
   });
 });
