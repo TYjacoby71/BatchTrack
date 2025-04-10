@@ -12,8 +12,9 @@ faults_bp = Blueprint('faults', __name__)
 @login_required
 def view_fault_log():
     try:
+        from utils import get_setting
         page = request.args.get('page', 1, type=int)
-        per_page = 20
+        per_page = get_setting("per_page", 20)
         faults = []
         
         if os.path.exists(FAULT_LOG_PATH):
