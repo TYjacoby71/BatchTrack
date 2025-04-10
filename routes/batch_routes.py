@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit
+from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
 from datetime import datetime
 import uuid, os
 from werkzeug.utils import secure_filename
@@ -112,23 +112,22 @@ def finish_batch(batch_id):
             amount = float(request.form.get(f'amount_{i}', 0))
             unit = request.form.get(f'unit_{i}')
 
-            if name and amount > 0:
-                ingredient = Ingredient.query.filter_by(name=name).first()
-                if ingredient:
-                    if ingredient.quantity >= amount:
-                        ingredient.quantity -= amount
-                        ingredient_cost = getattr(ingredient, 'cost_per_unit', 0) or 0
-                        cost = amount * ingredient_cost
-                        total_cost += cost
-                        used_ingredients.append({
-                            'name': name,
-                            'amount': amount,
-                            'unit': unit,
-                            'cost': cost
-                        })
-                    else:
-                        flash(f'Insufficient quantity of {name}')
-                        return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+            ingredient = Ingredient.query.filter_by(name=name).first()
+            if ingredient:
+                if ingredient.quantity >= amount:
+                    ingredient.quantity -= amount
+                    ingredient_cost = float(ingredient.cost_per_unit or 0.0)
+                    cost = round(amount * ingredient_cost, 2)
+                    total_cost += cost
+                    used_ingredients.append({
+                        'name': name,
+                        'amount': amount,
+                        'unit': unit,
+                        'cost': cost
+                    })
+                else:
+                    flash(f'Insufficient quantity of {name}')
+                    return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
         # Handle extra ingredients
         extra_ingredients = request.form.getlist('extra_ingredients[]')
@@ -167,6 +166,11 @@ def finish_batch(batch_id):
             flash('Quantity must be greater than 0')
             return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
+        product_unit = request.form.get('product_unit')
+        if not product_unit:
+            flash('Product unit is required')
+            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+
         img_file = request.files.get('product_image')
         image_path = None
         if img_file and img_file.filename:
@@ -182,7 +186,7 @@ def finish_batch(batch_id):
             image=image_path,
             expiration_date=datetime.utcnow().date(),
             quantity=quantity,
-            unit=unit
+            unit=product_unit
         )
         db.session.add(product)
         db.session.commit()
