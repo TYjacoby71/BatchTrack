@@ -1,0 +1,6 @@
+
+{
+  "low_stock_threshold": 5,
+  "per_page": 20,
+  "enable_csv_export": true
+}
