@@ -1,11 +1,13 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
+
 {% if recipe %}
-<form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+  <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
 {% else %}
-<form method="post" action="{{ url_for('recipes.new_recipe') }}">
+  <form method="post" action="{{ url_for('recipes.new_recipe') }}">
 {% endif %}
+
     <div class="form-group">
         <label for="name">Recipe Name:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
@@ -23,248 +25,84 @@
 
     <div class="form-group">
         <label>Ingredients:</label>
-        <button type="button" onclick="showQuickAddModal()">Quick Add New Ingredient</button>
+        <button type="button" onclick="addIngredient()" class="btn btn-secondary">Add Ingredient</button>
         <div id="ingredients-container">
-            {% if recipe and recipe.ingredients %}
-                {% for ing in recipe.ingredients %}
+            {% if recipe and recipe.recipe_ingredients %}
+                {% for ing in recipe.recipe_ingredients %}
                 <div class="ingredient-entry">
                     <select name="ingredient_ids[]" required onchange="updateUnit(this)">
                         <option value="">Select an ingredient</option>
                         {% for available_ing in all_ingredients %}
-                        <option value="{{ available_ing.id }}" data-unit="{{ available_ing.unit }}" data-quantity="{{ available_ing.quantity }}" {% if available_ing.id == ing.id %}selected{% endif %}>
-                            {{ available_ing.name }} ({{ available_ing.quantity }} {{ available_ing.unit }})
+                        <option value="{{ available_ing.id }}" data-unit="{{ available_ing.unit }}"
+                            {% if available_ing.id == ing.ingredient_id %}selected{% endif %}>
+                            {{ available_ing.name }}
                         </option>
                         {% endfor %}
                     </select>
-                    <input type="number" step="0.01" name="amounts[]" value="{{ ing.amount }}" placeholder="Amount" required>
+                    <input type="number" step="0.01" name="amounts[]" value="{{ ing.amount }}" required>
                     <select name="units[]" required>
                         {% for unit in inventory_units %}
-                        <option value="{{ unit.name }}" {% if ing and ing.unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+                        <option value="{{ unit.name }}" {% if unit.name == ing.unit %}selected{% endif %}>
+                            {{ unit.name }}
+                        </option>
                         {% endfor %}
                     </select>
-                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
                 </div>
                 {% endfor %}
             {% endif %}
         </div>
-        <!-- Quick Add Ingredient Modal -->
-        <div id="quickAddIngredientModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000;">
-            <h3>Add New Ingredient</h3>
-            <form id="quickAddIngredientForm" onsubmit="return submitQuickAddIngredient(event)">
-                <div>
-                    <label for="newIngName">Name:</label>
-                    <input type="text" id="newIngName" required>
-                </div>
-                <div>
-                    <label for="newIngUnit">Base Unit:</label>
-                    <select id="newIngUnit" required>
-                        <option value="">Select a unit</option>
-                        <option value="quick_add_unit">+ Quick Add Count Unit</option>
-                        {% for unit in inventory_units %}
-                        <option value="{{ unit.name }}">{{ unit.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit">Save Ingredient</button>
-                <button type="button" onclick="closeQuickAddModal()">Cancel</button>
-            </form>
-        </div>
-
-        <!-- Quick Add Unit Modal (Moved outside forms) -->
-        <div id="quickAddUnitModal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; z-index: 9999;">
-            <h3>Add New Count Unit</h3>
-            <div>
-                <label for="newUnitName">Unit Name:</label>
-                <input type="text" id="newUnitName" required>
-                <button type="button" onclick="submitQuickAddUnit(event)">Save Unit</button>
-                <button type="button" onclick="closeQuickAddUnitModal()">Cancel</button>
-            </div>
-        </div>
-
-        <script>
-            function showQuickAddModal() {
-                document.getElementById('quickAddIngredientModal').style.display = 'block';
-            }
-
-            function closeQuickAddModal() {
-                document.getElementById('quickAddIngredientModal').style.display = 'none';
-            }
-
-            async function submitQuickAddIngredient(event) {
-                event.preventDefault();
-                const name = document.getElementById('newIngName').value;
-                const unit = document.getElementById('newIngUnit').value;
-                const currentSelect = document.querySelector('select[name="ingredient_ids[]"]:focus') || 
-                                    document.querySelector('select[name="ingredient_ids[]"]:last-of-type');
-
-                const response = await fetch('/ingredients/quick-add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name, unit })
-                });
-
-                if (response.ok) {
-                    const newIngredient = await response.json();
-                    // Add to all ingredient dropdowns
-                    const selects = document.querySelectorAll('select[name="ingredient_ids[]"]');
-                    selects.forEach(select => {
-                        const option = new Option(
-                            `${newIngredient.name} (${newIngredient.quantity} ${newIngredient.unit})`, 
-                            newIngredient.id
-                        );
-                        option.dataset.unit = newIngredient.unit;
-                        option.dataset.quantity = 0;
-                        select.add(option);
-                    });
-
-                    // Select the new ingredient in the current dropdown
-                    if (currentSelect) {
-                        currentSelect.value = newIngredient.id;
-                        updateUnit(currentSelect);
-                    }
-
-                    // Clear the form and close modal
-                    document.getElementById('newIngName').value = '';
-                    document.getElementById('newIngUnit').value = '';
-                    closeQuickAddModal(); // Added to close the ingredient modal
-                } else {
-                    alert('Failed to add ingredient');
-                }
-                return false;
-            }
-
-            function updateUnit(select) {
-                if (select && select.selectedIndex >= 0 && select.value && select.value !== 'quick_add') {
-                    const selectedOption = select.options[select.selectedIndex];
-                    if (selectedOption && selectedOption.dataset) {
-                        const unit = selectedOption.dataset.unit;
-                        select.parentElement.querySelector('input[name="units[]"]').value = unit || '';
-                    }
-                }
-            }
-
-            function addIngredient() {
-                const container = document.getElementById('ingredients-container');
-                const div = document.createElement('div');
-                div.className = 'ingredient-entry';
-                div.innerHTML = `
-                    <select name="ingredient_ids[]" required onchange="handleIngredientSelect(this)">
-                        <option value="">Select an ingredient</option>
-                        <option value="quick_add">+ Quick Add New Ingredient</option>
-                        {% for ing in all_ingredients %}
-                        <option value="{{ ing.id }}" data-unit="{{ ing.unit }}" data-quantity="{{ ing.quantity }}">
-                            {{ ing.name }} ({{ ing.quantity }} {{ ing.unit }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" step="0.01" name="amounts[]" placeholder="Amount" required>
-                    <input type="text" name="units[]" placeholder="Unit" readonly>
-                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
-                `;
-                container.appendChild(div);
-            }
-
-            function handleIngredientSelect(select) {
-                if (select.value === 'quick_add') {
-                    showQuickAddModal();
-                } else {
-                    updateUnit(select);
-                }
-            }
-
-            // Quick Add Unit Functions
-            function showQuickAddUnitModal() {
-                document.getElementById('quickAddUnitModal').style.display = 'block';
-            }
-
-            function closeQuickAddUnitModal() {
-                document.getElementById('quickAddUnitModal').style.display = 'none';
-            }
-
-            async function submitQuickAddUnit(event) {
-                event.preventDefault();
-                const unitName = document.getElementById('newUnitName').value;
-                const targetSelectId = window.currentUnitSelectId;
-
-                const response = await fetch('/units/quick-add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name: unitName })
-                });
-
-                if (response.ok) {
-                    const newUnit = await response.json();
-                    const unitSelect = document.getElementById(targetSelectId);
-                    if (unitSelect) {
-                        const newOption = document.createElement('option');
-                        newOption.value = newUnit.name;
-                        newOption.text = newUnit.name;
-                        unitSelect.add(newOption, unitSelect.options[unitSelect.options.length - 1]);
-                        unitSelect.value = newUnit.name;
-                    }
-
-                    // Reset and close unit modal
-                    document.getElementById('newUnitName').value = '';
-                    closeQuickAddUnitModal();
-
-                    // Reset ingredient form if this was called from there
-                    if (targetSelectId === 'newIngUnit') {
-                        document.getElementById('newIngName').value = '';
-                    }
-                } else {
-                    alert('Failed to add unit');
-                }
-                return false;
-            }
-
-            document.getElementById('newIngUnit').addEventListener('change', function(e) {
-                if (e.target.value === 'quick_add_unit') {
-                    e.target.value = '';
-                    window.currentUnitSelectId = e.target.id;
-                    showQuickAddUnitModal();
-                }
-            });
-        </script>
-        <button type="button" onclick="addIngredient()">Add Ingredient</button>
     </div>
+
     <div class="form-group mt-3">
-        <button type="submit" class="btn btn-primary" id="saveRecipeBtn">Save Recipe</button>
+        <button type="submit" id="saveRecipeBtn" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
 
-<!-- Add Bootstrap JS dependencies -->
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
+function addIngredient() {
+    const container = document.getElementById('ingredients-container');
+    const template = `
+        <div class="ingredient-entry">
+            <select name="ingredient_ids[]" required onchange="updateUnit(this)">
+                <option value="">Select an ingredient</option>
+                {% for available_ing in all_ingredients %}
+                <option value="{{ available_ing.id }}" data-unit="{{ available_ing.unit }}">
+                    {{ available_ing.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="number" step="0.01" name="amounts[]" required>
+            <select name="units[]" required>
+                {% for unit in inventory_units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', template);
+}
+
+function updateUnit(select) {
+    const unit = select.options[select.selectedIndex].getAttribute('data-unit');
+    if (unit) {
+        const unitSelect = select.parentElement.querySelector('select[name="units[]"]');
+        for (let option of unitSelect.options) {
+            if (option.value === unit) {
+                option.selected = true;
+                break;
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     form.addEventListener('submit', function(e) {
-        e.preventDefault();
         const submitBtn = document.getElementById('saveRecipeBtn');
         submitBtn.disabled = true;
-        
-        fetch(form.action, {
-            method: 'POST',
-            body: new FormData(form)
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = "{{ url_for('recipes.list_recipes') }}";
-            } else {
-                submitBtn.disabled = false;
-                throw new Error('Failed to save recipe');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            submitBtn.disabled = false;
-            alert('Failed to save recipe. Please try again.');
-        });
+        return true;
     });
 });
 </script>
