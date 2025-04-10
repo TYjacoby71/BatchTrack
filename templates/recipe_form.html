@@ -180,27 +180,28 @@ document.addEventListener('DOMContentLoaded', function() {
   .then(data => {
     if (data.error) return alert('Error: ' + data.error);
 
+    // Close modal first to prevent grey screen
+    const modal = document.getElementById('quickAddIngredientModal');
+    const bsModal = bootstrap.Modal.getInstance(modal);
+    if (bsModal) bsModal.hide();
+    
+    // Add new ingredient entry
     const container = document.getElementById('ingredients-container');
     const entry = document.createElement('div');
     entry.classList.add('ingredient-entry');
 
-    // Safely get ingredient options
-    let ingredientOptions = '';
+    // Get existing selects to copy options
     const firstIngredientSelect = document.querySelector("select[name='ingredient_ids[]']");
-    if (firstIngredientSelect) {
-      ingredientOptions = Array.from(firstIngredientSelect.options)
-        .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
-        .join('');
-    }
-
-    // Safely get unit options
-    let unitOptions = '';
     const firstUnitSelect = document.querySelector("select[name='units[]']");
-    if (firstUnitSelect) {
-      unitOptions = Array.from(firstUnitSelect.options)
-        .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
-        .join('');
-    }
+
+    // Build options HTML
+    let ingredientOptions = Array.from(firstIngredientSelect?.options || [])
+      .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
+      .join('');
+
+    let unitOptions = Array.from(firstUnitSelect?.options || [])
+      .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
+      .join('');
 
     entry.innerHTML = `
       <select name="ingredient_ids[]" required>
@@ -215,15 +216,15 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     container.appendChild(entry);
 
-    // Close modal safely
-    const modal = document.getElementById('quickAddIngredientModal');
-    if (modal) {
-      const bsModal = bootstrap.Modal.getInstance(modal);
-      if (bsModal) bsModal.hide();
+    // Select the newly added ingredient
+    const newSelect = entry.querySelector('select[name="ingredient_ids[]"]');
+    if (newSelect) {
+      newSelect.value = data.id;
     }
 
     // Reset form
     document.getElementById('quickIngredientName').value = '';
+    document.getElementById('quickIngredientUnit').selectedIndex = 0;
     
     // Reset context
     ingredientReturnContext = 'main';
