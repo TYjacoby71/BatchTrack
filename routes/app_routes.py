@@ -21,13 +21,14 @@ def homepage():
         scale = float(request.form.get("scale", 1))
         selected_recipe = Recipe.query.get(recipe_id)
         if selected_recipe:
-            stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-            if all_ok:
-                status = "ok"
-            elif any(item["status"] == "NEEDED" for item in stock_check):
-                status = "bad"
-            else:
-                status = "low"
+            stock_check = check_stock_for_recipe(selected_recipe, scale)[0]
+            status = "ok"
+            for item in stock_check:
+                if item["status"] == "NEEDED":
+                    status = "bad"
+                    break
+                elif item["status"] == "LOW":
+                    status = "low"
 
     return render_template("homepage.html", 
                          recipes=recipes,
