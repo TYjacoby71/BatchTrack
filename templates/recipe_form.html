@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
@@ -177,32 +176,41 @@ document.getElementById('saveQuickIngredient').addEventListener('click', functio
   });
 });
 
-document.getElementById('saveQuickUnit').addEventListener('click', function () {
-  const name = document.getElementById('unitName').value;
-  const type = document.getElementById('unitType').value;
+document.addEventListener('DOMContentLoaded', function() {
+  const unitModal = new bootstrap.Modal(document.getElementById('quickAddUnitModal'));
+  const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
 
-  if (!name) return alert('Unit name required.');
+  document.getElementById('saveQuickUnit').addEventListener('click', function () {
+    const name = document.getElementById('unitName').value;
+    const type = document.getElementById('unitType').value;
 
-  fetch('/recipes/units/quick-add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, type })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) return alert("Error: " + data.error);
+    if (!name) return alert('Unit name required.');
 
-    document.querySelectorAll("select[name='units[]']").forEach(select => {
-      let option = new Option(data.name, data.name, false, true);
-      select.add(option);
+    fetch('/recipes/units/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return alert("Error: " + data.error);
+
+      // Add to all unit dropdowns in the main form
+      document.querySelectorAll("select[name='units[]']").forEach(select => {
+        let option = new Option(data.name, data.name, false, true);
+        select.add(option);
+      });
+
+      // Add to the Quick Add Ingredient dropdown
+      const quickUnit = document.getElementById('quickIngredientUnit');
+      const newOpt = new Option(data.name, data.name, false, true);
+      quickUnit.add(newOpt);
+      quickUnit.value = data.name;
+
+      // Close unit modal and reopen ingredient modal
+      unitModal.hide();
+      ingredientModal.show();
     });
-
-    const quickUnit = document.getElementById('quickIngredientUnit');
-    let option = new Option(data.name, data.name, false, true);
-    quickUnit.add(option);
-    quickUnit.value = data.name;
-
-    bootstrap.Modal.getInstance(document.getElementById("quickAddUnitModal")).hide();
   });
 });
 </script>
