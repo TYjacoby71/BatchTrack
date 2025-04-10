@@ -1,47 +1,30 @@
-
 {% extends 'layout.html' %}
 {% block content %}
-<div class="plan-container">
-    <h2>Plan Production: {{ recipe.name }}</h2>
+<h2>Plan Production for {{ recipe.name }}</h2>
 
-    <form method="post">
-        <div class="form-group">
-            <label for="scale">Scale Factor:</label>
-            <input type="number" id="scale" name="scale" value="{{ scale }}" step="0.1" min="0.1" required>
-        </div>
-        <button type="submit" class="button">Check Stock</button>
-    </form>
+<form id="startBatchForm">
+    <button type="submit" class="btn btn-success">Start Batch</button>
+</form>
 
-    {% if stock_check %}
-    <div class="stock-summary">
-        <h3>Stock Check Results</h3>
-        {% for item in stock_check %}
-        <div class="stock-item {{ item.status.lower() }}">
-            <span class="name">{{ item.name }}</span>
-            <span class="amount">Need: {{ "%.2f"|format(item.needed) }} {{ item.unit }}</span>
-            <span class="available">Have: {{ "%.2f"|format(item.available) }} {{ item.unit }}</span>
-            <span class="status">Status: {{ item.status }}</span>
-        </div>
-        {% endfor %}
-
-        {% if all_ok %}
-        <div class="action-buttons">
-            <form method="post" action="{{ url_for('batches.start_batch') }}">
-                <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-                <input type="hidden" name="scale" value="{{ scale }}">
-                <div class="form-group">
-                    <label>Batch Notes:</label><br>
-                    <textarea name="notes" rows="3"></textarea>
-                </div>
-                <button type="submit" class="button">Start Batch</button>
-            </form>
-        </div>
-        {% else %}
-        <div class="warning">
-            <p>Cannot start batch - insufficient ingredients</p>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-</div>
+<script>
+    document.getElementById('startBatchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetch('{{ url_for("batches.start_batch_api") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recipe_id: {{ recipe.id }},
+                scale: {{ scale }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                window.location.href = '{{ url_for("batches.view_batch_in_progress") }}/' + data.batch_id;
+            }
+        });
+    });
+</script>
 {% endblock %}
