@@ -154,8 +154,17 @@ function setIngredientReturnContext(source, dropdown = null) {
 }
 
 document.getElementById('saveQuickIngredient').addEventListener('click', function () {
-  const name = document.getElementById('quickIngredientName').value;
+  const name = document.getElementById('quickIngredientName').value.trim();
   const unit = document.getElementById('quickIngredientUnit').value;
+
+  if (!name || !unit) {
+    alert("Both name and unit are required.");
+    return;
+  }
+
+  const button = this;
+  button.disabled = true;
+  button.innerText = "Adding...";
 
   fetch('/ingredients/quick-add', {
     method: 'POST',
@@ -166,21 +175,27 @@ document.getElementById('saveQuickIngredient').addEventListener('click', functio
   .then(data => {
     if (data.error) return alert('Error: ' + data.error);
 
-    // Dynamically add a new ingredient row to the recipe
     const container = document.getElementById('ingredients-container');
     const entry = document.createElement('div');
     entry.classList.add('ingredient-entry');
 
-    // Create select with all existing options plus new one
-    const ingredientOptions = Array.from(document.querySelector("select[name='ingredient_ids[]']").options)
-      .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
-      .join('');
+    // Safely get ingredient options
+    let ingredientOptions = '';
+    const firstIngredientSelect = document.querySelector("select[name='ingredient_ids[]']");
+    if (firstIngredientSelect) {
+      ingredientOptions = Array.from(firstIngredientSelect.options)
+        .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
+        .join('');
+    }
 
-    // Create unit options with the new unit selected
-    const unitSelect = document.querySelector("select[name='units[]']");
-    const unitOptions = Array.from(unitSelect.options)
-      .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
-      .join('');
+    // Safely get unit options
+    let unitOptions = '';
+    const firstUnitSelect = document.querySelector("select[name='units[]']");
+    if (firstUnitSelect) {
+      unitOptions = Array.from(firstUnitSelect.options)
+        .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
+        .join('');
+    }
 
     entry.innerHTML = `
       <select name="ingredient_ids[]" required>
@@ -195,17 +210,29 @@ document.getElementById('saveQuickIngredient').addEventListener('click', functio
     `;
     container.appendChild(entry);
 
-    // Close the modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-    modal.hide();
+    // Close modal safely
+    const modal = document.getElementById('quickAddIngredientModal');
+    if (modal) {
+      const bsModal = bootstrap.Modal.getInstance(modal);
+      if (bsModal) bsModal.hide();
+    }
 
-    // Clear the form for next use
+    // Reset form
     document.getElementById('quickIngredientName').value = '';
-
+    
     // Reset context
     ingredientReturnContext = 'main';
     lastIngredientDropdown = null;
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to add ingredient. Please try again.');
+  })
+  .finally(() => {
+    button.disabled = false;
+    button.innerText = "Add Ingredient";
   });
+});
 });
 
 document.addEventListener('DOMContentLoaded', function() {
