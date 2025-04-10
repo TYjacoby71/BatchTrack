@@ -21,8 +21,8 @@ class RecipeIngredient(db.Model):
     ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), primary_key=True)
     amount = db.Column(db.Float)
     unit = db.Column(db.String(32))
-    recipe = db.relationship('Recipe', backref=db.backref('recipe_ingredients', lazy='dynamic'))
-    ingredient = db.relationship('Ingredient', backref=db.backref('recipe_ingredients', lazy='dynamic'))
+    recipe = db.relationship('Recipe')
+    ingredient = db.relationship('Ingredient')
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
