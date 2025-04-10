@@ -1,21 +1,24 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Recipe, Ingredient, RecipeIngredient, InventoryUnit
+from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
 
-@recipes_bp.route('/', methods=['GET'])
+@recipes_bp.route('/recipes')
 @login_required
 def list_recipes():
     recipes = Recipe.query.all()
     return render_template('recipe_list.html', recipes=recipes)
 
-@recipes_bp.route('/new', methods=['GET', 'POST'])
+@recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
     all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    inventory_units = InventoryUnit.query.all()
+
     if request.method == 'POST':
         try:
             recipe = Recipe(
@@ -23,6 +26,8 @@ def new_recipe():
                 instructions=request.form['instructions'],
                 label_prefix=request.form['label_prefix']
             )
+            db.session.add(recipe)
+            db.session.flush()  # Get recipe.id
 
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
@@ -30,68 +35,67 @@ def new_recipe():
 
             for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
                 if ing_id:
-                    recipe_ingredient = RecipeIngredient(
+                    assoc = RecipeIngredient(
+                        recipe_id=recipe.id,
                         ingredient_id=ing_id,
                         amount=float(amount),
                         unit=unit
                     )
-                    recipe.recipe_ingredients.append(recipe_ingredient)
+                    db.session.add(assoc)
 
-            db.session.add(recipe)
             db.session.commit()
-            flash('Recipe created successfully')
+            flash('Recipe created successfully.')
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
+            db.session.rollback()
             flash(f'Error creating recipe: {str(e)}')
-    else: #added else block for GET request
-        all_ingredients = Ingredient.query.all()
-        inventory_units = InventoryUnit.query.all()
-        return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units) #added inventory_units
 
-@recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
+    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units)
+
+@recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
     inventory_units = InventoryUnit.query.all()
+
     if request.method == 'POST':
         try:
             recipe.name = request.form['name']
             recipe.instructions = request.form['instructions']
             recipe.label_prefix = request.form['label_prefix']
+
+            # Clear previous ingredients
+            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+                if ing_id:
+                    assoc = RecipeIngredient(
+                        recipe_id=recipe.id,
+                        ingredient_id=ing_id,
+                        amount=float(amount),
+                        unit=unit
+                    )
+                    db.session.add(assoc)
+
             db.session.commit()
-            flash('Recipe updated successfully')
+            flash('Recipe updated successfully.')
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
+            db.session.rollback()
             flash(f'Error updating recipe: {str(e)}')
-            
+
     return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units)
 
-
-@recipes_bp.route('/units/quick-add', methods=['POST'])
+@recipes_bp.route('/recipes/<int:recipe_id>/delete')
 @login_required
-def quick_add_unit():
-    data = request.get_json()
-    name = data.get('name')
-    
-    try:
-        unit = InventoryUnit(name=name, type='count')
-        db.session.add(unit)
-        db.session.commit()
-        return jsonify({
-            'id': unit.id,
-            'name': unit.name,
-            'type': 'count'
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
-
-@recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
-@login_required
-def plan_production(recipe_id):
+def delete_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    scale = float(request.form.get('scale', 1.0)) if request.method == 'POST' else 1.0
-    stock_check, all_ok = check_stock_for_recipe(recipe, scale)
-    return render_template('plan_production.html', recipe=recipe, scale=scale,
-                         stock_check=stock_check, all_ok=all_ok)
+    db.session.delete(recipe)
+    db.session.commit()
+    flash('Recipe deleted.')
+    return redirect(url_for('recipes.list_recipes'))
