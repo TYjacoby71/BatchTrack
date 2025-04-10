@@ -62,12 +62,17 @@ def view_batch_in_progress(batch_id):
             'line_cost': line_cost
         })
 
+    # Only pass product_quantity if it exists in the batch
+    product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
+    # Only pass batch_cost if ingredients are used
+    batch_cost = round(total_cost, 2) if ingredient_costs else None
+    
     return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
                          product_units=product_units,
-                         batch_cost=round(total_cost, 2),
-                         product_quantity=batch.product_quantity if hasattr(batch, 'product_quantity') else None,
+                         batch_cost=batch_cost,
+                         product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs)
 
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
