@@ -52,6 +52,14 @@ class Product(db.Model):
     quantity = db.Column(db.Integer)
     unit = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    events = db.relationship('ProductEvent', backref='product', lazy=True)
+
+class ProductEvent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    event_type = db.Column(db.String(64))
+    note = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,42 +1,33 @@
-
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Product Detail: {{ product.name }}</h2>
-
-<p><strong>Quantity:</strong> {{ product.quantity }} {{ product.unit }}</p>
-<p><strong>Expiration:</strong> {{ product.expiration_date }}</p>
+<h2>Product: {{ product.name }}</h2>
+<p>Quantity: {{ product.quantity }} {{ product.unit }}</p>
+<p>Expires: {{ product.expiration_date }}</p>
 {% if product.image %}
-    <p><img src="{{ url_for('static', filename='product_images/' ~ product.image) }}" width="120"></p>
+  <img src="{{ url_for('static', filename=product.image.split('static/')[-1]) }}" width="150">
 {% endif %}
 
-<h3>Log Product Event</h3>
+<h3>Log Event</h3>
 <form method="post">
-    <label for="event_type">Event Type:</label>
-    <select name="event_type">
-        <option value="sold">Sold</option>
-        <option value="sample">Sample</option>
-        <option value="spoiled">Spoiled</option>
-    </select><br>
-    <label for="note">Note:</label><br>
-    <textarea name="note" rows="3" cols="40"></textarea><br>
-    <button type="submit">Log Event</button>
+  <label>Type:</label>
+  <select name="event_type">
+    <option value="sold">Sold</option>
+    <option value="spoiled">Spoiled</option>
+    <option value="sample">Sample</option>
+  </select><br>
+  <label>Note:</label><br>
+  <textarea name="note" rows="3"></textarea><br>
+  <button type="submit">Log Event</button>
 </form>
 
-<h3>Event History</h3>
-{% if events %}
-<table>
-    <tr><th>Time</th><th>Type</th><th>Note</th></tr>
-    {% for event in events %}
-    <tr>
-        <td>{{ event.timestamp }}</td>
-        <td>{{ event.event_type }}</td>
-        <td>{{ event.note }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}
+<h3>History</h3>
+<ul>
+  {% for event in events %}
+    <li>[{{ event.timestamp.strftime('%Y-%m-%d') }}] {{ event.event_type }} — {{ event.note }}</li>
+  {% endfor %}
+</ul>
+{% if not events %}
 <p>No events logged yet.</p>
 {% endif %}
-
 <a href="/">Back to Home</a>
 {% endblock %}
