@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -6,7 +5,7 @@
 
 <div class="mb-3">
   {% if active_batch %}
-    <a href="{{ url_for('batches.view_batch', batch_id=active_batch.id) }}" class="button">Finish Batch</a>
+    <a href="{{ url_for('batches.view_batch_in_progress', batch_id=active_batch.id) }}" class="button">Continue Batch</a>
   {% endif %}
   <button onclick="openPlanBatchModal()" class="button">Start Batch</button>
 </div>
@@ -91,7 +90,7 @@ async function checkStock() {
     });
 
     if (!response.ok) throw new Error('Network response was not ok');
-    
+
     const data = await response.json();
     displayStockResults(data);
     showStep(2);
@@ -103,9 +102,9 @@ async function checkStock() {
 function displayStockResults(data) {
   const resultsDiv = document.getElementById('stockCheckResults');
   document.getElementById('stockCheckTitle').textContent = `Stock Check for ${data.recipe_name} (${data.status.toUpperCase()})`;
-  
+
   let html = '<table class="table"><thead><tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
-  
+
   data.stock_check.forEach(item => {
     html += `<tr>
       <td>${item.name}</td>
@@ -114,10 +113,10 @@ function displayStockResults(data) {
       <td>${item.status}</td>
     </tr>`;
   });
-  
+
   html += '</tbody></table>';
   resultsDiv.innerHTML = html;
-  
+
   document.getElementById('startBatchControls').style.display = data.all_ok ? 'block' : 'none';
 }
 
@@ -138,7 +137,7 @@ async function startBatch() {
     });
 
     if (!response.ok) throw new Error('Network response was not ok');
-    
+
     const data = await response.json();
     window.location.href = data.redirect_url;
   } catch (error) {
