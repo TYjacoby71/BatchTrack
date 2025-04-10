@@ -48,7 +48,16 @@ def quick_add_ingredient():
         return jsonify({'error': 'Name and unit are required'}), 400
 
     try:
-        # Always create with quantity 0 for placeholder
+        # Check for existing ingredient
+        existing = Ingredient.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({
+                'id': existing.id,
+                'name': existing.name,
+                'unit': existing.unit
+            })
+
+        # Create new ingredient with quantity 0 for placeholder
         ingredient = Ingredient(name=name, quantity=0.0, unit=unit)
         db.session.add(ingredient)
         db.session.commit()
