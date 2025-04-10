@@ -85,10 +85,12 @@
             <li><strong>Total Batch Cost:</strong> ${{ "%.2f"|format(batch_cost|float) if batch_cost is not none else "0.00" }}</li>
             <li><strong>Product Quantity:</strong> {{ product_quantity or "—" }}</li>
             <li><strong>Unit Cost:</strong>
-                {% if product_quantity and product_quantity > 0 and batch_cost %}
+                {% if batch_cost and product_quantity and product_quantity > 0 %}
                     ${{ "%.2f"|format(batch_cost / product_quantity) }}
+                {% elif batch_cost == 0 %}
+                    —
                 {% else %}
-                    $0.00
+                    <span class="text-muted">Finish batch to see cost</span>
                 {% endif %}
             </li>
         </ul>

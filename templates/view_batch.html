@@ -13,7 +13,13 @@
         <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
         {% if batch.product_quantity %}
             <p><strong>Product Yield:</strong> {{ batch.product_quantity }} {{ batch.product_unit }}</p>
-            <p><strong>Cost Per Unit:</strong> ${{ "%.2f"|format(batch.total_cost / batch.product_quantity) }}</p>
+            <p><strong>Cost Per Unit:</strong> 
+                {% if batch.total_cost and batch.product_quantity %}
+                    ${{ "%.2f"|format(batch.total_cost / batch.product_quantity) }}
+                {% else %}
+                    —
+                {% endif %}
+            </p>
         {% endif %}
     </div>
 
