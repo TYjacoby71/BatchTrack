@@ -166,27 +166,41 @@ document.getElementById('saveQuickIngredient').addEventListener('click', functio
   .then(data => {
     if (data.error) return alert('Error: ' + data.error);
 
-    // Add the new ingredient to ALL ingredient dropdowns
-    document.querySelectorAll("select[name='ingredient_ids[]']").forEach(select => {
-      const option = new Option(data.name, data.id, false, false);
-      select.add(option);
-    });
+    // Dynamically add a new ingredient row to the recipe
+    const container = document.getElementById('ingredients-container');
+    const entry = document.createElement('div');
+    entry.classList.add('ingredient-entry');
 
-    // If we have a specific dropdown to update, select the new ingredient
-    if (lastIngredientDropdown) {
-      lastIngredientDropdown.value = data.id;
-    } else {
-      // Otherwise update the last dropdown in the container
-      const quickIngredientDropdowns = document.getElementById('ingredients-container').querySelectorAll("select[name='ingredient_ids[]']");
-      if (quickIngredientDropdowns.length > 0) {
-        const lastDropdown = quickIngredientDropdowns[quickIngredientDropdowns.length - 1];
-        lastDropdown.value = data.id;
-      }
-    }
+    // Create select with all existing options plus new one
+    const ingredientOptions = Array.from(document.querySelector("select[name='ingredient_ids[]']").options)
+      .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
+      .join('');
+
+    // Create unit options with the new unit selected
+    const unitSelect = document.querySelector("select[name='units[]']");
+    const unitOptions = Array.from(unitSelect.options)
+      .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
+      .join('');
+
+    entry.innerHTML = `
+      <select name="ingredient_ids[]" required>
+        <option selected value="${data.id}">${data.name}</option>
+        ${ingredientOptions}
+      </select>
+      <input type="number" step="0.01" name="amounts[]" required>
+      <select name="units[]" required>
+        ${unitOptions}
+      </select>
+      <button type="button" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    container.appendChild(entry);
 
     // Close the modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     modal.hide();
+
+    // Clear the form for next use
+    document.getElementById('quickIngredientName').value = '';
 
     // Reset context
     ingredientReturnContext = 'main';
