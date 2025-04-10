@@ -13,6 +13,24 @@
         {% endif %}
     </div>
 
+    <div class="ingredients-used">
+        <h3>Ingredients Used</h3>
+        <table>
+            <tr>
+                <th>Ingredient</th>
+                <th>Amount</th>
+                <th>Unit</th>
+            </tr>
+            {% for assoc in batch.recipe.recipe_ingredients %}
+            <tr>
+                <td>{{ assoc.ingredient.name }}</td>
+                <td>{{ assoc.amount * batch.scale }}</td>
+                <td>{{ assoc.unit }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
     <div class="actions">
         <a href="{{ url_for('batches.batches_list') }}" class="button">Back to Batches</a>
     </div>
