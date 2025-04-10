@@ -182,8 +182,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Close modal first to prevent grey screen
     const modal = document.getElementById('quickAddIngredientModal');
-    const bsModal = bootstrap.Modal.getInstance(modal);
-    if (bsModal) bsModal.hide();
+    let bsModal = bootstrap.Modal.getInstance(modal);
+    if (!bsModal) bsModal = new bootstrap.Modal(modal); // fallback if not instantiated
+    bsModal.hide();
+    
+    // Clean up modal artifacts
+    document.body.classList.remove('modal-open');
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     
     // Add new ingredient entry
     const container = document.getElementById('ingredients-container');
@@ -215,6 +220,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <button type="button" onclick="this.parentElement.remove()">Remove</button>
     `;
     container.appendChild(entry);
+    
+    // Scroll new entry into view
+    entry.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     // Select the newly added ingredient
     const newSelect = entry.querySelector('select[name="ingredient_ids[]"]');
