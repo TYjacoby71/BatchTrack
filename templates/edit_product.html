@@ -1,0 +1,18 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Edit Product: {{ product.name }}</h2>
+<form method="post" enctype="multipart/form-data">
+  <label>Name:</label>
+  <input name="name" value="{{ product.name }}"><br>
+  <label>Quantity:</label>
+  <input name="quantity" type="number" value="{{ product.quantity }}"><br>
+  <label>Unit:</label>
+  <input name="unit" value="{{ product.unit }}"><br>
+  <label>Expiration Date:</label>
+  <input name="expiration_date" type="date" value="{{ product.expiration_date }}"><br>
+  <label>Upload New Image:</label>
+  <input type="file" name="image"><br><br>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

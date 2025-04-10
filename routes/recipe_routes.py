@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Recipe, Ingredient, recipe_ingredients, InventoryUnit # Added InventoryUnit import
+from models import db, Recipe, Ingredient, RecipeIngredient, InventoryUnit
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
@@ -29,17 +29,13 @@ def new_recipe():
             units = request.form.getlist('units[]')
 
             for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
-                ingredient = Ingredient.query.get(ing_id)
-                if ingredient:
-                    recipe.ingredients.append(ingredient)
-                    db.session.execute(
-                        recipe_ingredients.insert().values(
-                            recipe_id=recipe.id,
-                            ingredient_id=ing_id,
-                            amount=float(amount),
-                            unit=unit
-                        )
+                if ing_id:
+                    recipe_ingredient = RecipeIngredient(
+                        ingredient_id=ing_id,
+                        amount=float(amount),
+                        unit=unit
                     )
+                    recipe.recipe_ingredients.append(recipe_ingredient)
 
             db.session.add(recipe)
             db.session.commit()

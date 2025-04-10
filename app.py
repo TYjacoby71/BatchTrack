@@ -35,8 +35,10 @@ from routes.batch_view_route import batch_view_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
+from routes.product_routes import product_bp
 
 # Register blueprints
+app.register_blueprint(product_bp)
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')

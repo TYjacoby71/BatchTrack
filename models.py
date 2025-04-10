@@ -15,12 +15,14 @@ class User(UserMixin, db.Model):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
 
-recipe_ingredients = db.Table('recipe_ingredients',
-    db.Column('recipe_id', db.Integer, db.ForeignKey('recipe.id')),
-    db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id')),
-    db.Column('amount', db.Float),
-    db.Column('unit', db.String(32))
-)
+class RecipeIngredient(db.Model):
+    __tablename__ = 'recipe_ingredients'
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), primary_key=True)
+    amount = db.Column(db.Float)
+    unit = db.Column(db.String(32))
+    recipe = db.relationship('Recipe', backref=db.backref('recipe_ingredients', lazy='dynamic'))
+    ingredient = db.relationship('Ingredient', backref=db.backref('recipe_ingredients', lazy='dynamic'))
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -28,8 +30,7 @@ class Recipe(db.Model):
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
     qr_image = db.Column(db.String(128))
-    ingredients = db.relationship('Ingredient', secondary=recipe_ingredients,
-                                backref=db.backref('recipes', lazy='dynamic'))
+    recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
 class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,6 +53,14 @@ class Product(db.Model):
     quantity = db.Column(db.Integer)
     unit = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    events = db.relationship('ProductEvent', backref='product', lazy=True)
+
+class ProductEvent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    event_type = db.Column(db.String(64))
+    note = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
