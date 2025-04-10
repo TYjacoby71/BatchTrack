@@ -22,7 +22,7 @@ class RecipeIngredient(db.Model):
     amount = db.Column(db.Float)
     unit = db.Column(db.String(32))
     recipe = db.relationship('Recipe')
-    ingredient = db.relationship('Ingredient')
+    ingredient = db.relationship('Ingredient', backref=db.backref('recipe_ingredients', lazy='dynamic'))
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
