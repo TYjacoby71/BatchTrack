@@ -224,7 +224,22 @@
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
     </div>
     <div class="form-group mt-3">
-        <button type="submit" class="btn btn-primary">Save Recipe</button>
+        <button type="submit" class="btn btn-primary" id="saveRecipeBtn">Save Recipe</button>
     </div>
 </form>
+
+<!-- Add Bootstrap JS dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('saveRecipeBtn');
+        submitBtn.disabled = true;
+        return true;
+    });
+});
+</script>
 {% endblock %}
