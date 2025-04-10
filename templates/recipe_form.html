@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
@@ -180,9 +179,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('saveQuickUnit').addEventListener('click', function() {
     const name = document.getElementById('unitName').value;
     const type = document.getElementById('unitType').value;
-    
+
     if (!name) return alert('Unit name required.');
-    
+
     fetch('/recipes/units/quick-add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -191,30 +190,38 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(r => r.json())
     .then(data => {
       if (data.error) return alert('Error: ' + data.error);
-      
+
       // Add to all unit dropdowns
       document.querySelectorAll("select[name='units[]']").forEach(select => {
         select.add(new Option(data.name, data.name, false, true));
       });
-      
+
       // Add to quick ingredient unit dropdown
       const quickUnit = document.getElementById('quickIngredientUnit');
       quickUnit.add(new Option(data.name, data.name, false, true));
       quickUnit.value = data.name;
-      
+
       // Handle modal transitions
-      const unitModal = document.getElementById('quickAddUnitModal');
-      const bsUnitModal = bootstrap.Modal.getInstance(unitModal);
-      if (bsUnitModal) bsUnitModal.hide();
-      
-      if (unitReturnContext === 'ingredient') {
-        setTimeout(() => {
-          const ingredientModal = document.getElementById('quickAddIngredientModal');
-          const bsIngredientModal = new bootstrap.Modal(ingredientModal);
-          bsIngredientModal.show();
-        }, 150);
+      const unitModalEl = document.getElementById('quickAddUnitModal');
+      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
+      if (unitModal) {
+        unitModal.hide();
+
+        // Clean up modal artifacts
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+        if (unitReturnContext === 'ingredient') {
+          // Wait for unit modal to fully close
+          setTimeout(() => {
+            const ingredientModalEl = document.getElementById('quickAddIngredientModal');
+            const ingredientModal = new bootstrap.Modal(ingredientModalEl);
+            ingredientModal.show();
+            unitReturnContext = 'main'; // Reset context
+          }, 250);
+        }
       }
-      
+
       // Reset form
       document.getElementById('unitName').value = '';
       document.getElementById('unitType').selectedIndex = 0;
@@ -225,16 +232,16 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('saveQuickIngredient').addEventListener('click', function() {
     const name = document.getElementById('quickIngredientName').value.trim();
     const unit = document.getElementById('quickIngredientUnit').value;
-    
+
     if (!name || !unit) {
       alert('Both name and unit are required.');
       return;
     }
-    
+
     const button = this;
     button.disabled = true;
     button.innerText = 'Adding...';
-    
+
     fetch('/ingredients/quick-add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -246,23 +253,23 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Error: ' + data.error);
         return;
       }
-      
+
       // Close modal and clean up
       const modal = document.getElementById('quickAddIngredientModal');
       let bsModal = bootstrap.Modal.getInstance(modal);
       if (!bsModal) bsModal = new bootstrap.Modal(modal);
       bsModal.hide();
-      
+
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-      
+
       // Add new ingredient entry
       const entry = addIngredient(data.id);
-      
+
       // Reset the form
       document.getElementById('quickIngredientName').value = '';
       document.getElementById('quickIngredientUnit').selectedIndex = 0;
-      
+
       // Reset context
       ingredientReturnContext = 'main';
       lastIngredientDropdown = null;
