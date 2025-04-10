@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required
 from models import db, InventoryUnit
 
@@ -60,11 +60,11 @@ def quick_add_ingredient():
         db.session.add(ingredient)
         db.session.commit()
 
-        # Store in session for recipe form auto-population
-        session['preselect_ingredient_id'] = ingredient.id
-        session['add_ingredient_line'] = True
-
-        return jsonify({'redirect': request.referrer})
+        return jsonify({
+            'id': ingredient.id,
+            'name': ingredient.name,
+            'unit': ingredient.unit
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
