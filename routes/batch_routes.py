@@ -166,6 +166,11 @@ def finish_batch(batch_id):
             flash('Quantity must be greater than 0')
             return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
+        product_unit = request.form.get('product_unit')
+        if not product_unit:
+            flash('Product unit is required')
+            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+
         img_file = request.files.get('product_image')
         image_path = None
         if img_file and img_file.filename:
@@ -181,7 +186,7 @@ def finish_batch(batch_id):
             image=image_path,
             expiration_date=datetime.utcnow().date(),
             quantity=quantity,
-            unit=unit
+            unit=product_unit
         )
         db.session.add(product)
         db.session.commit()
