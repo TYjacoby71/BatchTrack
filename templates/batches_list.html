@@ -28,7 +28,7 @@
                 <td>{{ batch.scale }}</td>
                 <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
                 <td>
-                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                    <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
                 </td>
             </tr>
             {% endfor %}
@@ -47,7 +47,7 @@
                     <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
                     <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
                     <p class="card-text text-muted">{{ batch.timestamp.strftime("%Y-%m-%d") }}</p>
-                    <a href="{{ url_for('batch_view.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                    <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary">View</a>
                 </div>
             </div>
         </div>
