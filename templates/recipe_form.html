@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
-<form method="post">
+<form method="post" action="{{ url_for('recipes.new_recipe' if not recipe else 'recipes.edit_recipe', recipe_id=recipe.id if recipe else None) }}">
     <div class="form-group">
         <label for="name">Recipe Name:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
