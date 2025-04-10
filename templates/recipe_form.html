@@ -79,7 +79,7 @@
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
-          <a href="#" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal" onclick="setUnitReturnContext('ingredient')" data-bs-dismiss="modal">+ Add New Unit</a>
+          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
         </div>
       </div>
       <div class="modal-footer">
@@ -134,6 +134,12 @@ let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
 
+// Functions
+function setIngredientReturnContext(source, dropdown = null) {
+  ingredientReturnContext = source;
+  lastIngredientDropdown = dropdown;
+}
+
 function addIngredient(preselectId = null) {
   const container = document.getElementById('ingredients-container');
   const entry = document.createElement('div');
@@ -142,7 +148,7 @@ function addIngredient(preselectId = null) {
     <select name="ingredient_ids[]" required>
       <option value="">Select an ingredient</option>
       {% for ing in all_ingredients %}
-      <option value="{{ ing.id }}" ${preselectId == ing.id ? 'selected' : ''}>{{ ing.name }}</option>
+      <option value="{{ ing.id }}">{{ ing.name }}</option>
       {% endfor %}
     </select>
     <input type="number" step="0.01" name="amounts[]" required>
@@ -162,92 +168,63 @@ function addIngredient(preselectId = null) {
   return entry;
 }
 
-function setUnitReturnContext(context) {
-  unitReturnContext = context;
-}
-
-function setIngredientReturnContext(source, dropdown = null) {
-  ingredientReturnContext = source;
-  lastIngredientDropdown = dropdown;
-}
-
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+  // Handle initial ingredient line if needed
   if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
     addIngredient(PRESELECT_INGREDIENT_ID);
   }
 
   // Quick Add Unit Handler
   document.getElementById('saveQuickUnit').addEventListener('click', function() {
-  const name = document.getElementById('unitName').value.trim();
-  const type = document.getElementById('unitType').value;
-  const button = this;
+    const name = document.getElementById('unitName').value;
+    const type = document.getElementById('unitType').value;
 
-  if (!name) return alert('Unit name required.');
+    if (!name) return alert('Unit name required.');
 
-  button.disabled = true;
-  button.innerText = "Saving...";
+    fetch('/recipes/units/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return alert('Error: ' + data.error);
 
-  fetch('/quick-add/unit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, type })
-  })
-  .then(async response => {
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(err);
-    }
-    return response.json();
-  })
-  .then(data => {
-    if (data.error) {
-      alert("Error: " + data.error);
-      return;
-    }
+      // Add to all unit dropdowns
+      document.querySelectorAll("select[name='units[]']").forEach(select => {
+        select.add(new Option(data.name, data.name, false, true));
+      });
 
-    // Add new unit to all unit dropdowns in the main form
-    document.querySelectorAll("select[name='units[]']").forEach(select => {
-      const option = new Option(data.name, data.name, false, true);
-      select.add(option);
-    });
+      // Add to quick ingredient unit dropdown
+      const quickUnit = document.getElementById('quickIngredientUnit');
+      quickUnit.add(new Option(data.name, data.name, false, true));
+      quickUnit.value = data.name;
 
-    // Add it to the unit dropdown in the ingredient modal
-    const quickUnit = document.getElementById('quickIngredientUnit');
-    const quickOption = new Option(data.name, data.name, false, true);
-    quickUnit.add(quickOption);
-    quickUnit.value = data.name;
+      // Handle modal transitions
+      const unitModalEl = document.getElementById('quickAddUnitModal');
+      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
+      if (unitModal) {
+        unitModal.hide();
 
-    // Close modal and remove overlay
-    const unitModalEl = document.getElementById('quickAddUnitModal');
-    const unitModal = bootstrap.Modal.getInstance(unitModalEl) || new bootstrap.Modal(unitModalEl);
-    unitModal.hide();
-    document.body.classList.remove('modal-open');
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        // Clean up modal artifacts
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
 
-    // Reopen ingredient modal if needed
-    if (unitReturnContext === 'ingredient') {
-      setTimeout(() => {
-        const ingredientModalEl = document.getElementById('quickAddIngredientModal');
-        const ingredientModal = bootstrap.Modal.getInstance(ingredientModalEl) || new bootstrap.Modal(ingredientModalEl);
-        ingredientModal.show();
-      }, 250);
-    }
+        if (unitReturnContext === 'ingredient') {
+          // Wait for unit modal to fully close
+          setTimeout(() => {
+            const ingredientModalEl = document.getElementById('quickAddIngredientModal');
+            const ingredientModal = new bootstrap.Modal(ingredientModalEl);
+            ingredientModal.show();
+            unitReturnContext = 'main'; // Reset context
+          }, 250);
+        }
+      }
 
-    // Reset form + state
-    document.getElementById('unitName').value = '';
-    document.getElementById('unitType').selectedIndex = 0;
-    unitReturnContext = 'main';
-  })
-  .catch(error => {
-    console.error("Unit Add Error:", error);
-    alert("Something went wrong while adding the unit.");
-  })
-  .finally(() => {
-    button.disabled = false;
-    button.innerText = "Add Unit";
-  });
-});
+      // Reset form
+      document.getElementById('unitName').value = '';
+      document.getElementById('unitType').selectedIndex = 0;
     });
   });
 
