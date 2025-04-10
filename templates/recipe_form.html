@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
@@ -122,12 +123,14 @@
   </div>
 </div>
 
-<!-- Add Bootstrap CSS and JS -->
+<!-- Bootstrap + Logic -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 // Global variables
+const PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
+const SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
 let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
@@ -138,15 +141,15 @@ function setIngredientReturnContext(source, dropdown = null) {
   lastIngredientDropdown = dropdown;
 }
 
-function addIngredient() {
+function addIngredient(preselectId = null) {
   const container = document.getElementById('ingredients-container');
   const entry = document.createElement('div');
   entry.classList.add('ingredient-entry');
   entry.innerHTML = `
     <select name="ingredient_ids[]" required>
       <option value="">Select an ingredient</option>
-      {% for available_ing in all_ingredients %}
-      <option value="{{ available_ing.id }}">{{ available_ing.name }}</option>
+      {% for ing in all_ingredients %}
+      <option value="{{ ing.id }}">{{ ing.name }}</option>
       {% endfor %}
     </select>
     <input type="number" step="0.01" name="amounts[]" required>
@@ -158,117 +161,28 @@ function addIngredient() {
     <button type="button" onclick="this.parentElement.remove()">Remove</button>
   `;
   container.appendChild(entry);
+  if (preselectId) {
+    const select = entry.querySelector('select[name="ingredient_ids[]"]');
+    if (select) select.value = preselectId;
+  }
+  entry.scrollIntoView({ behavior: 'smooth' });
+  return entry;
 }
 
-// Initialize event listeners when DOM is ready
+// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('saveQuickIngredient').addEventListener('click', function () {
-  const name = document.getElementById('quickIngredientName').value.trim();
-  const unit = document.getElementById('quickIngredientUnit').value;
-
-  if (!name || !unit) {
-    alert("Both name and unit are required.");
-    return;
+  // Handle initial ingredient line if needed
+  if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
+    addIngredient(PRESELECT_INGREDIENT_ID);
   }
 
-  const button = this;
-  button.disabled = true;
-  button.innerText = "Adding...";
-
-  fetch('/ingredients/quick-add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, unit })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.error) return alert('Error: ' + data.error);
-
-    // Close modal first to prevent grey screen
-    const modal = document.getElementById('quickAddIngredientModal');
-    let bsModal = bootstrap.Modal.getInstance(modal);
-    if (!bsModal) bsModal = new bootstrap.Modal(modal); // fallback if not instantiated
-    bsModal.hide();
-    
-    // Clean up modal artifacts
-    document.body.classList.remove('modal-open');
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    
-    // Add new ingredient entry
-    const container = document.getElementById('ingredients-container');
-    const entry = document.createElement('div');
-    entry.classList.add('ingredient-entry');
-
-    // Get existing selects to copy options
-    const firstIngredientSelect = document.querySelector("select[name='ingredient_ids[]']");
-    const firstUnitSelect = document.querySelector("select[name='units[]']");
-
-    // Build options HTML
-    let ingredientOptions = Array.from(firstIngredientSelect?.options || [])
-      .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
-      .join('');
-
-    let unitOptions = Array.from(firstUnitSelect?.options || [])
-      .map(opt => `<option value="${opt.value}" ${opt.value === data.unit ? 'selected' : ''}>${opt.textContent}</option>`)
-      .join('');
-
-    entry.innerHTML = `
-      <select name="ingredient_ids[]" required>
-        <option selected value="${data.id}">${data.name}</option>
-        ${ingredientOptions}
-      </select>
-      <input type="number" step="0.01" name="amounts[]" required>
-      <select name="units[]" required>
-        ${unitOptions}
-      </select>
-      <button type="button" onclick="this.parentElement.remove()">Remove</button>
-    `;
-    container.appendChild(entry);
-    
-    // Scroll new entry into view
-    entry.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Select the newly added ingredient
-    const newSelect = entry.querySelector('select[name="ingredient_ids[]"]');
-    if (newSelect) {
-      newSelect.value = data.id;
-    }
-
-    // Reset form
-    document.getElementById('quickIngredientName').value = '';
-    document.getElementById('quickIngredientUnit').selectedIndex = 0;
-    
-    // Reset context
-    ingredientReturnContext = 'main';
-    lastIngredientDropdown = null;
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Failed to add ingredient. Please try again.');
-  })
-  .finally(() => {
-    button.disabled = false;
-    button.innerText = "Add Ingredient";
-  });
-});
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  function setUnitReturnContext(source) {
-    unitReturnContext = source;
-  }
-
-  // Add event listener to unit modal trigger button
-  document.querySelector('[data-bs-target="#quickAddUnitModal"]').addEventListener('click', function() {
-    setUnitReturnContext('ingredient');
-  });
-
-  document.getElementById('saveQuickUnit').addEventListener('click', function () {
+  // Quick Add Unit Handler
+  document.getElementById('saveQuickUnit').addEventListener('click', function() {
     const name = document.getElementById('unitName').value;
     const type = document.getElementById('unitType').value;
-
+    
     if (!name) return alert('Unit name required.');
-
+    
     fetch('/recipes/units/quick-add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -276,32 +190,90 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(r => r.json())
     .then(data => {
-      if (data.error) return alert("Error: " + data.error);
-
-      // Add to all unit dropdowns in the main form
+      if (data.error) return alert('Error: ' + data.error);
+      
+      // Add to all unit dropdowns
       document.querySelectorAll("select[name='units[]']").forEach(select => {
-        let option = new Option(data.name, data.name, false, true);
-        select.add(option);
+        select.add(new Option(data.name, data.name, false, true));
       });
-
-      // Add to the Quick Add Ingredient dropdown
+      
+      // Add to quick ingredient unit dropdown
       const quickUnit = document.getElementById('quickIngredientUnit');
-      const newOpt = new Option(data.name, data.name, false, true);
-      quickUnit.add(newOpt);
+      quickUnit.add(new Option(data.name, data.name, false, true));
       quickUnit.value = data.name;
-
-      // Close the unit modal
-      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-      unitModal.hide();
-
-      // If this came from ingredient modal, reopen it
+      
+      // Handle modal transitions
+      const unitModal = document.getElementById('quickAddUnitModal');
+      const bsUnitModal = bootstrap.Modal.getInstance(unitModal);
+      if (bsUnitModal) bsUnitModal.hide();
+      
       if (unitReturnContext === 'ingredient') {
-        const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-        setTimeout(() => ingredientModal.show(), 150);
+        setTimeout(() => {
+          const ingredientModal = document.getElementById('quickAddIngredientModal');
+          const bsIngredientModal = new bootstrap.Modal(ingredientModal);
+          bsIngredientModal.show();
+        }, 150);
       }
+      
+      // Reset form
+      document.getElementById('unitName').value = '';
+      document.getElementById('unitType').selectedIndex = 0;
+    });
+  });
 
+  // Quick Add Ingredient Handler
+  document.getElementById('saveQuickIngredient').addEventListener('click', function() {
+    const name = document.getElementById('quickIngredientName').value.trim();
+    const unit = document.getElementById('quickIngredientUnit').value;
+    
+    if (!name || !unit) {
+      alert('Both name and unit are required.');
+      return;
+    }
+    
+    const button = this;
+    button.disabled = true;
+    button.innerText = 'Adding...';
+    
+    fetch('/ingredients/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, unit })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+      
+      // Close modal and clean up
+      const modal = document.getElementById('quickAddIngredientModal');
+      let bsModal = bootstrap.Modal.getInstance(modal);
+      if (!bsModal) bsModal = new bootstrap.Modal(modal);
+      bsModal.hide();
+      
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      
+      // Add new ingredient entry
+      const entry = addIngredient(data.id);
+      
+      // Reset the form
+      document.getElementById('quickIngredientName').value = '';
+      document.getElementById('quickIngredientUnit').selectedIndex = 0;
+      
       // Reset context
-      unitReturnContext = 'main';
+      ingredientReturnContext = 'main';
+      lastIngredientDropdown = null;
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to add ingredient. Please try again.');
+    })
+    .finally(() => {
+      button.disabled = false;
+      button.innerText = 'Add Ingredient';
     });
   });
 });
