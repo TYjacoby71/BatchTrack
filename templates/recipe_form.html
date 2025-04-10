@@ -154,6 +154,10 @@ function addIngredient(preselectId = null) {
     <button type="button" onclick="this.parentElement.remove()">Remove</button>
   `;
   container.appendChild(entry);
+  if (preselectId) {
+    const select = entry.querySelector('select[name="ingredient_ids[]"]');
+    if (select) select.value = preselectId;
+  }
   entry.scrollIntoView({ behavior: 'smooth' });
   return entry;
 }
@@ -279,30 +283,19 @@ document.addEventListener('DOMContentLoaded', function() {
       return response.json();
     })
     .then(data => {
-      if (data.error) {
-        alert('Error: ' + data.error);
-        return;
-      }
+      if (data.error) return alert('Error: ' + data.error);
 
-      // Close modal and clean up
+      // Close the modal
       const modal = document.getElementById('quickAddIngredientModal');
-      let bsModal = bootstrap.Modal.getInstance(modal);
-      if (!bsModal) bsModal = new bootstrap.Modal(modal);
-      bsModal.hide();
+      const bsModal = bootstrap.Modal.getInstance(modal);
+      if (bsModal) bsModal.hide();
 
+      // Clean up UI artifacts
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
 
-      // Add new ingredient entry
-      const entry = addIngredient(data.id);
-
-      // Reset the form
-      document.getElementById('quickIngredientName').value = '';
-      document.getElementById('quickIngredientUnit').selectedIndex = 0;
-
-      // Reset context
-      ingredientReturnContext = 'main';
-      lastIngredientDropdown = null;
+      // Let the server handle the row prefill
+      window.location.reload();
     })
     .catch(error => {
       console.error('Error:', error);
