@@ -105,7 +105,7 @@ def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('plan_production.html', recipe=recipe, scale=1.0)
 
-@recipes_bp.route('/recipes/units/quick-add', methods=['POST'])
+@recipes_bp.route('/units/quick-add', methods=['POST'])
 def quick_add_unit():
     data = request.get_json()
     name = data.get('name')
