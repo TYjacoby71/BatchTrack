@@ -1,0 +1,105 @@
+# BatchTrack v7 Full App Diagnostic Script with Import and Route Validation
+
+import os
+import ast
+
+project_root = "/mnt/data/btv7/btv7"
+
+# Expected folders and files
+expected_dirs = [
+    "routes", "templates", "static", "models", "instance"
+]
+
+expected_route_files = [
+    "app_routes.py", "batch_routes.py", "ingredient_routes.py",
+    "product_log_routes.py", "admin_routes.py", "tag_routes.py",
+    "unit_routes.py", "recipe_routes.py", "adjust_routes.py",
+    "fault_log_routes.py", "bulk_stock_routes.py"
+]
+
+expected_templates = [
+    "homepage.html", "ingredients.html", "update_ingredient.html", "plan_production.html",
+    "batches_list.html", "batch_in_progress.html", "finish_batch.html",
+    "product_detail.html", "edit_product.html", "product_list.html",
+    "tag_manager.html", "unit_manager.html", "view_batch.html"
+]
+
+expected_static_dirs = [
+    "product_images", "css", "js"
+]
+
+required_models = [
+    "User", "Ingredient", "Recipe", "Batch", "Product", "ProductEvent",
+    "InventoryUnit", "ProductUnit", "Tag", "FaultLog"
+]
+
+# Check existence of folders and files
+missing_dirs = [d for d in expected_dirs if not os.path.isdir(os.path.join(project_root, d))]
+missing_routes = [f for f in expected_route_files if not os.path.exists(os.path.join(project_root, "routes", f))]
+missing_templates = [t for t in expected_templates if not os.path.exists(os.path.join(project_root, "templates", t))]
+missing_static_dirs = [d for d in expected_static_dirs if not os.path.isdir(os.path.join(project_root, "static", d))]
+
+# Analyze models.py
+model_file = os.path.join(project_root, "models", "models.py")
+defined_models = []
+if os.path.exists(model_file):
+    with open(model_file, "r") as f:
+        tree = ast.parse(f.read())
+        defined_models = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
+
+missing_models = [m for m in required_models if m not in defined_models]
+
+# Check if app.py registers expected blueprints
+app_py_path = os.path.join(project_root, "app.py")
+blueprint_lines = []
+if os.path.exists(app_py_path):
+    with open(app_py_path, "r") as f:
+        lines = f.readlines()
+        blueprint_lines = [line.strip() for line in lines if "register_blueprint" in line]
+
+# Diagnostic summary
+
+def run_diagnostics():
+    print("\n🔍 BatchTrack v7 Full App Diagnostic")
+    print("====================================")
+    print(f"📁 Root Path: {project_root}")
+
+    print("\n📦 Folder Check")
+    if missing_dirs:
+        print(f"❌ Missing folders: {missing_dirs}")
+    else:
+        print("✅ All expected project folders are present")
+
+    print("\n📄 Route Files Check")
+    if missing_routes:
+        print(f"❌ Missing route files: {missing_routes}")
+    else:
+        print("✅ All expected route files are present")
+
+    print("\n🖼️ Template Files Check")
+    if missing_templates:
+        print(f"❌ Missing templates: {missing_templates}")
+    else:
+        print("✅ All expected templates found")
+
+    print("\n🎨 Static Assets Check")
+    if missing_static_dirs:
+        print(f"⚠️ Missing static asset folders: {missing_static_dirs}")
+    else:
+        print("✅ All static folders exist")
+
+    print("\n🧬 Model Definitions Check")
+    if missing_models:
+        print(f"❌ Models missing in models.py: {missing_models}")
+    else:
+        print("✅ All required models are defined in models.py")
+
+    print("\n🔗 Flask Blueprint Registration in app.py")
+    if blueprint_lines:
+        print("✅ Registered blueprints:")
+        for line in blueprint_lines:
+            print("  -", line)
+    else:
+        print("❌ No blueprint registration lines found in app.py")
+
+run_diagnostics()
