@@ -29,7 +29,7 @@
                 <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
                 <td>
                     {% if not batch.total_cost %}
-                        <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="btn btn-sm btn-warning">Resume</a>
+                        <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
                     {% else %}
                         <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                     {% endif %}
@@ -52,7 +52,7 @@
                     <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
                     <p class="card-text text-muted">{{ batch.timestamp.strftime("%Y-%m-%d") }}</p>
                     {% if not batch.total_cost %}
-                        <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="btn btn-sm btn-warning">Resume</a>
+                        <a href="{{ url_for('batches.view_batch_in_progress', batch_id=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
                     {% else %}
                         <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                     {% endif %}
