@@ -300,10 +300,22 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => {
       console.error('Error:', error);
       alert('Failed to add ingredient. Please try again.');
+      
+      // Clean up modal state after error
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      
+      // Re-init modal for clean state
+      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+      ingredientModal.hide();
     })
     .finally(() => {
       button.disabled = false;
       button.innerText = 'Add Ingredient';
+      
+      // Additional cleanup in finally block
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     });
   });
 
