@@ -1,0 +1,26 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>{{ recipe.name }}</h2>
+
+<div class="recipe-details">
+    <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
+    
+    <h3>Ingredients</h3>
+    <ul>
+        {% for assoc in recipe.recipe_ingredients %}
+        <li>{{ assoc.ingredient.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if recipe.instructions %}
+    <h3>Instructions</h3>
+    <p>{{ recipe.instructions }}</p>
+    {% endif %}
+</div>
+
+<div class="actions">
+    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="button">Edit Recipe</a>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="button-secondary">Back to List</a>
+</div>
+{% endblock %}
