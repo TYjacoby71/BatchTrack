@@ -35,6 +35,8 @@ def bulk_stock_check():
 
             for rid in selected_ids:
                 recipe = Recipe.query.get(int(rid))
+                if not recipe:
+                    continue
                 results, _ = check_stock_for_recipe(recipe, scale)
 
                 for row in results:
