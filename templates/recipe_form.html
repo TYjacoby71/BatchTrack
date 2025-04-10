@@ -247,7 +247,13 @@ document.addEventListener('DOMContentLoaded', function() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, unit })
     })
-    .then(response => response.json())
+    .then(async response => {
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err);
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.error) {
         alert('Error: ' + data.error);
