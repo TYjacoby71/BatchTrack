@@ -139,6 +139,11 @@ function setUnitReturnContext(context) {
   unitReturnContext = context;
 }
 
+function setIngredientReturnContext(source, dropdown = null) {
+  ingredientReturnContext = source;
+  lastIngredientDropdown = dropdown;
+}
+
 function addIngredient(preselectId = null) {
   const container = document.getElementById('ingredients-container');
   const entry = document.createElement('div');
@@ -166,14 +171,6 @@ function addIngredient(preselectId = null) {
   entry.scrollIntoView({ behavior: 'smooth' });
   return entry;
 }
-
-function setIngredientReturnContext(source, dropdown = null) {
-  ingredientReturnContext = source;
-  lastIngredientDropdown = dropdown;
-}
-  const container = document.getElementById('ingredients-container');
-  const entry = document.createElement('div');
-  entry.classList.add('ingredient-entry');
   entry.innerHTML = `
     <select name="ingredient_ids[]" required>
       <option value="">Select an ingredient</option>
