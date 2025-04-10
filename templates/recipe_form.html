@@ -127,6 +127,46 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+let ingredientReturnContext = 'main';
+let lastIngredientDropdown = null;
+
+function setIngredientReturnContext(source, dropdown = null) {
+  ingredientReturnContext = source;
+  lastIngredientDropdown = dropdown;
+}
+
+function addIngredient() {
+  const container = document.getElementById('ingredients-container');
+  const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `
+    <select name="ingredient_ids[]" required>
+      <option value="">Select an ingredient</option>
+      {% for available_ing in all_ingredients %}
+      <option value="{{ available_ing.id }}">{{ available_ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="amounts[]" required>
+    <select name="units[]" required>
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  container.appendChild(entry);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize any Bootstrap components
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
+
+<script>
 function addIngredient() {
   const container = document.getElementById('ingredients-container');
   const entry = document.createElement('div');
