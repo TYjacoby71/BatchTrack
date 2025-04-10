@@ -75,5 +75,5 @@ def delete_ingredient(id):
     ing = Ingredient.query.get_or_404(id)
     db.session.delete(ing)
     db.session.commit()
-    flash('Ingredient deleted.')
-    return redirect(url_for('ingredients.ingredient_list'))
+    flash('Ingredient deleted successfully.', 'success')
+    return redirect(url_for('ingredients.list_ingredients'))
