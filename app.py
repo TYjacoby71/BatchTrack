@@ -37,6 +37,8 @@ from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 
 # Register blueprints
+from routes.app_routes import app_routes_bp
+app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(ingredients_bp)  # No prefix to match /ingredients URLs
