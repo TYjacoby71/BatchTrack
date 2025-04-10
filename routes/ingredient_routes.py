@@ -45,6 +45,26 @@ def quick_add_ingredient():
     name = data.get('name')
     unit = data.get('unit')
     
+    if not name or not unit:
+        return jsonify({'error': 'Name and unit required'})
+        
+    try:
+        ingredient = Ingredient(name=name, quantity=0, unit=unit)
+        db.session.add(ingredient)
+        db.session.commit()
+        return jsonify({
+            'id': ingredient.id,
+            'name': ingredient.name,
+            'unit': ingredient.unit
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)})
+def quick_add_ingredient():
+    data = request.get_json()
+    name = data.get('name')
+    unit = data.get('unit')
+    
     try:
         # Always create with quantity 0 for placeholder
         ingredient = Ingredient(name=name, quantity=0.0, unit=unit)
