@@ -133,7 +133,6 @@ const SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
 let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
-let ingredientReturnContext = 'main';
 
 function addIngredient(preselectId = null) {
   const container = document.getElementById('ingredients-container');
@@ -171,9 +170,6 @@ function setIngredientReturnContext(source, dropdown = null) {
   ingredientReturnContext = source;
   lastIngredientDropdown = dropdown;
 }
-  entry.classList.add('ingredient-entry');
-  entry.innerHTML = `
-    <div class="ingredient-entry">
       <select name="ingredient_ids[]" required>
         <option value="">Select an ingredient</option>
         {% for ing in all_ingredients %}
