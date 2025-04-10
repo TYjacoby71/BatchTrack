@@ -22,14 +22,15 @@
     <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
     <div class="ingredients-used">
         <h3>Confirm Ingredients Used</h3>
-        {% for ingredient in recipe.ingredients %}
+        {% for item in ingredient_costs %}
         <div class="ingredient-row">
-            <input type="hidden" name="ingredient_{{ loop.index0 }}" value="{{ ingredient.name }}">
-            <label>{{ ingredient.name }}:</label>
-            <input type="number" name="amount_{{ loop.index0 }}" 
-                   value="{{ (ingredient.amount * batch.scale) | round(2) }}" step="0.01">
-            <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ ingredient.unit }}">
+            <input type="hidden" name="ingredient_{{ loop.index0 }}" value="{{ item.name }}">
+            <label>{{ item.name }} ({{ item.unit }}):</label>
+            <input type="number" name="amount_{{ loop.index0 }}" value="{{ item.used | round(2) }}" step="0.01">
+            <span class="cost-info"> @ ${{ item.cost_per_unit }} = ${{ item.line_cost }}</span>
+            <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ item.unit }}">
         </div>
+    {% endfor %}
         {% endfor %}
         <input type="hidden" name="total_ingredients" value="{{ recipe.ingredients | length }}">
     </div>
