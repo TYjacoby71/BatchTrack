@@ -83,8 +83,27 @@ def finish_batch(batch_id):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
+    output_type = request.form.get("output_type")
+    
+    if output_type == "ingredient":
+        # Save result to Ingredient table
+        name = request.form.get("ingredient_name")
+        qty = float(request.form.get("ingredient_quantity", 0))
+        unit = request.form.get("ingredient_unit")
+        new_ingredient = Ingredient(
+            name=name,
+            quantity=qty,
+            unit=unit,
+            cost_per_unit=(batch.total_cost or 0) / qty if qty > 0 else 0
+        )
+        db.session.add(new_ingredient)
+        batch.notes = f"Converted to ingredient: {name}"
+    else:
+        # Save as product
+        batch.product_quantity = request.form.get("product_quantity")
+        batch.product_unit = request.form.get("product_unit")
+        
     batch.total_cost = request.form.get('total_cost', type=float)
-    batch.notes = request.form.get('notes', '')
     db.session.commit()
     return redirect(url_for('batches.view_batch', batch_id=batch_id))
 
