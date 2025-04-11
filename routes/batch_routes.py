@@ -18,7 +18,7 @@ def start_batch():
         recipe_name=recipe.name,
         scale=data['scale'],
         notes=data.get('notes', ''),
-        label_code=f"{recipe.prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
+        label_code=f"{recipe.label_prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
     )
     
     db.session.add(new_batch)
