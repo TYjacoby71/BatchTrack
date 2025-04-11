@@ -98,21 +98,38 @@ def view_batch_in_progress(batch_id):
 @login_required
 def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    if batch.total_cost is not None:
-        flash('This batch is already completed.')
-        return redirect(url_for('batches.list_batches'))
+    recipe = Recipe.query.get_or_404(batch.recipe_id)
+    scale = batch.scale
 
-    output_type = request.form.get("output_type")
+    total_ingredients = int(request.form.get('total_ingredients', 0))
+    total_cost = 0.0
 
-    # Calculate total cost from ingredient costs
-    total_cost = float(sum(
-        float(request.form.get(f'amount_{i}', 0)) * 
-        (Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first().cost_per_unit or 0)
-        for i in range(int(request.form.get('total_ingredients', 0)))
-    ))
+    for i in range(total_ingredients):
+        name = request.form.get(f'ingredient_{i}')
+        amount = float(request.form.get(f'amount_{i}', 0))
+        unit = request.form.get(f'unit_{i}')
+        ingredient = Ingredient.query.filter_by(name=name).first()
 
-    batch.total_cost = total_cost
-    batch.status = 'completed'  # Mark the batch as completed
+        if ingredient:
+            used = amount
+            ingredient.quantity -= used
+            ingredient.quantity = round(max(ingredient.quantity, 0), 4)
+            cost = ingredient.cost_per_unit or 0
+            total_cost += cost * used
+
+    db.session.commit()
+
+    batch.total_cost = round(total_cost, 2)
+    product_quantity = float(request.form.get('product_quantity', 1))
+    batch.product_quantity = product_quantity
+    batch.product_unit = request.form.get('product_unit')
+    batch.tags = request.form.get('tags')
+    batch.status = 'complete'
+    batch.finished_on = datetime.utcnow()
+
+    db.session.commit()
+    flash("Batch completed and inventory deducted.", "success")
+    return redirect(url_for('batches.list_batches'))
 
     if output_type == "ingredient":
         # Check if ingredient already exists
