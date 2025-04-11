@@ -12,7 +12,7 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
-    
+
     new_batch = Batch(
         recipe_id=recipe.id,
         recipe_name=recipe.name,
@@ -20,10 +20,10 @@ def start_batch():
         notes=data.get('notes', ''),
         label_code=f"{recipe.label_prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
     )
-    
+
     db.session.add(new_batch)
     db.session.commit()
-    
+
     return jsonify({'batch_id': new_batch.id})
 
 @batches_bp.route('/')
@@ -85,7 +85,7 @@ def view_batch_in_progress(batch_id):
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
     # Only pass batch_cost if ingredients are used
     batch_cost = round(total_cost, 2) if ingredient_costs else None
-    
+
     return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
@@ -103,23 +103,23 @@ def finish_batch(batch_id):
         return redirect(url_for('batches.list_batches'))
 
     output_type = request.form.get("output_type")
-    
+
     # Calculate total cost from ingredient costs
     total_cost = float(sum(
         float(request.form.get(f'amount_{i}', 0)) * 
         (Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first().cost_per_unit or 0)
         for i in range(int(request.form.get('total_ingredients', 0)))
     ))
-    
+
     batch.total_cost = total_cost
     batch.status = 'completed'  # Mark the batch as completed
-    
+
     if output_type == "ingredient":
         # Check if ingredient already exists
         existing_ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
         qty = float(request.form.get("ingredient_quantity", 0))
         unit = request.form.get("ingredient_unit")
-        
+
         if existing_ingredient:
             if existing_ingredient.unit == unit:
                 existing_ingredient.quantity += qty
