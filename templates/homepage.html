@@ -126,7 +126,7 @@ async function startBatch() {
   const notes = document.getElementById('batchNotes').value;
 
   try {
-    const response = await fetch('/batches/start', {
+    const response = await fetch('/batches/start_batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -139,7 +139,11 @@ async function startBatch() {
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json();
-    window.location.href = data.redirect_url;
+    if (data.batch_id) {
+      window.location.href = `/batches/in-progress/${data.batch_id}`;
+    } else {
+      throw new Error('No batch ID returned');
+    }
   } catch (error) {
     alert('Error starting batch: ' + error.message);
   }

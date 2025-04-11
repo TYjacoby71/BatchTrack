@@ -7,6 +7,25 @@ from werkzeug.utils import secure_filename
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
+@batches_bp.route('/start_batch', methods=['POST'])
+@login_required
+def start_batch():
+    data = request.get_json()
+    recipe = Recipe.query.get_or_404(data['recipe_id'])
+    
+    new_batch = Batch(
+        recipe_id=recipe.id,
+        recipe_name=recipe.name,
+        scale=data['scale'],
+        notes=data.get('notes', ''),
+        label_code=f"{recipe.label_prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
+    )
+    
+    db.session.add(new_batch)
+    db.session.commit()
+    
+    return jsonify({'batch_id': new_batch.id})
+
 @batches_bp.route('/')
 @login_required
 def list_batches():
@@ -83,8 +102,37 @@ def finish_batch(batch_id):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
+    output_type = request.form.get("output_type")
+    
+    if output_type == "ingredient":
+        # Check if ingredient already exists
+        existing_ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
+        qty = float(request.form.get("ingredient_quantity", 0))
+        unit = request.form.get("ingredient_unit")
+        
+        if existing_ingredient:
+            if existing_ingredient.unit == unit:
+                existing_ingredient.quantity += qty
+                existing_ingredient.cost_per_unit = ((existing_ingredient.cost_per_unit * existing_ingredient.quantity) + 
+                                                   (batch.total_cost or 0)) / (existing_ingredient.quantity + qty)
+            else:
+                flash(f'Warning: Unit mismatch. Existing: {existing_ingredient.unit}, New: {unit}')
+                return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+        else:
+            new_ingredient = Ingredient(
+                name=batch.recipe_name,
+                quantity=qty,
+                unit=unit,
+                cost_per_unit=(batch.total_cost or 0) / qty if qty > 0 else 0
+            )
+            db.session.add(new_ingredient)
+        batch.notes = f"Added to inventory as: {batch.recipe_name}"
+    else:
+        # Save as product
+        batch.product_quantity = request.form.get("product_quantity")
+        batch.product_unit = request.form.get("product_unit")
+        
     batch.total_cost = request.form.get('total_cost', type=float)
-    batch.notes = request.form.get('notes', '')
     db.session.commit()
     return redirect(url_for('batches.view_batch', batch_id=batch_id))
 
