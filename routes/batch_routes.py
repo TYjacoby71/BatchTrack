@@ -104,6 +104,16 @@ def finish_batch(batch_id):
 
     output_type = request.form.get("output_type")
     
+    # Calculate total cost from ingredient costs
+    total_cost = 0
+    for i in range(int(request.form.get('total_ingredients', 0))):
+        amount = float(request.form.get(f'amount_{i}', 0))
+        ingredient = Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first()
+        if ingredient:
+            total_cost += amount * (ingredient.cost_per_unit or 0)
+    
+    batch.total_cost = total_cost
+    
     if output_type == "ingredient":
         # Check if ingredient already exists
         existing_ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
@@ -114,7 +124,7 @@ def finish_batch(batch_id):
             if existing_ingredient.unit == unit:
                 existing_ingredient.quantity += qty
                 existing_ingredient.cost_per_unit = ((existing_ingredient.cost_per_unit * existing_ingredient.quantity) + 
-                                                   (batch.total_cost or 0)) / (existing_ingredient.quantity + qty)
+                                                   total_cost) / (existing_ingredient.quantity + qty)
             else:
                 flash(f'Warning: Unit mismatch. Existing: {existing_ingredient.unit}, New: {unit}')
                 return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
@@ -123,7 +133,7 @@ def finish_batch(batch_id):
                 name=batch.recipe_name,
                 quantity=qty,
                 unit=unit,
-                cost_per_unit=(batch.total_cost or 0) / qty if qty > 0 else 0
+                cost_per_unit=total_cost / qty if qty > 0 else 0
             )
             db.session.add(new_ingredient)
         batch.notes = f"Added to inventory as: {batch.recipe_name}"
@@ -131,8 +141,6 @@ def finish_batch(batch_id):
         # Save as product
         batch.product_quantity = request.form.get("product_quantity")
         batch.product_unit = request.form.get("product_unit")
-        
-    batch.total_cost = request.form.get('total_cost', type=float)
     db.session.commit()
     return redirect(url_for('batches.list_batches'))
 
