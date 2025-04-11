@@ -37,7 +37,7 @@ def list_batches():
 def view_batch(batch_id):
     try:
         batch = Batch.query.get_or_404(batch_id)
-        if not batch.total_cost:
+        if batch.total_cost is None:
             return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
