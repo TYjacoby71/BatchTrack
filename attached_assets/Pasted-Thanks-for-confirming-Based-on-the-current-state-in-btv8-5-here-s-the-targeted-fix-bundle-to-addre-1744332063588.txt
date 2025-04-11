@@ -1,3 +1,12 @@
+Thanks for confirming. Based on the current state in btv8.5, here’s the targeted fix bundle to address the following issues:
+
+🚨 Core Fix Summary
+❌ Problem A: “Complete Batch” not marking batch as complete
+→ Likely missing a batch.total_cost update or return flow
+
+❌ Problem B: Batch in progress NOT deducting from ingredient inventory
+→ finish_batch() logic is likely referencing stale ingredient lists or missing inventory updates
+
 ✅ Fix 1: Update finish_batch() Logic in batch_routes.py
 📌 Paste the following into your routes/batch_routes.py replacing the current finish_batch() method. This includes:
 
@@ -46,51 +55,3 @@ def finish_batch(batch_id):
     db.session.commit()
     flash("Batch completed and inventory deducted.", "success")
     return redirect(url_for('batch_view.view_batch', batch_id=batch.id))
-✅ Fix 2: Ensure Batch.status = 'complete' on Finish
-If not already in your model:
-
-📌 Update your Batch model in models.py to ensure status exists:
-
-python
-Copy
-Edit
-status = db.Column(db.String(20), default='in_progress')
-finished_on = db.Column(db.DateTime)
-This allows proper filtering and visibility in views.
-
-✅ Fix 3: Ensure Recipe Ingredients Are Accessed Properly
-📌 If you're still using an association model for RecipeIngredient, then update the loop:
-
-python
-Copy
-Edit
-for assoc in recipe.recipe_ingredients:
-    ...
-Make sure ingredient = assoc.ingredient is referenced and .amount is scaled correctly.
-
-✅ Fix 4: View Routing Consistency
-Make sure your redirect on complete is always:
-
-python
-Copy
-Edit
-return redirect(url_for('batch_view.view_batch', batch_id=batch.id))
-Do not redirect to /batches/list after completion unless explicitly desired.
-
-🧪 Recommended Test Path
-Start a batch from Plan Production ✅
-
-View /batches/in-progress/<id> ✅
-
-Click “Complete Batch” with quantities pre-filled ✅
-
-Confirm:
-
-Batch disappears from in-progress list ✅
-
-Inventory is deducted ✅
-
-Cost per unit and batch total appear ✅
-
-Batch visible in /batches with filter ✅
-
