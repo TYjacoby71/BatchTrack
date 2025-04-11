@@ -32,13 +32,18 @@ def list_batches():
     batches = Batch.query.order_by(Batch.timestamp.desc()).all()
     return render_template('batches_list.html', batches=batches)
 
-@batches_bp.route('/<int:batch_id>')
+@batches_bp.route('/<batch_identifier>')
 @login_required
-def view_batch(batch_id):
+def view_batch(batch_identifier):
     try:
-        batch = Batch.query.get_or_404(batch_id)
+        # Check if the identifier is a label code
+        if not batch_identifier.isdigit():
+            batch = Batch.query.filter_by(label_code=batch_identifier).first_or_404()
+        else:
+            batch = Batch.query.get_or_404(int(batch_identifier))
+            
         if batch.total_cost is None:
-            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch.id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
         flash(f'Error viewing batch: {str(e)}')
