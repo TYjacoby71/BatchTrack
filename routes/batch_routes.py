@@ -105,14 +105,14 @@ def finish_batch(batch_id):
     output_type = request.form.get("output_type")
     
     # Calculate total cost from ingredient costs
-    total_cost = 0
-    for i in range(int(request.form.get('total_ingredients', 0))):
-        amount = float(request.form.get(f'amount_{i}', 0))
-        ingredient = Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first()
-        if ingredient:
-            total_cost += amount * (ingredient.cost_per_unit or 0)
+    total_cost = float(sum(
+        float(request.form.get(f'amount_{i}', 0)) * 
+        (Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first().cost_per_unit or 0)
+        for i in range(int(request.form.get('total_ingredients', 0)))
+    ))
     
     batch.total_cost = total_cost
+    batch.status = 'completed'  # Mark the batch as completed
     
     if output_type == "ingredient":
         # Check if ingredient already exists
