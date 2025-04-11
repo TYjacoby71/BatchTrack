@@ -35,7 +35,8 @@
     </div>
         <div class="form-group">
             <label for="product_quantity">Product Quantity:</label>
-            <input type="number" name="product_quantity" value="1" min="1" required>
+            <input type="number" name="product_quantity" id="product_quantity_input" value="1" min="1" required>
+            <input type="hidden" id="batchCostData" value="{{ batch_cost or 0 }}">
         </div>
 
         <div class="form-group">
@@ -82,17 +83,40 @@
 <div class="summary-section mt-4">
         <h4>Batch Summary</h4>
         <ul>
-            <li><strong>Total Batch Cost:</strong> ${{ "%.2f"|format(batch_cost|float) if batch_cost is not none else "0.00" }}</li>
-            <li><strong>Product Quantity:</strong> {{ product_quantity or "—" }}</li>
+            <li><strong>Total Batch Cost:</strong> 
+                <span id="totalBatchCost">${{ "%.2f"|format(batch_cost|float) if batch_cost is not none else "0.00" }}</span>
+            </li>
+            <li><strong>Product Quantity:</strong> 
+                <span id="productQuantityPreview">—</span>
+            </li>
             <li><strong>Unit Cost:</strong>
-                {% if batch_cost and product_quantity and product_quantity > 0 %}
-                    ${{ "%.2f"|format(batch_cost / product_quantity) }}
-                {% elif batch_cost == 0 %}
-                    —
-                {% else %}
-                    <span class="text-muted">Finish batch to see cost</span>
-                {% endif %}
+                <span id="unitCostPreview" class="text-muted">Calculating...</span>
             </li>
         </ul>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const quantityInput = document.getElementById('product_quantity_input');
+        const unitCostOutput = document.getElementById('unitCostPreview');
+        const productQtyOutput = document.getElementById('productQuantityPreview');
+        const batchCost = parseFloat(document.getElementById('batchCostData').value || 0);
+
+        function updateUnitCost() {
+            const qty = parseFloat(quantityInput.value);
+            if (!qty || qty <= 0) {
+                unitCostOutput.innerText = "—";
+                productQtyOutput.innerText = "—";
+                return;
+            }
+
+            const unitCost = batchCost / qty;
+            productQtyOutput.innerText = qty;
+            unitCostOutput.innerText = `$${unitCost.toFixed(2)}`;
+        }
+
+        quantityInput.addEventListener('input', updateUnitCost);
+        updateUnitCost();
+    });
+    </script>
 {% endblock %}

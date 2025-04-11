@@ -1,0 +1,109 @@
+No. This is for the sub batches. If selector shows ingredients, then the whole of the batch will display the ingredients/inventory units list and add the produced recipe to ingredients.
+
+Ex ample. I make a recipe for bacon. and it yields 1 piece. I select ingredients. Then it is stored in ingredients. I then get to use it for a larger recipe breakfast and complete that batch as product with a product unit list. and I would name the unit plate 1 plate of breakfast
+
+
+ChatGPT said:
+💡 Got it — thanks for the clarification. You’re describing true recursive batching between:
+
+✅ Two Batch Modes
+Mode	Behavior
+🧪 Ingredient Mode	You’re making a sub-batch (e.g. “Bacon”) that gets added to inventory as an ingredient — with a yield and unit.
+📦 Product Mode	You’re finishing a final product (e.g. “Breakfast Plate”) that gets labeled and packaged as a product.
+🎯 The Selector Should:
+Switch the UI between:
+
+👇 Ingredient Mode UI:
+
+Shows Inventory Units
+
+Saves to the Ingredient table
+
+Adds a new row like: "Bacon", quantity: 1, unit: slice
+
+📦 Product Mode UI:
+
+Shows Product Units
+
+Logs product packaging info and image
+
+Batch is completed with a public label
+
+✅ Plan to Implement:
+1. Add a Selector
+In batch_in_progress.html, add this above the product/ingredient section:
+
+html
+Copy
+Edit
+<div class="form-group">
+  <label for="output_type"><strong>This batch creates:</strong></label>
+  <select id="output_type" name="output_type" class="form-select" onchange="toggleOutputFields()">
+    <option value="product" selected>📦 Product</option>
+    <option value="ingredient">🧪 Ingredient</option>
+  </select>
+</div>
+2. Wrap Product Fields in a div with an ID:
+html
+Copy
+Edit
+<div id="productFields">
+  <!-- Product Quantity -->
+  <!-- Product Unit -->
+  <!-- Product Image -->
+</div>
+3. Wrap Ingredient Fields in a div with an ID:
+html
+Copy
+Edit
+<div id="ingredientFields" style="display: none;">
+  <div class="form-group">
+    <label for="ingredient_name">Ingredient Name:</label>
+    <input type="text" name="ingredient_name" placeholder="e.g. Cooked Bacon">
+  </div>
+
+  <div class="form-group">
+    <label for="ingredient_quantity">Yield Quantity:</label>
+    <input type="number" name="ingredient_quantity" value="1" step="0.01" required>
+  </div>
+
+  <div class="form-group">
+    <label for="ingredient_unit">Inventory Unit:</label>
+    <select name="ingredient_unit">
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+4. Add JavaScript to Toggle
+html
+Copy
+Edit
+<script>
+function toggleOutputFields() {
+  const type = document.getElementById('output_type').value;
+  document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
+  document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
+}
+</script>
+5. In finish_batch Route
+You’ll handle both cases separately:
+
+python
+Copy
+Edit
+output_type = request.form.get("output_type")
+
+if output_type == "ingredient":
+    # Save result to Ingredient table
+    name = request.form.get("ingredient_name")
+    qty = float(request.form.get("ingredient_quantity", 0))
+    unit = request.form.get("ingredient_unit")
+    new_ingredient = Ingredient(name=name, quantity=qty, unit=unit)
+    db.session.add(new_ingredient)
+
+elif output_type == "product":
+    # Save result as product (e.g. assign to batch for display)
+    batch.product_quantity = request.form.get("product_quantity")
+    batch.product_unit = request.form.get("product_unit")
