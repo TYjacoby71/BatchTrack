@@ -62,7 +62,7 @@ def update_batch_notes(batch_id):
 def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
-    batch = Batch.query.get_or_404(batch_id)
+    batch = Batch.query.get_or_404(batch_identifier)
     if batch.total_cost is not None:
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
