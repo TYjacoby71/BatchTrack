@@ -86,18 +86,28 @@ def finish_batch(batch_id):
     output_type = request.form.get("output_type")
     
     if output_type == "ingredient":
-        # Save result to Ingredient table
-        name = request.form.get("ingredient_name")
+        # Check if ingredient already exists
+        existing_ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
         qty = float(request.form.get("ingredient_quantity", 0))
         unit = request.form.get("ingredient_unit")
-        new_ingredient = Ingredient(
-            name=name,
-            quantity=qty,
-            unit=unit,
-            cost_per_unit=(batch.total_cost or 0) / qty if qty > 0 else 0
-        )
-        db.session.add(new_ingredient)
-        batch.notes = f"Converted to ingredient: {name}"
+        
+        if existing_ingredient:
+            if existing_ingredient.unit == unit:
+                existing_ingredient.quantity += qty
+                existing_ingredient.cost_per_unit = ((existing_ingredient.cost_per_unit * existing_ingredient.quantity) + 
+                                                   (batch.total_cost or 0)) / (existing_ingredient.quantity + qty)
+            else:
+                flash(f'Warning: Unit mismatch. Existing: {existing_ingredient.unit}, New: {unit}')
+                return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+        else:
+            new_ingredient = Ingredient(
+                name=batch.recipe_name,
+                quantity=qty,
+                unit=unit,
+                cost_per_unit=(batch.total_cost or 0) / qty if qty > 0 else 0
+            )
+            db.session.add(new_ingredient)
+        batch.notes = f"Added to inventory as: {batch.recipe_name}"
     else:
         # Save as product
         batch.product_quantity = request.form.get("product_quantity")

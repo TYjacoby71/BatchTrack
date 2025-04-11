@@ -65,7 +65,7 @@
         <div id="ingredientFields" style="display: none;">
             <div class="form-group">
                 <label for="ingredient_name">Ingredient Name:</label>
-                <input type="text" name="ingredient_name" class="form-control" placeholder="e.g. Cooked Bacon">
+                <input type="text" name="ingredient_name" class="form-control" value="{{ batch.recipe_name }}" readonly>
             </div>
 
             <div class="form-group">
@@ -74,12 +74,13 @@
             </div>
 
             <div class="form-group">
-                <label for="ingredient_unit">Inventory Unit:</label>
+                <label for="ingredient_unit">Unit:</label>
                 <select name="ingredient_unit" class="form-select">
                     {% for unit in inventory_units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                     {% endfor %}
                 </select>
+                <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
             </div>
         </div>
 
