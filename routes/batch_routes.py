@@ -13,12 +13,19 @@ def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     
+    # Get current year and count of batches for this recipe this year
+    current_year = datetime.now().year
+    year_batches = Batch.query.filter(
+        Batch.recipe_id == recipe.id,
+        extract('year', Batch.timestamp) == current_year
+    ).count()
+    
     new_batch = Batch(
         recipe_id=recipe.id,
         recipe_name=recipe.name,
         scale=data['scale'],
         notes=data.get('notes', ''),
-        label_code=f"{recipe.label_prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
+        label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
     )
     
     db.session.add(new_batch)
