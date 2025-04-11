@@ -13,6 +13,7 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
+    scale = float(data['scale'])
 
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
@@ -24,7 +25,7 @@ def start_batch():
     new_batch = Batch(
         recipe_id=recipe.id,
         recipe_name=recipe.name,
-        scale=data['scale'],
+        scale=scale,
         notes=data.get('notes', ''),
         label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
     )
@@ -32,6 +33,32 @@ def start_batch():
     db.session.add(new_batch)
     db.session.commit()
 
+    # Deduct inventory at start of batch
+    ingredient_errors = []
+
+    for assoc in recipe.recipe_ingredients:
+        ingredient = assoc.ingredient
+        if not ingredient:
+            continue
+
+        required_amount = assoc.amount * scale
+
+        if ingredient.unit != assoc.unit:
+            ingredient_errors.append(f"Unit mismatch for {ingredient.name}")
+            continue
+
+        if ingredient.quantity < required_amount:
+            ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
+        else:
+            ingredient.quantity -= required_amount
+            db.session.add(ingredient)
+
+    if ingredient_errors:
+        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
+    else:
+        flash("Batch started and inventory deducted.", "success")
+
+    db.session.commit()
     return jsonify({'batch_id': new_batch.id})
 
 @batches_bp.route('/')
