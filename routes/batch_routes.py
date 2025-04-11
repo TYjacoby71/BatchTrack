@@ -57,9 +57,11 @@ def update_batch_notes(batch_id):
     db.session.commit()
     return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
-@batches_bp.route('/in-progress/<int:batch_id>')
+@batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
-def view_batch_in_progress(batch_id):
+def view_batch_in_progress(batch_identifier):
+    if not isinstance(batch_identifier, int):
+        batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_id)
     if batch.total_cost is not None:
         flash('This batch is already completed.')
