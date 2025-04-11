@@ -7,6 +7,25 @@ from werkzeug.utils import secure_filename
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
+@batches_bp.route('/start_batch', methods=['POST'])
+@login_required
+def start_batch():
+    data = request.get_json()
+    recipe = Recipe.query.get_or_404(data['recipe_id'])
+    
+    new_batch = Batch(
+        recipe_id=recipe.id,
+        recipe_name=recipe.name,
+        scale=data['scale'],
+        notes=data.get('notes', ''),
+        label_code=f"{recipe.prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
+    )
+    
+    db.session.add(new_batch)
+    db.session.commit()
+    
+    return jsonify({'batch_id': new_batch.id})
+
 @batches_bp.route('/')
 @login_required
 def list_batches():
