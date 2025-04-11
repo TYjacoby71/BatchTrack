@@ -1,0 +1,57 @@
+Thanks for confirming. Based on the current state in btv8.5, here’s the targeted fix bundle to address the following issues:
+
+🚨 Core Fix Summary
+❌ Problem A: “Complete Batch” not marking batch as complete
+→ Likely missing a batch.total_cost update or return flow
+
+❌ Problem B: Batch in progress NOT deducting from ingredient inventory
+→ finish_batch() logic is likely referencing stale ingredient lists or missing inventory updates
+
+✅ Fix 1: Update finish_batch() Logic in batch_routes.py
+📌 Paste the following into your routes/batch_routes.py replacing the current finish_batch() method. This includes:
+
+Deducting inventory
+
+Storing total_cost and per-unit cost
+
+Marking batch as finished
+
+python
+Copy
+Edit
+@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
+@login_required
+def finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    recipe = Recipe.query.get_or_404(batch.recipe_id)
+    scale = batch.scale
+
+    total_ingredients = int(request.form.get('total_ingredients', 0))
+    total_cost = 0.0
+
+    for i in range(total_ingredients):
+        name = request.form.get(f'ingredient_{i}')
+        amount = float(request.form.get(f'amount_{i}', 0))
+        unit = request.form.get(f'unit_{i}')
+        ingredient = Ingredient.query.filter_by(name=name).first()
+
+        if ingredient:
+            used = amount
+            ingredient.quantity -= used
+            ingredient.quantity = round(max(ingredient.quantity, 0), 4)
+            cost = ingredient.cost_per_unit or 0
+            total_cost += cost * used
+
+    db.session.commit()
+
+    batch.total_cost = round(total_cost, 2)
+    product_quantity = float(request.form.get('product_quantity', 1))
+    batch.product_quantity = product_quantity
+    batch.product_unit = request.form.get('product_unit')
+    batch.tags = request.form.get('tags')
+    batch.status = 'complete'
+    batch.finished_on = datetime.utcnow()
+
+    db.session.commit()
+    flash("Batch completed and inventory deducted.", "success")
+    return redirect(url_for('batch_view.view_batch', batch_id=batch.id))
