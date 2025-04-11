@@ -41,8 +41,6 @@ class Batch(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
-    status = db.Column(db.String(20), default='in_progress')
-    finished_on = db.Column(db.DateTime)
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
