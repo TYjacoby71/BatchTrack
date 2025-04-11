@@ -134,7 +134,7 @@ def finish_batch(batch_id):
         
     batch.total_cost = request.form.get('total_cost', type=float)
     db.session.commit()
-    return redirect(url_for('batches.view_batch', batch_id=batch_id))
+    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
