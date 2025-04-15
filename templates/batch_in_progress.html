@@ -9,151 +9,82 @@
     <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
 </div>
 
-<div class="notes-section">
-    <h3>Batch Notes</h3>
-    <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
-        <textarea name="notes" rows="4" cols="50">{{ batch.notes or '' }}</textarea>
-        <button type="submit" class="button secondary">Update Notes</button>
-    </form>
-</div>
-
-<div class="actions-section">
-    <h3>Finish Batch</h3>
-    <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="output_type"><strong>This batch creates:</strong></label>
-            <select id="output_type" name="output_type" class="form-select" onchange="toggleOutputFields()">
-                <option value="product" selected>📦 Product</option>
-                <option value="ingredient">🧪 Ingredient</option>
-            </select>
-        </div>
-    <div class="ingredients-used">
-        <h3>Confirm Ingredients Used</h3>
-        {% for item in ingredient_costs %}
-        <div class="ingredient-row">
-            <input type="hidden" name="ingredient_{{ loop.index0 }}" value="{{ item.name }}">
-            <label>{{ item.name }} ({{ item.unit }}):</label>
-            <input type="number" name="amount_{{ loop.index0 }}" value="{{ item.used | round(2) }}" step="0.01">
-            <span class="cost-info"> @ ${{ item.cost_per_unit }} = ${{ item.line_cost }}</span>
-            <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ item.unit }}">
-        </div>
-    {% endfor %}
-        <input type="hidden" name="total_ingredients" value="{{ recipe.ingredients | length }}">
-    </div>
-        <div id="productFields">
-            <div class="form-group">
-                <label for="product_quantity">Product Quantity:</label>
-                <input type="number" name="product_quantity" id="product_quantity_input" value="1" min="1" required>
-                <input type="hidden" id="batchCostData" value="{{ batch_cost or 0 }}">
-            </div>
-
-            <div class="form-group">
-                <label for="product_unit">Product Unit:</label>
-                <select name="product_unit" required>
-                    {% for unit in product_units %}
-                    <option value="{{ unit.name }}">{{ unit.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="product_image">Product Image:</label>
-                <input type="file" name="product_image" accept="image/*">
-            </div>
-        </div>
-
-        <div id="ingredientFields" style="display: none;">
-            <div class="form-group">
-                <label for="ingredient_name">Ingredient Name:</label>
-                <input type="text" name="ingredient_name" class="form-control" value="{{ batch.recipe_name }}" readonly>
-            </div>
-
-            <div class="form-group">
-                <label for="ingredient_quantity">Yield Quantity:</label>
-                <input type="number" name="ingredient_quantity" class="form-control" value="1" step="0.01" required>
-            </div>
-
-            <div class="form-group">
-                <label for="ingredient_unit">Unit:</label>
-                <select name="ingredient_unit" class="form-select">
-                    {% for unit in inventory_units %}
-                    <option value="{{ unit.name }}">{{ unit.name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="tags">Tags (comma-separated):</label>
-            <input type="text" name="tags" value="{{ batch.tags or '' }}">
-        </div>
-
-        <div class="extra-ingredients">
-            <h4>Additional Ingredients Used</h4>
-            <div id="ingredientInputs">
-                <div class="ingredient-row">
-                    <input type="text" name="extra_ingredients[]" placeholder="Ingredient name">
-                    <input type="number" name="extra_amounts[]" placeholder="Amount" step="0.01">
-                    <input type="text" name="extra_units[]" placeholder="Unit">
-                </div>
-            </div>
-            <button type="button" onclick="addIngredientRow()" class="button secondary">+ Add Ingredient</button>
-        </div>
-
-        <div class="button-group">
-            <button type="submit" name="action" value="finish" class="button primary">✓ Complete Batch</button>
-            <button type="submit" name="action" value="fail" class="button warning">✕ Mark as Failed</button>
-        </div>
-    </form>
-
-    <form method="post" action="{{ url_for('batches.cancel_batch', batch_id=batch.id) }}" class="cancel-form">
-        <button type="submit" class="button danger">↩ Cancel Batch</button>
-    </form>
-</div>
-<div class="summary-section mt-4">
-        <h4>Batch Summary</h4>
-        <ul>
-            <li><strong>Total Batch Cost:</strong> 
-                <span id="totalBatchCost">${{ "%.2f"|format(batch_cost|float) if batch_cost is not none else "0.00" }}</span>
-            </li>
-            <li><strong>Product Quantity:</strong> 
-                <span id="productQuantityPreview">—</span>
-            </li>
-            <li><strong>Unit Cost:</strong>
-                <span id="unitCostPreview" class="text-muted">Calculating...</span>
-            </li>
-        </ul>
+<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+    <!-- Notes Section -->
+    <div class="notes-section">
+        <h3>Batch Notes</h3>
+        <textarea name="notes" rows="4" cols="50" class="form-control">{{ batch.notes or '' }}</textarea>
     </div>
 
-    <script>
-    function toggleOutputFields() {
-        const type = document.getElementById('output_type').value;
-        document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
-        document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
-    }
+    <!-- Tags Section -->
+    <div class="form-group mt-2">
+        <label for="tags">Tags (comma-separated):</label>
+        <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
+    </div>
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const quantityInput = document.getElementById('product_quantity_input');
-        const unitCostOutput = document.getElementById('unitCostPreview');
-        const productQtyOutput = document.getElementById('productQuantityPreview');
-        const batchCost = parseFloat(document.getElementById('batchCostData').value || 0);
+    <!-- Yield Section -->
+    <div class="form-group mt-4">
+        <label for="product_quantity">Batch Yield:
+            <span title="Tell us how many units your batch produced." style="cursor: help;">❔</span>
+        </label>
+        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
+    </div>
 
-        function updateUnitCost() {
-            const qty = parseFloat(quantityInput.value);
-            if (!qty || qty <= 0) {
-                unitCostOutput.innerText = "—";
-                productQtyOutput.innerText = "—";
-                return;
-            }
+    <!-- Unit Selection -->
+    <div class="form-group">
+        <label for="product_unit">Unit Type:</label>
+        <select name="product_unit" class="form-select" required>
+            {% for unit in product_units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-            const unitCost = batchCost / qty;
-            productQtyOutput.innerText = qty;
-            unitCostOutput.innerText = `$${unitCost.toFixed(2)}`;
-        }
+    <!-- Timers -->
+    <div class="form-group mt-4">
+        <h4>Batch Timers</h4>
+        <div id="timer-container"></div>
+        <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addTimer()">+ Add Timer</button>
+    </div>
 
-        quantityInput.addEventListener('input', updateUnitCost);
-        updateUnitCost();
-    });
-    </script>
+    <!-- Toggleable Extra Ingredients -->
+    <div class="form-group mt-4">
+        <button type="button" class="btn btn-outline-primary" onclick="toggleExtraIngredients()">+ Extra Inventory Used</button>
+        <div id="extra-ingredients" style="display:none;">
+            <div id="ingredientInputs"></div>
+            <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addIngredientRow()">+ Add Ingredient Row</button>
+        </div>
+    </div>
+
+    <!-- Submission Buttons -->
+    <div class="button-group mt-4">
+        <button type="submit" name="action" value="finish" class="btn btn-success">✓ Complete Batch</button>
+        <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
+    </div>
+</form>
+
+<script>
+function toggleExtraIngredients() {
+    const container = document.getElementById('extra-ingredients');
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+}
+
+function addIngredientRow() {
+    const div = document.createElement('div');
+    div.classList.add('ingredient-row', 'mb-2');
+    div.innerHTML = `
+        <input type="text" name="extra_ingredients[]" placeholder="Ingredient name" class="form-control mb-1">
+        <input type="number" name="extra_amounts[]" placeholder="Amount" step="0.01" class="form-control mb-1">
+        <input type="text" name="extra_units[]" placeholder="Unit" class="form-control mb-1">
+    `;
+    document.getElementById('ingredientInputs').appendChild(div);
+}
+
+function addTimer() {
+    const div = document.createElement('div');
+    div.classList.add('timer-entry', 'mb-2');
+    div.innerHTML = `<input type="datetime-local" name="batch_timers[]" class="form-control">`;
+    document.getElementById('timer-container').appendChild(div);
+}
+</script>
 {% endblock %}
