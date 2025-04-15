@@ -1,0 +1,85 @@
+✅ Next Step: Add "Column Visibility" Controls to Batch List
+As users manage more batches, they'll want control over which columns they see. This will give a smoother dashboard-style experience, especially for high-volume producers or those tracking tags, units, or costs.
+
+🧩 What This Feature Adds
+Feature	Description
+✅ Column Toggle Panel	User can show/hide batch table columns (like tags, cost, quantity)
+✅ Column Memory (via session)	Their settings persist as they browse
+🛠️ Simple, no-db implementation	Stored in session for now (DB prefs later if needed)
+🛠️ Step 1: Add Column Controls to batch_list.html
+Add this above the batch table, below your filters form:
+
+html
+Copy
+Edit
+<h3 class="mt-4">Columns</h3>
+<form method="post" action="{{ url_for('batches.set_column_visibility') }}" class="mb-3">
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Recipe</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Timestamp</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Cost</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Quantity</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Tags</label>
+  </div>
+  <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
+</form>
+🛠️ Step 2: Update batch_routes.py to Handle Visibility Settings
+Add this POST route:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches/columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    columns = request.form.getlist('columns')
+    session['visible_columns'] = columns
+    flash('Column preferences updated')
+    return redirect(url_for('batches.list_batches'))
+Then update your existing list_batches() route to include:
+
+python
+Copy
+Edit
+visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
+and pass it to the template:
+
+python
+Copy
+Edit
+return render_template('batch_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
+🛠️ Step 3: Conditionally Render Columns in HTML
+In the table's <thead> and <tbody>, wrap each column like this:
+
+html
+Copy
+Edit
+{% if 'timestamp' in visible_columns %}
+  <th>Date</th>
+{% endif %}
+And in the rows:
+
+html
+Copy
+Edit
+{% if 'timestamp' in visible_columns %}
+  <td>{{ batch.timestamp.strftime('%Y-%m-%d') }}</td>
+{% endif %}
+Repeat this pattern for all columns: recipe, timestamp, total_cost, product_quantity, tags.
+
+✅ Result
+You now have a dynamic batch list with user-controlled visibility — ready for real operations.
+
