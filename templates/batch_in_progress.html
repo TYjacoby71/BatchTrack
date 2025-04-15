@@ -61,12 +61,26 @@
     </div>
 </form>
 
-<!-- First load jQuery -->
+<!-- Load dependencies -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Then load Select2 after jQuery -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+// Wait for jQuery to load before initializing Select2
+$(document).ready(function() {
+    // Initialize any existing Select2 dropdowns
+    $('.ingredient-select').select2({
+        placeholder: "Search Ingredient",
+        allowClear: true
+    });
+    
+    $('.unit-select').select2({
+        placeholder: "Select Unit",
+        allowClear: true
+    });
+});
+</script>
 
 <script>
 function addIngredientRow() {
@@ -83,9 +97,11 @@ function addIngredientRow() {
             </select>
             <input type="number" name="extra_amounts[]" step="0.01" placeholder="Amount" class="form-control" style="width: 120px;" required>
             <select name="extra_units[]" class="form-select unit-select" style="min-width: 150px;" required>
-                <option value="">Unit</option>
+                <option value="">Select Unit</option>
                 {% for unit in inventory_units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                    {% if unit.type == 'inventory' %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
+                    {% endif %}
                 {% endfor %}
             </select>
             <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.ingredient-row').remove()">❌</button>
