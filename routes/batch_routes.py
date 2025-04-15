@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
 from datetime import datetime
@@ -73,6 +73,7 @@ def set_column_visibility():
 @login_required
 def list_batches():
     query = Batch.query.order_by(Batch.timestamp.desc())
+    # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
     status = request.args.get('status')

@@ -1,73 +1,84 @@
 
 {% extends 'layout.html' %}
 {% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <h2>Batches</h2>
 
-<!-- Filters -->
-<form method="get" class="mb-4 row g-3">
-  <div class="col-md-3">
-    <label class="form-label">Status</label>
-    <select name="status" class="form-select">
-      <option value="">All</option>
-      <option value="in_progress">In Progress</option>
-      <option value="completed">Completed</option>
-      <option value="failed">Failed</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">Recipe</label>
-    <select name="recipe_id" class="form-select">
-      <option value="">All</option>
-      {% for r in all_recipes %}
-        <option value="{{ r.id }}">{{ r.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">Start Date</label>
-    <input type="date" name="start" class="form-control">
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">End Date</label>
-    <input type="date" name="end" class="form-control">
-  </div>
-  <div class="col-md-12 d-flex gap-2 mt-2">
-    <button type="submit" class="btn btn-primary">Apply</button>
-    <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Reset</a>
-  </div>
-</form>
+<!-- Control Bar -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <!-- View Toggle Buttons -->
+    <div>
+        <button class="btn btn-outline-secondary" onclick="showView('tableView')">Table View</button>
+        <button class="btn btn-outline-secondary" onclick="showView('cardView')">Card View</button>
+    </div>
+    
+    <!-- Filter Button -->
+    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" id="filterButton">
+        <i class="fas fa-filter"></i> Filters
+    </button>
+</div>
 
-<!-- Column Controls -->
-<h3 class="mt-4">Columns</h3>
-<form method="post" action="{{ url_for('batches.set_column_visibility') }}" class="mb-3">
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
-    <label class="form-check-label">Recipe</label>
-  </div>
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
-    <label class="form-check-label">Timestamp</label>
-  </div>
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
-    <label class="form-check-label">Cost</label>
-  </div>
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
-    <label class="form-check-label">Quantity</label>
-  </div>
-  <div class="form-check form-check-inline">
-    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
-    <label class="form-check-label">Tags</label>
-  </div>
-  <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
-</form>
+<!-- Collapsible Filter Section -->
+<div class="collapse mb-4" id="filterSection">
+    <div class="card card-body">
+        <!-- Batch Filters -->
+        <form method="get" class="row g-3 mb-3" id="filterForm">
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Status: All</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="recipe_id" class="form-select form-select-sm">
+                    <option value="">Recipe: All</option>
+                    {% for r in all_recipes %}
+                    <option value="{{ r.id }}">{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="start" class="form-control form-control-sm" placeholder="Start Date">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="end" class="form-control form-control-sm" placeholder="End Date">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-sm btn-primary" onclick="collapseFilters()">Apply Filters</button>
+                <a href="{{ url_for('batches.list_batches') }}" class="btn btn-sm btn-secondary" onclick="collapseFilters()">Reset</a>
+            </div>
+        </form>
 
-<!-- Toggle Buttons -->
-<div class="mb-3 text-end">
-    <button class="btn btn-outline-secondary" onclick="showView('tableView')">Table View</button>
-    <button class="btn btn-outline-secondary" onclick="showView('cardView')">Card View</button>
+        <!-- Column Visibility -->
+        <form method="post" action="{{ url_for('batches.set_column_visibility') }}" id="columnForm">
+            <div class="d-flex gap-3 align-items-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Recipe</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Timestamp</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Cost</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Quantity</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Tags</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Update Columns</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Table View -->
@@ -160,5 +171,18 @@ function showView(viewId) {
     document.getElementById('tableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('cardView').style.display = viewId === 'cardView' ? 'block' : 'none';
 }
+
+function collapseFilters() {
+    const filterSection = document.getElementById('filterSection');
+    const bsCollapse = new bootstrap.Collapse(filterSection);
+    bsCollapse.hide();
+}
+
+// Add event listener for column visibility form
+document.getElementById('columnForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+    collapseFilters();
+});
 </script>
 {% endblock %}

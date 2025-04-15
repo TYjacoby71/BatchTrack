@@ -1,0 +1,99 @@
+🆕 Now Scheduled
+🔸 Product + Variation Inventory Logic (New)
+Stage: Post-core inventory & batch cost logic
+
+Add /products page with:
+
+Product Name
+
+Inventory Unit (e.g. bar, jar)
+
+Variation Subtable (e.g. Green Soap, Travel Bar, etc.)
+
+Update Batch Finish Flow (if “Product” is selected):
+
+Step 1: Select or Add Product
+
+Step 2: Select or Add Variation
+
+Step 3: Set yield, tag, and complete batch
+
+🔁 Inventory added under selected Variation
+
+[Later] Add Shopify sync or CSV export logic
+
+🧭 Next Step: Batch Summary + Log View UI Enhancements
+✅ Here's your next actionable task:
+
+Update the Batch View Page (templates/view_batch.html) to show:
+
+✅ Timestamp
+
+✅ Tag
+
+✅ Yield (unit + quantity)
+
+✅ Type (Product or Intermediate)
+
+✅ Total Cost
+
+✅ Unit Cost
+
+✅ List of timers set (if any)
+
+✅ Ingredients used
+
+✅ Archived or not
+
+📦 To Do:
+Please replace the content of templates/view_batch.html with this full version:
+
+html
+Copy
+Edit
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Batch Summary</h2>
+
+<div class="batch-metadata">
+  <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+  <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+  <p><strong>Type:</strong> {{ 'Product' if batch.is_product else 'Intermediate' }}</p>
+  <p><strong>Tags:</strong> {{ batch.tags or 'None' }}</p>
+  <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+  <p><strong>Yield:</strong> {{ batch.yield_quantity }} {{ batch.yield_unit }}</p>
+  <p><strong>Total Cost:</strong> ${{ batch.total_cost or 0.00 }}</p>
+  <p><strong>Unit Cost:</strong> ${{ (batch.total_cost / batch.yield_quantity) | round(2) if batch.total_cost and batch.yield_quantity else 'N/A' }}</p>
+</div>
+
+<hr>
+
+<h4>Ingredients Used:</h4>
+<ul>
+  {% for ing in batch.ingredients_used %}
+  <li>{{ ing.name }} — {{ ing.amount }} {{ ing.unit }}</li>
+  {% endfor %}
+</ul>
+
+{% if batch.extra_ingredients %}
+<h4>Extra Inventory Used:</h4>
+<ul>
+  {% for ex in batch.extra_ingredients %}
+  <li>{{ ex.name }} — {{ ex.amount }} {{ ex.unit }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if batch.timers %}
+<h4>Timers Set:</h4>
+<ul>
+  {% for timer in batch.timers %}
+  <li>⏰ {{ timer.label }} → {{ timer.trigger_time.strftime('%Y-%m-%d %H:%M') }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary mt-3">Back to Batch List</a>
+{% endblock %}
+This improves the UX while aligning us for the upcoming Product + Variation model.
+
