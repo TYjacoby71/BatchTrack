@@ -1,69 +1,44 @@
-
 {% extends 'layout.html' %}
 {% block content %}
-<div class="batch-view">
-    <h2>Batch Details</h2>
+<h2>Batch Summary</h2>
 
-    <div class="batch-info">
-        <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
-        <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-        <p><strong>Scale:</strong> {{ batch.scale }}</p>
-        <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-        <p><strong>Status:</strong> Completed</p>
-        <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
-        {% if batch.product_quantity %}
-            <p><strong>Product Yield:</strong> {{ batch.product_quantity }} {{ batch.product_unit }}</p>
-            <p><strong>Cost Per Unit:</strong> 
-                {% if batch.total_cost and batch.product_quantity %}
-                    ${{ "%.2f"|format(batch.total_cost / batch.product_quantity) }}
-                {% else %}
-                    —
-                {% endif %}
-            </p>
-        {% endif %}
-    </div>
-
-    <div class="ingredients-used">
-        <h3>Ingredients Used</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Ingredient</th>
-                    <th>Amount</th>
-                    <th>Unit</th>
-                    <th>Cost</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ingredient in batch.ingredients_used %}
-                <tr>
-                    <td>{{ ingredient.name }}</td>
-                    <td>{{ "%.2f"|format(ingredient.amount) }}</td>
-                    <td>{{ ingredient.unit }}</td>
-                    <td>${{ "%.2f"|format(ingredient.cost) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    {% if batch.notes %}
-    <div class="notes-section">
-        <h3>Notes</h3>
-        <p class="batch-notes">{{ batch.notes|replace('\n', '<br>')|safe }}</p>
-    </div>
-    {% endif %}
-
-    {% if batch.tags %}
-    <div class="tags-section">
-        <h3>Tags</h3>
-        <p>{{ batch.tags }}</p>
-    </div>
-    {% endif %}
-
-    <div class="actions">
-        <a href="{{ url_for('batches.list_batches') }}" class="button">Back to Batches</a>
-        <button onclick="window.print()" class="button secondary">Print</button>
-    </div>
+<div class="batch-metadata">
+  <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+  <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
+  <p><strong>Type:</strong> {{ 'Product' if batch.is_product else 'Intermediate' }}</p>
+  <p><strong>Tags:</strong> {{ batch.tags or 'None' }}</p>
+  <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+  <p><strong>Yield:</strong> {{ batch.yield_quantity }} {{ batch.yield_unit }}</p>
+  <p><strong>Total Cost:</strong> ${{ batch.total_cost or 0.00 }}</p>
+  <p><strong>Unit Cost:</strong> ${{ (batch.total_cost / batch.yield_quantity) | round(2) if batch.total_cost and batch.yield_quantity else 'N/A' }}</p>
 </div>
+
+<hr>
+
+<h4>Ingredients Used:</h4>
+<ul>
+  {% for ing in batch.ingredients_used %}
+  <li>{{ ing.name }} — {{ ing.amount }} {{ ing.unit }}</li>
+  {% endfor %}
+</ul>
+
+{% if batch.extra_ingredients %}
+<h4>Extra Inventory Used:</h4>
+<ul>
+  {% for ex in batch.extra_ingredients %}
+  <li>{{ ex.name }} — {{ ex.amount }} {{ ex.unit }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if batch.timers %}
+<h4>Timers Set:</h4>
+<ul>
+  {% for timer in batch.timers %}
+  <li>⏰ {{ timer.label }} → {{ timer.trigger_time.strftime('%Y-%m-%d %H:%M') }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary mt-3">Back to Batch List</a>
 {% endblock %}
