@@ -28,9 +28,10 @@ login_manager.login_view = 'login'
 from routes.batch_routes import batches_bp
 from routes.admin_routes import admin_bp
 from routes.ingredient_routes import ingredients_bp
-from routes.recipe_routes import recipes_bp #This line was missing in the original code
+from routes.recipe_routes import recipes_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
+from routes.products import products_bp # Added import for products blueprint
 
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
@@ -53,6 +54,8 @@ app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/products')
 app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
+app.register_blueprint(products_bp, url_prefix='/products') #Added registration for products blueprint
+
 
 @login_manager.user_loader
 def load_user(user_id):

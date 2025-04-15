@@ -44,15 +44,20 @@ class Batch(db.Model):
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    batch_id = db.Column(db.Integer)
-    name = db.Column(db.String(128))
-    label_code = db.Column(db.String(32))
-    image = db.Column(db.String(128))
-    expiration_date = db.Column(db.Date)
-    quantity = db.Column(db.Integer)
-    unit = db.Column(db.String(32))
+    name = db.Column(db.String(128), unique=True, nullable=False)
+    default_unit = db.Column(db.String(32), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
+
+class ProductVariation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    sku = db.Column(db.String(64), unique=True)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ProductEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
