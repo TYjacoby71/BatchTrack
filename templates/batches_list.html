@@ -13,7 +13,7 @@
     </div>
     
     <!-- Filter Button -->
-    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" id="filterButton">
         <i class="fas fa-filter"></i> Filters
     </button>
 </div>
@@ -22,7 +22,7 @@
 <div class="collapse mb-4" id="filterSection">
     <div class="card card-body">
         <!-- Batch Filters -->
-        <form method="get" class="row g-3 mb-3">
+        <form method="get" class="row g-3 mb-3" id="filterForm">
             <div class="col-md-3">
                 <select name="status" class="form-select form-select-sm">
                     <option value="">Status: All</option>
@@ -47,13 +47,13 @@
                 <input type="date" name="end" class="form-control form-control-sm" placeholder="End Date">
             </div>
             <div class="col-12">
-                <button type="submit" class="btn btn-sm btn-primary">Apply Filters</button>
-                <a href="{{ url_for('batches.list_batches') }}" class="btn btn-sm btn-secondary">Reset</a>
+                <button type="submit" class="btn btn-sm btn-primary" onclick="collapseFilters()">Apply Filters</button>
+                <a href="{{ url_for('batches.list_batches') }}" class="btn btn-sm btn-secondary" onclick="collapseFilters()">Reset</a>
             </div>
         </form>
 
         <!-- Column Visibility -->
-        <form method="post" action="{{ url_for('batches.set_column_visibility') }}">
+        <form method="post" action="{{ url_for('batches.set_column_visibility') }}" id="columnForm">
             <div class="d-flex gap-3 align-items-center">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
@@ -171,5 +171,18 @@ function showView(viewId) {
     document.getElementById('tableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('cardView').style.display = viewId === 'cardView' ? 'block' : 'none';
 }
+
+function collapseFilters() {
+    const filterSection = document.getElementById('filterSection');
+    const bsCollapse = new bootstrap.Collapse(filterSection);
+    bsCollapse.hide();
+}
+
+// Add event listener for column visibility form
+document.getElementById('columnForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+    collapseFilters();
+});
 </script>
 {% endblock %}
