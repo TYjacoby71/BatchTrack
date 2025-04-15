@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Plan Production for {{ recipe.name }}</h2>
@@ -9,7 +10,7 @@
 <script>
     document.getElementById('startBatchForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        fetch('{{ url_for("batches.start_batch_api") }}', {
+        fetch('{{ url_for("batches.start_batch") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -22,7 +23,7 @@
             if (data.error) {
                 alert('Error: ' + data.error);
             } else {
-                window.location.href = '{{ url_for("batches.view_batch_in_progress") }}/' + data.batch_id;
+                window.location.href = '{{ url_for("batches.view_batch_in_progress", batch_identifier="") }}' + data.batch_id;
             }
         });
     });

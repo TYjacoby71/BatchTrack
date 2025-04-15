@@ -1,0 +1,96 @@
+✅ Step 1: Update HTML Template - batch_in_progress.html
+📍 File path: templates/batch_in_progress.html
+🎯 Goal:
+
+Convert “Confirm Ingredients Used” to a collapsible section called “Extra Inventory Used”
+
+Change "Product Quantity" to "Batch Yield" with tooltip
+
+Fix/Add: Timer section with ability to add one or more timers
+
+Move "Tags" below "Notes"
+
+Fix/Add: Button to add extra ingredients only (remove always-visible row)
+
+🔧 batch_in_progress.html PATCH
+Replace the form area in batch_in_progress.html with the following code inside the main <form> element:
+
+html
+Copy
+Edit
+<!-- Notes Section -->
+<div class="notes-section">
+    <h3>Batch Notes</h3>
+    <textarea name="notes" rows="4" cols="50">{{ batch.notes or '' }}</textarea>
+</div>
+
+<!-- Tags Section -->
+<div class="form-group mt-2">
+    <label for="tags">Tags (comma-separated):</label>
+    <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
+</div>
+
+<!-- Yield Section -->
+<div class="form-group mt-4">
+    <label for="product_quantity">Batch Yield:
+        <span title="Tell us how many units your batch produced." style="cursor: help;">❔</span>
+    </label>
+    <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
+</div>
+
+<!-- Unit Selection -->
+<div class="form-group">
+    <label for="product_unit">Unit Type:</label>
+    <select name="product_unit" class="form-select" required>
+        {% for unit in inventory_units %}
+        <option value="{{ unit.name }}">{{ unit.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Timers -->
+<div class="form-group mt-4">
+    <h4>Batch Timers</h4>
+    <div id="timer-container"></div>
+    <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addTimer()">+ Add Timer</button>
+</div>
+
+<!-- Toggleable Extra Ingredients -->
+<div class="form-group mt-4">
+    <button type="button" class="btn btn-outline-primary" onclick="toggleExtraIngredients()">+ Extra Inventory Used</button>
+    <div id="extra-ingredients" style="display:none;">
+        <div id="ingredientInputs"></div>
+        <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addIngredientRow()">+ Add Ingredient Row</button>
+    </div>
+</div>
+
+<!-- Submission Buttons -->
+<div class="button-group mt-4">
+    <button type="submit" name="action" value="finish" class="btn btn-success">✓ Complete Batch</button>
+    <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
+</div>
+
+<script>
+function toggleExtraIngredients() {
+    const container = document.getElementById('extra-ingredients');
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+}
+
+function addIngredientRow() {
+    const div = document.createElement('div');
+    div.classList.add('ingredient-row', 'mb-2');
+    div.innerHTML = `
+        <input type="text" name="extra_ingredients[]" placeholder="Ingredient name" class="form-control mb-1">
+        <input type="number" name="extra_amounts[]" placeholder="Amount" step="0.01" class="form-control mb-1">
+        <input type="text" name="extra_units[]" placeholder="Unit" class="form-control mb-1">
+    `;
+    document.getElementById('ingredientInputs').appendChild(div);
+}
+
+function addTimer() {
+    const div = document.createElement('div');
+    div.classList.add('timer-entry', 'mb-2');
+    div.innerHTML = `<input type="datetime-local" name="batch_timers[]" class="form-control">`;
+    document.getElementById('timer-container').appendChild(div);
+}
+</script>

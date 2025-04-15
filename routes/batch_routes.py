@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
 from datetime import datetime
+from sqlalchemy import extract
 import uuid, os
 from werkzeug.utils import secure_filename
 
@@ -12,18 +13,52 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
+    scale = float(data['scale'])
+
+    # Get current year and count of batches for this recipe this year
+    current_year = datetime.now().year
+    year_batches = Batch.query.filter(
+        Batch.recipe_id == recipe.id,
+        extract('year', Batch.timestamp) == current_year
+    ).count()
 
     new_batch = Batch(
         recipe_id=recipe.id,
         recipe_name=recipe.name,
-        scale=data['scale'],
+        scale=scale,
         notes=data.get('notes', ''),
-        label_code=f"{recipe.label_prefix or 'BTH'}-{uuid.uuid4().hex[:8].upper()}"
+        label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
     )
 
     db.session.add(new_batch)
     db.session.commit()
 
+    # Deduct inventory at start of batch
+    ingredient_errors = []
+
+    for assoc in recipe.recipe_ingredients:
+        ingredient = assoc.ingredient
+        if not ingredient:
+            continue
+
+        required_amount = assoc.amount * scale
+
+        if ingredient.unit != assoc.unit:
+            ingredient_errors.append(f"Unit mismatch for {ingredient.name}")
+            continue
+
+        if ingredient.quantity < required_amount:
+            ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
+        else:
+            ingredient.quantity -= required_amount
+            db.session.add(ingredient)
+
+    if ingredient_errors:
+        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
+    else:
+        flash("Batch started and inventory deducted.", "success")
+
+    db.session.commit()
     return jsonify({'batch_id': new_batch.id})
 
 @batches_bp.route('/')
@@ -32,13 +67,18 @@ def list_batches():
     batches = Batch.query.order_by(Batch.timestamp.desc()).all()
     return render_template('batches_list.html', batches=batches)
 
-@batches_bp.route('/<int:batch_id>')
+@batches_bp.route('/<batch_identifier>')
 @login_required
-def view_batch(batch_id):
+def view_batch(batch_identifier):
     try:
-        batch = Batch.query.get_or_404(batch_id)
-        if not batch.total_cost:
-            return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+        # Check if the identifier is a label code
+        if not batch_identifier.isdigit():
+            batch = Batch.query.filter_by(label_code=batch_identifier).first_or_404()
+        else:
+            batch = Batch.query.get_or_404(int(batch_identifier))
+
+        if batch.total_cost is None:
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
         flash(f'Error viewing batch: {str(e)}')
@@ -52,10 +92,12 @@ def update_batch_notes(batch_id):
     db.session.commit()
     return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
 
-@batches_bp.route('/in-progress/<int:batch_id>')
+@batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
-def view_batch_in_progress(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+def view_batch_in_progress(batch_identifier):
+    if not isinstance(batch_identifier, int):
+        batch_identifier = int(batch_identifier)
+    batch = Batch.query.get_or_404(batch_identifier)
     if batch.total_cost is not None:
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
@@ -105,44 +147,16 @@ def finish_batch(batch_id):
     output_type = request.form.get("output_type")
 
     # Calculate total cost from ingredient costs
-    total_cost = float(sum(
-        float(request.form.get(f'amount_{i}', 0)) * 
-        (Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first().cost_per_unit or 0)
-        for i in range(int(request.form.get('total_ingredients', 0)))
-    ))
+    total_cost = 0
+    for i in range(int(request.form.get('total_ingredients', 0))):
+        amount = float(request.form.get(f'amount_{i}', 0))
+        ingredient = Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first()
+        if ingredient:
+            total_cost += amount * (ingredient.cost_per_unit or 0)
 
     batch.total_cost = total_cost
-    batch.status = 'completed'  # Mark the batch as completed
-
-    if output_type == "ingredient":
-        # Check if ingredient already exists
-        existing_ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
-        qty = float(request.form.get("ingredient_quantity", 0))
-        unit = request.form.get("ingredient_unit")
-
-        if existing_ingredient:
-            if existing_ingredient.unit == unit:
-                existing_ingredient.quantity += qty
-                existing_ingredient.cost_per_unit = ((existing_ingredient.cost_per_unit * existing_ingredient.quantity) + 
-                                                   total_cost) / (existing_ingredient.quantity + qty)
-            else:
-                flash(f'Warning: Unit mismatch. Existing: {existing_ingredient.unit}, New: {unit}')
-                return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
-        else:
-            new_ingredient = Ingredient(
-                name=batch.recipe_name,
-                quantity=qty,
-                unit=unit,
-                cost_per_unit=total_cost / qty if qty > 0 else 0
-            )
-            db.session.add(new_ingredient)
-        batch.notes = f"Added to inventory as: {batch.recipe_name}"
-    else:
-        # Save as product
-        batch.product_quantity = request.form.get("product_quantity")
-        batch.product_unit = request.form.get("product_unit")
     db.session.commit()
-    return redirect(url_for('batches.list_batches'))
+    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
