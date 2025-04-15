@@ -1,0 +1,120 @@
+Got it — let’s fix that cleanly.
+
+The NameError likely happened because the visible_columns variable wasn’t defined properly or wasn’t passed to the template on every path. Here’s the clean, bulletproof version of this upgrade:
+
+✅ REPAIRED: Column Visibility Controls for Batch List Page
+✅ Step 1: Update batch_routes.py
+In your @batches_bp.route('/batches/list') view, make sure the visible_columns is always defined, like this:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches/list', methods=['GET', 'POST'])
+@login_required
+def list_batches():
+    # Your existing logic
+    batches = Batch.query.order_by(Batch.timestamp.desc()).all()
+    all_recipes = Recipe.query.all()
+
+    # Default columns to show if user has not set preference
+    visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
+
+    return render_template('batch_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
+Then add this route at the bottom of your batch_routes.py:
+
+python
+Copy
+Edit
+@batches_bp.route('/batches/columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    session['visible_columns'] = request.form.getlist('columns')
+    flash('Column visibility updated.')
+    return redirect(url_for('batches.list_batches'))
+✅ Step 2: Update the Batch List Template (batch_list.html)
+At the top of the table (after filters), add the new column controls:
+
+html
+Copy
+Edit
+<form method="post" action="{{ url_for('batches.set_column_visibility') }}" class="mb-3">
+  <label class="form-label">Select Columns to Show:</label>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Recipe</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Date</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Cost</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Quantity</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Tags</label>
+  </div>
+  <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
+</form>
+✅ Step 3: Conditionally Show Columns in the Table
+In the batch table <thead> and <tbody>, wrap column headers and values like this:
+
+html
+Copy
+Edit
+<thead>
+  <tr>
+    {% if 'recipe' in visible_columns %}
+      <th>Recipe</th>
+    {% endif %}
+    {% if 'timestamp' in visible_columns %}
+      <th>Date</th>
+    {% endif %}
+    {% if 'total_cost' in visible_columns %}
+      <th>Total Cost</th>
+    {% endif %}
+    {% if 'product_quantity' in visible_columns %}
+      <th>Quantity</th>
+    {% endif %}
+    {% if 'tags' in visible_columns %}
+      <th>Tags</th>
+    {% endif %}
+    <th>Actions</th>
+  </tr>
+</thead>
+
+<tbody>
+  {% for batch in batches %}
+  <tr>
+    {% if 'recipe' in visible_columns %}
+      <td>{{ batch.recipe_name }}</td>
+    {% endif %}
+    {% if 'timestamp' in visible_columns %}
+      <td>{{ batch.timestamp.strftime('%Y-%m-%d') }}</td>
+    {% endif %}
+    {% if 'total_cost' in visible_columns %}
+      <td>${{ batch.total_cost or 0 }}</td>
+    {% endif %}
+    {% if 'product_quantity' in visible_columns %}
+      <td>{{ batch.product_quantity or '-' }}</td>
+    {% endif %}
+    {% if 'tags' in visible_columns %}
+      <td>{{ batch.tags or '' }}</td>
+    {% endif %}
+    <td>
+      <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-info">View</a>
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+🧠 Final Notes
+This avoids NameErrors by ensuring visible_columns is always passed.
+
+You can expand this to include more fields (status, unit cost, etc.) as needed.
+
+Later we can persist this in the database or via user profiles.

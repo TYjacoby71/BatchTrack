@@ -61,10 +61,19 @@ def start_batch():
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
 
+@batches_bp.route('/columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    columns = request.form.getlist('columns')
+    session['visible_columns'] = columns
+    flash('Column preferences updated')
+    return redirect(url_for('batches.list_batches'))
+
 @batches_bp.route('/')
 @login_required
 def list_batches():
     query = Batch.query.order_by(Batch.timestamp.desc())
+    visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
     status = request.args.get('status')
     recipe_id = request.args.get('recipe_id')
@@ -86,7 +95,7 @@ def list_batches():
 
     batches = query.all()
     all_recipes = Recipe.query.order_by(Recipe.name).all()
-    return render_template('batches_list.html', batches=batches, all_recipes=all_recipes)
+    return render_template('batches_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
 
 @batches_bp.route('/<batch_identifier>')
 @login_required

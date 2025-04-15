@@ -38,6 +38,32 @@
   </div>
 </form>
 
+<!-- Column Controls -->
+<h3 class="mt-4">Columns</h3>
+<form method="post" action="{{ url_for('batches.set_column_visibility') }}" class="mb-3">
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Recipe</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Timestamp</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Cost</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Quantity</label>
+  </div>
+  <div class="form-check form-check-inline">
+    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
+    <label class="form-check-label">Tags</label>
+  </div>
+  <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Apply</button>
+</form>
+
 <!-- Toggle Buttons -->
 <div class="mb-3 text-end">
     <button class="btn btn-outline-secondary" onclick="showView('tableView')">Table View</button>
@@ -49,24 +75,48 @@
     <table class="table table-striped">
         <thead>
             <tr>
+                {% if 'recipe' in visible_columns %}
                 <th>Recipe</th>
+                {% endif %}
                 <th>Label Code</th>
                 <th>Scale</th>
+                {% if 'timestamp' in visible_columns %}
                 <th>Date</th>
+                {% endif %}
                 <th>Status</th>
+                {% if 'total_cost' in visible_columns %}
                 <th>Cost</th>
+                {% endif %}
+                {% if 'product_quantity' in visible_columns %}
+                <th>Quantity</th>
+                {% endif %}
+                {% if 'tags' in visible_columns %}
+                <th>Tags</th>
+                {% endif %}
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for batch in batches %}
             <tr>
+                {% if 'recipe' in visible_columns %}
                 <td>{{ batch.recipe_name }}</td>
+                {% endif %}
                 <td>{{ batch.label_code }}</td>
                 <td>{{ batch.scale }}</td>
+                {% if 'timestamp' in visible_columns %}
                 <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
+                {% endif %}
                 <td>{{ 'In Progress' if batch.total_cost is none else 'Completed' }}</td>
+                {% if 'total_cost' in visible_columns %}
                 <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
+                {% endif %}
+                {% if 'product_quantity' in visible_columns %}
+                <td>{{ batch.product_quantity if batch.product_quantity else '—' }}</td>
+                {% endif %}
+                {% if 'tags' in visible_columns %}
+                <td>{{ batch.tags if batch.tags else '—' }}</td>
+                {% endif %}
                 <td>
                     {% if batch.total_cost is none %}
                         <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
