@@ -21,25 +21,26 @@
 
     <!-- Product Yield Section (Initially Hidden) -->
     <div id="productFields" class="form-group mt-4">
-        <label for="product_quantity">Batch Yield:</label>
-        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
-        <label for="product_unit">Unit Type:</label>
-        <select name="product_unit" class="form-select" required>
+        <label for="product_unit" class="form-label mb-2">Unit Type:</label>
+        <select name="product_unit" class="form-select mb-3" required>
             {% for unit in product_units %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
+        <label for="product_quantity">Batch Yield:</label>
+        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
     </div>
 
     <!-- Ingredient Yield Section (Initially Hidden) -->
     <div id="ingredientFields" class="form-group mt-4" style="display:none;">
-        <label for="ingredient_quantity">Ingredient Yield:</label>
-        <input type="number" name="ingredient_quantity" value="1" min="1" class="form-control" required>
-        <select name="ingredient_unit" class="form-select mt-2" required>
-            {% for unit in product_units %}
+        <label for="ingredient_unit" class="form-label mb-2">Unit Type:</label>
+        <select name="ingredient_unit" class="form-select mb-3" required>
+            {% for unit in inventory_units %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
+        <label for="ingredient_quantity">Ingredient Yield:</label>
+        <input type="number" name="ingredient_quantity" value="1" min="1" class="form-control" required>
     </div>
 
     <!-- Extra Ingredients Section (Always Visible) -->
