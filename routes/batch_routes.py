@@ -69,18 +69,11 @@ def set_column_visibility():
     flash('Column preferences updated')
     return redirect(url_for('batches.list_batches'))
 
-@batches_bp.route('/columns', methods=['POST'])
-@login_required
-def set_column_visibility():
-    columns = request.form.getlist('columns')
-    session['visible_columns'] = columns
-    flash('Column preferences updated')
-    return redirect(url_for('batches.list_batches'))
-
 @batches_bp.route('/')
 @login_required
 def list_batches():
     query = Batch.query.order_by(Batch.timestamp.desc())
+    # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
     status = request.args.get('status')
