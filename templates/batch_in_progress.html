@@ -73,14 +73,14 @@ function addIngredientRow() {
     row.classList.add('ingredient-row', 'mb-3');
     row.innerHTML = `
         <div class="d-flex gap-2 flex-wrap">
-            <select name="extra_ingredients[]" class="form-select ingredient-select" required>
+            <select name="extra_ingredients[]" class="form-select ingredient-select" style="min-width: 200px;" required>
                 <option value="">Select Ingredient</option>
                 {% for ing in all_ingredients %}
-                <option value="{{ ing.name }}">{{ ing.name }}</option>
+                <option value="{{ ing.id }}">{{ ing.name }}</option>
                 {% endfor %}
             </select>
-            <input type="number" name="extra_amounts[]" step="0.01" placeholder="Amount" class="form-control" required>
-            <select name="extra_units[]" class="form-select" required>
+            <input type="number" name="extra_amounts[]" step="0.01" placeholder="Amount" class="form-control" style="width: 120px;" required>
+            <select name="extra_units[]" class="form-select unit-select" style="min-width: 150px;" required>
                 <option value="">Unit</option>
                 {% for unit in inventory_units %}
                 <option value="{{ unit.name }}">{{ unit.name }}</option>
@@ -91,14 +91,30 @@ function addIngredientRow() {
     `;
     wrapper.appendChild(row);
 
-    // Enable Select2 search box
-    setTimeout(() => {
-        $(row.querySelector('.ingredient-select')).select2({
-            width: '200px',
-            placeholder: "Search Ingredient"
-        });
-    }, 0);
+    // Enable Select2 search boxes
+    $(row.querySelector('.ingredient-select')).select2({
+        placeholder: "Search Ingredient",
+        allowClear: true
+    });
+    
+    $(row.querySelector('.unit-select')).select2({
+        placeholder: "Select Unit",
+        allowClear: true
+    });
 }
+
+// Initialize any existing Select2 dropdowns when page loads
+$(document).ready(function() {
+    $('.ingredient-select').select2({
+        placeholder: "Search Ingredient",
+        allowClear: true
+    });
+    
+    $('.unit-select').select2({
+        placeholder: "Select Unit",
+        allowClear: true
+    });
+});
 
 function addTimer() {
     const container = document.getElementById('timer-container');

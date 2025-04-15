@@ -103,6 +103,8 @@ def view_batch_in_progress(batch_identifier):
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
     product_units = ProductUnit.query.all()
+    inventory_units = InventoryUnit.query.filter_by(type='inventory').all()
+    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
 
     # Build cost summary
     total_cost = 0
@@ -132,6 +134,8 @@ def view_batch_in_progress(batch_identifier):
                          batch=batch,
                          recipe=recipe,
                          product_units=product_units,
+                         inventory_units=inventory_units,
+                         all_ingredients=all_ingredients,
                          batch_cost=batch_cost,
                          product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs)
