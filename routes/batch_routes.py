@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
 from datetime import datetime
@@ -60,6 +60,14 @@ def start_batch():
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
+
+@batches_bp.route('/columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    columns = request.form.getlist('columns')
+    session['visible_columns'] = columns
+    flash('Column preferences updated')
+    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
