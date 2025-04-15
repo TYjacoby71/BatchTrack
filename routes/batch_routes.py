@@ -64,8 +64,29 @@ def start_batch():
 @batches_bp.route('/')
 @login_required
 def list_batches():
-    batches = Batch.query.order_by(Batch.timestamp.desc()).all()
-    return render_template('batches_list.html', batches=batches)
+    query = Batch.query.order_by(Batch.timestamp.desc())
+
+    status = request.args.get('status')
+    recipe_id = request.args.get('recipe_id')
+    start = request.args.get('start')
+    end = request.args.get('end')
+
+    if status:
+        if status == 'in_progress':
+            query = query.filter(Batch.total_cost.is_(None))
+        elif status == 'completed':
+            query = query.filter(Batch.total_cost.isnot(None))
+
+    if recipe_id:
+        query = query.filter_by(recipe_id=recipe_id)
+    if start:
+        query = query.filter(Batch.timestamp >= start)
+    if end:
+        query = query.filter(Batch.timestamp <= end)
+
+    batches = query.all()
+    all_recipes = Recipe.query.order_by(Recipe.name).all()
+    return render_template('batches_list.html', batches=batches, all_recipes=all_recipes)
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
