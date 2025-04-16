@@ -9,6 +9,13 @@
     <label for="quantity">Quantity:</label>
     <input type="number" step="0.01" name="quantity" value="{{ ing.quantity }}"><br>
 
+    <label for="type">Type:</label>
+    <select name="type" class="form-select" required>
+        <option value="ingredient" {% if ing.type == 'ingredient' %}selected{% endif %}>Ingredient</option>
+        <option value="container" {% if ing.type == 'container' %}selected{% endif %}>Container</option>
+        <option value="supply" {% if ing.type == 'supply' %}selected{% endif %}>Supply</option>
+    </select>
+
     <label for="unit">Unit:</label>
     <select name="unit">
         {% for unit in units %}

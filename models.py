@@ -68,11 +68,14 @@ class ProductEvent(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Ingredient(db.Model):
+    __tablename__ = 'ingredient'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    quantity = db.Column(db.Float)
+    name = db.Column(db.String(120), nullable=False)
     unit = db.Column(db.String(32))
-    cost_per_unit = db.Column(db.Float, default=0.0)
+    quantity = db.Column(db.Float, default=0)
+    cost_per_unit = db.Column(db.Float, default=0)
+    type = db.Column(db.String(32), default="ingredient")
+    intermediate = db.Column(db.Boolean, default=False)
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
