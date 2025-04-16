@@ -175,9 +175,7 @@ def finish_batch(batch_id):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
-    # Get and save output type
-    output_type = request.form.get("output_type", "product")
-    batch.mode = output_type
+    output_type = request.form.get("output_type")
 
     # Calculate total cost from ingredient costs
     total_cost = 0
