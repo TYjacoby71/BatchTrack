@@ -35,6 +35,7 @@ class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer)
     recipe_name = db.Column(db.String(128))
+    status = db.Column(db.String(32), default='in_progress')
     label_code = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     scale = db.Column(db.Float)
@@ -72,7 +73,6 @@ class Ingredient(db.Model):
     quantity = db.Column(db.Float)
     unit = db.Column(db.String(32))
     cost_per_unit = db.Column(db.Float, default=0.0)
-    intermediate = db.Column(db.Boolean, default=False)
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
