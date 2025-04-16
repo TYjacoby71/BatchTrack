@@ -113,7 +113,13 @@ def delete_recipe(recipe_id):
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    return render_template('plan_production.html', recipe=recipe, scale=1.0)
+    containers = Ingredient.query.filter_by(type="container").all()
+    return render_template(
+        'plan_production.html',
+        recipe=recipe,
+        scale=1.0,
+        containers=containers
+    )
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
 def quick_add_unit():

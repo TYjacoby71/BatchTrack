@@ -3,6 +3,24 @@
 {% block content %}
 <h2>Plan Production for {{ recipe.name }}</h2>
 
+<div class="container-selection mb-4">
+    <div class="form-group mt-3">
+        <label for="containers">Select Container(s):</label>
+        <small class="form-text text-muted">Choose one or more containers this batch will use.</small>
+        <div id="containerSelectionList">
+            {% for container in containers %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="containers[]" value="{{ container.id }}" id="container_{{ container.id }}">
+                <label class="form-check-label" for="container_{{ container.id }}">
+                    {{ container.name }} ({{ container.quantity }} in stock)
+                </label>
+                <input type="number" name="container_quantities[]" placeholder="Qty" min="1" class="form-control form-control-sm d-inline w-auto ms-2">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <form id="startBatchForm">
     <button type="submit" class="btn btn-success">Start Batch</button>
 </form>
@@ -10,12 +28,24 @@
 <script>
     document.getElementById('startBatchForm').addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Collect container selections
+        const selectedContainers = [];
+        document.querySelectorAll('input[name="containers[]"]:checked').forEach(checkbox => {
+            const quantityInput = checkbox.parentElement.querySelector('input[name="container_quantities[]"]');
+            selectedContainers.push({
+                id: checkbox.value,
+                quantity: quantityInput.value
+            });
+        });
+
         fetch('{{ url_for("batches.start_batch") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 recipe_id: {{ recipe.id }},
-                scale: {{ scale }}
+                scale: {{ scale }},
+                containers: selectedContainers
             })
         })
         .then(response => response.json())
