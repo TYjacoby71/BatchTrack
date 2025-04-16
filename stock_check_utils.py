@@ -32,9 +32,11 @@ def check_stock_for_recipe(recipe, scale=1.0):
 
             results.append({
                 'name': ing.name,
-                'unit': ing.unit,
-                'needed': round(needed_converted, 2),
+                'unit': assoc.unit,  # Use original recipe unit
+                'needed': round(needed, 2),  # Original amount
+                'needed_converted': round(needed_converted, 2),  # Converted amount
                 'available': round(available, 2),
+                'available_unit': ing.unit,  # Ingredient storage unit
                 'status': status
             })
 
