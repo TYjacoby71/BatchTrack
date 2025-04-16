@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": "2025-04-16T01:08:08.595886",
+    "message": "Stock check error",
+    "source": "system",
+    "details": {
+      "error": "(sqlite3.OperationalError) no such column: ingredient.intermediate\n[SQL: SELECT ingredient.id AS ingredient_id, ingredient.name AS ingredient_name, ingredient.quantity AS ingredient_quantity, ingredient.unit AS ingredient_unit, ingredient.cost_per_unit AS ingredient_cost_per_unit, ingredient.intermediate AS ingredient_intermediate \nFROM ingredient \nWHERE ingredient.id = ?]\n[parameters: (2,)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "recipe_id": 1
+    },
+    "batch_id": null,
+    "status": "NEW"
+  },
+  {
+    "timestamp": "2025-04-16T01:08:22.453011",
+    "message": "Stock check error",
+    "source": "system",
+    "details": {
+      "error": "(sqlite3.OperationalError) no such column: ingredient.intermediate\n[SQL: SELECT ingredient.id AS ingredient_id, ingredient.name AS ingredient_name, ingredient.quantity AS ingredient_quantity, ingredient.unit AS ingredient_unit, ingredient.cost_per_unit AS ingredient_cost_per_unit, ingredient.intermediate AS ingredient_intermediate \nFROM ingredient \nWHERE ingredient.id = ?]\n[parameters: (8,)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "recipe_id": 2
+    },
+    "batch_id": null,
+    "status": "NEW"
+  }
+]
