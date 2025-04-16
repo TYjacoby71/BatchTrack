@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
-from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient
+from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient, InventoryItem
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
@@ -110,16 +110,16 @@ def delete_recipe(recipe_id):
     flash('Recipe deleted.')
     return redirect(url_for('recipes.list_recipes'))
 
-@recipes_bp.route('/plan-production/<int:recipe_id>')
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    containers = Ingredient.query.filter_by(type="container").all()
+    inventory_items = InventoryItem.query.all()
     return render_template(
         'plan_production.html',
         recipe=recipe,
         scale=1.0,
-        containers=containers
+        inventory_items=inventory_items
     )
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
