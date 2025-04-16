@@ -118,18 +118,14 @@ def view_batch(batch_identifier):
 @login_required
 def update_batch_notes(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    batch.notes = request.form.get('notes')
-    db.session.commit()
-    flash('Batch notes updated.')
-    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
-
-@batches_bp.route('/update_notes/<int:batch_id>', methods=['POST'])
-@login_required
-def update_batch_notes(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
     batch.notes = request.form.get('notes', '')
     db.session.commit()
-    return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+    flash('Batch notes updated.')
+    
+    # Redirect based on batch status
+    if batch.status == 'in_progress':
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
