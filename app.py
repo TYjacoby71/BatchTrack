@@ -27,7 +27,7 @@ login_manager.login_view = 'login'
 # Register all blueprints
 from routes.batch_routes import batches_bp
 from routes.admin_routes import admin_bp
-from routes.ingredient_routes import ingredients_bp
+from routes.inventory_routes import inventory_bp
 from routes.recipe_routes import recipes_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
@@ -46,7 +46,7 @@ from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(ingredients_bp)  # No prefix to match /ingredients URLs
+app.register_blueprint(inventory_bp)  # No prefix to match /ingredients URLs
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
