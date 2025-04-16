@@ -66,9 +66,9 @@
 
     <!-- Timer Section -->
     <div class="form-group mt-4">
-        <h4>Batch Timers</h4>
-        <div id="timer-container"></div>
-        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addTimer()">🗓️ Add Timer</button>
+        <h4>🕒 Batch Timers</h4>
+        <div id="timerContainer"></div>
+        <button type="button" class="btn btn-outline-secondary" onclick="addTimerRow()">➕ Add Timer</button>
     </div>
 
     <!-- Submission Buttons -->
@@ -157,14 +157,16 @@ function addIngredientRow() {
     document.getElementById('ingredientInputs').appendChild(row);
 }
 
-function addTimer() {
-    const container = document.getElementById('timer-container');
+function addTimerRow() {
+    const container = document.getElementById('timerContainer');
     const div = document.createElement('div');
-    div.classList.add('timer-entry', 'd-flex', 'align-items-center', 'gap-2', 'mb-2');
+    div.className = 'd-flex align-items-center mb-2';
+
     div.innerHTML = `
-        <input type="datetime-local" name="batch_timers[]" class="form-control" style="max-width: 250px;" required>
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">❌</button>
+        <input type="datetime-local" name="batch_timers[]" class="form-control me-2" required>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">🗑️</button>
     `;
+
     container.appendChild(div);
 }
 
