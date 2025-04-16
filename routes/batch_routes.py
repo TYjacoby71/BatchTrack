@@ -183,7 +183,7 @@ def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     if batch.status == 'complete':
         flash('This batch is already completed.')
-        return redirect(url_for('batches.list_batches'))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     output_type = request.form.get("output_type")
 
