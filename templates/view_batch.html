@@ -29,7 +29,7 @@
 
 <h3>Batch Notes</h3>
 <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
-    <textarea name="notes" class="form-control" rows="4">{{ batch.notes or '' }}</textarea>
+    <textarea name="notes" rows="4" class="form-control">{{ batch.notes or '' }}</textarea>
     <button type="submit" class="btn btn-secondary mt-2">Update Notes</button>
 </form>
 
