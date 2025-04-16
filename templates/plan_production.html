@@ -1,118 +1,81 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Plan Production for {{ recipe.name }}</h2>
 
-{% if recipe.variations %}
-<div class="form-group mt-3">
-    <label for="variation_id">Select Variation (optional):</label>
-    <select name="variation_id" class="form-select">
-        <option value="">None (Use base recipe)</option>
-        {% for v in recipe.variations %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
-    </select>
-</div>
-{% endif %}
-
-{% if recipe.variations %}
-<div class="form-group mt-3">
-    <label for="variation_id">Select Variation (optional):</label>
-    <select name="variation_id" class="form-select">
-        <option value="">None (Use base recipe)</option>
-        {% for v in recipe.variations %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
-    </select>
-</div>
-{% endif %}
-
-<h3 class="mt-4">Select Containers</h3>
-<div id="container-select-section">
-  <div class="container-select-row">
-    <select name="container_ids[]" class="form-select d-inline-block w-50">
-      <option value="">Select Container</option>
-      {% for item in inventory_items if item.type == 'container' %}
-      <option value="{{ item.id }}">{{ item.name }} ({{ item.unit }})</option>
-      {% endfor %}
-    </select>
-    <input type="number" name="container_quantities[]" class="form-control d-inline-block w-25 mx-2" placeholder="Quantity" min="1" value="1">
-    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
-  </div>
-</div>
-<button type="button" class="btn btn-secondary mt-2" onclick="addContainerRow()">+ Add Another Container</button>
-
-<script>
-function addContainerRow() {
-  const section = document.getElementById('container-select-section');
-  const div = document.createElement('div');
-  div.classList.add('container-select-row', 'mt-2');
-  div.innerHTML = `
-    <select name="container_ids[]" class="form-select d-inline-block w-50">
-      <option value="">Select Container</option>
-      {% for item in inventory_items if item.type == 'container' %}
-      <option value="{{ item.id }}">{{ item.name }} ({{ item.unit }})</option>
-      {% endfor %}
-    </select>
-    <input type="number" name="container_quantities[]" class="form-control d-inline-block w-25 mx-2" placeholder="Quantity" min="1" value="1">
-    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
-  `;
-  section.appendChild(div);
-}</script>
-
-<div class="container-selection mb-4">
+<form method="post" class="production-plan-form">
+    {% if variations %}
     <div class="form-group mt-3">
-        <label for="containers">Select Container(s):</label>
-        <small class="form-text text-muted">Choose one or more containers this batch will use.</small>
-        <div id="containerSelectionList">
-            {% for container in containers %}
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="containers[]" value="{{ container.id }}" id="container_{{ container.id }}">
-                <label class="form-check-label" for="container_{{ container.id }}">
-                    {{ container.name }} ({{ container.quantity }} in stock)
-                </label>
-                <input type="number" name="container_quantities[]" placeholder="Qty" min="1" class="form-control form-control-sm d-inline w-auto ms-2">
-            </div>
+        <label for="variation_id">Select Variation (optional):</label>
+        <select name="variation_id" id="variation_id" class="form-select">
+            <option value="none">None (Use base recipe)</option>
+            {% for v in variations %}
+            <option value="{{ v.id }}">{{ v.name }}</option>
             {% endfor %}
-        </div>
+        </select>
     </div>
-</div>
+    {% endif %}
 
-<form id="startBatchForm">
-    <button type="submit" class="btn btn-success">Start Batch</button>
+    <div class="form-group mt-3">
+        <label for="containers">Select Containers:</label>
+        <select name="containers[]" id="containers" class="form-select" multiple>
+            {% for c in containers %}
+            <option value="{{ c.id }}">{{ c.name }} ({{ c.quantity }} available)</option>
+            {% endfor %}
+        </select>
+        <small class="text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+    </div>
+
+    <div class="form-group mt-3">
+        <label for="scale">Batch Scale:</label>
+        <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+
+    {% if stock_check %}
+    <div class="stock-check-results mt-4">
+        <h3>Stock Check Results</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Required</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in stock_check %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.needed }} {{ item.unit }}</td>
+                    <td>{{ item.available }} {{ item.unit }}</td>
+                    <td>
+                        {% if item.status == 'OK' %}
+                        <span class="badge bg-success">OK</span>
+                        {% elif item.status == 'LOW' %}
+                        <span class="badge bg-warning">LOW</span>
+                        {% else %}
+                        <span class="badge bg-danger">NEEDED</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if all_ok %}
+        <form action="{{ url_for('batches.start_batch') }}" method="post">
+            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+            <input type="hidden" name="scale" value="{{ scale }}">
+            <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
+            {% for container_id in request.form.getlist('containers[]') %}
+            <input type="hidden" name="containers[]" value="{{ container_id }}">
+            {% endfor %}
+            <button type="submit" class="btn btn-success">Start Batch</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 </form>
-
-<script>
-    document.getElementById('startBatchForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Collect container selections
-        const selectedContainers = [];
-        document.querySelectorAll('input[name="containers[]"]:checked').forEach(checkbox => {
-            const quantityInput = checkbox.parentElement.querySelector('input[name="container_quantities[]"]');
-            selectedContainers.push({
-                id: checkbox.value,
-                quantity: quantityInput.value
-            });
-        });
-
-        fetch('{{ url_for("batches.start_batch") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                recipe_id: {{ recipe.id }},
-                scale: {{ scale }},
-                containers: selectedContainers
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert('Error: ' + data.error);
-            } else {
-                window.location.href = '{{ url_for("batches.view_batch_in_progress", batch_identifier="") }}' + data.batch_id;
-            }
-        });
-    });
-</script>
 {% endblock %}

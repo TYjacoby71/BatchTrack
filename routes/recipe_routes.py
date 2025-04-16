@@ -116,12 +116,40 @@ def delete_recipe(recipe_id):
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
+    variations = Recipe.query.filter_by(parent_id=recipe.id).all()
     inventory_items = InventoryItem.query.all()
+    containers = InventoryItem.query.filter_by(type='container').all()
+
+    scale = 1.0
+    stock_check = []
+    all_ok = False
+    status = None
+
+    if request.method == 'POST':
+        scale = float(request.form.get('scale', 1.0))
+        variation_id = request.form.get('variation_id')
+        selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
+
+        container_ids = request.form.getlist('containers[]')
+        selected_containers = InventoryItem.query.filter(InventoryItem.id.in_(container_ids)).all()
+
+        stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
+        status = "ok" if all_ok else "bad"
+
+        for item in stock_check:
+            if item["status"] == "LOW" and status != "bad":
+                status = "low"
+
     return render_template(
         'plan_production.html',
         recipe=recipe,
-        scale=1.0,
-        inventory_items=inventory_items
+        variations=variations,
+        scale=scale,
+        stock_check=stock_check,
+        all_ok=all_ok,
+        status=status,
+        inventory_items=inventory_items,
+        containers=containers
     )
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
