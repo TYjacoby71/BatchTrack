@@ -80,9 +80,9 @@
         </div>
     </div>
 
-    <div class="form-group mt-3">
-        <button type="submit" class="btn btn-primary">Save Recipe</button>
+    <div class="form-group mt-3 d-flex justify-content-between">
         <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
 
@@ -327,11 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => {
       console.error('Error:', error);
       alert('Failed to add ingredient. Please try again.');
-      
+
       // Clean up modal state after error
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-      
+
       // Re-init modal for clean state
       const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
       ingredientModal.hide();
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .finally(() => {
       button.disabled = false;
       button.innerText = 'Add Ingredient';
-      
+
       // Additional cleanup in finally block
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
