@@ -118,7 +118,7 @@
                 {% if 'timestamp' in visible_columns %}
                 <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
                 {% endif %}
-                <td>{{ 'In Progress' if batch.total_cost is none else 'Completed' }}</td>
+                <td>{{ batch.status }}</td>
                 {% if 'total_cost' in visible_columns %}
                 <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
                 {% endif %}

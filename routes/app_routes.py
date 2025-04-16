@@ -10,7 +10,7 @@ app_routes_bp = Blueprint('home', __name__)
 @login_required
 def homepage():
     recipes = Recipe.query.all()
-    active_batch = Batch.query.filter(Batch.total_cost == None).first()
+    active_batch = Batch.query.filter_by(status='in_progress').order_by(Batch.timestamp.desc()).first()
     stock_check = None
     selected_recipe = None
     scale = 1

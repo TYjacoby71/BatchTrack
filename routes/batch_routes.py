@@ -106,20 +106,26 @@ def view_batch(batch_identifier):
         else:
             batch = Batch.query.get_or_404(int(batch_identifier))
 
-        if batch.status == 'in_progress':
+        # For in-progress batches, redirect to the in-progress view
+        if batch.total_cost is None:
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
         flash(f'Error viewing batch: {str(e)}')
         return redirect(url_for('batches.list_batches'))
 
-@batches_bp.route('/update_notes/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
 def update_batch_notes(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     batch.notes = request.form.get('notes', '')
     db.session.commit()
-    return redirect(url_for('batches.view_batch_in_progress', batch_id=batch_id))
+    flash('Batch notes updated.')
+    
+    # Redirect based on batch status
+    if batch.status == 'in_progress':
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
@@ -168,43 +174,33 @@ def view_batch_in_progress(batch_identifier):
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id):
-    from datetime import datetime
-
     batch = Batch.query.get_or_404(batch_id)
-    if batch.status == 'complete':
-        flash('This batch is already completed.')
-        return redirect(url_for('batches.list_batches'))
 
-    output_type = request.form.get("output_type")
+    action = request.form.get('action')
+    # Prevent redundant status changes
+    if batch.status == "completed" and action == "finish":
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+    elif batch.status == "failed" and action == "fail":
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
-    # Calculate total cost from ingredient costs
-    total_cost = 0
-    for i in range(int(request.form.get('total_ingredients', 0))):
-        amount = float(request.form.get(f'amount_{i}', 0))
-        ingredient = Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first()
-        if ingredient:
-            total_cost += amount * (ingredient.cost_per_unit or 0)
+    # Handle cost + product logic (already handled earlier in your app)
+    batch.notes = request.form.get("notes", "")
+    batch.tags = request.form.get("tags", "")
+    batch.total_cost = batch.total_cost or 0  # fallback
 
-    if output_type == 'product':
-        product_name = request.form.get("product_name") or batch.recipe_name
-        product_unit = request.form.get("product_unit")
-        quantity = float(request.form.get("product_quantity", 1))
+    action = request.form.get('action')
+    if action == "finish":
+        batch.status = "completed"
+        flash("✅ Batch marked as completed.")
+    elif action == "fail":
+        batch.status = "failed"
+        flash("⚠️ Batch marked as failed.")
+    else:
+        flash("Unknown action. Please try again.")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
-        # Update product inventory
-        product = Product.query.filter_by(name=product_name).first()
-        if not product:
-            product = Product(name=product_name, default_unit=product_unit)
-            db.session.add(product)
-            db.session.flush()  # Ensure product.id available
-
-        product.quantity = (product.quantity or 0) + quantity
-        product.last_updated = datetime.utcnow()
-        batch.product_id = product.id
-
-    batch.total_cost = total_cost
-    batch.status = 'complete'
     db.session.commit()
-    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
+    return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
