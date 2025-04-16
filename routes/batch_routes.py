@@ -176,23 +176,6 @@ def finish_batch(batch_id):
         return redirect(url_for('batches.list_batches'))
 
     output_type = request.form.get("output_type")
-    product_quantity = float(request.form.get("ingredient_quantity" if output_type == "ingredient" else "product_quantity", 0))
-    selected_unit = request.form.get("ingredient_unit" if output_type == "ingredient" else "product_unit")
-
-    if output_type == "ingredient":
-        ingredient = Ingredient.query.filter_by(name=batch.recipe_name).first()
-        if ingredient:
-            ingredient.quantity += product_quantity
-            ingredient.unit = selected_unit
-            ingredient.intermediate = True
-        else:
-            ingredient = Ingredient(
-                name=batch.recipe_name,
-                quantity=product_quantity,
-                unit=selected_unit,
-                intermediate=True
-            )
-            db.session.add(ingredient)
 
     # Calculate total cost from ingredient costs
     total_cost = 0

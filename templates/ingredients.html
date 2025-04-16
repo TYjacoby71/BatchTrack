@@ -13,12 +13,7 @@
 </tr>
 {% for ing in ingredients %}
 <tr>
-    <td>
-    {{ ing.name }}
-    {% if ing.intermediate %}
-        <span class="badge bg-warning text-dark">Intermediate</span>
-    {% endif %}
-</td>
+    <td>{{ ing.name }}</td>
     <td>{{ ing.quantity }}</td>
     <td>{{ ing.unit }}</td>
     <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>
