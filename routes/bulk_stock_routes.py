@@ -18,6 +18,18 @@ def bulk_stock_check():
             
         summary = {}
         selected_ids = []
+        scale = 1.0
+
+        if request.method == 'POST':
+            selected_ids = request.form.getlist('recipe_ids')
+            try:
+                scale = float(request.form.get('scale', 1.0))
+                if scale <= 0:
+                    flash('Scale must be greater than 0')
+                    return redirect(url_for('bulk_stock.bulk_stock_check'))
+            except ValueError:
+                flash('Invalid scale value')
+                return redirect(url_for('bulk_stock.bulk_stock_check'))
 
         if request.method == 'POST':
             selected_ids = request.form.getlist('recipe_ids')
