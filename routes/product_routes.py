@@ -3,13 +3,15 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, Product, ProductEvent
 from datetime import datetime
+from werkzeug.utils import secure_filename
+import os
 
 product_bp = Blueprint('product', __name__)
 
 @product_bp.route('/products')
 @login_required
 def list_products():
-    products = Product.query.all()
+    products = Product.query.order_by(Product.expiration_date).all()
     return render_template('product_list.html', products=products)
 
 @product_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
@@ -31,8 +33,15 @@ def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
     if request.method == 'POST':
         product.name = request.form.get('name')
-        product.default_unit = request.form.get('default_unit')
-        product.is_active = bool(request.form.get('is_active', True))
+        product.quantity = request.form.get('quantity')
+        product.unit = request.form.get('unit')
+        product.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d').date()
+        file = request.files.get('image')
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            path = os.path.join('static/product_images', filename)
+            file.save(path)
+            product.image = path
         db.session.commit()
         flash('Product updated.')
         return redirect(url_for('product.view_product', product_id=product.id))
