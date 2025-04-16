@@ -45,8 +45,9 @@
 
     <!-- Extra Ingredients Section (Always Visible) -->
     <div class="extra-ingredients mt-4">
-        <button type="button" class="btn btn-outline-primary" onclick="addIngredientRow()">+ Extra Ingredients Used</button>
-        <div id="ingredientInputs" class="mt-3"></div>
+        <h4>Extra Ingredients Used</h4>
+        <div id="extraIngredientContainer"></div>
+        <button type="button" class="btn btn-secondary" onclick="addExtraIngredientRow()">+ Extra Ingredients Used</button>
     </div>
 
     <!-- Notes Section -->
@@ -60,11 +61,6 @@
         <label for="tags">Tags (comma-separated):</label>
         <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
     </div>
-
-
-
-    <!-- Extra Ingredients Used Section -->
-
 
     <!-- Timer Section -->
     <div class="form-group mt-4">
@@ -168,6 +164,33 @@ function addTimer() {
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">❌</button>
     `;
     container.appendChild(div);
+}
+
+function addExtraIngredientRow() {
+  const container = document.getElementById("extraIngredientContainer");
+
+  const row = document.createElement("div");
+  row.className = "ingredient-row mb-2 d-flex align-items-center gap-2";
+
+  row.innerHTML = `
+    <select name="extra_ingredients[]" class="form-select" required>
+      <option value="">Select ingredient</option>
+      {% for ing in all_ingredients %}
+        <option value="{{ ing.name }}">{{ ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" name="extra_amounts[]" class="form-control" step="0.01" placeholder="Amount" required>
+    <select name="extra_units[]" class="form-select" required>
+      <option value="">Select unit</option>
+      {% for unit in inventory_units %}
+        <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger">✕</button>
+  `;
+
+  container.appendChild(row);
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 // Wait for jQuery and DOM to load before initializing
