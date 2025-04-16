@@ -1,9 +1,7 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, InventoryUnit
-
-from models import Ingredient
+from models import db, InventoryItem, InventoryUnit
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -11,46 +9,46 @@ inventory_bp = Blueprint('inventory', __name__)
 @login_required
 def list_inventory():
     inventory_type = request.args.get('type')
-    if inventory_type == 'intermediate':
-        ingredients = Ingredient.query.filter_by(intermediate=True).all()
-    else:
-        ingredients = Ingredient.query.all()
+    query = InventoryItem.query
+    if inventory_type:
+        query = query.filter_by(type=inventory_type)
+    items = query.all()
     units = InventoryUnit.query.all()
-    return render_template('inventory_list.html', ingredients=ingredients, units=units)
+    return render_template('inventory_list.html', items=items, units=units)
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
 @login_required
 def add_inventory():
     name = request.form.get('name')
-    quantity = float(request.form.get('quantity'))
+    quantity = float(request.form.get('quantity', 0))
     unit = request.form.get('unit')
     item_type = request.form.get('type', 'ingredient')
-    db.session.add(Ingredient(name=name, quantity=quantity, unit=unit, type=item_type))
+    item = InventoryItem(name=name, quantity=quantity, unit=unit, type=item_type)
+    db.session.add(item)
     db.session.commit()
-    flash('Inventory item added.')
+    flash('Inventory item added successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/inventory/update/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_inventory(id):
-    ing = Ingredient.query.get_or_404(id)
+    item = InventoryItem.query.get_or_404(id)
     if request.method == 'POST':
-        ing.name = request.form.get('name')
-        ing.quantity = float(request.form.get('quantity'))
-        ing.unit = request.form.get('unit')
-        ing.cost_per_unit = float(request.form.get('cost_per_unit', 0.0))
-        ing.type = request.form.get('type', 'ingredient')
+        item.name = request.form.get('name')
+        item.quantity = float(request.form.get('quantity'))
+        item.unit = request.form.get('unit')
+        item.type = request.form.get('type')
+        item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         db.session.commit()
-        flash('Inventory item updated successfully.', 'success')
+        flash('Inventory item updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    units = InventoryUnit.query.all()
-    return render_template('edit_inventory.html', ing=ing, units=units)
+    return render_template('inventory/edit.html', item=item)
 
 @inventory_bp.route('/inventory/delete/<int:id>')
 @login_required
 def delete_inventory(id):
-    ing = Ingredient.query.get_or_404(id)
-    db.session.delete(ing)
+    item = InventoryItem.query.get_or_404(id)
+    db.session.delete(item)
     db.session.commit()
-    flash('Inventory item deleted successfully.', 'success')
+    flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
