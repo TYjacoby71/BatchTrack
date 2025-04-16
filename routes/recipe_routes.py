@@ -93,6 +93,50 @@ def edit_recipe(recipe_id):
     preselect_ingredient_id = session.pop('last_added_ingredient_id', None)
     add_ingredient_line = session.pop('add_ingredient_line', False)
 
+@recipes_bp.route('/<int:recipe_id>/add-variation', methods=['GET', 'POST'])
+@login_required
+def add_variation(recipe_id):
+    parent = Recipe.query.get_or_404(recipe_id)
+    all_ingredients = Ingredient.query.all()
+    inventory_units = InventoryUnit.query.all()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        instructions = request.form.get('instructions')
+        label_prefix = request.form.get('label_prefix')
+
+        new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
+        db.session.add(new_variation)
+        db.session.flush()
+
+        ingredient_ids = request.form.getlist('ingredient_ids[]')
+        amounts = request.form.getlist('amounts[]')
+        units = request.form.getlist('units[]')
+
+        for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+            if ing_id:
+                assoc = RecipeIngredient(
+                    recipe_id=new_variation.id,
+                    ingredient_id=int(ing_id),
+                    amount=float(amount),
+                    unit=unit
+                )
+                db.session.add(assoc)
+
+        db.session.commit()
+        flash("Variation created successfully.")
+        return redirect(url_for('recipes.list_recipes'))
+
+    return render_template(
+        "recipe_form.html",
+        recipe=None,
+        all_ingredients=all_ingredients,
+        inventory_units=inventory_units,
+        is_variation=True,
+        parent_recipe=parent
+    )
+
+
     base_recipes = Recipe.query.filter_by(parent_id=None).all()
     return render_template('recipe_form.html',
         recipe=recipe,

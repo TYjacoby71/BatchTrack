@@ -6,11 +6,13 @@
 <div class="recipe-list">
     {% for recipe in recipes %}
     {% if not recipe.parent_id %}
-    <div class="recipe-card">
+    <div class="recipe-card {% if recipe.parent_id %}ms-3 border-start border-primary{% endif %}">
         <h3>
             {{ recipe.name }}
             {% if recipe.parent_id %}
             <span class="badge bg-info text-dark">Variation</span>
+            {% elif not recipe.parent_id %}
+            <a href="{{ url_for('recipes.add_variation', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">+ Variation</a>
             {% endif %}
         </h3>
         {% if recipe.variations %}

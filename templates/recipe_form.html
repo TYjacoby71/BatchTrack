@@ -1,6 +1,16 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
+<h2>
+    {% if recipe %}Edit{% else %}
+        {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+    {% endif %}
+</h2>
+
+{% if is_variation %}
+<div class="alert alert-info mb-3">
+    <strong>New Variation:</strong> This variation is based on <strong>{{ parent_recipe.name }}</strong>.
+</div>
+{% endif %}
 
 {% if recipe %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
