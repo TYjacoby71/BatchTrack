@@ -27,7 +27,8 @@ def start_batch():
         recipe_name=recipe.name,
         scale=scale,
         notes=data.get('notes', ''),
-        label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
+        label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}",
+        status='in_progress'
     )
 
     db.session.add(new_batch)
@@ -82,10 +83,7 @@ def list_batches():
     end = request.args.get('end')
 
     if status:
-        if status == 'in_progress':
-            query = query.filter(Batch.total_cost.is_(None))
-        elif status == 'completed':
-            query = query.filter(Batch.total_cost.isnot(None))
+        query = query.filter_by(status=status)
 
     if recipe_id:
         query = query.filter_by(recipe_id=recipe_id)
@@ -108,7 +106,7 @@ def view_batch(batch_identifier):
         else:
             batch = Batch.query.get_or_404(int(batch_identifier))
 
-        if batch.total_cost is None:
+        if batch.status == 'in_progress':
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
@@ -129,7 +127,7 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_identifier)
-    if batch.total_cost is not None:
+    if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
@@ -171,9 +169,9 @@ def view_batch_in_progress(batch_identifier):
 @login_required
 def finish_batch(batch_id):
     from datetime import datetime
-    
+
     batch = Batch.query.get_or_404(batch_id)
-    if batch.total_cost is not None:
+    if batch.status == 'complete':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
@@ -204,6 +202,7 @@ def finish_batch(batch_id):
         batch.product_id = product.id
 
     batch.total_cost = total_cost
+    batch.status = 'complete'
     db.session.commit()
     return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
