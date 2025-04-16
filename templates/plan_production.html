@@ -1,15 +1,15 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Plan Production for {{ recipe.name }}</h2>
+<h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
     {% if variations %}
-    <div class="form-group mt-3">
-        <label for="variation_id">Select Variation (optional):</label>
-        <select name="variation_id" id="variation_id" class="form-select">
-            <option value="none">None (Use base recipe)</option>
+    <div class="form-group">
+        <label for="variationSelect">Select Variation (optional):</label>
+        <select id="variationSelect" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
+            <option value="">None (Use Base Recipe)</option>
             {% for v in variations %}
-            <option value="{{ v.id }}">{{ v.name }}</option>
+            <option value="{{ v.id }}" {% if recipe.id == v.id %}selected{% endif %}>{{ v.name }}</option>
             {% endfor %}
         </select>
     </div>

@@ -159,10 +159,15 @@ def delete_recipe(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    variations = Recipe.query.filter_by(parent_id=recipe.id).all()
+    base_recipe = Recipe.query.get_or_404(recipe_id)
+    variations = base_recipe.variations.all() if base_recipe else []
     inventory_items = InventoryItem.query.all()
     containers = InventoryItem.query.filter_by(type='container').all()
+    
+    recipe = base_recipe
+    selected_variation_id = request.args.get('variation_id', type=int)
+    if selected_variation_id:
+        recipe = Recipe.query.get(selected_variation_id)
 
     scale = 1.0
     stock_check = []
