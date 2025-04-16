@@ -12,6 +12,10 @@ bulk_stock_bp = Blueprint('bulk_stock', __name__)
 def bulk_stock_check():
     try:
         recipes = Recipe.query.all()
+        if not recipes:
+            flash('No recipes found in the system')
+            return render_template('bulk_stock_check.html', recipes=[])
+            
         summary = {}
         selected_ids = []
 
