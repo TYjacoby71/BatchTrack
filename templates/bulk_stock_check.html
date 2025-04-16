@@ -24,8 +24,8 @@
     {% for row in summary %}
     <tr>
         <td>{{ row.name }}</td>
-        <td>{{ row.needed }}</td>
-        <td>{{ row.available }}</td>
+        <td>{{ row.needed }} {{ row.unit }}</td>
+        <td>{{ row.available }} {{ row.available_unit }}</td>
         <td>{{ row.status }}</td>
     </tr>
     {% endfor %}
