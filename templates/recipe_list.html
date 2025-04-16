@@ -5,8 +5,19 @@
 
 <div class="recipe-list">
     {% for recipe in recipes %}
+    {% if not recipe.parent_id %}
     <div class="recipe-card">
         <h3>{{ recipe.name }}</h3>
+        {% if recipe.variations %}
+        <div class="variations mt-2">
+            <strong>Variations:</strong>
+            <ul class="list-unstyled ms-3">
+                {% for var in recipe.variations %}
+                <li>↳ {{ var.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         <p>Label Prefix: {{ recipe.label_prefix }}</p>
         {% if recipe.instructions %}
         <div class="recipe-instructions">

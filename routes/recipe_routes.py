@@ -17,6 +17,7 @@ def list_recipes():
 def new_recipe():
     all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
     inventory_units = InventoryUnit.query.all()
+    parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     if request.method == 'POST':
         try:
@@ -49,7 +50,7 @@ def new_recipe():
             db.session.rollback()
             flash(f'Error creating recipe: {str(e)}')
 
-    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units)
+    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, parent_recipes=parent_recipes)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required

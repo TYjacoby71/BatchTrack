@@ -3,6 +3,18 @@
 {% block content %}
 <h2>Plan Production for {{ recipe.name }}</h2>
 
+{% if recipe.variations %}
+<div class="form-group mt-3">
+    <label for="variation_id">Select Variation (optional):</label>
+    <select name="variation_id" class="form-select">
+        <option value="">None (Use base recipe)</option>
+        {% for v in recipe.variations %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
 <div class="container-selection mb-4">
     <div class="form-group mt-3">
         <label for="containers">Select Container(s):</label>
