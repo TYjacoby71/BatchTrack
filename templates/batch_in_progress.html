@@ -21,14 +21,16 @@
 
     <!-- Product Yield Section (Initially Hidden) -->
     <div id="productFields" class="form-group mt-4">
-        <label for="product_unit" class="form-label mb-2">Unit Type:</label>
+        <label for="product_quantity">
+          Batch Yield:
+          <span title="Tell us how many units your batch produced." style="cursor: help;">❓</span>
+        </label>
+        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
         <select name="product_unit" class="form-select mb-3" required>
             {% for unit in product_units %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
-        <label for="product_quantity">Batch Yield:</label>
-        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
     </div>
 
     <!-- Ingredient Yield Section (Initially Hidden) -->
