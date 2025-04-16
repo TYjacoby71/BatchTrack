@@ -170,6 +170,8 @@ def view_batch_in_progress(batch_identifier):
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id):
+    from datetime import datetime
+    
     batch = Batch.query.get_or_404(batch_id)
     if batch.total_cost is not None:
         flash('This batch is already completed.')
@@ -184,6 +186,22 @@ def finish_batch(batch_id):
         ingredient = Ingredient.query.filter_by(name=request.form.get(f'ingredient_{i}')).first()
         if ingredient:
             total_cost += amount * (ingredient.cost_per_unit or 0)
+
+    if output_type == 'product':
+        product_name = request.form.get("product_name") or batch.recipe_name
+        product_unit = request.form.get("product_unit")
+        quantity = float(request.form.get("product_quantity", 1))
+
+        # Update product inventory
+        product = Product.query.filter_by(name=product_name).first()
+        if not product:
+            product = Product(name=product_name, default_unit=product_unit)
+            db.session.add(product)
+            db.session.flush()  # Ensure product.id available
+
+        product.quantity = (product.quantity or 0) + quantity
+        product.last_updated = datetime.utcnow()
+        batch.product_id = product.id
 
     batch.total_cost = total_cost
     db.session.commit()
