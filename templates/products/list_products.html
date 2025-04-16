@@ -1,0 +1,19 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Products</h2>
+<a href="{{ url_for('products.new_product') }}" class="btn btn-primary mb-3">+ New Product</a>
+<ul class="list-group">
+  {% for product in products %}
+  <li class="list-group-item d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ product.name }}</strong> 
+      <span class="text-muted">({{ product.default_unit }})</span>
+    </div>
+    {% if product.variations %}
+    <span class="badge bg-secondary rounded-pill">{{ product.variations|length }} variations</span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

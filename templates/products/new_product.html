@@ -1,0 +1,17 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Add Product</h2>
+<form method="POST">
+  <div class="mb-3">
+    <label for="name" class="form-label">Product Name</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label for="default_unit" class="form-label">Default Unit</label>
+    <input type="text" name="default_unit" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-success">Save</button>
+  <a href="{{ url_for('products.list_products') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
