@@ -41,6 +41,7 @@ class Batch(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
+    mode = db.Column(db.String(20), default='product')
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
