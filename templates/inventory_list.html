@@ -12,8 +12,18 @@
     <th>Actions</th>
 </tr>
 {% for ing in ingredients %}
+<div class="mb-3">
+    <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary {% if not request.args.get('type') %}active{% endif %}">All</a>
+    <a href="{{ url_for('inventory.list_inventory', type='intermediate') }}" class="btn btn-outline-primary {% if request.args.get('type') == 'intermediate' %}active{% endif %}">Intermediate</a>
+</div>
+
 <tr>
-    <td>{{ ing.name }}</td>
+    <td>
+        <strong>{{ ing.name }}</strong>
+        {% if ing.intermediate %}
+        <span class="badge bg-warning text-dark ms-2">Intermediate</span>
+        {% endif %}
+    </td>
     <td>{{ ing.quantity }}</td>
     <td>{{ ing.unit }}</td>
     <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>

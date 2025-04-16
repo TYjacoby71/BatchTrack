@@ -10,7 +10,11 @@ inventory_bp = Blueprint('inventory', __name__)
 @inventory_bp.route('/inventory')
 @login_required
 def list_inventory():
-    ingredients = Ingredient.query.all()
+    inventory_type = request.args.get('type')
+    if inventory_type == 'intermediate':
+        ingredients = Ingredient.query.filter_by(intermediate=True).all()
+    else:
+        ingredients = Ingredient.query.all()
     units = InventoryUnit.query.all()
     return render_template('inventory_list.html', ingredients=ingredients, units=units)
 
