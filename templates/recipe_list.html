@@ -7,7 +7,12 @@
     {% for recipe in recipes %}
     {% if not recipe.parent_id %}
     <div class="recipe-card">
-        <h3>{{ recipe.name }}</h3>
+        <h3>
+            {{ recipe.name }}
+            {% if recipe.parent_id %}
+            <span class="badge bg-info text-dark">Variation</span>
+            {% endif %}
+        </h3>
         {% if recipe.variations %}
         <div class="variations mt-2">
             <strong>Variations:</strong>

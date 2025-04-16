@@ -20,6 +20,20 @@
         </select>
     </div>
 
+    {% if not recipe or not recipe.parent_id %}
+    <div class="form-group mb-3">
+        <label for="parent_id">Create as Variation of Existing Recipe:</label>
+        <select name="parent_id" class="form-select">
+            <option value="">None</option>
+            {% for base in all_base_recipes %}
+            <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
+                {{ base.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
     <div class="form-group">
         <label for="name">Recipe Name:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>

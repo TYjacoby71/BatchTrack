@@ -15,6 +15,18 @@
 </div>
 {% endif %}
 
+{% if recipe.variations %}
+<div class="form-group mt-3">
+    <label for="variation_id">Select Variation (optional):</label>
+    <select name="variation_id" class="form-select">
+        <option value="">None (Use base recipe)</option>
+        {% for v in recipe.variations %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
 <h3 class="mt-4">Select Containers</h3>
 <div id="container-select-section">
   <div class="container-select-row">
