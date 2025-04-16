@@ -176,9 +176,11 @@ def view_batch_in_progress(batch_identifier):
 def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
 
-    # Prevent duplicate completion
-    if batch.status and batch.status != "in_progress":
-        flash('This batch is already marked as finished or failed.')
+    action = request.form.get('action')
+    # Prevent redundant status changes
+    if batch.status == "completed" and action == "finish":
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+    elif batch.status == "failed" and action == "fail":
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     # Handle cost + product logic (already handled earlier in your app)
