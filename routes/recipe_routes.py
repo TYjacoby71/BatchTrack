@@ -124,6 +124,29 @@ def add_variation(recipe_id):
         instructions = request.form.get('instructions')
         label_prefix = request.form.get('label_prefix')
 
+        # Check if any basic details have changed
+        has_changes = (
+            name != parent.name or
+            instructions != parent.instructions or
+            label_prefix != parent.label_prefix
+        )
+
+        # Get ingredient changes
+        ingredient_ids = request.form.getlist('ingredient_ids[]')
+        amounts = request.form.getlist('amounts[]')
+        units = request.form.getlist('units[]')
+        
+        # Compare ingredients with parent
+        parent_ingredients = {(ri.inventory_item_id, ri.amount, ri.unit) for ri in parent.recipe_ingredients}
+        new_ingredients = set()
+        for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+            if ing_id:
+                new_ingredients.add((int(ing_id), float(amount), unit))
+        
+        if not has_changes and parent_ingredients == new_ingredients:
+            flash('Variation must have at least one change from parent recipe.')
+            return redirect(url_for('recipes.edit_recipe', recipe_id=parent.id))
+
         new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
         db.session.add(new_variation)
         db.session.flush()
