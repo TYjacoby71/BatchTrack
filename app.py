@@ -54,7 +54,7 @@ app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
 app.register_blueprint(settings_bp) #Register settings blueprint
 from routes.app_routes import app_routes_bp
-app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
+app.register_blueprint(app_routes_bp, url_prefix='/')  # Explicitly set prefix for root routes
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')

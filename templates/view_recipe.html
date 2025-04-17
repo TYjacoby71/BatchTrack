@@ -30,7 +30,7 @@
     <h3>Ingredients</h3>
     <ul>
         {% for assoc in recipe.recipe_ingredients %}
-        <li>{{ assoc.ingredient.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
+        <li>{{ assoc.inventory_item.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
         {% endfor %}
     </ul>
 
