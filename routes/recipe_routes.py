@@ -176,8 +176,8 @@ def plan_production(recipe_id):
 
     if request.method == 'POST':
         scale = float(request.form.get('scale', 1.0))
-        variation_id = request.form.get('variation_id')
-        selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
+        selected_id = request.form.get('variation_id') or recipe.id
+        selected_recipe = Recipe.query.get(selected_id)
 
         # Process container selections
         container_ids = request.form.getlist('container_ids[]')

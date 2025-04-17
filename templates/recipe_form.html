@@ -50,6 +50,20 @@
     </div>
 
     <div class="form-group">
+        <label for="parent_id">Base Recipe (Optional):</label>
+        <select name="parent_id" class="form-select">
+            <option value="">None (This is a base recipe)</option>
+            {% for base in all_recipes %}
+                {% if not recipe or base.id != recipe.id %}
+                <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
+                    {{ base.name }}
+                </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
         <label for="instructions">Instructions:</label>
         <textarea name="instructions" rows="4">{{ recipe.instructions if recipe else '' }}</textarea>
     </div>

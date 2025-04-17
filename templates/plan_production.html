@@ -3,13 +3,15 @@
 <h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
-    {% if variations %}
+    {% if recipe.variations %}
     <div class="form-group">
-        <label for="variationSelect">Select Variation (optional):</label>
-        <select id="variationSelect" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-            <option value="">None (Use Base Recipe)</option>
-            {% for v in variations %}
-            <option value="{{ v.id }}" {% if recipe.id == v.id %}selected{% endif %}>{{ v.name }}</option>
+        <label for="variation_id">Variation:</label>
+        <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
+            <option value="">Base Recipe ({{ recipe.name }})</option>
+            {% for variant in recipe.variations %}
+            <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>
+                {{ variant.name }}
+            </option>
             {% endfor %}
         </select>
     </div>
