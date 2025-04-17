@@ -6,7 +6,7 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///batchtrack.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/new_batchtrack.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
@@ -19,6 +19,10 @@ from models import db, User, Recipe, InventoryItem, InventoryUnit
 # Initialize db with app
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Setup logging
+from utils import setup_logging
+setup_logging(app)
 
 # Setup LoginManager
 login_manager = LoginManager(app)
@@ -39,10 +43,13 @@ from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp #Import timer blueprint
+from routes.settings_routes import settings_bp #Import settings blueprint
+
 
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
+app.register_blueprint(settings_bp) #Register settings blueprint
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')

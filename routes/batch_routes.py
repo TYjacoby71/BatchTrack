@@ -100,18 +100,17 @@ def list_batches():
 @login_required
 def view_batch(batch_identifier):
     try:
-        # Check if the identifier is a label code
-        if not batch_identifier.isdigit():
-            batch = Batch.query.filter_by(label_code=batch_identifier).first_or_404()
-        else:
+        if batch_identifier.isdigit():
             batch = Batch.query.get_or_404(int(batch_identifier))
+        else:
+            batch = Batch.query.filter_by(label_code=batch_identifier).first_or_404()
 
-        # For in-progress batches, redirect to the in-progress view
-        if batch.total_cost is None:
+        if batch.status == 'in_progress':
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
         return render_template('view_batch.html', batch=batch)
     except Exception as e:
-        flash(f'Error viewing batch: {str(e)}')
+        app.logger.error(f'Error viewing batch {batch_identifier}: {str(e)}')
+        flash('Error viewing batch. Please try again.')
         return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
