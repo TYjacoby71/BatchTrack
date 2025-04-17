@@ -43,10 +43,13 @@ from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp #Import timer blueprint
+from routes.settings_routes import settings_bp #Import settings blueprint
+
 
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
+app.register_blueprint(settings_bp) #Register settings blueprint
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')
