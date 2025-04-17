@@ -154,24 +154,24 @@ def add_variation(recipe_id):
 
         try:
             new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
-        db.session.add(new_variation)
-        db.session.flush()
+            db.session.add(new_variation)
+            db.session.flush()
 
-        ingredient_ids = request.form.getlist('ingredient_ids[]')
-        amounts = request.form.getlist('amounts[]')
-        units = request.form.getlist('units[]')
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
 
-        for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
-            if ing_id:
-                assoc = RecipeIngredient(
-                    recipe_id=new_variation.id,
-                    inventory_item_id=int(ing_id),
-                    amount=float(amount),
-                    unit=unit
-                )
-                db.session.add(assoc)
+            for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+                if ing_id:
+                    assoc = RecipeIngredient(
+                        recipe_id=new_variation.id,
+                        inventory_item_id=int(ing_id),
+                        amount=float(amount),
+                        unit=unit
+                    )
+                    db.session.add(assoc)
 
-        db.session.commit()
+            db.session.commit()
             flash("Variation created successfully.")
             return redirect(url_for('recipes.list_recipes'))
         except Exception as e:
