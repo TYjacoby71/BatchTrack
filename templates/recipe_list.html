@@ -1,45 +1,39 @@
-{% extends 'layout.html' %}
-{% block content %}
-<h2>Recipes</h2>
-<a href="{{ url_for('recipes.new_recipe') }}" class="button">New Recipe</a>
 
-<div class="recipe-list">
+{% extends "layout.html" %}
+{% block content %}
+<div class="container">
+    <h2>Recipes</h2>
+    <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary mb-3">+ New Recipe</a>
+
     {% for recipe in recipes %}
-    {% if not recipe.parent_id %}
-    <div class="recipe-card {% if recipe.parent_id %}ms-3 border-start border-primary{% endif %}">
-        <h3>
-            {{ recipe.name }}
-            {% if recipe.parent_id %}
-            <span class="badge bg-info text-dark">Variation</span>
-            {% elif not recipe.parent_id %}
-            <a href="{{ url_for('recipes.add_variation', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">+ Variation</a>
-            {% endif %}
-        </h3>
-        {% if recipe.variations %}
-        <div class="variations mt-2">
-            <strong>Variations:</strong>
-            <ul class="list-unstyled ms-3">
-                {% for var in recipe.variations %}
-                <li>↳ {{ var.name }}</li>
+        {% if not recipe.parent_id %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ recipe.name }}</h5>
+                <div>
+                    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
+                    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                    <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">Plan</a>
+                    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">Duplicate</a>
+                    <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-success btn-sm">+ Variation</a>
+                </div>
+            </div>
+            {% if recipe.variations %}
+            <ul class="list-group list-group-flush">
+                {% for variation in recipe.variations %}
+                <li class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                    <span><strong>{{ variation.name }}</strong> (variation)</span>
+                    <div>
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
+                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                        <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-sm">Plan</a>
+                    </div>
+                </li>
                 {% endfor %}
             </ul>
-        </div>
-        {% endif %}
-        <p>Label Prefix: {{ recipe.label_prefix }}</p>
-        {% if recipe.instructions %}
-        <div class="recipe-instructions">
-            <strong>Instructions:</strong>
-            <p>{{ recipe.instructions[:100] }}{% if recipe.instructions|length > 100 %}...{% endif %}</p>
-        </div>
-        {% endif %}
-        <div class="recipe-actions">
-            <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="button">Edit</a>
-            <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="button">Plan Production</a>
-            {% if recipe.qr_image %}
-            <a href="{{ url_for('static', filename=recipe.qr_image) }}" class="button" target="_blank">View QR</a>
             {% endif %}
         </div>
-    </div>
+        {% endif %}
     {% endfor %}
 </div>
 {% endblock %}
