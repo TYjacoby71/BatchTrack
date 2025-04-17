@@ -293,11 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (unitReturnContext === 'ingredient') {
           // Wait for unit modal to fully close
           setTimeout(() => {
-            const ingredientModalEl = document.getElementById('quickAddIngredientModal');
-            const ingredientModal = new bootstrap.Modal(ingredientModalEl);
+            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
             ingredientModal.show();
             unitReturnContext = 'main'; // Reset context
-          }, 250);
+          }, 300);
         }
       }
 
