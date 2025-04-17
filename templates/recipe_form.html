@@ -84,7 +84,7 @@
                     <select name="ingredient_ids[]" required>
                         <option value="">Select an ingredient</option>
                         {% for available_ing in all_ingredients %}
-                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.ingredient.id %}selected{% endif %}>
+                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>
                             {{ available_ing.name }}
                         </option>
                         {% endfor %}

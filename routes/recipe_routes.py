@@ -12,7 +12,7 @@ def list_recipes():
     recipes = Recipe.query.all()
     return render_template('recipe_list.html', recipes=recipes)
 
-@recipes_bp.route('/recipes/<int:recipe_id>')
+@recipes_bp.route('/<int:recipe_id>')
 @login_required
 def view_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
@@ -58,7 +58,7 @@ def new_recipe():
 
     return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, parent_recipes=parent_recipes)
 
-@recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
@@ -169,7 +169,7 @@ def delete_recipe(recipe_id):
 @login_required
 def plan_production(recipe_id):
     base_recipe = Recipe.query.get_or_404(recipe_id)
-    variations = base_recipe.variations.all() if base_recipe else []
+    variations = base_recipe.variations if base_recipe else []
     inventory_items = InventoryItem.query.all()
     containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
 
@@ -246,7 +246,7 @@ def clone_recipe(recipe_id):
     for assoc in original.recipe_ingredients:
         new_assoc = RecipeIngredient(
             recipe_id=cloned.id,
-            ingredient_id=assoc.ingredient_id,
+            inventory_item_id=assoc.inventory_item_id,
             amount=assoc.amount,
             unit=assoc.unit
         )

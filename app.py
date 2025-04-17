@@ -52,7 +52,7 @@ from routes.settings_routes import settings_bp #Import settings blueprint
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
-app.register_blueprint(settings_bp) #Register settings blueprint
+app.register_blueprint(settings_bp, url_prefix='/settings') #Register settings blueprint and added url_prefix
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp, url_prefix='/')  # Explicitly set prefix for root routes
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -63,9 +63,9 @@ app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
 
 app.register_blueprint(faults_bp, url_prefix='/logs')
-app.register_blueprint(product_log_bp, url_prefix='/products')
-app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
-app.register_blueprint(products_bp, url_prefix='/products') #Added registration for products blueprint
+app.register_blueprint(product_log_bp, url_prefix='/product-logs') #Corrected url_prefix for consistency
+app.register_blueprint(tag_bp, url_prefix='/tags')  # Added prefix for consistency
+app.register_blueprint(products_bp, url_prefix='/products') #Added registration for products blueprint and added url_prefix
 app.register_blueprint(timers_bp, url_prefix='/timers') #Register timer blueprint
 
 
