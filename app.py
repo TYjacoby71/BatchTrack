@@ -38,6 +38,7 @@ from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
+from routes.timer_routes import timers_bp #Import timer blueprint
 
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
@@ -55,6 +56,7 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/products')
 app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
 app.register_blueprint(products_bp, url_prefix='/products') #Added registration for products blueprint
+app.register_blueprint(timers_bp, url_prefix='/timers') #Register timer blueprint
 
 
 @login_manager.user_loader
