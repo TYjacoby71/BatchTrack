@@ -117,7 +117,7 @@ def add_variation(recipe_id):
             if ing_id:
                 assoc = RecipeIngredient(
                     recipe_id=new_variation.id,
-                    ingredient_id=int(ing_id),
+                    inventory_item_id=int(ing_id),
                     amount=float(amount),
                     unit=unit
                 )
