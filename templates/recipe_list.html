@@ -9,7 +9,14 @@
         {% if not recipe.parent_id %}
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ recipe.name }}</h5>
+                <div class="d-flex align-items-center">
+                    {% if recipe.variations %}
+                    <button class="btn btn-link p-0 me-2" onclick="toggleVariations('variations-{{recipe.id}}')" aria-expanded="false">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    {% endif %}
+                    <h5 class="mb-0">{{ recipe.name }}</h5>
+                </div>
                 <div>
                     <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
                     <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
@@ -19,7 +26,7 @@
                 </div>
             </div>
             {% if recipe.variations %}
-            <ul class="list-group list-group-flush">
+            <ul id="variations-{{recipe.id}}" class="list-group list-group-flush" style="display: none;">
                 {% for variation in recipe.variations %}
                 <li class="list-group-item d-flex justify-content-between align-items-center ps-4">
                     <span>{{ variation.name }}</span>
@@ -36,4 +43,18 @@
         {% endif %}
     {% endfor %}
 </div>
+
+<script>
+function toggleVariations(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling.querySelector('button i');
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.classList.replace('fa-chevron-right', 'fa-chevron-down');
+    } else {
+        el.style.display = 'none';
+        btn.classList.replace('fa-chevron-down', 'fa-chevron-right');
+    }
+}
+</script>
 {% endblock %}
