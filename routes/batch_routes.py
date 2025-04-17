@@ -227,7 +227,19 @@ def confirm_finish_with_timers(batch_id):
         return redirect(url_for('batches.finish_batch_force', batch_id=batch.id))
     return render_template('confirm_finish_with_timers.html', batch=batch)
 
-@batches_bp.route('/finish-force/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/force-finish/<int:batch_id>')
 @login_required
-def finish_batch_force(batch_id):
-    return finish_batch(batch_id, force=True)
+def force_finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+
+    # Optional: Warn if no active timers exist
+    if all(timer.completed for timer in batch.timers):
+        flash("All timers are already completed. Use the normal Finish Batch button.", "info")
+        return redirect(url_for('batches.view_batch_in_progress', batch_id=batch.id))
+
+    # Mark batch as finished
+    batch.status = 'finished'
+    db.session.commit()
+
+    flash("Batch marked complete. Timers ignored.", "warning")
+    return redirect(url_for('batches.view_batch', batch_id=batch.id))
