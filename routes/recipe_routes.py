@@ -130,20 +130,14 @@ def add_variation(recipe_id):
         # Compare ingredients first
         parent_ingredients = {(ri.inventory_item_id, ri.amount, ri.unit) for ri in parent.recipe_ingredients}
         new_ingredients = set()
+        
         for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
             if ing_id:
                 try:
                     new_ingredients.add((int(ing_id), float(amount), unit))
                 except (ValueError, TypeError):
-                    return render_template(
-                        "recipe_form.html",
-                        recipe=None,
-                        all_ingredients=all_ingredients,
-                        inventory_units=inventory_units,
-                        is_variation=True,
-                        parent_recipe=parent,
-                        error="Invalid ingredient data provided."
-                    )
+                    flash("Invalid ingredient data provided.")
+                    return redirect(url_for('recipes.edit_recipe', recipe_id=parent.id))
 
         # Check if any changes exist
         has_changes = (
@@ -154,9 +148,19 @@ def add_variation(recipe_id):
         )
 
         if not has_changes:
-            return render_template(
-                "recipe_form.html",
-                recipe=None,
+            flash("You must make at least one change to create a variation.")
+            return redirect(url_for('recipes.edit_recipe', recipe_id=parent.id))
+
+        # Only proceed if we have changes
+        try:
+            new_variation = Recipe(
+                name=name,
+                instructions=instructions,
+                label_prefix=label_prefix,
+                parent_id=parent.id
+            )
+            db.session.add(new_variation)
+            db.session.flush()
                 all_ingredients=all_ingredients,
                 inventory_units=inventory_units,
                 is_variation=True,
