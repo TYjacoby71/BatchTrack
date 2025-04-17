@@ -38,6 +38,7 @@ from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
+from routes.timer_routes import timers_bp #Import timer blueprint
 
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
@@ -46,7 +47,7 @@ from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(inventory_bp)  # No prefix to match /ingredients URLs
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
@@ -55,6 +56,7 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/products')
 app.register_blueprint(tag_bp)  # No prefix to match /tags URLs
 app.register_blueprint(products_bp, url_prefix='/products') #Added registration for products blueprint
+app.register_blueprint(timers_bp, url_prefix='/timers') #Register timer blueprint
 
 
 @login_manager.user_loader

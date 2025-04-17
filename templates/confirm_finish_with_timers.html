@@ -1,0 +1,12 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container">
+  <h2>Finish Batch with Active Timers?</h2>
+  <p>This batch has active timers. Are you sure you want to mark it finished anyway?</p>
+  <form method="post">
+    <button type="submit" class="btn btn-danger">Yes, Finish Anyway</button>
+    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

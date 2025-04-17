@@ -173,15 +173,23 @@ def view_batch_in_progress(batch_identifier):
 
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
-def finish_batch(batch_id):
+def finish_batch(batch_id, force=False):
     batch = Batch.query.get_or_404(batch_id)
 
     action = request.form.get('action')
+    
     # Prevent redundant status changes
     if batch.status == "completed" and action == "finish":
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
     elif batch.status == "failed" and action == "fail":
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+    # Timer check unless forced
+    if not force and action == "finish":
+        active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
+        if active_timers:
+            flash("This batch has active timers. Complete timers or confirm finish.", "warning")
+            return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
     # Handle cost + product logic (already handled earlier in your app)
     batch.notes = request.form.get("notes", "")
@@ -210,3 +218,28 @@ def cancel_batch(batch_id):
     db.session.commit()
     flash('Batch cancelled successfully.')
     return redirect(url_for('batches.list_batches'))
+
+@batches_bp.route('/finish-with-timers/<int:batch_id>', methods=['GET', 'POST'])
+@login_required
+def confirm_finish_with_timers(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    if request.method == 'POST':
+        return redirect(url_for('batches.finish_batch_force', batch_id=batch.id))
+    return render_template('confirm_finish_with_timers.html', batch=batch)
+
+@batches_bp.route('/force-finish/<int:batch_id>')
+@login_required
+def force_finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+
+    # Optional: Warn if no active timers exist
+    if all(timer.completed for timer in batch.timers):
+        flash("All timers are already completed. Use the normal Finish Batch button.", "info")
+        return redirect(url_for('batches.view_batch_in_progress', batch_id=batch.id))
+
+    # Mark batch as finished
+    batch.status = 'finished'
+    db.session.commit()
+
+    flash("Batch marked complete. Timers ignored.", "warning")
+    return redirect(url_for('batches.view_batch', batch_id=batch.id))

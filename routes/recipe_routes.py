@@ -163,7 +163,7 @@ def plan_production(recipe_id):
     variations = base_recipe.variations.all() if base_recipe else []
     inventory_items = InventoryItem.query.all()
     containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
-    
+
     recipe = base_recipe
     selected_variation_id = request.args.get('variation_id', type=int)
     if selected_variation_id:
@@ -176,15 +176,18 @@ def plan_production(recipe_id):
 
     if request.method == 'POST':
         scale = float(request.form.get('scale', 1.0))
-        variation_id = request.form.get('variation_id')
-        selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
+        selected_id = request.form.get('variation_id') or recipe.id
+        selected_recipe = Recipe.query.get(selected_id)
 
-        container_ids = request.form.getlist('containers[]')
-        selected_containers = InventoryItem.query.filter(InventoryItem.id.in_(container_ids)).all()
+        # Process container selections
+        container_ids = request.form.getlist('container_ids[]')
+        container_check, containers_ok = check_container_availability(container_ids, scale)
+        recipe_check, ingredients_ok = check_stock_for_recipe(selected_recipe, scale)
 
-        stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
+        stock_check = recipe_check + container_check
+        all_ok = ingredients_ok and containers_ok
+
         status = "ok" if all_ok else "bad"
-
         for item in stock_check:
             if item["status"] == "LOW" and status != "bad":
                 status = "low"
@@ -218,3 +221,63 @@ def quick_add_unit():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+@recipes_bp.route('/<int:recipe_id>/clone', methods=['GET'])
+@login_required
+def clone_recipe(recipe_id):
+    original = Recipe.query.get_or_404(recipe_id)
+    cloned = Recipe(
+        name=f"{original.name} Copy",
+        instructions=original.instructions,
+        label_prefix=original.label_prefix
+    )
+    db.session.add(cloned)
+    db.session.flush()  # So it gets an ID before adding ingredients
+
+    for assoc in original.recipe_ingredients:
+        new_assoc = RecipeIngredient(
+            recipe_id=cloned.id,
+            ingredient_id=assoc.ingredient_id,
+            amount=assoc.amount,
+            unit=assoc.unit
+        )
+        db.session.add(new_assoc)
+
+    db.session.commit()
+    flash("Recipe duplicated.")
+    return redirect(url_for('recipes.edit_recipe', recipe_id=cloned.id))
+
+@recipes_bp.route('/<int:recipe_id>/variation', methods=['GET'])
+@login_required
+def create_variation(recipe_id):
+    parent = Recipe.query.get_or_404(recipe_id)
+    variation = Recipe(
+        name=f"{parent.name} Variation",
+        instructions=parent.instructions,
+        label_prefix=parent.label_prefix,
+        parent_id=parent.id
+    )
+    db.session.add(variation)
+    db.session.flush()
+
+    for assoc in parent.recipe_ingredients:
+        new_assoc = RecipeIngredient(
+            recipe_id=variation.id,
+            ingredient_id=assoc.ingredient_id,
+            amount=assoc.amount,
+            unit=assoc.unit
+        )
+        db.session.add(new_assoc)
+
+    db.session.commit()
+    flash("Variation created.")
+    return redirect(url_for('recipes.edit_recipe', recipe_id=variation.id))
+
+@recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
+@login_required
+def lock_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe.is_locked = True
+    db.session.commit()
+    flash('Recipe locked.')
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))

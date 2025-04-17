@@ -112,6 +112,14 @@
     </div>
 </form>
 
+{% if batch.timers|selectattr('completed', 'equalto', False)|list %}
+  <div class="alert alert-warning mt-3">
+    <strong>Heads up!</strong> This batch still has active timers. You must complete them first.
+    <br>
+    Or, <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger mt-2">Force Finish Anyway</a>
+  </div>
+{% endif %}
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />

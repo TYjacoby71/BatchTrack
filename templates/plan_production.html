@@ -3,34 +3,68 @@
 <h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
-    {% if variations %}
+    {% if recipe.variations %}
     <div class="form-group">
-        <label for="variationSelect">Select Variation (optional):</label>
-        <select id="variationSelect" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-            <option value="">None (Use Base Recipe)</option>
-            {% for v in variations %}
-            <option value="{{ v.id }}" {% if recipe.id == v.id %}selected{% endif %}>{{ v.name }}</option>
+        <label for="variation_id">Variation:</label>
+        <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
+            <option value="">Base Recipe ({{ recipe.name }})</option>
+            {% for variant in recipe.variations %}
+            <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>
+                {{ variant.name }}
+            </option>
             {% endfor %}
         </select>
     </div>
     {% endif %}
 
+    {% if containers %}
     <div class="form-group mt-3">
-        <label for="containers">Select Containers:</label>
-        <select name="containers[]" id="containers" class="form-select" multiple>
-            {% for c in containers %}
-            <option value="{{ c.id }}">{{ c.name }} ({{ c.quantity }} available)</option>
+        <label>Select Containers:</label>
+        <div id="containerSelection">
+            {% for container in containers %}
+            <div class="d-flex align-items-center mb-2">
+                <label class="me-2 flex-grow-1">{{ container.name }} ({{ container.quantity }} available)</label>
+                <input type="number" 
+                       name="container_{{ container.id }}" 
+                       class="form-control form-control-sm w-auto" 
+                       placeholder="Qty" 
+                       min="0"
+                       max="{{ container.quantity }}"
+                       value="{{ request.form.get('container_' ~ container.id, '0') }}">
+            </div>
             {% endfor %}
-        </select>
-        <small class="text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+        </div>
     </div>
+    {% endif %}
 
     <div class="form-group mt-3">
         <label for="scale">Batch Scale:</label>
         <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
     </div>
 
-    <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+    <div class="form-group mt-3">
+        <label for="containers">Select Containers (optional):</label>
+        <select name="containers[]" id="containers" class="form-select" multiple>
+            {% for container in containers %}
+            <option value="{{ container.id }}">{{ container.name }} ({{ container.unit }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="container-selection mb-3">
+  <h3>Select Containers</h3>
+  <div class="form-group">
+    <label for="containers">Containers for this batch:</label>
+    <select name="container_ids[]" id="containers" class="form-select" multiple>
+      {% for container in containers %}
+      <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }})</option>
+      {% endfor %}
+    </select>
+    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+  </div>
+</div>
+
+<button type="submit" class="btn btn-primary mt-3">Check Stock</button>
 
     {% if stock_check %}
     <div class="stock-check-results mt-4">
@@ -38,18 +72,22 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Ingredient</th>
+                    <th>Type</th>
+                    <th>Item</th>
                     <th>Required</th>
                     <th>Available</th>
+                    <th>Unit</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in stock_check %}
-                <tr>
+                <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
+                    <td>{{ item.type or 'ingredient' }}</td>
                     <td>{{ item.name }}</td>
-                    <td>{{ item.needed }} {{ item.unit }}</td>
-                    <td>{{ item.available }} {{ item.unit }}</td>
+                    <td>{{ item.needed }}</td>
+                    <td>{{ item.available }}</td>
+                    <td>{{ item.unit }}</td>
                     <td>
                         {% if item.status == 'OK' %}
                         <span class="badge bg-success">OK</span>
