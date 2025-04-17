@@ -1,32 +1,67 @@
+
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Inventory</h2>
+<h2>Inventory Management</h2>
 
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Quantity</th>
-      <th>Unit</th>
-      <th>Cost/Unit</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in items %}
-    <tr>
-      <td>{{ item.name }}</td>
-      <td>{{ item.quantity }}</td>
-      <td>{{ item.unit }}</td>
-      <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
-      <td>
-        <a href="{{ url_for('inventory.update_inventory', id=item.id) }}">Update</a> |
-        <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}">Delete</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="inventory-sections">
+  <div class="section">
+    <h3>Ingredients</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Quantity</th>
+          <th>Unit</th>
+          <th>Cost/Unit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items if item.type == 'ingredient' %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit }}</td>
+          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+          <td>
+            <a href="{{ url_for('inventory.update_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Containers</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Quantity</th>
+          <th>Unit</th>
+          <th>Cost/Unit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items if item.type == 'container' %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit }}</td>
+          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+          <td>
+            <a href="{{ url_for('inventory.update_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <h3>Add New Item</h3>
 <form method="post" action="{{ url_for('inventory.add_inventory') }}">
@@ -34,6 +69,13 @@
     <div class="col">
       <label class="form-label">Name</label>
       <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="col">
+      <label class="form-label">Type</label>
+      <select name="type" class="form-select" required>
+        <option value="ingredient">Ingredient</option>
+        <option value="container">Container</option>
+      </select>
     </div>
     <div class="col">
       <label class="form-label">Quantity</label>
@@ -46,6 +88,10 @@
         <option value="{{ unit.name }}">{{ unit.name }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="col">
+      <label class="form-label">Cost/Unit</label>
+      <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
     </div>
     <div class="col">
       <button type="submit" class="btn btn-primary">Add Item</button>
