@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
-from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient, InventoryItem
+from models import db, Recipe, InventoryUnit, RecipeIngredient, InventoryItem
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
