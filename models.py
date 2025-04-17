@@ -1,4 +1,3 @@
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, date
@@ -10,7 +9,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(32), default='user')
-    
+
     def check_password(self, password):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
@@ -18,10 +17,10 @@ class User(UserMixin, db.Model):
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
     amount = db.Column(db.Float)
     unit = db.Column(db.String(32))
-    ingredient = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic'))
+    inventory_item = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic'))
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)

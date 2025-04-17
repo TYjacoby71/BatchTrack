@@ -56,7 +56,7 @@ def new_recipe():
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = InventoryUnit.query.order_by(InventoryUnit.name).all()
 
     if request.method == 'POST':
