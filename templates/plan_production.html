@@ -15,15 +15,25 @@
     </div>
     {% endif %}
 
+    {% if containers %}
     <div class="form-group mt-3">
-        <label for="containers">Select Containers:</label>
-        <select name="containers[]" id="containers" class="form-select" multiple>
-            {% for c in containers %}
-            <option value="{{ c.id }}">{{ c.name }} ({{ c.quantity }} available)</option>
+        <label>Select Containers:</label>
+        <div id="containerSelection">
+            {% for container in containers %}
+            <div class="d-flex align-items-center mb-2">
+                <label class="me-2 flex-grow-1">{{ container.name }} ({{ container.quantity }} available)</label>
+                <input type="number" 
+                       name="container_{{ container.id }}" 
+                       class="form-control form-control-sm w-auto" 
+                       placeholder="Qty" 
+                       min="0"
+                       max="{{ container.quantity }}"
+                       value="{{ request.form.get('container_' ~ container.id, '0') }}">
+            </div>
             {% endfor %}
-        </select>
-        <small class="text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+        </div>
     </div>
+    {% endif %}
 
     <div class="form-group mt-3">
         <label for="scale">Batch Scale:</label>

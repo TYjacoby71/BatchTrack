@@ -179,12 +179,39 @@ def plan_production(recipe_id):
         variation_id = request.form.get('variation_id')
         selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
 
-        container_ids = request.form.getlist('containers[]')
-        selected_containers = InventoryItem.query.filter(InventoryItem.id.in_(container_ids)).all()
+        # Process container selections
+        container_quantities = {}
+        for key, value in request.form.items():
+            if key.startswith('container_') and value:
+                container_id = int(key.split('_')[1])
+                try:
+                    quantity = int(value)
+                    if quantity > 0:
+                        container_quantities[container_id] = quantity
+                except ValueError:
+                    continue
+
+        selected_containers = InventoryItem.query.filter(
+            InventoryItem.id.in_(container_quantities.keys()),
+            InventoryItem.type == 'container'
+        ).all()
 
         stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-        status = "ok" if all_ok else "bad"
+        
+        # Add container requirements to stock check
+        for container in selected_containers:
+            needed_quantity = container_quantities.get(container.id, 0)
+            stock_check.append({
+                'name': container.name,
+                'needed': needed_quantity,
+                'available': container.quantity,
+                'unit': 'units',
+                'status': 'OK' if container.quantity >= needed_quantity else 'NEEDED'
+            })
+            if container.quantity < needed_quantity:
+                all_ok = False
 
+        status = "ok" if all_ok else "bad"
         for item in stock_check:
             if item["status"] == "LOW" and status != "bad":
                 status = "low"
