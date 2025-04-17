@@ -20,6 +20,10 @@ from models import db, User, Recipe, InventoryItem, InventoryUnit
 db.init_app(app)
 migrate = Migrate(app, db)
 
+# Setup logging
+from utils import setup_logging
+setup_logging(app)
+
 # Setup LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
