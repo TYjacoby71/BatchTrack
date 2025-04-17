@@ -10,18 +10,20 @@
       <thead>
         <tr>
           <th>Name</th>
-          <th>Quantity</th>
           <th>Unit</th>
+          <th>Quantity</th>
+          <th>Type</th>
           <th>Cost/Unit</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for item in items if item.type == 'ingredient' %}
+        {% for item in items %}
         <tr>
           <td>{{ item.name }}</td>
-          <td>{{ item.quantity }}</td>
           <td>{{ item.unit }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.type|capitalize }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.update_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
