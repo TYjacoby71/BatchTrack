@@ -47,7 +47,7 @@ from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)  # No prefix since it handles root route
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(inventory_bp)  # No prefix to match /ingredients URLs
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
