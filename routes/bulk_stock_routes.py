@@ -43,7 +43,7 @@ def bulk_stock_check():
                     name = row['name']
                     needed = row['needed']
                     from_unit = row.get('unit') or 'ml'
-                    ingredient = Ingredient.query.filter_by(name=name).first()
+                    ingredient = InventoryItem.query.filter_by(name=name).first()
 
                     if not ingredient:
                         continue
