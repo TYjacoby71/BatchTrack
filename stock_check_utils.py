@@ -7,7 +7,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
     all_ok = True
 
     for assoc in recipe.recipe_ingredients:
-        ing = assoc.ingredient
+        ing = assoc.inventory_item
         if not ing:
             continue
         needed = assoc.amount * scale
