@@ -144,8 +144,15 @@ def add_variation(recipe_id):
                 new_ingredients.add((int(ing_id), float(amount), unit))
         
         if not has_changes and parent_ingredients == new_ingredients:
-            flash('Variation must have at least one change from parent recipe.')
-            return redirect(url_for('recipes.edit_recipe', recipe_id=parent.id))
+            return render_template(
+                "recipe_form.html",
+                recipe=None,
+                all_ingredients=all_ingredients,
+                inventory_units=inventory_units,
+                is_variation=True,
+                parent_recipe=parent,
+                error="Please make at least one change to create a variation, or cancel."
+            )
 
         new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
         db.session.add(new_variation)
