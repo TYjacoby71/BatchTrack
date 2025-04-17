@@ -18,7 +18,7 @@ def view_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('view_recipe.html', recipe=recipe)
 
-@recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
+@recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
@@ -156,7 +156,7 @@ def add_variation(recipe_id):
     )
 
 
-@recipes_bp.route('/recipes/<int:recipe_id>/delete')
+@recipes_bp.route('/<int:recipe_id>/delete')
 @login_required
 def delete_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
