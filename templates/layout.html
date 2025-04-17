@@ -19,10 +19,6 @@
             <a class="navbar-brand" href="{{ url_for('dashboard.dashboard') }}">BatchTrack</a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
-                <a class="nav-link" href="{{ url_for('recipes.list_recipes') }}">Recipes</a>
-                <a class="nav-link" href="{{ url_for('inventory.list_inventory') }}">Inventory</a>
-                <a class="nav-link" href="{{ url_for('product.list_products') }}">Products</a>
-                <a class="nav-link" href="{{ url_for('batches.list_batches') }}">Batches</a>
             </div>
             <div class="dropdown">
                 <button class="btn btn-light dropdown-toggle" type="button" id="directoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -30,8 +26,8 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Settings</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.tag_manager') }}">Tag Manager</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('fault_log.fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
