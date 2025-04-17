@@ -11,7 +11,7 @@ product_bp = Blueprint('product', __name__)
 @product_bp.route('/products')
 @login_required
 def list_products():
-    products = Product.query.order_by(Product.expiration_date).all()
+    products = Product.query.order_by(Product.created_at).all()
     return render_template('product_list.html', products=products)
 
 @product_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
