@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Product, ProductEvent
+from models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
