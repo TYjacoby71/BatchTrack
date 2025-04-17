@@ -23,6 +23,7 @@ class RecipeIngredient(db.Model):
     inventory_item = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic'))
 
 class Recipe(db.Model):
+    __tablename__ = 'recipe'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)
