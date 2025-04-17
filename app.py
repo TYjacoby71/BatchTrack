@@ -6,12 +6,13 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/new_batchtrack.db'
+# Ensure directories exist
+os.makedirs('instance', exist_ok=True)
+os.makedirs('static/product_images', exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'new_batchtrack.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
-
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Import db instance and models
 from models import db, User, Recipe, InventoryItem, InventoryUnit
