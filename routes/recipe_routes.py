@@ -269,7 +269,7 @@ def create_variation(recipe_id):
     for assoc in parent.recipe_ingredients:
         new_assoc = RecipeIngredient(
             recipe_id=variation.id,
-            ingredient_id=assoc.ingredient_id,
+            inventory_item_id=assoc.inventory_item_id,
             amount=assoc.amount,
             unit=assoc.unit
         )
