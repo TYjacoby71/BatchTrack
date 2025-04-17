@@ -19,34 +19,8 @@
 {% endif %}
 
     <div class="form-group">
-        <label for="parent_id">Base Recipe (optional):</label>
-        <select name="parent_id" class="form-select">
-            <option value="">None (This is a base recipe)</option>
-            {% for base in parent_recipes %}
-            <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
-                {{ base.name }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="form-group">
         <label for="name">Recipe Name:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
-    </div>
-
-    <div class="form-group">
-        <label for="parent_id">Base Recipe (Optional):</label>
-        <select name="parent_id" class="form-select">
-            <option value="">None (This is a base recipe)</option>
-            {% for base in all_recipes %}
-                {% if not recipe or base.id != recipe.id %}
-                <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
-                    {{ base.name }}
-                </option>
-                {% endif %}
-            {% endfor %}
-        </select>
     </div>
 
     <div class="form-group">
