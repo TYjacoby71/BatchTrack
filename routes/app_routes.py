@@ -4,11 +4,11 @@ from models import Recipe, InventoryItem, Batch
 from stock_check_utils import check_stock_for_recipe
 from flask_login import login_required, current_user
 
-app_routes_bp = Blueprint('home', __name__)
+app_routes_bp = Blueprint('dashboard', __name__)
 
 @app_routes_bp.route("/", methods=["GET", "POST"])
 @login_required
-def homepage():
+def dashboard():
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').order_by(Batch.timestamp.desc()).first()
     stock_check = None

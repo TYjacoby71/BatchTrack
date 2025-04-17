@@ -1,4 +1,5 @@
-2025-04-17 07:24:10,138 ERROR: Exception on /login [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-17 07:14:42,447 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-17 07:19:58,806 ERROR: Exception on /login [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
     self._dbapi_connection = engine.raw_connection()
@@ -57,7 +58,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 85, in login
+  File "/home/runner/workspace/app.py", line 82, in login
     u = User.query.filter_by(username=username).first()
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2759, in first
@@ -131,4 +132,7 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unable to open database file
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-04-17 07:38:38,167 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-17 07:21:01,163 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-17 07:21:30,063 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-17 07:23:01,682 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-17 07:23:35,275 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
