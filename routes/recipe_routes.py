@@ -97,7 +97,7 @@ def edit_recipe(recipe_id):
 @login_required
 def add_variation(recipe_id):
     parent = Recipe.query.get_or_404(recipe_id)
-    all_ingredients = Ingredient.query.all()
+    all_ingredients = InventoryItem.query.all()
     inventory_units = InventoryUnit.query.all()
 
     if request.method == 'POST':
