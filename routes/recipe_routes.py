@@ -161,12 +161,6 @@ def add_variation(recipe_id):
             )
             db.session.add(new_variation)
             db.session.flush()
-                error="Please make at least one change to create a variation, or cancel.",
-            all_ingredients=all_ingredients,
-            inventory_units=inventory_units,
-            is_variation=True,
-            parent_recipe=parent
-        )
 
         # Only create new variation if changes exist
         new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
