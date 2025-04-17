@@ -15,7 +15,7 @@ def list_recipes():
 @recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
-    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = InventoryUnit.query.all()
     parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
@@ -37,7 +37,7 @@ def new_recipe():
                 if ing_id:
                     assoc = RecipeIngredient(
                         recipe_id=recipe.id,
-                        ingredient_id=ing_id,
+                        inventory_item_id=ing_id,
                         amount=float(amount),
                         unit=unit
                     )
