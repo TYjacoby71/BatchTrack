@@ -163,7 +163,7 @@ def plan_production(recipe_id):
     variations = base_recipe.variations.all() if base_recipe else []
     inventory_items = InventoryItem.query.all()
     containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
-    
+
     recipe = base_recipe
     selected_variation_id = request.args.get('variation_id', type=int)
     if selected_variation_id:
@@ -180,36 +180,12 @@ def plan_production(recipe_id):
         selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
 
         # Process container selections
-        container_quantities = {}
-        for key, value in request.form.items():
-            if key.startswith('container_') and value:
-                container_id = int(key.split('_')[1])
-                try:
-                    quantity = int(value)
-                    if quantity > 0:
-                        container_quantities[container_id] = quantity
-                except ValueError:
-                    continue
+        container_ids = request.form.getlist('container_ids[]')
+        container_check, containers_ok = check_container_availability(container_ids, scale)
+        recipe_check, ingredients_ok = check_stock_for_recipe(selected_recipe, scale)
 
-        selected_containers = InventoryItem.query.filter(
-            InventoryItem.id.in_(container_quantities.keys()),
-            InventoryItem.type == 'container'
-        ).all()
-
-        stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-        
-        # Add container requirements to stock check
-        for container in selected_containers:
-            needed_quantity = container_quantities.get(container.id, 0)
-            stock_check.append({
-                'name': container.name,
-                'needed': needed_quantity,
-                'available': container.quantity,
-                'unit': 'units',
-                'status': 'OK' if container.quantity >= needed_quantity else 'NEEDED'
-            })
-            if container.quantity < needed_quantity:
-                all_ok = False
+        stock_check = recipe_check + container_check
+        all_ok = ingredients_ok and containers_ok
 
         status = "ok" if all_ok else "bad"
         for item in stock_check:

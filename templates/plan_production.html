@@ -61,18 +61,22 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Ingredient</th>
+                    <th>Type</th>
+                    <th>Item</th>
                     <th>Required</th>
                     <th>Available</th>
+                    <th>Unit</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in stock_check %}
-                <tr>
+                <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
+                    <td>{{ item.type or 'ingredient' }}</td>
                     <td>{{ item.name }}</td>
-                    <td>{{ item.needed }} {{ item.unit }}</td>
-                    <td>{{ item.available }} {{ item.unit }}</td>
+                    <td>{{ item.needed }}</td>
+                    <td>{{ item.available }}</td>
+                    <td>{{ item.unit }}</td>
                     <td>
                         {% if item.status == 'OK' %}
                         <span class="badge bg-success">OK</span>
