@@ -3,6 +3,27 @@
 {% block content %}
 <h2>{{ recipe.name }}</h2>
 
+{% if recipe.is_locked %}
+  <span class="badge bg-secondary">Locked</span>
+{% endif %}
+{% if recipe.parent_id %}
+  <p class="text-muted">Variation of: 
+    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">
+      {{ recipe.parent.name }}
+    </a>
+  </p>
+{% endif %}
+
+<div class="action-buttons mb-3">
+  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
+  <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
+  {% if not recipe.is_locked %}
+    <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+      <button type="submit" class="btn btn-sm btn-warning">Lock Recipe</button>
+    </form>
+  {% endif %}
+</div>
+
 <div class="recipe-details">
     <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
     
