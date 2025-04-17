@@ -4,11 +4,15 @@
 
 <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 
-<div class="mb-3">
+<div class="mb-3 d-flex flex-wrap gap-2">
   {% if active_batch %}
-    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="button">Continue Batch</a>
+    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
   {% endif %}
-  <button onclick="openPlanBatchModal()" class="button">Start Batch</button>
+  <button onclick="openPlanBatchModal()" class="btn btn-primary">Start Batch</button>
+  <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-primary">Recipes</a>
+  <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">Inventory</a>
+  <a href="{{ url_for('product.list_products') }}" class="btn btn-outline-primary">Products</a>
+  <a href="{{ url_for('batches.list_batches') }}" class="btn btn-outline-primary">Batches</a>
 </div>
 
 <!-- Start Batch Modal -->
