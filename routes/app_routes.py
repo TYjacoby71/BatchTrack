@@ -31,7 +31,7 @@ def dashboard():
         except ValueError as e:
             flash("Invalid scale value")
 
-    return render_template("homepage.html", 
+    return render_template("dashboard.html", 
                          recipes=recipes,
                          stock_check=stock_check,
                          selected_recipe=selected_recipe,
