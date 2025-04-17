@@ -95,9 +95,22 @@ def edit_recipe(recipe_id):
             db.session.rollback()
             flash(f'Error updating recipe: {str(e)}')
 
-    # Read session variables for preselection logic
     preselect_ingredient_id = session.pop('last_added_ingredient_id', None)
     add_ingredient_line = session.pop('add_ingredient_line', False)
+
+    base_recipes = Recipe.query.filter_by(parent_id=None).all()
+    inventory_units = InventoryUnit.query.all()
+    parent_recipes = Recipe.query.filter_by(parent_id=None).all()
+
+    return render_template('recipe_form.html',
+        recipe=recipe,
+        all_ingredients=all_ingredients,
+        inventory_units=inventory_units,
+        preselect_ingredient_id=preselect_ingredient_id,
+        add_ingredient_line=add_ingredient_line,
+        parent_recipes=parent_recipes,
+        all_base_recipes=base_recipes
+    )
 
 @recipes_bp.route('/<int:recipe_id>/add-variation', methods=['GET', 'POST'])
 @login_required
@@ -142,16 +155,6 @@ def add_variation(recipe_id):
         parent_recipe=parent
     )
 
-
-    base_recipes = Recipe.query.filter_by(parent_id=None).all()
-    return render_template('recipe_form.html',
-        recipe=recipe,
-        all_ingredients=all_ingredients,
-        inventory_units=inventory_units,
-        preselect_ingredient_id=preselect_ingredient_id,
-        add_ingredient_line=add_ingredient_line,
-        all_base_recipes=base_recipes
-    )
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
 @login_required
