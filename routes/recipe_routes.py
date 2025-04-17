@@ -127,21 +127,33 @@ def add_variation(recipe_id):
         amounts = request.form.getlist('amounts[]')
         units = request.form.getlist('units[]')
 
-        # Check if any basic details have changed
-        has_changes = (
-            name != parent.name or
-            instructions != parent.instructions or
-            label_prefix != parent.label_prefix
-        )
-
-        # Compare ingredients with parent
+        # Compare ingredients first
         parent_ingredients = {(ri.inventory_item_id, ri.amount, ri.unit) for ri in parent.recipe_ingredients}
         new_ingredients = set()
         for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
             if ing_id:
-                new_ingredients.add((int(ing_id), float(amount), unit))
+                try:
+                    new_ingredients.add((int(ing_id), float(amount), unit))
+                except (ValueError, TypeError):
+                    return render_template(
+                        "recipe_form.html",
+                        recipe=None,
+                        all_ingredients=all_ingredients,
+                        inventory_units=inventory_units,
+                        is_variation=True,
+                        parent_recipe=parent,
+                        error="Invalid ingredient data provided."
+                    )
 
-        if not has_changes and parent_ingredients == new_ingredients:
+        # Check if any changes exist
+        has_changes = (
+            name != parent.name or
+            instructions != parent.instructions or
+            label_prefix != parent.label_prefix or
+            parent_ingredients != new_ingredients
+        )
+
+        if not has_changes:
             return render_template(
                 "recipe_form.html",
                 recipe=None,
@@ -152,8 +164,9 @@ def add_variation(recipe_id):
                 error="Please make at least one change to create a variation, or cancel."
             )
 
+        # Only create new variation if changes exist
+        new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
         try:
-            new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
             db.session.add(new_variation)
             db.session.flush()
 
