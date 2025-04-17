@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
+from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem
 from datetime import datetime
 from sqlalchemy import extract
 import uuid, os
@@ -38,7 +38,7 @@ def start_batch():
     ingredient_errors = []
 
     for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.ingredient
+        ingredient = assoc.inventory_item
         if not ingredient:
             continue
 
@@ -121,7 +121,7 @@ def update_batch_notes(batch_id):
     batch.notes = request.form.get('notes', '')
     db.session.commit()
     flash('Batch notes updated.')
-    
+
     # Redirect based on batch status
     if batch.status == 'in_progress':
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
@@ -144,7 +144,7 @@ def view_batch_in_progress(batch_identifier):
     ingredient_costs = []
 
     for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.ingredient
+        ingredient = assoc.inventory_item
         used_amount = assoc.amount * batch.scale
         cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
         line_cost = round(used_amount * cost_per_unit, 2)

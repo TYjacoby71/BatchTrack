@@ -1,12 +1,48 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
+<h2>
+    {% if recipe %}Edit{% else %}
+        {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+    {% endif %}
+</h2>
+
+{% if is_variation %}
+<div class="alert alert-info mb-3">
+    <strong>New Variation:</strong> This variation is based on <strong>{{ parent_recipe.name }}</strong>.
+</div>
+{% endif %}
 
 {% if recipe %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
 {% endif %}
+
+    <div class="form-group">
+        <label for="parent_id">Base Recipe (optional):</label>
+        <select name="parent_id" class="form-select">
+            <option value="">None (This is a base recipe)</option>
+            {% for base in parent_recipes %}
+            <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
+                {{ base.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if not recipe or not recipe.parent_id %}
+    <div class="form-group mb-3">
+        <label for="parent_id">Create as Variation of Existing Recipe:</label>
+        <select name="parent_id" class="form-select">
+            <option value="">None</option>
+            {% for base in all_base_recipes %}
+            <option value="{{ base.id }}" {% if recipe and recipe.parent_id == base.id %}selected{% endif %}>
+                {{ base.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
 
     <div class="form-group">
         <label for="name">Recipe Name:</label>
@@ -54,9 +90,9 @@
         </div>
     </div>
 
-    <div class="form-group mt-3">
-        <button type="submit" class="btn btn-primary">Save Recipe</button>
+    <div class="form-group mt-3 d-flex justify-content-between">
         <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
 
@@ -301,11 +337,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => {
       console.error('Error:', error);
       alert('Failed to add ingredient. Please try again.');
-      
+
       // Clean up modal state after error
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-      
+
       // Re-init modal for clean state
       const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
       ingredientModal.hide();
@@ -313,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .finally(() => {
       button.disabled = false;
       button.innerText = 'Add Ingredient';
-      
+
       // Additional cleanup in finally block
       document.body.classList.remove('modal-open');
       document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());

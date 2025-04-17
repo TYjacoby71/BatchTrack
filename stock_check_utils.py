@@ -1,4 +1,5 @@
-from models import Ingredient, RecipeIngredient
+
+from models import InventoryItem, RecipeIngredient
 from services.unit_conversion import UnitConversionService
 
 def check_stock_for_recipe(recipe, scale=1.0):
@@ -6,7 +7,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
     all_ok = True
 
     for assoc in recipe.recipe_ingredients:
-        ing = assoc.ingredient
+        ing = assoc.inventory_item
         if not ing:
             continue
         needed = assoc.amount * scale

@@ -1,31 +1,81 @@
-
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Plan Production for {{ recipe.name }}</h2>
+<h2>Plan Production: {{ base_recipe.name }}</h2>
 
-<form id="startBatchForm">
-    <button type="submit" class="btn btn-success">Start Batch</button>
+<form method="post" class="production-plan-form">
+    {% if variations %}
+    <div class="form-group">
+        <label for="variationSelect">Select Variation (optional):</label>
+        <select id="variationSelect" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
+            <option value="">None (Use Base Recipe)</option>
+            {% for v in variations %}
+            <option value="{{ v.id }}" {% if recipe.id == v.id %}selected{% endif %}>{{ v.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="form-group mt-3">
+        <label for="containers">Select Containers:</label>
+        <select name="containers[]" id="containers" class="form-select" multiple>
+            {% for c in containers %}
+            <option value="{{ c.id }}">{{ c.name }} ({{ c.quantity }} available)</option>
+            {% endfor %}
+        </select>
+        <small class="text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+    </div>
+
+    <div class="form-group mt-3">
+        <label for="scale">Batch Scale:</label>
+        <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+
+    {% if stock_check %}
+    <div class="stock-check-results mt-4">
+        <h3>Stock Check Results</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Required</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in stock_check %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.needed }} {{ item.unit }}</td>
+                    <td>{{ item.available }} {{ item.unit }}</td>
+                    <td>
+                        {% if item.status == 'OK' %}
+                        <span class="badge bg-success">OK</span>
+                        {% elif item.status == 'LOW' %}
+                        <span class="badge bg-warning">LOW</span>
+                        {% else %}
+                        <span class="badge bg-danger">NEEDED</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if all_ok %}
+        <form action="{{ url_for('batches.start_batch') }}" method="post">
+            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+            <input type="hidden" name="scale" value="{{ scale }}">
+            <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
+            {% for container_id in request.form.getlist('containers[]') %}
+            <input type="hidden" name="containers[]" value="{{ container_id }}">
+            {% endfor %}
+            <button type="submit" class="btn btn-success">Start Batch</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 </form>
-
-<script>
-    document.getElementById('startBatchForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch('{{ url_for("batches.start_batch") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                recipe_id: {{ recipe.id }},
-                scale: {{ scale }}
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert('Error: ' + data.error);
-            } else {
-                window.location.href = '{{ url_for("batches.view_batch_in_progress", batch_identifier="") }}' + data.batch_id;
-            }
-        });
-    });
-</script>
 {% endblock %}

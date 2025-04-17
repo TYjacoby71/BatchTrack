@@ -30,7 +30,7 @@ def upgrade():
     sa.Column('ingredient_id', sa.Integer(), nullable=True),
     sa.Column('amount', sa.Float(), nullable=True),
     sa.Column('unit', sa.String(length=32), nullable=True),
-    sa.ForeignKeyConstraint(['ingredient_id'], ['ingredient.id'], ),
+    sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], )
     )
     # ### end Alembic commands ###

@@ -1,39 +1,78 @@
 
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Inventory</h2>
+<h2>Inventory Management</h2>
 
-<table>
-<tr>
-    <th>Name</th>
-    <th>Quantity</th>
-    <th>Unit</th>
-    <th>Cost/Unit</th>
-    <th>Actions</th>
-</tr>
-{% for ing in ingredients %}
-<tr>
-    <td>{{ ing.name }}</td>
-    <td>{{ ing.quantity }}</td>
-    <td>{{ ing.unit }}</td>
-    <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>
-    <td>
-        <a href="{{ url_for('inventory.update_inventory', id=ing.id) }}">Update</a> |
-        <a href="{{ url_for('inventory.delete_inventory', id=ing.id) }}">Delete</a>
-    </td>
-</tr>
-{% endfor %}
+<div class="mb-3">
+  <form method="get" class="d-inline-block">
+    <label for="type">Category:</label>
+    <select name="type" onchange="this.form.submit()" class="form-select d-inline-block w-auto">
+      <option value="">All Items</option>
+      <option value="ingredient" {% if request.args.get('type') == 'ingredient' %}selected{% endif %}>Ingredients</option>
+      <option value="container" {% if request.args.get('type') == 'container' %}selected{% endif %}>Containers</option>
+      <option value="packaging" {% if request.args.get('type') == 'packaging' %}selected{% endif %}>Packaging</option>
+    </select>
+  </form>
+</div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Category</th>
+      <th>Quantity</th>
+      <th>Unit</th>
+      <th>Cost/Unit</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td>{{ item.type|title }}</td>
+      <td>{{ item.quantity }}</td>
+      <td>{{ item.unit }}</td>
+      <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+      <td>
+        <a href="{{ url_for('inventory.update_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+        <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
 
 <h3>Add New Inventory Item</h3>
-<form method="post" action="{{ url_for('inventory.add_inventory') }}">
-    <input type="text" name="name" placeholder="Name" required>
-    <input type="number" step="0.01" name="quantity" placeholder="Quantity" required>
-    <select name="unit">
+<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col">
+      <label class="form-label">Name</label>
+      <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="col">
+      <label class="form-label">Category</label>
+      <select name="type" class="form-select" required>
+        <option value="ingredient">Ingredient</option>
+        <option value="container">Container</option>
+        <option value="packaging">Packaging</option>
+      </select>
+    </div>
+    <div class="col">
+      <label class="form-label">Quantity</label>
+      <input type="number" step="0.01" name="quantity" class="form-control" required>
+    </div>
+    <div class="col">
+      <label class="form-label">Unit</label>
+      <select name="unit" class="form-select" required>
         {% for unit in units %}
         <option value="{{ unit.name }}">{{ unit.name }}</option>
         {% endfor %}
-    </select>
-    <button type="submit">Add Item</button>
+      </select>
+    </div>
+    <div class="col">
+      <button type="submit" class="btn btn-primary">Add Item</button>
+    </div>
+  </div>
 </form>
 {% endblock %}

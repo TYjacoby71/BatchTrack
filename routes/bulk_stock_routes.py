@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
-from models import db, Recipe, Ingredient
+from models import db, Recipe, InventoryItem
 from stock_check_utils import check_stock_for_recipe
 from unit_conversion_utils import convert_units
 
@@ -43,7 +43,7 @@ def bulk_stock_check():
                     name = row['name']
                     needed = row['needed']
                     from_unit = row.get('unit') or 'ml'
-                    ingredient = Ingredient.query.filter_by(name=name).first()
+                    ingredient = InventoryItem.query.filter_by(name=name).first()
 
                     if not ingredient:
                         continue

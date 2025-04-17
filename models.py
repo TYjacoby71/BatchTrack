@@ -1,4 +1,3 @@
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, date
@@ -10,7 +9,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(32), default='user')
-    
+
     def check_password(self, password):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
@@ -18,17 +17,20 @@ class User(UserMixin, db.Model):
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
     amount = db.Column(db.Float)
     unit = db.Column(db.String(32))
-    ingredient = db.relationship('Ingredient', backref=db.backref('recipe_ingredients', lazy='dynamic'))
+    inventory_item = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic'))
 
 class Recipe(db.Model):
+    __tablename__ = 'recipe'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
     qr_image = db.Column(db.String(128))
+    parent_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
 class Batch(db.Model):
@@ -67,12 +69,17 @@ class ProductEvent(db.Model):
     note = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Ingredient(db.Model):
+class InventoryItem(db.Model):
+    __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    quantity = db.Column(db.Float)
+    quantity = db.Column(db.Float, default=0)
     unit = db.Column(db.String(32))
+    type = db.Column(db.String(32), default="ingredient")
     cost_per_unit = db.Column(db.Float, default=0.0)
+    intermediate = db.Column(db.Boolean, default=False)
+    expiration_date = db.Column(db.Date, nullable=True)
+    perishable = db.Column(db.Boolean, default=False)
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)

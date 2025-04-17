@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
-from models import db, Recipe, Ingredient, InventoryUnit, RecipeIngredient
+from models import db, Recipe, InventoryUnit, RecipeIngredient, InventoryItem
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
@@ -15,8 +15,9 @@ def list_recipes():
 @recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
-    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = InventoryUnit.query.all()
+    parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     if request.method == 'POST':
         try:
@@ -36,7 +37,7 @@ def new_recipe():
                 if ing_id:
                     assoc = RecipeIngredient(
                         recipe_id=recipe.id,
-                        ingredient_id=ing_id,
+                        inventory_item_id=ing_id,
                         amount=float(amount),
                         unit=unit
                     )
@@ -49,13 +50,13 @@ def new_recipe():
             db.session.rollback()
             flash(f'Error creating recipe: {str(e)}')
 
-    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units)
+    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, parent_recipes=parent_recipes)
 
 @recipes_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    all_ingredients = Ingredient.query.order_by(Ingredient.name).all()
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = InventoryUnit.query.order_by(InventoryUnit.name).all()
 
     if request.method == 'POST':
@@ -75,7 +76,7 @@ def edit_recipe(recipe_id):
                 if ing_id:
                     assoc = RecipeIngredient(
                         recipe_id=recipe.id,
-                        ingredient_id=int(ing_id),
+                        inventory_item_id=int(ing_id),
                         amount=float(amount),
                         unit=unit
                     )
@@ -92,12 +93,58 @@ def edit_recipe(recipe_id):
     preselect_ingredient_id = session.pop('last_added_ingredient_id', None)
     add_ingredient_line = session.pop('add_ingredient_line', False)
 
+@recipes_bp.route('/<int:recipe_id>/add-variation', methods=['GET', 'POST'])
+@login_required
+def add_variation(recipe_id):
+    parent = Recipe.query.get_or_404(recipe_id)
+    all_ingredients = InventoryItem.query.all()
+    inventory_units = InventoryUnit.query.all()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        instructions = request.form.get('instructions')
+        label_prefix = request.form.get('label_prefix')
+
+        new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
+        db.session.add(new_variation)
+        db.session.flush()
+
+        ingredient_ids = request.form.getlist('ingredient_ids[]')
+        amounts = request.form.getlist('amounts[]')
+        units = request.form.getlist('units[]')
+
+        for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+            if ing_id:
+                assoc = RecipeIngredient(
+                    recipe_id=new_variation.id,
+                    inventory_item_id=int(ing_id),
+                    amount=float(amount),
+                    unit=unit
+                )
+                db.session.add(assoc)
+
+        db.session.commit()
+        flash("Variation created successfully.")
+        return redirect(url_for('recipes.list_recipes'))
+
+    return render_template(
+        "recipe_form.html",
+        recipe=None,
+        all_ingredients=all_ingredients,
+        inventory_units=inventory_units,
+        is_variation=True,
+        parent_recipe=parent
+    )
+
+
+    base_recipes = Recipe.query.filter_by(parent_id=None).all()
     return render_template('recipe_form.html',
         recipe=recipe,
         all_ingredients=all_ingredients,
         inventory_units=inventory_units,
         preselect_ingredient_id=preselect_ingredient_id,
-        add_ingredient_line=add_ingredient_line
+        add_ingredient_line=add_ingredient_line,
+        all_base_recipes=base_recipes
     )
 
 @recipes_bp.route('/recipes/<int:recipe_id>/delete')
@@ -109,11 +156,50 @@ def delete_recipe(recipe_id):
     flash('Recipe deleted.')
     return redirect(url_for('recipes.list_recipes'))
 
-@recipes_bp.route('/plan-production/<int:recipe_id>')
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    return render_template('plan_production.html', recipe=recipe, scale=1.0)
+    base_recipe = Recipe.query.get_or_404(recipe_id)
+    variations = base_recipe.variations.all() if base_recipe else []
+    inventory_items = InventoryItem.query.all()
+    containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
+    
+    recipe = base_recipe
+    selected_variation_id = request.args.get('variation_id', type=int)
+    if selected_variation_id:
+        recipe = Recipe.query.get(selected_variation_id)
+
+    scale = 1.0
+    stock_check = []
+    all_ok = False
+    status = None
+
+    if request.method == 'POST':
+        scale = float(request.form.get('scale', 1.0))
+        variation_id = request.form.get('variation_id')
+        selected_recipe = Recipe.query.get(variation_id) if variation_id and variation_id != 'none' else recipe
+
+        container_ids = request.form.getlist('containers[]')
+        selected_containers = InventoryItem.query.filter(InventoryItem.id.in_(container_ids)).all()
+
+        stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
+        status = "ok" if all_ok else "bad"
+
+        for item in stock_check:
+            if item["status"] == "LOW" and status != "bad":
+                status = "low"
+
+    return render_template(
+        'plan_production.html',
+        recipe=recipe,
+        variations=variations,
+        scale=scale,
+        stock_check=stock_check,
+        all_ok=all_ok,
+        status=status,
+        inventory_items=inventory_items,
+        containers=containers
+    )
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
 def quick_add_unit():

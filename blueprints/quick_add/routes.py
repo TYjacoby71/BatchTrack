@@ -1,6 +1,6 @@
 
 from flask import Blueprint, request, jsonify
-from models import db, Ingredient, InventoryUnit
+from models import db, InventoryItem, InventoryUnit
 
 quick_add_bp = Blueprint('quick_add', __name__)
 
@@ -13,11 +13,11 @@ def quick_add_ingredient():
     if not name or not unit:
         return jsonify({'error': 'Name and unit are required.'}), 400
 
-    existing = Ingredient.query.filter_by(name=name).first()
+    existing = InventoryItem.query.filter_by(name=name).first()
     if existing:
-        return jsonify({'error': 'Ingredient already exists.'}), 409
+        return jsonify({'error': 'Item already exists.'}), 409
 
-    ingredient = Ingredient(name=name, quantity=0.0, unit=unit, cost_per_unit=0.0)
+    ingredient = InventoryItem(name=name, quantity=0.0, unit=unit, cost_per_unit=0.0)
     db.session.add(ingredient)
     db.session.commit()
 
@@ -26,7 +26,6 @@ def quick_add_ingredient():
         'name': ingredient.name,
         'unit': ingredient.unit
     }), 201
-
 
 @quick_add_bp.route('/unit', methods=['POST'])
 def quick_add_unit():

@@ -11,7 +11,9 @@
     <label for="default_unit" class="form-label">Default Unit</label>
     <input type="text" name="default_unit" class="form-control" required>
   </div>
-  <button type="submit" class="btn btn-success">Save</button>
-  <a href="{{ url_for('products.list_products') }}" class="btn btn-secondary">Cancel</a>
+  <div class="form-group mt-3 d-flex justify-content-between">
+    <a href="{{ url_for('products.list_products') }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-success">Save Product</button>
+  </div>
 </form>
 {% endblock %}
