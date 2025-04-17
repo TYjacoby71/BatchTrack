@@ -123,6 +123,9 @@ def add_variation(recipe_id):
         name = request.form.get('name')
         instructions = request.form.get('instructions')
         label_prefix = request.form.get('label_prefix')
+        ingredient_ids = request.form.getlist('ingredient_ids[]')
+        amounts = request.form.getlist('amounts[]')
+        units = request.form.getlist('units[]')
 
         # Check if any basic details have changed
         has_changes = (
@@ -131,18 +134,13 @@ def add_variation(recipe_id):
             label_prefix != parent.label_prefix
         )
 
-        # Get ingredient changes
-        ingredient_ids = request.form.getlist('ingredient_ids[]')
-        amounts = request.form.getlist('amounts[]')
-        units = request.form.getlist('units[]')
-        
         # Compare ingredients with parent
         parent_ingredients = {(ri.inventory_item_id, ri.amount, ri.unit) for ri in parent.recipe_ingredients}
         new_ingredients = set()
         for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
             if ing_id:
                 new_ingredients.add((int(ing_id), float(amount), unit))
-        
+
         if not has_changes and parent_ingredients == new_ingredients:
             return render_template(
                 "recipe_form.html",
@@ -154,7 +152,8 @@ def add_variation(recipe_id):
                 error="Please make at least one change to create a variation, or cancel."
             )
 
-        new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
+        try:
+            new_variation = Recipe(name=name, instructions=instructions, label_prefix=label_prefix, parent_id=parent.id)
         db.session.add(new_variation)
         db.session.flush()
 
@@ -173,8 +172,20 @@ def add_variation(recipe_id):
                 db.session.add(assoc)
 
         db.session.commit()
-        flash("Variation created successfully.")
-        return redirect(url_for('recipes.list_recipes'))
+            flash("Variation created successfully.")
+            return redirect(url_for('recipes.list_recipes'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error creating variation: {str(e)}")
+            return render_template(
+                "recipe_form.html",
+                recipe=None,
+                all_ingredients=all_ingredients,
+                inventory_units=inventory_units,
+                is_variation=True,
+                parent_recipe=parent,
+                error="An error occurred while creating the variation."
+            )
 
     return render_template(
         "recipe_form.html",
