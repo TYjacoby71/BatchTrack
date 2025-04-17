@@ -30,6 +30,7 @@ class Recipe(db.Model):
     label_prefix = db.Column(db.String(8))
     qr_image = db.Column(db.String(128))
     parent_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    is_locked = db.Column(db.Boolean, default=False)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
