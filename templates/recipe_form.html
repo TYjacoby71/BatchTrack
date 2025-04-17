@@ -1,8 +1,5 @@
 {% extends 'layout.html' %}
 {% block content %}
-{% if error %}
-<div class="alert alert-danger">{{ error }}</div>
-{% endif %}
 <h2>
     {% if recipe %}
         {% if recipe.parent_id %}Edit Variation{% else %}Edit Recipe{% endif %}
