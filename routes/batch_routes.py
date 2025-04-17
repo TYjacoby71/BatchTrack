@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, Ingredient
+from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem
 from datetime import datetime
 from sqlalchemy import extract
 import uuid, os
