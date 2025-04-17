@@ -1,4 +1,5 @@
-from models import Ingredient, RecipeIngredient
+
+from models import InventoryItem, RecipeIngredient
 from services.unit_conversion import UnitConversionService
 
 def check_stock_for_recipe(recipe, scale=1.0):
