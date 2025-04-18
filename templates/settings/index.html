@@ -18,7 +18,7 @@
                         <input type="checkbox" class="form-check-input" 
                                name="batch_display.visible_columns" 
                                value="{{ col }}"
-                               {% if col in settings.batch_display.visible_columns %}checked{% endif %}>
+                               {% if settings.batch_display and col in settings.batch_display.visible_columns %}checked{% endif %}>
                         {{ col|title }}
                     </label><br>
                     {% endfor %}
