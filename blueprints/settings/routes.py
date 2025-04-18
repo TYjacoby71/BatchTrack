@@ -6,9 +6,9 @@ import json
 
 settings_bp = Blueprint('settings', __name__)
 
-@settings_bp.route('/', endpoint='settings')
+@settings_bp.route('/', endpoint='index')
 @login_required
-def settings():
+def index():
     try:
         with open("settings.json", "r") as f:
             settings_data = json.load(f)
