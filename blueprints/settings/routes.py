@@ -13,22 +13,22 @@ def index():
             settings_data = json.load(f)
     except FileNotFoundError:
         settings_data = {
-                "batch_display": {
-                    "visible_columns": ["status", "recipe", "start_date", "end_date", "tags", "cost"]
-                },
-                "alerts": {
-                    "low_stock_threshold": 5,
-                    "notification_type": "dashboard"
-                },
-                "batch_rules": {
-                    "require_timer_completion": True,
-                    "allow_intermediate_tags": False
-                },
-                "recipe_builder": {
-                    "enable_variations": True,
-                    "enable_containers": True
-                }
+            "batch_display": {
+                "visible_columns": ["status", "recipe", "start_date", "end_date", "tags", "cost"]
+            },
+            "alerts": {
+                "low_stock_threshold": 5,
+                "notification_type": "dashboard"
+            },
+            "batch_rules": {
+                "require_timer_completion": True,
+                "allow_intermediate_tags": False
+            },
+            "recipe_builder": {
+                "enable_variations": True,
+                "enable_containers": True
             }
+        }
         # Create settings.json if it doesn't exist
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
