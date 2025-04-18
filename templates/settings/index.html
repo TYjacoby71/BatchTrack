@@ -1,9 +1,8 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container">
     <h2>Settings</h2>
-    
+
     <form id="settingsForm" class="mt-4">
         <!-- Batch Display Settings -->
         <div class="card mb-4">
@@ -18,7 +17,7 @@
                         <input type="checkbox" class="form-check-input" 
                                name="batch_display.visible_columns" 
                                value="{{ col }}"
-                               {% if settings.batch_display and col in settings.batch_display.visible_columns %}checked{% endif %}>
+                               {% if settings.get('batch_display', {}).get('visible_columns', []) and col in settings.get('batch_display', {}).get('visible_columns', []) %}checked{% endif %}>
                         {{ col|title }}
                     </label><br>
                     {% endfor %}
@@ -41,8 +40,8 @@
                 <div class="form-group">
                     <label>Notification Type</label>
                     <select class="form-control" name="alerts.notification_type">
-                        <option value="dashboard" {% if settings.alerts.notification_type == 'dashboard' %}selected{% endif %}>Dashboard</option>
-                        <option value="popup" {% if settings.alerts.notification_type == 'popup' %}selected{% endif %}>Popup</option>
+                        <option value="dashboard" {% if settings.get('alerts', {}).get('notification_type') == 'dashboard' %}selected{% endif %}>Dashboard</option>
+                        <option value="popup" {% if settings.get('alerts', {}).get('notification_type') == 'popup' %}selected{% endif %}>Popup</option>
                     </select>
                 </div>
             </div>
@@ -58,7 +57,7 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="batch_rules.require_timer_completion"
-                               {% if settings.batch_rules.require_timer_completion %}checked{% endif %}>
+                               {% if settings.get('batch_rules', {}).get('require_timer_completion') %}checked{% endif %}>
                         Require Timer Completion
                     </label>
                 </div>
@@ -66,7 +65,7 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="batch_rules.allow_intermediate_tags"
-                               {% if settings.batch_rules.allow_intermediate_tags %}checked{% endif %}>
+                               {% if settings.get('batch_rules', {}).get('allow_intermediate_tags') %}checked{% endif %}>
                         Allow Intermediate Tags
                     </label>
                 </div>
@@ -83,7 +82,7 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="recipe_builder.enable_variations"
-                               {% if settings.recipe_builder.enable_variations %}checked{% endif %}>
+                               {% if settings.get('recipe_builder', {}).get('enable_variations') %}checked{% endif %}>
                         Enable Recipe Variations
                     </label>
                 </div>
@@ -106,7 +105,7 @@
 document.getElementById('settingsForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = {};
-    
+
     // Collect all form data
     const inputs = this.querySelectorAll('input, select');
     inputs.forEach(input => {

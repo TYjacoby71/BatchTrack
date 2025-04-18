@@ -44,7 +44,18 @@ def index():
 @login_required
 def save_settings():
     settings_data = request.get_json()
-    with open("settings.json", "w") as f:
-        json.dump(settings_data, f, indent=2)
-    flash('Settings saved successfully')
-    return jsonify({"status": "success"})
+    try:
+        with open("settings.json", "w") as f:
+            json.dump(settings_data, f, indent=2)
+        flash('Settings saved successfully')
+        return jsonify({"status": "success"})
+    except Exception as e:
+        flash('Error saving settings')
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# Catch-all route for unimplemented settings
+@settings_bp.route('/<path:subpath>')
+@login_required
+def unimplemented_setting(subpath):
+    flash('This setting is not yet implemented')
+    return redirect(url_for('settings.index'))
