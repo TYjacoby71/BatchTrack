@@ -45,7 +45,9 @@ def settings():
             "recipe_builder": {
                 "enable_variations": True,
                 "enable_containers": True
-            }
+            },
+            "enable_debug": False,
+            "show_experimental": False
         }
     
     return render_template(
