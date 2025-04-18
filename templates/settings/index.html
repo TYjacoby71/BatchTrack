@@ -65,7 +65,7 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="batch_rules.allow_intermediate_tags"
-                               {% if settings.batch_rules.allow_intermediate_tags %}checked{% endif %}>
+                               {% if settings.get('batch_rules', {}).get('allow_intermediate_tags') %}checked{% endif %}>
                         Allow Intermediate Tags
                     </label>
                 </div>
