@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required
 from models import db, InventoryUnit, ProductUnit
@@ -15,44 +14,25 @@ def index():
     except FileNotFoundError:
         settings_data = {
             "batch_display": {
-                "visible_columns": ["status", "recipe", "start_date", "end_date"],
-                "default_filters": {"status": "all"}
+                "visible_columns": ["status", "recipe", "start_date", "end_date", "tags", "cost"]
             },
             "alerts": {
                 "low_stock_threshold": 5,
                 "notification_type": "dashboard"
             },
-            "inventory": {
-                "show_ingredients": True,
-                "show_containers": True
-            },
-            "product_defaults": {
-                "default_unit": "pieces",
-                "enable_fifo": True
-            },
             "batch_rules": {
                 "require_timer_completion": True,
                 "allow_intermediate_tags": False
             },
-            "printing": {
-                "default_layout": "recipe_card",
-                "show_costs": False
-            },
-            "qr_settings": {
-                "auto_generate": True,
-                "base_url": ""
-            },
             "recipe_builder": {
                 "enable_variations": True,
                 "enable_containers": True
-            },
-            "enable_debug": False,
-            "show_experimental": False
+            }
         }
         # Create settings.json if it doesn't exist
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
-    
+
     return render_template(
         'settings/index.html',
         settings=settings_data,
