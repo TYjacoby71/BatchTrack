@@ -1,0 +1,148 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container">
+    <h2>Settings</h2>
+    
+    <form id="settingsForm" class="mt-4">
+        <!-- Batch Display Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Batch Display Settings</h3>
+            </div>
+            <div class="card-body">
+                <h4>Visible Columns</h4>
+                <div class="form-check">
+                    {% for col in ['status', 'recipe', 'start_date', 'end_date', 'tags', 'cost'] %}
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input" 
+                               name="batch_display.visible_columns" 
+                               value="{{ col }}"
+                               {% if col in settings.batch_display.visible_columns %}checked{% endif %}>
+                        {{ col|title }}
+                    </label><br>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Alert Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Low Stock Threshold</label>
+                    <input type="number" class="form-control" 
+                           name="alerts.low_stock_threshold"
+                           value="{{ settings.alerts.low_stock_threshold }}">
+                </div>
+                <div class="form-group">
+                    <label>Notification Type</label>
+                    <select class="form-control" name="alerts.notification_type">
+                        <option value="dashboard" {% if settings.alerts.notification_type == 'dashboard' %}selected{% endif %}>Dashboard</option>
+                        <option value="popup" {% if settings.alerts.notification_type == 'popup' %}selected{% endif %}>Popup</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Rules -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Batch Rules</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input"
+                               name="batch_rules.require_timer_completion"
+                               {% if settings.batch_rules.require_timer_completion %}checked{% endif %}>
+                        Require Timer Completion
+                    </label>
+                </div>
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input"
+                               name="batch_rules.allow_intermediate_tags"
+                               {% if settings.batch_rules.allow_intermediate_tags %}checked{% endif %}>
+                        Allow Intermediate Tags
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Builder Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Recipe Builder Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input"
+                               name="recipe_builder.enable_variations"
+                               {% if settings.recipe_builder.enable_variations %}checked{% endif %}>
+                        Enable Recipe Variations
+                    </label>
+                </div>
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input type="checkbox" class="form-check-input"
+                               name="recipe_builder.enable_containers"
+                               {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
+                        Enable Container Selection
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = {};
+    
+    // Collect all form data
+    const inputs = this.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            const path = input.name.split('.');
+            let current = formData;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (!current[path[i]]) current[path[i]] = {};
+                current = current[path[i]];
+            }
+            current[path[path.length - 1]] = input.checked;
+        } else {
+            const path = input.name.split('.');
+            let current = formData;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (!current[path[i]]) current[path[i]] = {};
+                current = current[path[i]];
+            }
+            current[path[path.length - 1]] = input.value;
+        }
+    });
+
+    // Save settings
+    fetch('/settings/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Settings saved successfully');
+        }
+    });
+});
+</script>
+{% endblock %}

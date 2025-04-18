@@ -46,7 +46,7 @@ from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp #Import timer blueprint
-from routes.settings_routes import settings_bp #Import settings blueprint
+from blueprints.settings import settings_bp #Import settings blueprint
 
 
 # Register blueprints

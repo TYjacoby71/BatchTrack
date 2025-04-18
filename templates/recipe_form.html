@@ -8,9 +8,13 @@
     {% endif %}
 </h2>
 
-{% if is_variation %}
+{% if recipe and recipe.parent %}
 <div class="alert alert-info mb-3">
-    <strong>New Variation:</strong> This variation is based on <strong>{{ parent_recipe.name }}</strong>.
+    <strong>Variation of:</strong> {{ recipe.parent.name }}
+</div>
+{% elif is_variation and parent_recipe %}
+<div class="alert alert-info mb-3">
+    <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
 {% endif %}
 
@@ -21,7 +25,7 @@
 {% endif %}
 
     <div class="form-group">
-        <label for="name">Recipe Name:</label>
+        <label for="name">{% if recipe and recipe.parent_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}:</label>
         <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
     </div>
 
