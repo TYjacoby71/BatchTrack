@@ -1,9 +1,8 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container">
     <h2>Settings</h2>
-    
+
     <form id="settingsForm" class="mt-4">
         <!-- Batch Display Settings -->
         <div class="card mb-4">
@@ -18,7 +17,7 @@
                         <input type="checkbox" class="form-check-input" 
                                name="batch_display.visible_columns" 
                                value="{{ col }}"
-                               {% if settings.batch_display and col in settings.batch_display.visible_columns %}checked{% endif %}>
+                               {% if settings.get('batch_display', {}).get('visible_columns', []) and col in settings.get('batch_display', {}).get('visible_columns', []) %}checked{% endif %}>
                         {{ col|title }}
                     </label><br>
                     {% endfor %}
@@ -106,7 +105,7 @@
 document.getElementById('settingsForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = {};
-    
+
     // Collect all form data
     const inputs = this.querySelectorAll('input, select');
     inputs.forEach(input => {
