@@ -12,7 +12,7 @@ def index():
     try:
         with open("settings.json", "r") as f:
             settings_data = json.load(f)
-    except:
+    except FileNotFoundError:
         settings_data = {
             "batch_display": {
                 "visible_columns": ["status", "recipe", "start_date", "end_date"],
@@ -49,6 +49,9 @@ def index():
             "enable_debug": False,
             "show_experimental": False
         }
+        # Create settings.json if it doesn't exist
+        with open("settings.json", "w") as f:
+            json.dump(settings_data, f, indent=2)
     
     return render_template(
         'settings/index.html',
