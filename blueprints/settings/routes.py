@@ -6,7 +6,7 @@ import json
 
 settings_bp = Blueprint('settings', __name__)
 
-@settings_bp.route('/')
+@settings_bp.route('/', endpoint='settings')
 @login_required
 def settings():
     try:
