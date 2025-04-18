@@ -52,7 +52,7 @@ from blueprints.settings import settings_bp #Import settings blueprint
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
-app.register_blueprint(settings_bp, url_prefix='/settings') #Register settings blueprint and added url_prefix
+app.register_blueprint(settings_bp) #Register settings blueprint
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp, url_prefix='/')  # Explicitly set prefix for root routes
 app.register_blueprint(batches_bp, url_prefix='/batches')
