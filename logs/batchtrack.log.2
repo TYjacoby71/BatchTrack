@@ -1,4 +1,4 @@
-2025-04-18 23:24:36,327 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-18 23:29:03,530 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -43,7 +43,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.settings'. Did you mean 'tags.delete_tag' instead?
-2025-04-18 23:26:23,002 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-18 23:29:05,889 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-18 23:29:06,208 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -88,8 +89,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.settings'. Did you mean 'tags.delete_tag' instead?
-2025-04-18 23:28:32,722 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:28:33,116 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-18 23:30:15,245 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-18 23:30:15,503 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -123,7 +124,7 @@ Traceback (most recent call last):
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 32, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Settings</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -133,4 +134,5 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.settings'. Did you mean 'tags.delete_tag' instead?
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.index'. Did you mean 'tags.delete_tag' instead?
+2025-04-18 23:31:06,392 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
