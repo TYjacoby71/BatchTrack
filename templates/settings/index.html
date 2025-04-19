@@ -90,7 +90,7 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="recipe_builder.enable_containers"
-                               {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
+                               {% if settings.get('recipe_builder', {}).get('enable_containers') %}checked{% endif %}>
                         Enable Container Selection
                     </label>
                 </div>
