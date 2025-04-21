@@ -10,9 +10,7 @@ def seed_categories():
         {"name": "Dairy", "default_density": 1.03},
         {"name": "Syrup", "default_density": 1.33},
     ]
-
     for category in categories:
         if not IngredientCategory.query.filter_by(name=category["name"]).first():
-            new_cat = IngredientCategory(**category)
-            db.session.add(new_cat)
+            db.session.add(IngredientCategory(**category))
     db.session.commit()

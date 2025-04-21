@@ -18,10 +18,10 @@ def seed_units():
         {"name": "inch", "type": "length", "base_unit": "cm", "multiplier_to_base": 2.54},
         {"name": "sqcm", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 1.0},
         {"name": "sqft", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 929.03},
+        {"name": "scoop", "type": "volume", "base_unit": "ml", "multiplier_to_base": 50.0},
+        {"name": "pinch", "type": "weight", "base_unit": "gram", "multiplier_to_base": 0.5},
     ]
-
     for unit in units:
         if not Unit.query.filter_by(name=unit["name"]).first():
-            new_unit = Unit(**unit)
-            db.session.add(new_unit)
+            db.session.add(Unit(**unit))
     db.session.commit()
