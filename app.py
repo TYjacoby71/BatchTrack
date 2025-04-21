@@ -6,6 +6,8 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
+db.init_app(app)
+migrate = Migrate(app, db)
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
