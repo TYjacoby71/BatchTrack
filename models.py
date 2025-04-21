@@ -15,6 +15,37 @@ class User(UserMixin, db.Model):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
 
+class Unit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    type = db.Column(db.String(32), nullable=False)
+    base_unit = db.Column(db.String(64), nullable=False)
+    multiplier_to_base = db.Column(db.Float, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+class CustomUnitMapping(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    multiplier = db.Column(db.Float, nullable=False)
+
+class IngredientCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    default_density = db.Column(db.Float, nullable=False)
+
+class ConversionLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    amount = db.Column(db.Float, nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    result = db.Column(db.Float, nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True)
+    density_used = db.Column(db.Float, nullable=True)
+
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
