@@ -4,26 +4,7 @@
     <h2>Settings</h2>
 
     <form id="settingsForm" class="mt-4">
-        <!-- Batch Display Settings -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Batch Display Settings</h3>
-            </div>
-            <div class="card-body">
-                <h4>Visible Columns</h4>
-                <div class="form-check">
-                    {% for col in ['status', 'recipe', 'start_date', 'end_date', 'tags', 'cost'] %}
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" 
-                               name="batch_display.visible_columns" 
-                               value="{{ col }}"
-                               {% if settings.get('batch_display', {}).get('visible_columns', []) and col in settings.get('batch_display', {}).get('visible_columns', []) %}checked{% endif %}>
-                        {{ col|title }}
-                    </label><br>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+        
 
         <!-- Alert Settings -->
         <div class="card mb-4">
@@ -47,31 +28,6 @@
             </div>
         </div>
 
-        <!-- Batch Rules -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Batch Rules</h3>
-            </div>
-            <div class="card-body">
-                <div class="form-check">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input"
-                               name="batch_rules.require_timer_completion"
-                               {% if settings.get('batch_rules', {}).get('require_timer_completion') %}checked{% endif %}>
-                        Require Timer Completion
-                    </label>
-                </div>
-                <div class="form-check">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input"
-                               name="batch_rules.allow_intermediate_tags"
-                               {% if settings.get('batch_rules', {}).get('allow_intermediate_tags') %}checked{% endif %}>
-                        Allow Intermediate Tags
-                    </label>
-                </div>
-            </div>
-        </div>
-
         <!-- Recipe Builder Settings -->
         <div class="card mb-4">
             <div class="card-header">
@@ -90,15 +46,86 @@
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input"
                                name="recipe_builder.enable_containers"
-                               {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
+                               {% if settings.get('recipe_builder', {}).get('enable_containers') %}checked{% endif %}>
                         Enable Container Selection
                     </label>
                 </div>
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary">Save Settings</button>
+        <!-- Unit Management -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Unit Management</h3>
+            </div>
+            <div class="card-body">
+                <p>Unit definition management will be implemented here.</p>
+                <div id="unitManagementPlaceholder">
+                    {% if inventory_units %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Unit Name</th>
+                                <th>Base Unit</th>
+                                <th>Conversion Factor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit in inventory_units %}
+                            <tr>
+                                <td>{{ unit.name }}</td>
+                                <td>{{ unit.base_unit }}</td>
+                                <td>{{ unit.conversion_factor }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No units defined yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Management -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Category Management</h3>
+            </div>
+            <div class="card-body">
+                <p>Category management will be implemented here.</p>
+                <div id="categoryManagementPlaceholder">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Category Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="2">No categories defined yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save"></i> Save Settings
+        </button>
     </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mt-3">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 </div>
 
 <script>

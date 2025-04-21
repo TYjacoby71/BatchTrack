@@ -52,9 +52,9 @@ from blueprints.settings.routes import settings_bp #Import settings blueprint
 # Register blueprints
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
-app.register_blueprint(settings_bp) #Register settings blueprint
+app.register_blueprint(settings_bp, url_prefix='/settings') #Register settings blueprint with prefix
 from routes.app_routes import app_routes_bp
-app.register_blueprint(app_routes_bp, url_prefix='/')  # Explicitly set prefix for root routes
+app.register_blueprint(app_routes_bp)  # Dashboard handles root routes
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
@@ -97,6 +97,11 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/')
+@login_required
+def index():
+    return redirect(url_for('dashboard.dashboard'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
