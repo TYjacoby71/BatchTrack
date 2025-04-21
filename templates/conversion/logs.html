@@ -1,0 +1,31 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h2>Conversion Logs</h2>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Amount</th>
+      <th>From Unit</th>
+      <th>To Unit</th>
+      <th>Result</th>
+      <th>Ingredient</th>
+      <th>Density Used</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for log in logs %}
+    <tr>
+      <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ log.amount }}</td>
+      <td>{{ log.from_unit }}</td>
+      <td>{{ log.to_unit }}</td>
+      <td>{{ log.result }}</td>
+      <td>{{ log.ingredient.name if log.ingredient else 'N/A' }}</td>
+      <td>{{ log.density_used or 'N/A' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
