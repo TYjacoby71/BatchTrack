@@ -1,4 +1,4 @@
-2025-04-18 23:31:06,691 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-18 23:36:51,018 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,7 +15,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/settings/routes.py", line 53, in index
+  File "/home/runner/workspace/blueprints/settings/routes.py", line 36, in index
     return render_template(
            ^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
@@ -28,21 +28,21 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/settings/index.html", line 2, in top-level template code
+  File "/home/runner/workspace/templates/settings/index.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/settings/index.html", line 21, in block 'content'
-    {% if col in settings.batch_display.visible_columns %}checked{% endif %}>
+  File "/home/runner/workspace/templates/settings/index.html", line 93, in block 'content'
+    {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
     return getattr(obj, attribute)
            ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'batch_display'
-2025-04-18 23:31:44,059 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:31:44,359 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'recipe_builder'
+2025-04-19 20:06:23,513 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-19 20:06:24,851 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -59,7 +59,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/settings/routes.py", line 56, in index
+  File "/home/runner/workspace/blueprints/settings/routes.py", line 36, in index
     return render_template(
            ^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
@@ -72,60 +72,43 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/settings/index.html", line 2, in top-level template code
+  File "/home/runner/workspace/templates/settings/index.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/settings/index.html", line 21, in block 'content'
-    {% if col in settings.batch_display.visible_columns %}checked{% endif %}>
+  File "/home/runner/workspace/templates/settings/index.html", line 93, in block 'content'
+    {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
     return getattr(obj, attribute)
            ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'batch_display'
-2025-04-18 23:31:54,489 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:31:54,798 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/settings/routes.py", line 56, in index
-    return render_template(
-           ^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/settings/index.html", line 2, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/settings/index.html", line 21, in block 'content'
-    {% if col in settings.batch_display.visible_columns %}checked{% endif %}>
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
-    return getattr(obj, attribute)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'batch_display'
+jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'recipe_builder'
+2025-04-19 20:06:53,356 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-19 20:10:35,216 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 16:05:01,697 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 17:47:28,463 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:21:28,649 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:23:44,660 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:25:22,680 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:27:03,806 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:31:15,384 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:34:13,672 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:36:06,231 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:37:21,271 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 18:38:35,598 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 19:26:25,764 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:08:33,796 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:09:35,115 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:11:02,876 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:14:14,431 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:15:10,129 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:15:50,503 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:15:52,108 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:16:08,575 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:18:23,620 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 20:18:32,577 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 23:23:50,123 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 23:23:55,402 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-21 23:23:56,600 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
