@@ -11,5 +11,18 @@
     },
     "batch_id": null,
     "status": "NEW"
+  },
+  {
+    "timestamp": "2025-04-21T19:11:53.116610",
+    "message": "UnitConversionService failed",
+    "source": "system",
+    "details": {
+      "amount": 3.0,
+      "from": "ml",
+      "to": "count",
+      "error": "Cannot convert volume to count without density"
+    },
+    "batch_id": null,
+    "status": "NEW"
   }
 ]
