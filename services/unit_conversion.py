@@ -1,34 +1,64 @@
 
-from models import InventoryUnit
-from fault_log_utils import log_fault
+from datetime import datetime
+from flask_login import current_user
+from models import db, Unit, CustomUnitMapping, Ingredient, ConversionLog
 
-class UnitConversionService:
+class ConversionEngine:
     @staticmethod
-    def convert(amount, from_unit, to_unit, density=None):
-        if from_unit == to_unit:
-            return amount
+    def round_value(value, decimals=2):
+        return round(value, decimals)
 
-        try:
-            f = InventoryUnit.query.filter_by(name=from_unit).first()
-            t = InventoryUnit.query.filter_by(name=to_unit).first()
-            if not f or not t:
-                raise ValueError(f"Unknown units: {from_unit}, {to_unit}")
+    @staticmethod
+    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
+        from_u = Unit.query.filter_by(name=from_unit).first()
+        to_u = Unit.query.filter_by(name=to_unit).first()
+        if not from_u or not to_u:
+            raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
 
-            if f.type != t.type:
-                if {'volume', 'weight'} <= {f.type, t.type} and density:
-                    if f.type == 'volume':
-                        return (amount * f.base_equivalent * density) / t.base_equivalent
-                    else:
-                        return (amount * f.base_equivalent / density) / t.base_equivalent
-                raise ValueError(f"Cannot convert {f.type} to {t.type} without density")
+        custom_mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
+        if custom_mapping:
+            result = amount * custom_mapping.multiplier
+        elif from_unit == to_unit:
+            result = amount
+        elif from_u.type == to_u.type:
+            base_amount = amount * from_u.multiplier_to_base
+            result = base_amount / to_u.multiplier_to_base
+        elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+            if density is None and ingredient_id:
+                ingredient = Ingredient.query.get(ingredient_id)
+                if ingredient:
+                    density = ingredient.density
+                    if density is None and ingredient.category:
+                        density = ingredient.category.default_density
+                    density = density or 1.0
+            if density is None:
+                density = 1.0
+            if from_u.type == 'volume':
+                grams = amount * from_u.multiplier_to_base * density
+                result = grams / to_u.multiplier_to_base
+            else:
+                ml = (amount * from_u.multiplier_to_base) / density
+                result = ml / to_u.multiplier_to_base
+        else:
+            raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
 
-            return (amount * f.base_equivalent) / t.base_equivalent
+        log = ConversionLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            timestamp=datetime.utcnow(),
+            amount=amount,
+            from_unit=from_unit,
+            to_unit=to_unit,
+            result=result,
+            ingredient_id=ingredient_id,
+            density_used=density
+        )
+        db.session.add(log)
+        db.session.commit()
 
-        except Exception as e:
-            log_fault("UnitConversionService failed", {
-                "amount": amount,
-                "from": from_unit,
-                "to": to_unit,
-                "error": str(e)
-            })
-            return amount  # fallback to raw value
+        return ConversionEngine.round_value(result)
+
+    @staticmethod
+    def get_units_by_type(unit_type=None):
+        if unit_type:
+            return Unit.query.filter_by(type=unit_type).all()
+        return Unit.query.all()
