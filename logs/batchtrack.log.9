@@ -1,4 +1,4 @@
-2025-04-17 08:07:12,972 ERROR: Exception on /recipes/recipes/2/edit [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-18 23:29:03,530 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,9 +15,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/recipe_routes.py", line 105, in edit_recipe
-    return render_template('recipe_form.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/app_routes.py", line 34, in dashboard
+    return render_template("dashboard.html",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,20 +28,23 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/recipe_form.html", line 1, in top-level template code
+  File "/home/runner/workspace/templates/dashboard.html", line 2, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
-    {% block content %}{% endblock %}
+  File "/home/runner/workspace/templates/layout.html", line 32, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Settings</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/recipe_form.html", line 87, in block 'content'
-    <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.ingredient.id %}selected{% endif %}>
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
-    return getattr(obj, attribute)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'models.RecipeIngredient object' has no attribute 'ingredient'
-2025-04-17 08:07:18,001 ERROR: Exception on /recipes/2/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.settings'. Did you mean 'tags.delete_tag' instead?
+2025-04-18 23:29:05,889 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-18 23:29:06,208 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -58,57 +61,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/recipe_routes.py", line 172, in plan_production
-    variations = base_recipe.variations.all() if base_recipe else []
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'InstrumentedList' object has no attribute 'all'
-2025-04-17 08:08:18,766 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:10:26,710 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:12:44,359 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:13:52,719 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:15:22,495 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:16:52,570 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:18:46,358 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:20:25,853 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:21:34,781 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:23:04,695 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:25:44,355 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:28:08,933 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:28:24,656 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:28:26,992 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:28:31,605 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:28:47,901 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:29:02,092 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:30:04,913 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:30:51,595 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:30:53,734 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:31:16,161 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:31:19,685 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:31:28,029 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:31:49,756 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-17 08:32:15,533 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:15:37,673 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:15:41,136 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:17:10,889 ERROR: Exception on /settings/settings [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/settings_routes.py", line 13, in settings
-    return render_template('settings.html',
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/app_routes.py", line 34, in dashboard
+    return render_template("dashboard.html",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -119,18 +74,65 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/settings.html", line 2, in top-level template code
+  File "/home/runner/workspace/templates/dashboard.html", line 2, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
-    {% block content %}{% endblock %}
+  File "/home/runner/workspace/templates/layout.html", line 32, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Settings</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/settings.html", line 9, in block 'content'
-    <input type="checkbox" name="enable_debug" {% if settings.enable_debug %}checked{% endif %}>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.settings'. Did you mean 'tags.delete_tag' instead?
+2025-04-18 23:30:15,245 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-18 23:30:15,503 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/app_routes.py", line 34, in dashboard
+    return render_template("dashboard.html",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/dashboard.html", line 2, in top-level template code
+    {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
-    return getattr(obj, attribute)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'settings' is undefined
-2025-04-18 23:17:47,271 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-18 23:23:15,327 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+  File "/home/runner/workspace/templates/layout.html", line 32, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'settings.index'. Did you mean 'tags.delete_tag' instead?
+2025-04-18 23:31:06,392 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
