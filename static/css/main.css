@@ -1,0 +1,39 @@
+
+/* Unit Converter Modal Enhancements */
+#converterResult,
+#calculatorResult {
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  margin-top: 10px;
+}
+
+.modal-content {
+  border-radius: 10px;
+}
+
+.tab-content {
+  padding: 15px 0;
+}
+
+/* Modal form spacing */
+#unitConverterModal form .form-group,
+#unitConverterModal form .mb-2 {
+  margin-bottom: 1rem;
+}
+
+/* Responsive handling */
+@media (max-width: 768px) {
+  .modal-dialog {
+    width: 90%;
+    margin: 1rem auto;
+  }
+  .table {
+    font-size: 0.9rem;
+  }
+  .table th,
+  .table td {
+    padding: 0.5rem;
+  }
+}
