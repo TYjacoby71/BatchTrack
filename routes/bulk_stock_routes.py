@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from models import db, Recipe, InventoryItem
 from stock_check_utils import check_stock_for_recipe
-from unit_conversion_utils import convert_units
+from services.unit_conversion import ConversionEngine
 
 bulk_stock_bp = Blueprint('bulk_stock', __name__)
 
@@ -50,7 +50,7 @@ def bulk_stock_check():
 
                     to_unit = ingredient.unit
                     try:
-                        needed_converted = convert_units(needed, from_unit, to_unit)
+                        needed_converted = ConversionEngine.convert_units(needed, from_unit, to_unit)
                     except Exception:
                         needed_converted = needed
                         to_unit = from_unit
