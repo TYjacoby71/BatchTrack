@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -36,6 +35,13 @@
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                  <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                    🧮 Converter
+                  </a>
+                </li>
+            </ul>
             {% endif %}
         </div>
     </nav>
@@ -50,6 +56,105 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+    </div>
+
+    <!-- Unit Converter Modal -->
+    <div class="modal fade" id="unitConverterModal" tabindex="-1" aria-labelledby="unitConverterModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="unitConverterModalLabel">Unit Converter & Calculator</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <ul class="nav nav-tabs" id="converterTabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" id="converter-tab" data-bs-toggle="tab" href="#converter" role="tab">Converter</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="calculator-tab" data-bs-toggle="tab" href="#calculator" role="tab">Calculator</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="manage-tab" data-bs-toggle="tab" href="#manage" role="tab">Add Unit/Mapping</a>
+              </li>
+            </ul>
+            <div class="tab-content pt-3">
+              <!-- Converter Tab -->
+              <div class="tab-pane fade show active" id="converter" role="tabpanel">
+                <form id="converterForm">
+                  <div class="mb-2">
+                    <label>Amount</label>
+                    <input type="number" step="0.01" class="form-control" id="converterAmount" required>
+                  </div>
+                  <div class="mb-2">
+                    <label>From Unit</label>
+                    <select class="form-control" id="fromUnit"></select>
+                  </div>
+                  <div class="mb-2">
+                    <label>To Unit</label>
+                    <select class="form-control" id="toUnit"></select>
+                  </div>
+                  <div class="mb-2">
+                    <label>Ingredient (for density)</label>
+                    <select class="form-control" id="ingredient">
+                      <option value="">None</option>
+                      {% for ing in ingredients %}
+                        <option value="{{ ing.id }}">{{ ing.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <button type="button" class="btn btn-primary" onclick="convertUnits()">Convert</button>
+                </form>
+                <div id="converterResult" class="mt-3"></div>
+              </div>
+
+              <!-- Calculator Tab -->
+              <div class="tab-pane fade" id="calculator" role="tabpanel">
+                <form id="calculatorForm">
+                  <div class="mb-2">
+                    <label>Expression (e.g., 2 * 240)</label>
+                    <input type="text" class="form-control" id="expression" required>
+                  </div>
+                  <button type="button" class="btn btn-primary" onclick="calculate()">Calculate</button>
+                </form>
+                <div id="calculatorResult" class="mt-3"></div>
+              </div>
+
+              <!-- Manage Tab -->
+              <div class="tab-pane fade" id="manage" role="tabpanel">
+                <form id="addUnitForm" class="mt-3">
+                  <h6>Add New Unit</h6>
+                  <input type="text" class="form-control mb-2" id="newUnitName" placeholder="Unit Name" required>
+                  <select class="form-control mb-2" id="newUnitType" required>
+                    <option value="count">Count</option>
+                    <option value="volume">Volume</option>
+                    <option value="weight">Weight</option>
+                    <option value="length">Length</option>
+                    <option value="area">Area</option>
+                  </select>
+                  <select class="form-control mb-2" id="newUnitBase" required></select>
+                  <input type="number" step="0.01" class="form-control mb-2" id="newUnitMultiplier" placeholder="Multiplier to Base Unit" required>
+                  <button type="button" class="btn btn-success" onclick="addUnit()">Add Unit</button>
+                </form>
+                <hr>
+                <form id="addMappingForm" class="mt-3">
+                  <h6>Add Custom Mapping</h6>
+                  <input type="text" class="form-control mb-2" id="fromUnitMapping" placeholder="From Unit" required>
+                  <input type="text" class="form-control mb-2" id="toUnitMapping" placeholder="To Unit" required>
+                  <input type="number" step="0.01" class="form-control mb-2" id="mappingMultiplier" placeholder="Multiplier" required>
+                  <button type="button" class="btn btn-info" onclick="addMapping()">Add Mapping</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <a href="{{ url_for('conversion.manage_units') }}" class="btn btn-link">Manage Units</a>
+            <a href="{{ url_for('conversion.manage_mappings') }}" class="btn btn-link">Manage Custom Mappings</a>
+            <a href="{{ url_for('conversion.view_logs') }}" class="btn btn-link">View Logs</a>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Single Bootstrap Bundle with Popper import at the end of body -->
