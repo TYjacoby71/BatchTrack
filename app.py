@@ -47,9 +47,10 @@ from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp #Import timer blueprint
 from blueprints.settings.routes import settings_bp #Import settings blueprint
-
+from blueprints.conversion.routes import conversion_bp #Import conversion blueprint
 
 # Register blueprints
+app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings') #Register settings blueprint with prefix
