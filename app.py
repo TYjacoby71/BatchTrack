@@ -16,12 +16,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_pat
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
-# Initialize db with app
-from models import db
-db.init_app(app)
-
-# Import models after db initialization
-from models import User, Recipe, InventoryItem, InventoryUnit
+# Import db instance and models
+from models import db, User, Recipe, InventoryItem, InventoryUnit
 
 # Initialize db with app
 db.init_app(app)
