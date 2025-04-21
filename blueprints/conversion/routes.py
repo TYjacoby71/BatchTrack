@@ -1,10 +1,8 @@
+from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required
+from models import db, Unit, CustomUnitMapping, ConversionLog
 
-from flask import Blueprint, jsonify, request, render_template, redirect, url_for, flash
-from flask_login import login_required, current_user
-from models import db, Unit, CustomUnitMapping
-from services.unit_conversion import ConversionEngine
-
-conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
+conversion_bp = Blueprint('conversion', __name__)
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
@@ -51,7 +49,7 @@ def manage_mappings():
         from_unit = data.get('from_unit')
         to_unit = data.get('to_unit')
         multiplier = float(data.get('multiplier'))
-        
+
         mapping = CustomUnitMapping(
             user_id=current_user.id,
             from_unit=from_unit,
@@ -60,7 +58,7 @@ def manage_mappings():
         )
         db.session.add(mapping)
         db.session.commit()
-        
+
         if request.is_json:
             return jsonify({'success': 'Mapping added.'})
         flash('Custom mapping added successfully.', 'success')
@@ -74,3 +72,9 @@ def manage_mappings():
             'multiplier': m.multiplier
         } for m in mappings])
     return render_template('conversion/mappings.html', mappings=mappings)
+
+@conversion_bp.route('/logs')
+@login_required
+def view_logs():
+    logs = ConversionLog.query.order_by(ConversionLog.timestamp.desc()).all()
+    return render_template('conversion/logs.html', logs=logs)
