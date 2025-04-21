@@ -4,26 +4,7 @@
     <h2>Settings</h2>
 
     <form id="settingsForm" class="mt-4">
-        <!-- Batch Display Settings -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Batch Display Settings</h3>
-            </div>
-            <div class="card-body">
-                <h4>Visible Columns</h4>
-                <div class="form-check">
-                    {% for col in ['status', 'recipe', 'start_date', 'end_date', 'tags', 'cost'] %}
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input" 
-                               name="batch_display.visible_columns" 
-                               value="{{ col }}"
-                               {% if settings.get('batch_display', {}).get('visible_columns', []) and col in settings.get('batch_display', {}).get('visible_columns', []) %}checked{% endif %}>
-                        {{ col|title }}
-                    </label><br>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+        
 
         <!-- Alert Settings -->
         <div class="card mb-4">
