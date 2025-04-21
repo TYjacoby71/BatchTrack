@@ -1,12 +1,14 @@
 
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 
+# Create the db object first
 db = SQLAlchemy()
 
+# Create app and attach config
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'devkey'
 # Ensure directories exist with proper permissions
@@ -23,7 +25,7 @@ app.config['UPLOAD_FOLDER'] = 'static/product_images'
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# Import db instance and models
+# Import models after db initialization
 from models import User, Recipe, InventoryItem, InventoryUnit
 
 # Setup logging
