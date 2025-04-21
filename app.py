@@ -88,7 +88,7 @@ def login():
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
-            return redirect(url_for('dashboard.dashboard'))
+            return redirect(url_for('dashboard')) #Assuming dashboard is defined in app_routes_bp
         flash('Invalid credentials')
     return render_template('login.html')
 
