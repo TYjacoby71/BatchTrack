@@ -88,7 +88,7 @@ def login():
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
-            return redirect(url_for('dashboard')) #Assuming dashboard is defined in app_routes_bp
+            return redirect(url_for('dashboard.dashboard'))
         flash('Invalid credentials')
     return render_template('login.html')
 
@@ -97,10 +97,6 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-@app.route('/')
-def index():
-    return redirect(url_for('dashboard.dashboard', _external=True))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
