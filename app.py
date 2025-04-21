@@ -101,7 +101,7 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('dashboard.html')
+    return redirect(url_for('dashboard.dashboard'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

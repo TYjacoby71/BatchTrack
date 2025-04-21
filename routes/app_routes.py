@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
 from models import Recipe, InventoryItem, Batch
 from stock_check_utils import check_stock_for_recipe
@@ -10,7 +9,7 @@ app_routes_bp = Blueprint('dashboard', __name__)
 @login_required
 def dashboard():
     recipes = Recipe.query.all()
-    active_batch = Batch.query.filter_by(status='in_progress').order_by(Batch.timestamp.desc()).first()
+    active_batch = Batch.query.filter_by(status='in_progress').first()
     stock_check = None
     selected_recipe = None
     scale = 1
