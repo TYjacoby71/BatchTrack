@@ -1,6 +1,6 @@
 
 from models import InventoryItem, RecipeIngredient
-from services.unit_conversion import UnitConversionService
+from services.unit_conversion import ConversionEngine
 
 def check_stock_for_recipe(recipe, scale=1.0):
     results = []
@@ -12,7 +12,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
             continue
         needed = assoc.amount * scale
         try:
-            needed_converted = UnitConversionService.convert(needed, assoc.unit, ing.unit)
+            needed_converted = ConversionEngine.convert_units(needed, assoc.unit, ing.unit)
         except:
             needed_converted = needed
 
