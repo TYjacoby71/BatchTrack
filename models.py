@@ -113,6 +113,8 @@ class InventoryItem(db.Model):
     intermediate = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.Date, nullable=True)
     perishable = db.Column(db.Boolean, default=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
+    category = db.relationship('IngredientCategory', backref='ingredients')
 
 class InventoryUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
