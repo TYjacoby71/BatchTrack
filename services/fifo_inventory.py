@@ -2,6 +2,14 @@
 from models import ProductInventory, db
 from sqlalchemy import and_
 
+def get_fifo_inventory():
+    """
+    Gets all active FIFO inventory entries ordered by timestamp.
+    """
+    return ProductInventory.query.filter(
+        ProductInventory.quantity > 0
+    ).order_by(ProductInventory.timestamp.asc()).all()
+
 def deduct_product_fifo(product_id, variant, unit, quantity_requested):
     """
     Deducts inventory from the oldest batches using FIFO logic.
