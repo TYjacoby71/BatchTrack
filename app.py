@@ -37,6 +37,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Register all blueprints
+from routes.batch_routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
 from blueprints.conversion.routes import conversion_bp
