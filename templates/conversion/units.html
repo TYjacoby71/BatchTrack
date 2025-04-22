@@ -1,3 +1,4 @@
+
 {% extends "layout.html" %}
 {% block content %}
 <h2>Unit Manager</h2>
@@ -64,7 +65,7 @@
             {% endfor %}
 
             <!-- Custom Units -->
-            {% set custom_units = units|selectattr('type', 'equalto', unit_type)|selectattr('is_custom', 'equalto', true)|list %}
+            {% set custom_units = units|selectattr('type', 'equalto', unit_type)|selectattr('is_custom')|list %}
             {% if custom_units %}
             <tr class="table-secondary">
               <td colspan="3"><strong>Custom:</strong></td>
@@ -77,7 +78,7 @@
             </tr>
             {% endfor %}
             {% endif %}
-            {% if not (units|selectattr('type', 'equalto', unit_type)|list)|length %}
+            {% if not (standard_units or custom_units) %}
             <tr><td colspan="3" class="text-muted">No {{ unit_type }} units defined</td></tr>
             {% endif %}
           </tbody>
@@ -87,7 +88,7 @@
   {% endfor %}
 </div>
 
-<!-- Custom Mappings Form (Improved UI) -->
+<!-- Custom Mappings Form -->
 <div class="card p-3">
   <h4>Custom Unit Mappings</h4>
   <form method="POST" action="{{ url_for('conversion.manage_mappings') }}">
