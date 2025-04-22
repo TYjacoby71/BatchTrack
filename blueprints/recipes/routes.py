@@ -149,6 +149,8 @@ def clone_recipe(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
+    if request.method == 'POST' and request.form.get('recipe_token'):
+        return redirect(url_for('recipes.edit_recipe', recipe_id=request.form.get('recipe_token')))
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
