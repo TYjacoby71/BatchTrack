@@ -26,7 +26,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 # Import models after db initialization
-from models import User, Recipe, InventoryItem, InventoryUnit
+from models import User, Recipe, InventoryItem, InventoryUnit, Unit, IngredientCategory
 
 # Setup logging
 from utils import setup_logging
