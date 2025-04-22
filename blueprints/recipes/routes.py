@@ -128,6 +128,7 @@ def clone_recipe(recipe_id):
         db.session.add(clone)
         db.session.flush()
 
+        # Clone all recipe ingredients with exact amounts and units
         for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
@@ -136,9 +137,10 @@ def clone_recipe(recipe_id):
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
+            db.session.flush()  # Ensure each ingredient gets added properly
 
         db.session.commit()
-        flash('Recipe cloned successfully')
+        flash('Recipe and all ingredients cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
