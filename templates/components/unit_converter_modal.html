@@ -1,0 +1,25 @@
+
+<div class="modal fade" id="unitConverterModal" tabindex="-1" aria-labelledby="unitConverterLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <h5 id="unitConverterLabel">Unit Converter</h5>
+      <form id="converterForm" method="post" action="/convert">
+        <div class="mb-2">
+          <input type="number" id="amount" name="amount" step="any" class="form-control" placeholder="Amount" required>
+        </div>
+        <div class="mb-2">
+          <select id="fromUnit" name="from_unit" class="form-select" required>
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div class="mb-2">
+          <select id="toUnit" name="to_unit" class="form-select" required>
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div id="converterResult" class="alert" style="display: none;"></div>
+        <button type="button" class="btn btn-primary" onclick="convertUnits()">Convert</button>
+      </form>
+    </div>
+  </div>
+</div>
