@@ -23,10 +23,11 @@ function loadUnits() {
         //Added grouping of units by category
         const unitGroups = {};
         units.forEach(unit => {
-          if (!unitGroups[unit.category]) {
-            unitGroups[unit.category] = [];
+          const category = unit.type || 'Other';
+          if (!unitGroups[category]) {
+            unitGroups[category] = [];
           }
-          unitGroups[unit.category].push(unit);
+          unitGroups[category].push(unit);
         });
 
         for (const category in unitGroups) {
