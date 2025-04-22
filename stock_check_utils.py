@@ -31,15 +31,6 @@ def check_stock_for_recipe(recipe, scale=1.0):
 
     return results, all_ok
 
-        results.append({
-            'name': ing.name,
-            'unit': ing.unit,
-            'needed': round(needed_converted, 2),
-            'available': round(available, 2),
-            'status': status
-        })
-
-    return results, all_ok
 def check_container_availability(container_ids, scale=1.0):
     results = []
     all_ok = True

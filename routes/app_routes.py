@@ -58,26 +58,20 @@ def check_stock():
         recipe = Recipe.query.get_or_404(recipe_id)
         stock_check, all_ok = check_stock_for_recipe(recipe, scale)
         
+        status = "ok" if all_ok else "bad"
+        for item in stock_check:
+            if item["status"] == "LOW" and status != "bad":
+                status = "low"
+                break
+
         return jsonify({
             "stock_check": stock_check,
-            "status": "ok" if all_ok else "bad",
+            "status": status,
             "all_ok": all_ok,
             "recipe_name": recipe.name
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    status = "ok" if all_ok else "bad"
-    for item in stock_check:
-        if item["status"] == "LOW" and status != "bad":
-            status = "low"
-            break
-
-    return jsonify({
-        "stock_check": stock_check,
-        "status": status,
-        "all_ok": all_ok,
-        "recipe_name": recipe.name
-    }), 200
 
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required
