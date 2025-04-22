@@ -56,6 +56,7 @@ from blueprints.settings.routes import settings_bp
 from blueprints.conversion.routes import conversion_bp
 
 # Register blueprints
+from routes.admin_routes import admin_bp
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
