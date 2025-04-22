@@ -17,7 +17,7 @@ def convert(amount, from_unit, to_unit):
 
 @conversion_bp.route('/units', methods=['GET'])
 def manage_units():
-    units = Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
+    units = Unit.query.order_by(Unit.type, Unit.is_custom, Unit.name).all()
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
             'id': unit.id,

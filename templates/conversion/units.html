@@ -7,12 +7,12 @@
 {% for unit_type in types %}
   <h3>{{ unit_type | title }} Units</h3>
   <ul>
-    {% for unit in units if unit.type == unit_type and not unit.custom %}
+    {% for unit in units if unit.type == unit_type and not unit.is_custom %}
       <li>{{ unit.name }}</li>
     {% endfor %}
   </ul>
 
-  {% set custom_units = units | selectattr("custom") | selectattr("type", "equalto", unit_type) | list %}
+  {% set custom_units = units | selectattr("is_custom") | selectattr("type", "equalto", unit_type) | list %}
   {% if custom_units %}
     <h5>Custom:</h5>
     <ul>
