@@ -1,13 +1,15 @@
 
 from datetime import datetime
 from flask_login import current_user
-from models import db, Unit, CustomUnitMapping, ConversionLog, InventoryItem
+from models import db, CustomUnitMapping, ConversionLog, InventoryItem
+from utils.unit_utils import get_global_unit_list
 
 class UnitConversionService:
     @staticmethod
     def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
-        from_u = Unit.query.filter_by(name=from_unit).first()
-        to_u = Unit.query.filter_by(name=to_unit).first()
+        units = get_global_unit_list()
+        from_u = next((u for u in units if u.name == from_unit), None)
+        to_u = next((u for u in units if u.name == to_unit), None)
         if not from_u or not to_u:
             raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
 
