@@ -16,6 +16,11 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
+    # Ensure is_custom column exists
+    with op.batch_alter_table('unit', schema=None) as batch_op:
+        if not batch_op.exists('is_custom'):
+            batch_op.add_column(sa.Column('is_custom', sa.Boolean(), nullable=True))
+
     # Update existing custom units
     op.execute("""
         UPDATE unit 
