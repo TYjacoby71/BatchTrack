@@ -91,6 +91,7 @@ class Product(db.Model):
     name = db.Column(db.String(128), unique=True, nullable=False)
     default_unit = db.Column(db.String(32), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    low_stock_threshold = db.Column(db.Float, default=0)
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
@@ -132,6 +133,8 @@ class InventoryItem(db.Model):
     intermediate = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.Date, nullable=True)
     perishable = db.Column(db.Boolean, default=False)
+    low_stock_threshold = db.Column(db.Float, default=0)
+    is_perishable = db.Column(db.Boolean, default=False)
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 
