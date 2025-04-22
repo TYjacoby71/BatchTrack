@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>{{ recipe.name }}</h2>
@@ -19,6 +18,7 @@
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
   {% if not recipe.is_locked %}
     <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+      {{ csrf_token() }}
       <button type="submit" class="btn btn-sm btn-warning">Lock Recipe</button>
     </form>
   {% endif %}
@@ -26,7 +26,7 @@
 
 <div class="recipe-details">
     <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
-    
+
     <h3>Ingredients</h3>
     <ul>
         {% for assoc in recipe.recipe_ingredients %}
