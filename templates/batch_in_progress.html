@@ -27,9 +27,12 @@
             <span data-bs-toggle="tooltip" title="How much usable product or inventory this batch created. Example: 12 jars, 3 bottles, etc.">❓</span>
         </label>
         <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
-        <select name="product_unit" class="form-select mb-3" required>
-            {% for unit in product_units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
+        <select name="product_unit" class="form-select select2" data-unit-select required>
+            <option value="">Select unit</option>
+            {% for unit in units %}
+            <option value="{{ unit.name }}" {% if unit.name == batch.product_unit %}selected{% endif %}>
+                {{ unit.name }} ({{ unit.type }})
+            </option>
             {% endfor %}
         </select>
     </div>
