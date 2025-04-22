@@ -8,6 +8,7 @@
   <h3>{{ unit_type | title }} Units</h3>
   
   <table class="table table-bordered">
+    {% set custom_units = units | selectattr("is_custom") | selectattr("type", "equalto", unit_type) | list %}
     <thead>
       <tr>
         <th>Name</th>
@@ -17,12 +18,19 @@
       </tr>
     </thead>
     <tbody>
-      {% for unit in units if unit.type == unit_type %}
-        {% if unit.is_custom and loop.first %}
-          <tr class="table-secondary">
-            <td colspan="4"><strong>Custom Units</strong></td>
-          </tr>
-        {% endif %}
+      {% for unit in units if unit.type == unit_type and not unit.is_custom %}
+        <tr>
+          <td>{{ unit.name }}</td>
+          <td>{{ unit.type }}</td>
+          <td>{{ unit.base_unit }}</td>
+          <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
+        </tr>
+      {% endfor %}
+      {% if custom_units %}
+        <tr class="table-secondary">
+          <td colspan="4"><strong>Custom Units:</strong> {% for unit in custom_units %}{{ unit.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        </tr>
+      {% endif %}
         <tr{% if unit.is_custom %} class="table-light"{% endif %}>
           <td>{{ unit.name }}</td>
           <td>{{ unit.type }}</td>
