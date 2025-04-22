@@ -118,8 +118,16 @@ function convertUnits() {
 }
 
 async function checkStock() {
-  const recipeId = document.getElementById('recipeSelect')?.value;
-  const scale = parseFloat(document.getElementById('scaleInput')?.value || '1.0');
+  const recipeSelect = document.getElementById('recipeSelect');
+  const scaleInput = document.getElementById('scaleInput');
+  
+  if (!recipeSelect || !scaleInput) {
+    console.error('Required elements not found');
+    return;
+  }
+
+  const recipeId = recipeSelect.value;
+  const scale = parseFloat(scaleInput.value || '1.0');
 
   if (!recipeId || isNaN(scale) || scale <= 0) {
     alert('Please select a recipe and enter a valid scale');
