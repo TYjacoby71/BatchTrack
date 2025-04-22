@@ -134,6 +134,7 @@ def clone_recipe(recipe_id):
     try:
         # Get original recipe with ingredients
         original = Recipe.query.get_or_404(recipe_id)
+        original_ingredients = list(original.recipe_ingredients)  # Create list to avoid lazy loading issues
         
         # Create new recipe
         clone = Recipe(
@@ -142,10 +143,10 @@ def clone_recipe(recipe_id):
             label_prefix=original.label_prefix
         )
         db.session.add(clone)
-        db.session.flush()
+        db.session.flush()  # Get clone.id
 
-        # Explicitly clone all ingredients
-        for ingredient in original.recipe_ingredients:
+        # Clone ingredients
+        for ingredient in original_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
                 inventory_item_id=ingredient.inventory_item_id,
@@ -153,10 +154,18 @@ def clone_recipe(recipe_id):
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
+            db.session.flush()  # Ensure each ingredient is added
 
         db.session.commit()
-        current_app.logger.info(f"Recipe {original.id} cloned to {clone.id} with {len(original.recipe_ingredients)} ingredients")
-        flash('Recipe and ingredients cloned successfully')
+        
+        # Verify ingredients were copied
+        ingredient_count = len(list(clone.recipe_ingredients))
+        current_app.logger.info(f"Recipe {original.id} cloned to {clone.id} with {ingredient_count} ingredients")
+        
+        if ingredient_count == 0:
+            raise ValueError("No ingredients were copied")
+            
+        flash(f'Recipe cloned successfully with {ingredient_count} ingredients')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
     except SQLAlchemyError as e:
         db.session.rollback()
