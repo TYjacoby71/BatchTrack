@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Recipe, Unit, RecipeIngredient, InventoryItem
-from flask import jsonify
+from models import db, Recipe, RecipeIngredient, InventoryItem
+from utils.unit_utils import get_global_unit_list
 from stock_check_utils import check_stock_for_recipe
 
 recipes_bp = Blueprint('recipes', __name__)
@@ -16,13 +16,14 @@ def list_recipes():
 @login_required
 def view_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    return render_template('view_recipe.html', recipe=recipe)
+    inventory_units = get_global_unit_list()
+    return render_template('view_recipe.html', recipe=recipe, inventory_units=inventory_units)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
-    inventory_units = Unit.query.all()
+    inventory_units = get_global_unit_list()
     parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     if request.method == 'POST':
@@ -33,7 +34,7 @@ def new_recipe():
                 label_prefix=request.form['label_prefix']
             )
             db.session.add(recipe)
-            db.session.flush()  # Get recipe.id
+            db.session.flush()
 
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
