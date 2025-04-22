@@ -163,7 +163,25 @@ table, th, td {
 th, td {
     padding: 8px 12px;
     text-align: left;
+    vertical-align: middle;
 }
+
+/* Column-specific alignments */
+td:nth-child(1) { width: 20%; } /* Recipe name */
+td:nth-child(2) { width: 15%; } /* Label code */
+td:nth-child(3) { width: 10%; text-align: right; } /* Scale */
+td:nth-child(4) { width: 12%; } /* Date */
+td:nth-child(5) { width: 10%; } /* Status */
+td:nth-child(6) { width: 10%; text-align: right; } /* Cost */
+td:nth-child(7) { width: 10%; text-align: right; } /* Quantity */
+td:nth-child(8) { width: 8%; } /* Tags */
+td:nth-child(9) { width: 5%; text-align: center; } /* Actions */
+
+/* Header alignment should match cells */
+th:nth-child(3),
+th:nth-child(6),
+th:nth-child(7) { text-align: right; }
+th:nth-child(9) { text-align: center; }
 
 .flashes {
     list-style: none;
