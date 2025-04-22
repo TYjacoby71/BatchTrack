@@ -3,6 +3,7 @@ from flask_login import login_required
 from models import db, Recipe, RecipeIngredient, InventoryItem
 from utils.unit_utils import get_global_unit_list
 from stock_check_utils import check_stock_for_recipe
+from sqlalchemy.exc import SQLAlchemyError
 
 recipes_bp = Blueprint('recipes', __name__)
 
@@ -53,9 +54,10 @@ def new_recipe():
             db.session.commit()
             flash('Recipe created successfully.')
             return redirect(url_for('recipes.list_recipes'))
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             db.session.rollback()
-            flash(f'Error creating recipe: {str(e)}')
+            flash(f"Invalid data: {str(e)}", "warning")
+            return redirect(request.referrer or url_for('recipes.new_recipe'))
 
     return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, parent_recipes=parent_recipes)
 
@@ -92,9 +94,10 @@ def edit_recipe(recipe_id):
             db.session.commit()
             flash('Recipe updated successfully.')
             return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             db.session.rollback()
-            flash(f'Error updating recipe: {str(e)}')
+            flash(f"Invalid update data: {str(e)}", "warning")
+            return redirect(request.referrer or url_for('recipes.edit_recipe', id=recipe_id))
 
     preselect_ingredient_id = session.pop('last_added_ingredient_id', None)
     add_ingredient_line = session.pop('add_ingredient_line', False)
@@ -161,9 +164,14 @@ def add_variation(recipe_id):
 @login_required
 def delete_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    db.session.delete(recipe)
-    db.session.commit()
-    flash('Recipe deleted.')
+    try:
+        db.session.delete(recipe)
+        db.session.commit()
+        flash('Recipe deleted.')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Database error while deleting recipe.", "danger")
+        return redirect(url_for('recipes.view_all'))
     return redirect(url_for('recipes.list_recipes'))
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
