@@ -1,18 +1,13 @@
-
-from app import app, db
-from models import User
-from werkzeug.security import generate_password_hash
+from app import app, db  # Must import from app.py where db is bound to app
 from seeders.unit_seeder import seed_units
 from seeders.ingredient_category_seeder import seed_categories
+from models import User
+from werkzeug.security import generate_password_hash
 
 def init_db():
     with app.app_context():
         db.create_all()
-        
-        # Seed default units
         seed_units()
-        
-        # Seed ingredient categories
         seed_categories()
         
         # Create default admin user if not exists
@@ -25,8 +20,7 @@ def init_db():
             db.session.add(admin)
             db.session.commit()
             print("Created admin user")
-
         print("✅ Database initialized and seeded successfully.")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     init_db()
