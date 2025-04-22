@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>View Batch</h2>
@@ -12,11 +11,14 @@
 
     {% if batch.product_id %}
         <p><strong>Output Type:</strong> Product</p>
-        <p><strong>Product Name:</strong> {{ batch.recipe_name }}</p>
+        <p><strong>Product Name:</strong> {{ batch.product.name }}</p>
+        {% if batch.variant %}
+            <p><strong>Variant:</strong> {{ batch.variant }}</p>
+        {% endif %}
         <p><strong>Quantity Produced:</strong> {{ batch.product_quantity }}</p>
-        <p><strong>Unit:</strong> {{ batch.product_unit }}</p>
+        <p><strong>Output Unit:</strong> {{ batch.product_unit }}</p>
         {% if batch.total_cost and batch.product_quantity %}
-        <p><strong>Unit Cost:</strong> ${{ (batch.total_cost / batch.product_quantity) | round(2) }}</p>
+            <p><strong>Unit Cost:</strong> ${{ (batch.total_cost / batch.product_quantity) | round(2) }}</p>
         {% endif %}
     {% else %}
         <p><strong>Output Type:</strong> Ingredient</p>
