@@ -20,8 +20,7 @@ def upgrade():
     op.execute("""
         UPDATE unit 
         SET is_custom = TRUE 
-        WHERE discipline_tags LIKE '%custom%' 
-        OR name NOT IN (
+        WHERE name NOT IN (
             'gram', 'kg', 'mg', 'oz', 'lb', 'ton',
             'ml', 'liter', 'tsp', 'tbsp', 'cup', 'pint', 'quart', 'gallon', 'floz', 'drop', 'dram',
             'cm', 'mm', 'inch', 'ft', 'yard', 'meter',
