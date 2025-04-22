@@ -14,17 +14,21 @@ function filterUnits() {
 
 function loadUnits() {
   fetch('/conversion/units', {
+    method: 'GET',
     headers: {
-      'Accept': 'application/json'
-    }
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    credentials: 'same-origin'
   })
     .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return response.json();
     })
     .then(units => {
-      if (!Array.isArray(units) || units.length === 0) {
-        throw new Error('No units received');
+      if (!units || (Array.isArray(units) && units.length === 0)) {
+        console.warn('No units available');
+        return;
       }
       const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
       unitSelectors.forEach(select => {
