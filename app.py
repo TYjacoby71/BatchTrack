@@ -55,10 +55,14 @@ from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp
+from routes.fifo_routes import fifo_bp
+from routes.expiration_routes import expiration_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.conversion.routes import conversion_bp
 
 # Register blueprints
+app.register_blueprint(fifo_bp)
+app.register_blueprint(expiration_bp)
 from routes.admin_routes import admin_bp
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
