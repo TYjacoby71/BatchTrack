@@ -171,46 +171,11 @@ def view_batch_in_progress(batch_identifier):
                          product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs)
 
-@batches_bp.route('/finish/<int:batch_id>', methods=['GET', 'POST'])
+@batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id, force=False):
     batch = Batch.query.get_or_404(batch_id)
-    
-    if request.method == 'GET':
-        products = Product.query.all()
-        units = get_global_unit_list()
-        return render_template('finish_batch.html', batch=batch, products=products, units=units)
-
-    try:
-        product_id = int(request.form['product_id'])
-        variant = request.form.get('variant_label', '').strip()
-        output_unit = request.form['output_unit']
-        quantity = float(request.form['final_quantity'])
-        notes = request.form.get('notes', '')
-
-        # Link batch to product output
-        new_inventory = ProductInventory(
-            product_id=product_id,
-            variant=variant,
-            unit=output_unit,
-            quantity=quantity,
-            batch_id=batch.id,
-            notes=notes
-        )
-        db.session.add(new_inventory)
-
-        # Mark batch complete
-        batch.status = 'completed'
-        batch.completion_date = datetime.now()
-        db.session.commit()
-
-        flash("Batch finished and linked to product!", "success")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error finishing batch: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+    action = request.form.get('action')
 
     try:
         # Prevent redundant status changes
