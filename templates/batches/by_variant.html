@@ -1,31 +1,30 @@
 
-{% extends 'layout.html' %}
-
+{% extends "layout.html" %}
 {% block content %}
-<div class="container">
-  <h2>Batch Stock - {{ variant }} {{ size }} {{ unit }}</h2>
-  
-  <div class="table-responsive">
-    <table class="table">
+<div class="container mt-4">
+  <h2>Batches for {{ variant }} ({{ size }}, {{ unit }})</h2>
+
+  <div class="table-responsive mt-3">
+    <table class="table table-hover">
       <thead>
         <tr>
           <th>Batch ID</th>
-          <th>Created</th>
-          <th>Quantity</th>
+          <th>Remaining</th>
           <th>Notes</th>
+          <th>Timestamp</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for batch in batches %}
+        {% for b in batches %}
         <tr>
-          <td>{{ batch.batch_id }}</td>
-          <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td>{{ batch.quantity }} {{ unit }}</td>
-          <td>{{ batch.notes }}</td>
+          <td>#{{ b.batch_id }}</td>
+          <td>{{ b.quantity }} {{ unit }}</td>
+          <td>{{ b.notes or '' }}</td>
+          <td>{{ b.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>
-            <a href="{{ url_for('batches.view_batch', batch_identifier=batch.batch_id) }}" 
-               class="btn btn-sm btn-info">View</a>
+            <a href="{{ url_for('batches.view_batch', batch_identifier=b.batch_id) }}" 
+               class="btn btn-sm btn-outline-primary">View Details</a>
           </td>
         </tr>
         {% endfor %}
@@ -34,10 +33,12 @@
   </div>
 
   {% if not batches %}
-  <p>No batches found with remaining stock.</p>
+  <div class="alert alert-info">
+    No active batches found for this variant.
+  </div>
   {% endif %}
 
-  <a href="{{ url_for('product.view_product', product_id=batches[0].product_id if batches else product_id) }}" 
-     class="btn btn-secondary">Back to Product</a>
+  <a href="{{ url_for('products.view_product', product_id=batches[0].product_id if batches else product_id) }}" 
+     class="btn btn-secondary mt-3">← Back to Product</a>
 </div>
 {% endblock %}
