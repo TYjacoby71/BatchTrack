@@ -53,6 +53,12 @@ def manage_units():
             units_by_type[unit.type] = []
         units_by_type[unit.type].append(unit)
 
+    if request.headers.get('Accept') == 'application/json':
+        units_list = [{
+            'name': unit.name,
+            'category': unit.type
+        } for unit in units]
+        return jsonify(units_list)
     return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=[]) # units.html needs updating to display custom units separately.
 
 

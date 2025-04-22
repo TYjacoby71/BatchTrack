@@ -1,0 +1,79 @@
+Would you like me to:
+Search your current app files for all places where Unit.query.* is used?
+
+Drop in the new get_all_units() helper and patch a few spots for you?
+
+This is the best time to bulletproof the whole app before shadcn UI migration.
+
+
+
+
+
+
+You said:
+please search
+
+
+ChatGPT said:
+Here’s your full audit of where Unit.query is used throughout the project — this is where inconsistencies in unit lists could happen if not centralized.
+
+✅ Centralization Goal: Replace these calls with get_all_units() from a utility
+📍 Direct Unit.query.all() or .order_by() Calls:
+
+File	Line	Description
+app.py	80	Loads full unit list
+conversion/routes.py	44	Loads all units (UI route likely)
+recipes/routes.py	19	Unit.query.order_by(Unit.name).all()
+settings/routes.py	39	inventory_units=Unit.query.all()
+inventory_routes.py	16	units = Unit.query.all()
+recipe_routes.py	25, 66, 102	All loading unit lists
+recipe_routes.py	120	⚠️ Using InventoryUnit.query.all() (outdated!)
+services/unit_conversion.py	63, 64	Directly returning .all() — should use service layer
+📍 Direct Unit.query.filter_by(...) Calls:
+These are fine as-is for lookups by name or type:
+
+
+File	Line	Usage
+unit_conversion_utils.py	9–10	Get from/to units by name
+conversion/routes.py	28	Check if unit already exists
+quick_add/routes.py	39	Same as above
+seeders/unit_seeder.py	64	Prevent duplicate seeds
+services/unit_conversion.py	13–14	For actual conversion logic
+✅ These don’t need to change — they aren’t for dropdowns.
+
+✅ Next Step: Replace these with your new utility
+Create a new shared function:
+
+📄 app/utils/unit_utils.py
+
+python
+Copy
+Edit
+from models import Unit
+
+def get_all_units():
+    """Return units globally ordered for use in all dropdowns."""
+    return Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
+Then in each of these files, do:
+
+python
+Copy
+Edit
+from app.utils.unit_utils import get_all_units
+units = get_all_units()
+✅ Final Cleanup Target
+Replace unit list fetching in:
+
+/inventory
+
+/recipes
+
+/settings
+
+/conversion
+
+/custom_mapping
+
+Quick Add modals
+
+Any seed verification scripts
