@@ -63,3 +63,13 @@ def check_stock():
         "all_ok": all_ok,
         "recipe_name": recipe.name
     }), 200
+
+from flask import Blueprint, render_template, redirect, url_for
+from flask_login import login_required
+
+app_bp = Blueprint('app', __name__)
+
+@app_bp.route('/unit-manager')
+@login_required
+def unit_manager():
+    return redirect(url_for('conversion.manage_units'))
