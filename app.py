@@ -90,13 +90,15 @@ def load_user(user_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
+    from flask_wtf import FlaskForm
+    form = FlaskForm()
+    if request.method == 'POST' and form.validate_on_submit():
         username = request.form.get('username')
         password = request.form.get('password')
 
         if not username or not password:
             flash('Please provide both username and password')
-            return render_template('login.html')
+            return render_template('login.html', form=form)
 
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
