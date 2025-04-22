@@ -55,12 +55,15 @@ def manage_units():
         units_by_type[unit.type].append(unit)
 
     if request.headers.get('Accept') == 'application/json':
-        units_list = [{
+        return jsonify([{
+            'id': unit.id,
             'name': unit.name,
-            'category': unit.type
-        } for unit in units]
-        return jsonify(units_list)
-    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=[]) # units.html needs updating to display custom units separately.
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base,
+            'is_custom': unit.is_custom
+        } for unit in units])
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=[])
 
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
