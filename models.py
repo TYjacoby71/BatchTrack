@@ -86,6 +86,16 @@ class Batch(db.Model):
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
 
+class ProductInventory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    variant = db.Column(db.String(100))
+    unit = db.Column(db.String(50))
+    quantity = db.Column(db.Float)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
+    notes = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
