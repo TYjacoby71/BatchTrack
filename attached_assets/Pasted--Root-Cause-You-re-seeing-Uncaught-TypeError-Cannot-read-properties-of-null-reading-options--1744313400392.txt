@@ -1,0 +1,61 @@
+🔍 Root Cause
+You're seeing:
+
+Uncaught TypeError: Cannot read properties of null (reading 'options')
+
+This likely happens after you submit the "Quick Add Ingredient" form, and it tries to update the <select> dropdown — but the dropdown it's referencing doesn't exist because you're still in a modal context or because no dropdown is currently active.
+
+✅ Fix: Add a Null Check Before Updating Dropdowns
+Here’s the updated JS handler for after a quick-add ingredient submission. This adds a null check before trying to access .options:
+
+javascript
+Copy
+Edit
+document.getElementById('saveQuickIngredient').addEventListener('click', function () {
+    const name = document.getElementById('quickIngredientName').value.trim();
+    const unit = document.getElementById('quickIngredientUnit').value;
+
+    if (!name || !unit) {
+        alert("Both name and unit are required.");
+        return;
+    }
+
+    const button = this;
+    button.disabled = true;
+    button.innerText = "Adding...";
+
+    fetch("/recipes/ingredients/quick-add", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, unit })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) return alert("Error: " + data.error);
+
+        // Check if an ingredient dropdown is focused or present
+        const selects = document.querySelectorAll("select[name='ingredient_ids[]']");
+        if (selects.length > 0) {
+            const lastSelect = selects[selects.length - 1];
+            const opt = new Option(data.name, data.id, false, true);
+            lastSelect.add(opt);
+            lastSelect.value = data.id;
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById("quickAddIngredientModal")).hide();
+
+        // Optionally re-focus the last unit dropdown if needed
+        document.getElementById('quickIngredientName').value = '';
+        document.getElementById('quickIngredientUnit').value = '';
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerText = "Add Ingredient";
+    });
+});
+🛠 What This Fixes
+It prevents null reference errors by checking if dropdowns exist before modifying them.
+
+It auto-selects the newly added ingredient in the last-used dropdown (if it exists).
+
+It resets and closes the modal cleanly after submission.

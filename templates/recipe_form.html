@@ -20,11 +20,10 @@
 
 {% if recipe %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
-    {{ csrf_token() }}
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% endif %}
 
     <div class="form-group">
@@ -74,10 +73,41 @@
     </div>
 
     <div class="form-group mt-3 d-flex justify-content-between">
-        <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+        <div>
+            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+            {% if recipe %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
+                Delete Recipe
+            </button>
+            {% endif %}
+        </div>
         <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
+
+<!-- Delete Confirmation Modal -->
+{% if recipe %}
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete "{{ recipe.name }}"? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete Recipe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Quick Add Ingredient Modal -->
 <div class="modal fade" id="quickAddIngredientModal" tabindex="-1">

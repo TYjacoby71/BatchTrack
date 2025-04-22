@@ -1,0 +1,106 @@
+# === UUCS Full Integration Pack for BatchTrack v8.78 ===
+# This file contains all code needed to implement the Unit Converter Modal + Universal Unit Conversion System (UUCS) as discussed.
+# Copy file-by-file into your Replit app following the structure below.
+
+# == [1] models.py additions ==
+
+class Unit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    type = db.Column(db.String(32), nullable=False)
+    base_unit = db.Column(db.String(64), nullable=False)
+    multiplier_to_base = db.Column(db.Float, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+class CustomUnitMapping(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    multiplier = db.Column(db.Float, nullable=False)
+
+class IngredientCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    default_density = db.Column(db.Float, nullable=False)
+
+class ConversionLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    amount = db.Column(db.Float, nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    result = db.Column(db.Float, nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True)
+    density_used = db.Column(db.Float, nullable=True)
+
+# Add to Ingredient model:
+category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
+category = db.relationship('IngredientCategory', backref='ingredients')
+
+# Continue to next section...
+
+# == [2] utils/conversion_engine.py ==
+
+class ConversionEngine:
+    @staticmethod
+    def round_value(value, decimals=2):
+        return round(value, decimals)
+
+    @staticmethod
+    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
+        from_u = Unit.query.filter_by(name=from_unit).first()
+        to_u = Unit.query.filter_by(name=to_unit).first()
+        if not from_u or not to_u:
+            raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
+
+        custom_mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
+        if custom_mapping:
+            result = amount * custom_mapping.multiplier
+        elif from_unit == to_unit:
+            result = amount
+        elif from_u.type == to_u.type:
+            base_amount = amount * from_u.multiplier_to_base
+            result = base_amount / to_u.multiplier_to_base
+        elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+            if density is None and ingredient_id:
+                ingredient = Ingredient.query.get(ingredient_id)
+                if ingredient:
+                    density = ingredient.density
+                    if density is None and ingredient.category:
+                        density = ingredient.category.default_density
+                    density = density or 1.0
+            if density is None:
+                density = 1.0
+            if from_u.type == 'volume':
+                grams = amount * from_u.multiplier_to_base * density
+                result = grams / to_u.multiplier_to_base
+            else:
+                ml = (amount * from_u.multiplier_to_base) / density
+                result = ml / to_u.multiplier_to_base
+        else:
+            raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
+
+        log = ConversionLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            timestamp=datetime.utcnow(),
+            amount=amount,
+            from_unit=from_unit,
+            to_unit=to_unit,
+            result=result,
+            ingredient_id=ingredient_id,
+            density_used=density
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        return ConversionEngine.round_value(result)
+
+    @staticmethod
+    def get_units_by_type(unit_type=None):
+        if unit_type:
+            return Unit.query.filter_by(type=unit_type).all()
+        return Unit.query.all()
+
+# More sections to follow...

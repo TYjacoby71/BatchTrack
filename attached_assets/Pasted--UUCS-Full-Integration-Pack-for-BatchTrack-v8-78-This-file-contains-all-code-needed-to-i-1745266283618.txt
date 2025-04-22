@@ -1,0 +1,157 @@
+# === UUCS Full Integration Pack for BatchTrack v8.78 ===
+# This file contains all code needed to implement the Unit Converter Modal + Universal Unit Conversion System (UUCS) as discussed.
+# Copy file-by-file into your Replit app following the structure below.
+
+[... previous sections omitted for brevity ...]
+
+# == [5] static/js/main.js additions ==
+
+function convertUnits() {
+  const amount = document.getElementById('converterAmount').value;
+  const fromUnit = document.getElementById('fromUnit').value;
+  const toUnit = document.getElementById('toUnit').value;
+  const ingredientId = document.getElementById('ingredient').value;
+
+  if (!amount || !fromUnit || !toUnit) {
+    alert('Please fill in all fields.');
+    return;
+  }
+
+  let url = `/convert/convert/${amount}/${fromUnit}/${toUnit}`;
+  if (ingredientId) url += `?ingredient_id=${ingredientId}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const resultDiv = document.getElementById('converterResult');
+      if (data.error && data.error.includes("without density")) {
+        const useDefault = confirm("This conversion requires a density. Use default water density (1.0 g/mL)?");
+        if (useDefault) {
+          fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}&density=1.0`)
+            .then(response => response.json())
+            .then(result => displayResult(resultDiv, `${amount} ${fromUnit} = ${result.result} ${result.unit}`));
+        } else {
+          resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
+        }
+      } else if (data.error) {
+        resultDiv.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+      } else {
+        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('converterResult').innerHTML = '<p class="text-danger">An error occurred.</p>';
+    });
+}
+
+function calculate() {
+  const expression = document.getElementById('expression').value;
+  const resultDiv = document.getElementById('calculatorResult');
+
+  if (typeof math === 'undefined') {
+    resultDiv.innerHTML = '<p class="text-danger">Math.js failed to load.</p>';
+    return;
+  }
+
+  try {
+    const result = math.evaluate(expression);
+    if (isNaN(result) || !isFinite(result)) {
+      resultDiv.innerHTML = '<p class="text-danger">Invalid expression.</p>';
+    } else {
+      displayResult(resultDiv, `Result: ${result}`);
+    }
+  } catch (error) {
+    resultDiv.innerHTML = '<p class="text-danger">Error in expression.</p>';
+  }
+}
+
+function addUnit() {
+  const name = document.getElementById('newUnitName').value;
+  const type = document.getElementById('newUnitType').value;
+  const baseUnit = document.getElementById('newUnitBase').value;
+  const multiplier = document.getElementById('newUnitMultiplier').value;
+
+  fetch('/convert/units', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, type, base_unit: baseUnit, multiplier })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) alert(data.error);
+      else {
+        alert('Unit added successfully!');
+        refreshUnitDropdowns();
+      }
+    });
+}
+
+function addMapping() {
+  const fromUnit = document.getElementById('fromUnitMapping').value;
+  const toUnit = document.getElementById('toUnitMapping').value;
+  const multiplier = document.getElementById('mappingMultiplier').value;
+
+  fetch('/convert/custom-mappings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_unit: fromUnit, to_unit: toUnit, multiplier })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) alert(data.error);
+      else alert('Mapping added successfully!');
+    });
+}
+
+function loadUnits() {
+  const cached = localStorage.getItem('batchtrack_units');
+  if (cached) {
+    populateUnitDropdowns(JSON.parse(cached));
+  }
+
+  fetch('/convert/units', {
+    headers: { 'Accept': 'application/json' }
+  })
+    .then(response => response.json())
+    .then(units => {
+      localStorage.setItem('batchtrack_units', JSON.stringify(units));
+      populateUnitDropdowns(units);
+    })
+    .catch(error => console.error('Failed to load units:', error));
+}
+
+document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
+
+function populateUnitDropdowns(units) {
+  const from = document.getElementById('fromUnit');
+  const to = document.getElementById('toUnit');
+  const base = document.getElementById('newUnitBase');
+
+  if (!from || !to || !base) return;
+  from.innerHTML = '';
+  to.innerHTML = '';
+  base.innerHTML = '';
+
+  units.forEach(unit => {
+    const option = `<option value="${unit.name}">${unit.name} (${unit.type})</option>`;
+    from.innerHTML += option;
+    to.innerHTML += option;
+    base.innerHTML += option;
+  });
+}
+
+function displayResult(element, text) {
+  element.innerHTML = `
+    <p>${text}</p>
+    <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
+  `;
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+  });
+}

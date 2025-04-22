@@ -100,6 +100,19 @@ def create_variation(recipe_id):
 
 
 
+@recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
+@login_required
+def delete_recipe(recipe_id):
+    try:
+        recipe = Recipe.query.get_or_404(recipe_id)
+        db.session.delete(recipe)
+        db.session.commit()
+        flash('Recipe deleted successfully.')
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as e:
+        flash(f"Error deleting recipe: {str(e)}", "error")
+        return redirect(url_for('recipes.edit_recipe', recipe_id=recipe_id))
+
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 def lock_recipe(recipe_id):
@@ -128,6 +141,7 @@ def clone_recipe(recipe_id):
         db.session.add(clone)
         db.session.flush()
 
+        # Clone all recipe ingredients with exact amounts and units
         for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
@@ -136,9 +150,10 @@ def clone_recipe(recipe_id):
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
+            db.session.flush()  # Ensure each ingredient gets added properly
 
         db.session.commit()
-        flash('Recipe cloned successfully')
+        flash('Recipe and all ingredients cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")

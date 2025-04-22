@@ -66,8 +66,7 @@
 
 <h3>Add New Item</h3>
 <form method="post" action="{{ url_for('inventory.add_inventory') }}">
-  {{ csrf_token() }}
-  {{ csrf_token() }}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="row g-3 align-items-end">
     <div class="col">
       <label class="form-label">Name</label>
