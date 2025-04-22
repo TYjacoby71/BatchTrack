@@ -30,7 +30,10 @@
         <select name="product_unit" class="form-select select2" data-unit-select required>
             <option value="">Select unit</option>
             {% for unit in units %}
-            <option value="{{ unit.name }}" {% if unit.name == batch.product_unit %}selected{% endif %}>
+            <option value="{{ unit.name }}" 
+                    {% if unit.name == batch.product_unit %}selected{% endif %}
+                    {% if unit.type != 'product' %}style="display:none;" class="inventory-unit"{% endif %}
+                    {% if unit.type == 'product' %}class="product-unit"{% endif %}>
                 {{ unit.name }} ({{ unit.type }})
             </option>
             {% endfor %}
@@ -138,6 +141,17 @@ function toggleOutputFields() {
 
     productFields.style.display = type === 'product' ? 'block' : 'none';
     ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
+
+    // Toggle unit visibility
+    const select = document.querySelector('[name="product_unit"]');
+    const productUnits = select.querySelectorAll('.product-unit');
+    const inventoryUnits = select.querySelectorAll('.inventory-unit');
+    
+    productUnits.forEach(opt => opt.style.display = type === 'product' ? '' : 'none');
+    inventoryUnits.forEach(opt => opt.style.display = type === 'ingredient' ? '' : 'none');
+    
+    // Reset selection
+    select.value = '';
 }
 
 function addIngredientRow() {
