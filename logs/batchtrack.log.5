@@ -1,4 +1,4 @@
-2025-04-21 23:40:24,805 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-21 23:59:10,637 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -38,7 +38,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/login_manager.py", line 364, in _load_user
     user = self._user_callback(user_id)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 75, in load_user
+  File "/home/runner/workspace/app.py", line 77, in load_user
     return db.session.get(User, int(user_id))
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 1058, in get
@@ -87,3 +87,20 @@ FROM user
 WHERE user.id = ?]
 [parameters: (1,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-04-22 00:00:16,078 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:00:23,111 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:12,405 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:14,914 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:17,073 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:19,320 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:23,666 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:24,494 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:25,610 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:01:26,744 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:02:15,576 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:02:18,034 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:02:19,938 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:02:21,774 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:03:34,841 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:03:52,092 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:03:54,402 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
