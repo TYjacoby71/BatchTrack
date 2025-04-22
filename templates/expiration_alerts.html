@@ -1,0 +1,29 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Expiration Alerts</h2>
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Unit</th>
+        <th>Expiration Date</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in expired %}
+      <tr class="{% if item.is_expired %}table-danger{% endif %}">
+        <td>{{ item.product_name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.unit }}</td>
+        <td>{{ item.expiration_date }}</td>
+        <td>{% if item.is_expired %}Expired{% else %}Expiring Soon{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

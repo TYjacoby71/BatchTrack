@@ -1,0 +1,29 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>FIFO Inventory Tracking</h2>
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Batch</th>
+        <th>Date Added</th>
+        <th>Quantity</th>
+        <th>Unit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inventory %}
+      <tr>
+        <td>{{ item.product_name }}</td>
+        <td>{{ item.batch_number }}</td>
+        <td>{{ item.date_added }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.unit }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
