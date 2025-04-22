@@ -20,8 +20,7 @@
 
 {% if recipe %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
-    {{ csrf_token() }}
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
