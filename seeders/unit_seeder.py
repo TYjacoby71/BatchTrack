@@ -1,8 +1,8 @@
+
 from models import Unit, db
 
 def seed_units():
     units = [
-
         # Weight Units
         {"name": "gram", "type": "weight", "base_unit": "gram", "multiplier_to_base": 1.0},
         {"name": "kg", "type": "weight", "base_unit": "gram", "multiplier_to_base": 1000.0},
