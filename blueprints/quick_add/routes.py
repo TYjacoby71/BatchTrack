@@ -40,7 +40,14 @@ def quick_add_unit():
     if existing:
         return jsonify({'error': 'Unit already exists.'}), 409
 
-    new_unit = InventoryUnit(name=name, type=type_)
+    new_unit = Unit(
+        name=name,
+        type=type_,
+        base_unit=name,
+        multiplier_to_base=1.0,
+        discipline_tags="custom",
+        custom=True
+    )
     db.session.add(new_unit)
     db.session.commit()
 
