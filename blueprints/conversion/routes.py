@@ -20,7 +20,7 @@ def convert(amount, from_unit, to_unit):
 def manage_units():
     units = Unit.query.all()
     if request.headers.get('Accept') == 'application/json':
-        return jsonify([{'name': unit.name, 'type': unit.type} for unit in units])
+        return jsonify([{'id': unit.id, 'name': unit.name, 'type': unit.type} for unit in units])
     return render_template('conversion/units.html', units=units)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
