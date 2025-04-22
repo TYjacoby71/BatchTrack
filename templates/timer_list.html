@@ -1,35 +1,45 @@
 
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 {% block content %}
-<h2>Timer Management</h2>
-<div class="table-responsive">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Batch</th>
-        <th>Label</th>
-        <th>Due At</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for timer in timers %}
-      <tr>
-        <td>{{ timer.batch_id }}</td>
-        <td>{{ timer.label }}</td>
-        <td>{{ timer.due_at }}</td>
-        <td>{% if timer.completed %}Completed{% else %}Active{% endif %}</td>
-        <td>
-          {% if not timer.completed %}
-          <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" style="display: inline;">
-            <button type="submit" class="btn btn-sm btn-success">Complete</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="container">
+  <h2>Timer Management</h2>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Batch</th>
+          <th>Timer Label</th>
+          <th>Started</th>
+          <th>Due</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for timer in timers %}
+        <tr>
+          <td>{{ timer.batch_id }}</td>
+          <td>{{ timer.label }}</td>
+          <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ timer.due_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            {% if timer.completed %}
+            <span class="badge bg-success">Completed</span>
+            {% else %}
+            <span class="badge bg-warning">Active</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not timer.completed %}
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-success">Complete</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
