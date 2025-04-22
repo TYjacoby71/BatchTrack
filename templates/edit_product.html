@@ -3,6 +3,7 @@
 {% block content %}
 <h2>Edit Product: {{ product.name }}</h2>
 <form method="post" enctype="multipart/form-data">
+  {{ csrf_token() }}
   <label>Name:</label>
   <input name="name" value="{{ product.name }}"><br>
   <label>Quantity:</label>
