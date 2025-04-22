@@ -3,7 +3,8 @@
 <div class="container">
     <h2>Settings</h2>
 
-    <form id="settingsForm" class="mt-4">
+    <form id="settingsForm" class="mt-4" method="post">
+        {{ csrf_token() }}
         
 
         <!-- Alert Settings -->
