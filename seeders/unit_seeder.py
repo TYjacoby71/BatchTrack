@@ -71,6 +71,9 @@ def seed_units():
         {"name": "minute", "type": "time", "base_unit": "second", "multiplier_to_base": 60.0},
         {"name": "hour", "type": "time", "base_unit": "second", "multiplier_to_base": 3600.0},
         {"name": "day", "type": "time", "base_unit": "second", "multiplier_to_base": 86400.0},
+        {"name": "week", "type": "time", "base_unit": "second", "multiplier_to_base": 604800.0},
+        {"name": "month", "type": "time", "base_unit": "second", "multiplier_to_base": 2592000.0},
+        {"name": "year", "type": "time", "base_unit": "second", "multiplier_to_base": 31536000.0},
     ]
 
     # Seed regular units
