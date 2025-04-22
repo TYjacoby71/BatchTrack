@@ -38,26 +38,37 @@
     {% endif %}
   {% endwith %}
 
-  <table class="table mt-3">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Base Unit</th>
-        <th>Multiplier</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for unit in units %}
-      <tr>
-        <td>{{ unit.name }}</td>
-        <td>{{ unit.type }}</td>
-        <td>{{ unit.base_unit }}</td>
-        <td>{{ unit.multiplier_to_base }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h4>Units by Type</h4>
+  {% for unit_type in ['weight', 'volume', 'length', 'area', 'count', 'time', 'custom'] %}
+    <div class="card mb-3">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">{{ unit_type.capitalize() }}</h5>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Base Unit</th>
+              <th>Multiplier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for unit in units if unit.type == unit_type %}
+            <tr>
+              <td>{{ unit.name }}</td>
+              <td>{{ unit.base_unit }}</td>
+              <td>{{ unit.multiplier_to_base }}</td>
+            </tr>
+            {% endfor %}
+            {% if not (units|selectattr('type', 'equalto', unit_type)|list)|length %}
+            <tr><td colspan="3" class="text-muted">No {{ unit_type }} units defined</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
 </div>
 
 <!-- Custom Mappings Form (Improved UI) -->
