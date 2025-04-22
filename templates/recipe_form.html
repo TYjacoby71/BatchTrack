@@ -19,7 +19,7 @@
 {% endif %}
 
 {% if recipe %}
-  <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+  <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
