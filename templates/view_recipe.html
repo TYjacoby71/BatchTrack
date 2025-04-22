@@ -41,12 +41,7 @@
 </div>
 
 <div class="actions">
-    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
-    <a href="{{ url_for('recipes.prompt_clone', recipe_id=recipe.id) }}" class="btn btn-secondary">Duplicate Recipe</a>
-    <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this recipe?')">Delete Recipe</button>
-    </form>
-    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
+    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="button">Edit Recipe</a>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="button-secondary">Back to List</a>
 </div>
 {% endblock %}
