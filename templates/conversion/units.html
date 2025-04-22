@@ -6,15 +6,18 @@
 
 {% for unit_type in types %}
   <h3>{{ unit_type | title }} Units</h3>
+  
+  <!-- System Units -->
   <ul>
     {% for unit in units if unit.type == unit_type and not unit.is_custom %}
       <li>{{ unit.name }}</li>
     {% endfor %}
   </ul>
 
+  <!-- Custom Units -->
   {% set custom_units = units | selectattr("is_custom") | selectattr("type", "equalto", unit_type) | list %}
   {% if custom_units %}
-    <h5>Custom:</h5>
+    <h4 class="mt-3">Custom:</h4>
     <ul>
       {% for unit in custom_units %}
         <li>{{ unit.name }}</li>
