@@ -4,7 +4,8 @@
     <h3>Plan Production</h3>
   </div>
   
-  <form id="planForm" class="plan-form">
+  <form id="planForm" class="plan-form" method="post">
+    {{ csrf_token() }}
     <div class="form-group">
       <label>Recipe:</label>
       <select class="form-select" name="recipe_id" required>
