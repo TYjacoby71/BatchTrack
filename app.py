@@ -38,9 +38,11 @@ login_manager.login_view = 'login'
 
 # Register all blueprints
 from routes.batch_routes import batches_bp
-from routes.admin_routes import admin_bp
-from routes.inventory_routes import inventory_bp
-from routes.recipe_routes import recipes_bp
+from blueprints.inventory.routes import inventory_bp
+from blueprints.recipes.routes import recipes_bp
+from blueprints.conversion.routes import conversion_bp
+from blueprints.settings.routes import settings_bp
+from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
 from routes.products import products_bp
@@ -54,6 +56,7 @@ from blueprints.settings.routes import settings_bp
 from blueprints.conversion.routes import conversion_bp
 
 # Register blueprints
+from routes.admin_routes import admin_bp
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
