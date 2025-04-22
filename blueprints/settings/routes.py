@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required
-from models import db, InventoryUnit, ProductUnit
+from models import db, Unit, ProductUnit
 import json
 
 settings_bp = Blueprint('settings', __name__)
@@ -36,7 +36,7 @@ def index():
     return render_template(
         'settings/index.html',
         settings=settings_data,
-        inventory_units=InventoryUnit.query.all(),
+        inventory_units=Unit.query.all(),
         product_units=ProductUnit.query.all()
     )
 

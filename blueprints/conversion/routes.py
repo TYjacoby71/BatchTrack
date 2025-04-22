@@ -18,10 +18,45 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 @login_required
 def manage_units():
+    from models import Unit, db
+    if request.method == 'POST':
+        name = request.form.get('name')
+        type = request.form.get('type', 'count')
+        base_unit = request.form.get('base_unit', name)
+        multiplier = request.form.get('multiplier', 1.0)
+        
+        existing_unit = Unit.query.filter_by(name=name).first()
+        if existing_unit:
+            existing_unit.type = type
+            existing_unit.base_unit = base_unit
+            existing_unit.multiplier_to_base = float(multiplier)
+        else:
+            new_unit = Unit(
+                name=name,
+                type=type,
+                base_unit=base_unit,
+                multiplier_to_base=float(multiplier)
+            )
+            db.session.add(new_unit)
+        db.session.commit()
+
     units = Unit.query.all()
     if request.headers.get('Accept') == 'application/json':
-        return jsonify([{'id': unit.id, 'name': unit.name, 'type': unit.type} for unit in units])
-    return render_template('conversion/units.html', units=units)
+        return jsonify([{
+            'id': unit.id,
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base
+        } for unit in units])
+    # Group units by type
+    units_by_type = {}
+    for unit in units:
+        if unit.type not in units_by_type:
+            units_by_type[unit.type] = []
+        units_by_type[unit.type].append(unit)
+    
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=[])
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 @login_required

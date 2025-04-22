@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, InventoryItem, InventoryUnit
+from models import db, InventoryItem, Unit
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -13,7 +13,7 @@ def list_inventory():
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     items = query.all()
-    units = InventoryUnit.query.all()
+    units = Unit.query.all()
     return render_template('inventory_list.html', items=items, units=units)
 
 @inventory_bp.route('/inventory/add', methods=['POST'])

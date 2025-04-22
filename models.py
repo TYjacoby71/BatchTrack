@@ -116,13 +116,7 @@ class InventoryItem(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 
-class InventoryUnit(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(32), unique=True)
-    type = db.Column(db.String(16))
-    aliases = db.Column(db.Text)
-    base_equivalent = db.Column(db.Float)
-    density_required = db.Column(db.Boolean, default=False)
+
 
 class ProductUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
