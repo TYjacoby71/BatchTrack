@@ -34,6 +34,7 @@ class IngredientCategory(db.Model):
     default_density = db.Column(db.Float, nullable=False)
 
 class ConversionLog(db.Model):
+    __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -41,8 +42,9 @@ class ConversionLog(db.Model):
     from_unit = db.Column(db.String(64), nullable=False)
     to_unit = db.Column(db.String(64), nullable=False)
     result = db.Column(db.Float, nullable=False)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
     density_used = db.Column(db.Float, nullable=True)
+    ingredient = db.relationship('InventoryItem', backref='conversion_logs')
 
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
