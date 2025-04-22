@@ -42,12 +42,18 @@ def dashboard():
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
 def check_stock():
-    data = request.json
-    recipe_id = data.get('recipe_id')
-    scale = float(data.get('scale', 1.0))
-
-    if not recipe_id or scale <= 0:
-        return jsonify({"error": "Invalid input"}), 400
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        recipe_id = data.get('recipe_id')
+        if not recipe_id:
+            return jsonify({"error": "Recipe ID is required"}), 400
+            
+        scale = float(data.get('scale', 1.0))
+        if scale <= 0:
+            return jsonify({"error": "Scale must be greater than 0"}), 400
 
     recipe = Recipe.query.get_or_404(recipe_id)
     stock_check, all_ok = check_stock_for_recipe(recipe, scale)

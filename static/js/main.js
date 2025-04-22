@@ -112,3 +112,13 @@ function convertUnits() {
       resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     });
 }
+
+async function checkStock() {
+  const recipeId = document.getElementById('recipeSelect')?.value;
+  const scale = parseFloat(document.getElementById('scaleInput')?.value || '1.0');
+
+  if (!recipeId || isNaN(scale) || scale <= 0) {
+    alert('Please select a recipe and enter a valid scale');
+    return;
+  }
+}
