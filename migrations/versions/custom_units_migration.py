@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'custom_units_migration'
+revision = 'f7d3570207b6'
 down_revision = 'b5046060fd56'
 branch_labels = None
 depends_on = None
