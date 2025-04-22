@@ -64,13 +64,10 @@
             {% endfor %}
 
             <!-- Custom Units -->
-            {% set custom_units = units|selectattr('type', 'equalto', unit_type)|selectattr('is_custom')|list %}
+            {% set custom_units = units|selectattr('type', 'equalto', unit_type)|selectattr('is_custom', 'equalto', true)|list %}
             {% if custom_units %}
             <tr class="table-secondary">
               <td colspan="3"><strong>Custom:</strong></td>
-            </tr>
-            <tr>
-              <td colspan="3"><em>Customer {{ unit_type|capitalize }} Units</em></td>
             </tr>
             {% for unit in custom_units %}
             <tr>
