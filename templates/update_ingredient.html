@@ -3,6 +3,7 @@
 {% block content %}
 <h2>Update Ingredient</h2>
 <form method="post">
+    {{ csrf_token() }}
     <label for="name">Name:</label>
     <input type="text" name="name" value="{{ ing.name }}" required><br>
 
