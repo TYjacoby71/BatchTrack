@@ -57,6 +57,13 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
         stock_check, all_ok = check_stock_for_recipe(recipe, scale)
+        
+        return jsonify({
+            "stock_check": stock_check,
+            "status": "ok" if all_ok else "bad",
+            "all_ok": all_ok,
+            "recipe_name": recipe.name
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     status = "ok" if all_ok else "bad"
