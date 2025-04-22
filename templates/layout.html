@@ -28,7 +28,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Inventory Management -->
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('adjust.inventory_adjust') }}">Inventory Adjust</a></li>
@@ -36,18 +36,18 @@
                     <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Production Tools -->
                     <li><a class="dropdown-item" href="{{ url_for('timer.list_timers') }}">Timer Management</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product_log.view') }}">Production Log</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Settings & Management -->
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
