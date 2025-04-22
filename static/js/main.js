@@ -1,71 +1,55 @@
-async function loadUnits() {
-  try {
-    const response = await fetch('/conversion/units', {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    const units = await response.json();
-
-    // Populate all unit selectors
-    const unitSelectors = document.querySelectorAll('select[data-unit-select], select[name="base_unit"], #fromUnit, #toUnit');
-    unitSelectors.forEach(select => {
-      const currentValue = select.value;
-      select.innerHTML = '';
-      units.forEach(unit => {
-        const option = document.createElement('option');
-        option.value = unit.name;
-        option.textContent = unit.name;
-        select.appendChild(option);
-      });
-      // Restore selected value if it exists
-      if (currentValue && [...select.options].find(opt => opt.value === currentValue)) {
-        select.value = currentValue;
-      }
-    });
-
-    // Type-specific population for the base unit dropdown
-    const typeSelect = document.querySelector('select[name="type"]');
-    const baseUnitSelect = document.querySelector('select[name="base_unit"]');
-
-    if (typeSelect && baseUnitSelect) {
-      const updateBaseUnits = () => {
-        const selectedType = typeSelect.value;
-        const typeUnits = units.filter(unit => unit.type === selectedType);
-        baseUnitSelect.innerHTML = '';
-        typeUnits.forEach(unit => {
-          const option = document.createElement('option');
-          option.value = unit.name;
-          option.textContent = unit.name;
-          baseUnitSelect.appendChild(option);
+function loadUnits() {
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(units => {
+      const unitSelectors = document.querySelectorAll('select[data-unit-select]');
+      unitSelectors.forEach(select => {
+        select.innerHTML = '';
+        units.forEach(unit => {
+          const option = new Option(unit.name, unit.name);
+          select.add(option);
         });
-      };
-
-      typeSelect.addEventListener('change', updateBaseUnits);
-      updateBaseUnits(); // Initial population
-    }
-  } catch (error) {
-    console.error("Error loading units:", error);
-  }
+      });
+    })
+    .catch(error => console.error('Error loading units:', error));
 }
 
-// Add event listeners for unit loading
-document.addEventListener('DOMContentLoaded', () => {
-  loadUnits();
-
-  // Reload units when modals with unit selectors are shown
-  const modalsWithUnits = document.querySelectorAll('[data-bs-toggle="modal"]');
-  modalsWithUnits.forEach(modalTrigger => {
-    modalTrigger.addEventListener('click', loadUnits);
+// Load units when relevant modals or pages are shown
+document.addEventListener('DOMContentLoaded', function() {
+  const unitModals = document.querySelectorAll('[data-load-units]');
+  unitModals.forEach(modal => {
+    modal.addEventListener('show.bs.modal', loadUnits);
   });
+
+  // If we're on a page that needs units loaded immediately
+  if (document.querySelector('[data-unit-select]')) {
+    loadUnits();
+  }
 });
 
+function loadUnits() {
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(units => {
+      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
+      unitSelectors.forEach(select => {
+        if (!select) return;
+        select.innerHTML = '';
+        units.forEach(unit => {
+          select.add(new Option(unit.name, unit.name));
+        });
+      });
+    })
+    .catch(error => console.error('Error loading units:', error));
+}
+
+// Load units when page loads and when converter modal opens
+document.addEventListener('DOMContentLoaded', loadUnits);
 document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
 
-function displayResult(element, text, note = '') {
+function displayResult(element, text) {
   element.innerHTML = `
     <p>${text}</p>
-    ${note ? `<p class="text-muted small">${note}</p>` : ''}
     <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
   `;
 }
@@ -104,11 +88,7 @@ function convertUnits() {
           resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
         }
       } else {
-        let note = '';
-        if (data.mapping_used) {
-          note = `Using custom mapping: 1 ${fromUnit} = ${data.mapping_multiplier} ${data.unit}`;
-        }
-        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`, note);
+        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
       }
     })
     .catch(err => {
