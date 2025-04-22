@@ -106,6 +106,7 @@ class ProductInventory(db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     notes = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    expiration_date = db.Column(db.Date, nullable=True)
 
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
