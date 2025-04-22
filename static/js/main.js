@@ -13,9 +13,19 @@ function filterUnits() {
 }
 
 function loadUnits() {
-  fetch('/conversion/units')
-    .then(response => response.json())
+  fetch('/conversion/units', {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    })
     .then(units => {
+      if (!Array.isArray(units) || units.length === 0) {
+        throw new Error('No units received');
+      }
       const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
       unitSelectors.forEach(select => {
         if (!select) return;

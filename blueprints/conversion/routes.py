@@ -17,6 +17,20 @@ def convert(amount, from_unit, to_unit):
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
+    from utils.unit_utils import get_global_unit_list
+    units = get_global_unit_list()
+    
+    # Handle JSON requests first
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify([{
+            'id': unit.id,
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base,
+            'is_custom': unit.is_custom
+        } for unit in units])
+
     if request.method == 'POST':
         name = request.form.get('name')
         type_ = request.form.get('type')
@@ -35,8 +49,6 @@ def manage_units():
         flash('Unit added successfully', 'success')
         return redirect(url_for('conversion.manage_units'))
 
-    from utils.unit_utils import get_global_unit_list
-    units = get_global_unit_list()
     mappings = CustomUnitMapping.query.filter_by(user_id=current_user.id).all() if current_user.is_authenticated else []
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
