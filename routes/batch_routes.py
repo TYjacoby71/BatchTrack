@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem
+from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory
 from datetime import datetime
 from sqlalchemy import extract
 import uuid, os
@@ -248,3 +248,22 @@ def force_finish_batch(batch_id):
 
     flash("Batch marked complete. Timers ignored.", "warning")
     return redirect(url_for('batches.view_batch', batch_id=batch.id))
+
+@batches_bp.route("/by_product/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>")
+@login_required
+def view_batches_by_variant(product_id, variant, size, unit):
+    """View FIFO-ordered batches for a specific product variant"""
+    batches = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant_label=variant,
+        size_label=size,
+        unit=unit
+    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+
+    return render_template(
+        "batches/by_variant.html",
+        batches=batches,
+        variant=variant,
+        size=size,
+        unit=unit
+    )
