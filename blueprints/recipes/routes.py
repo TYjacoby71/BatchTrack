@@ -9,7 +9,7 @@ recipes_bp = Blueprint('recipes', __name__)
 @login_required
 def list_recipes():
     recipes = Recipe.query.filter_by(parent_id=None).all()
-    return render_template('recipes/list.html', recipes=recipes)
+    return render_template('recipe_list.html', recipes=recipes)
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
