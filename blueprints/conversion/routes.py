@@ -10,6 +10,24 @@ def convert(amount, from_unit, to_unit):
     ingredient_id = request.args.get('ingredient_id', None)
     density = request.args.get('density', None, type=float)
     try:
+        # Check for custom mapping first
+        if current_user.is_authenticated:
+            mapping = CustomUnitMapping.query.filter_by(
+                user_id=current_user.id,
+                from_unit=from_unit,
+                to_unit=to_unit
+            ).first()
+            
+            if mapping:
+                result = amount * mapping.multiplier
+                return jsonify({
+                    'result': round(result, 2),
+                    'unit': to_unit,
+                    'mapping_used': True,
+                    'mapping_multiplier': mapping.multiplier
+                })
+
+        # Fall back to standard conversion
         result = ConversionEngine.convert_units(amount, from_unit, to_unit, ingredient_id=ingredient_id, density=density)
         return jsonify({'result': round(result, 2), 'unit': to_unit})
     except ValueError as e:

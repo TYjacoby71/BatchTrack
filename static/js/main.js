@@ -29,9 +29,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
 
-function displayResult(element, text) {
+function displayResult(element, text, note = '') {
   element.innerHTML = `
     <p>${text}</p>
+    ${note ? `<p class="text-muted small">${note}</p>` : ''}
     <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
   `;
 }
@@ -70,7 +71,11 @@ function convertUnits() {
           resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
         }
       } else {
-        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
+        let note = '';
+        if (data.mapping_used) {
+          note = `Using custom mapping: 1 ${fromUnit} = ${data.mapping_multiplier} ${data.unit}`;
+        }
+        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`, note);
       }
     })
     .catch(err => {
