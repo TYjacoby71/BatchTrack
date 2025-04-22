@@ -1,9 +1,4 @@
-2025-04-22 02:16:38,584 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 02:17:42,762 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 02:19:47,192 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 02:30:08,103 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 02:32:33,554 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 02:32:33,856 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-22 16:49:41,399 ERROR: Exception on /recipes/1/edit [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -20,108 +15,116 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/app_routes.py", line 33, in dashboard
-    return render_template("dashboard.html",
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
-    app.update_template_context(context)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 530, in update_template_context
-    context.update(self.ensure_sync(func)())
-                   ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 77, in inject_units
-    units = Unit.query.order_by(Unit.type, Unit.name).all()
-            ^^^^
-NameError: name 'Unit' is not defined
-2025-04-22 02:33:03,446 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 15:06:08,466 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 15:06:52,092 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 15:40:46,562 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:10:25,668 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:11:59,648 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:12:05,790 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:12:11,330 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:13:22,345 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:16:04,335 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:16:33,108 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:18:20,454 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:24:42,837 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:24:46,466 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:24:51,913 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:25:30,497 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:26:43,548 ERROR: Exception on /inventory/inventory/update/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/inventory_routes.py", line 45, in update_inventory
-    return render_template('inventory/edit.html', item=item)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
-    template = app.jinja_env.get_or_select_template(template_name_or_list)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
-    return self.get_template(template_name_or_list, parent, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
-    return self._load_template(name, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
-    template = self.loader.load(self, name, self.make_globals(globals))
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
-    source, filename, uptodate = self.get_source(environment, name)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
-    return self._get_source_fast(environment, template)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
-    raise TemplateNotFound(template)
-jinja2.exceptions.TemplateNotFound: inventory/edit.html
-2025-04-22 16:27:15,017 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:29:07,189 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:30:09,745 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:32:15,109 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:34:49,188 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:39:47,349 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:40:44,850 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:41:16,773 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:41:27,135 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:41:50,283 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:43:49,460 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 16:44:55,254 ERROR: Exception on /recipes/1/edit [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/recipe_routes.py", line 66, in edit_recipe
-    inventory_units = InventoryUnit.query.order_by(InventoryUnit.name).all()
+  File "/home/runner/workspace/routes/recipe_routes.py", line 102, in edit_recipe
+    inventory_units = InventoryUnit.query.all()
                       ^^^^^^^^^^^^^
 NameError: name 'InventoryUnit' is not defined
-2025-04-22 16:49:31,889 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:50:16,833 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:51:41,914 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:56:28,976 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:56:35,170 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:56:58,355 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:57:08,396 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:57:24,653 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:59:32,823 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:59:39,714 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:59:48,533 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:59:50,053 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 16:59:54,538 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:00:29,023 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:03:35,401 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:06:08,871 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:06:09,598 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:06:14,582 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:06:15,421 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:09:46,689 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:09:51,355 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:25:46,103 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:26:09,213 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:27:05,246 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:28:12,082 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:37:48,879 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:38:23,480 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:39:06,492 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:39:43,503 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:39:55,586 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:41:16,339 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:41:48,343 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:42:01,686 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:43:00,099 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:43:00,991 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 20, in manage_units
+    units = Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
+                                           ^^^^^^^^^^^
+AttributeError: type object 'Unit' has no attribute 'custom'
+2025-04-22 17:43:14,951 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 20, in manage_units
+    units = Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
+                                           ^^^^^^^^^^^
+AttributeError: type object 'Unit' has no attribute 'custom'
+2025-04-22 17:43:15,790 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 20, in manage_units
+    units = Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
+                                           ^^^^^^^^^^^
+AttributeError: type object 'Unit' has no attribute 'custom'
+2025-04-22 17:43:22,507 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 20, in manage_units
+    def manage_units():
+                        
+AttributeError: type object 'Unit' has no attribute 'custom'
+2025-04-22 17:43:25,714 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:43:37,381 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:44:09,139 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 17:44:22,910 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]

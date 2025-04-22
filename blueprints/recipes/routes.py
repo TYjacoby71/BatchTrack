@@ -38,6 +38,31 @@ def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('plan_production.html', recipe=recipe)
 
+@recipes_bp.route('/<int:recipe_id>/clone')
+@login_required
+def clone_recipe(recipe_id):
+    original = Recipe.query.get_or_404(recipe_id)
+    clone = Recipe(
+        name=f"Copy of {original.name}",
+        instructions=original.instructions,
+        label_prefix=original.label_prefix
+    )
+    db.session.add(clone)
+    db.session.flush()
+
+    for ingredient in original.recipe_ingredients:
+        new_ingredient = RecipeIngredient(
+            recipe_id=clone.id,
+            inventory_item_id=ingredient.inventory_item_id,
+            amount=ingredient.amount,
+            unit=ingredient.unit
+        )
+        db.session.add(new_ingredient)
+
+    db.session.commit()
+    flash('Recipe cloned successfully')
+    return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
+
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
