@@ -24,5 +24,15 @@
     },
     "batch_id": null,
     "status": "NEW"
+  },
+  {
+    "timestamp": "2025-04-22T21:59:30.300516",
+    "message": "Error viewing fault log",
+    "source": "system",
+    "details": {
+      "error": "cannot import name 'get_setting' from 'utils' (/home/runner/workspace/utils/__init__.py)"
+    },
+    "batch_id": null,
+    "status": "NEW"
   }
 ]

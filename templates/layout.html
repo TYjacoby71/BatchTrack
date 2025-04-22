@@ -38,8 +38,8 @@
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Production Tools -->
-                    <li><a class="dropdown-item" href="{{ url_for('timer.list_timers') }}">Timer Management</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('product_log.view') }}">Production Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     <li><hr class="dropdown-divider"></li>
 
