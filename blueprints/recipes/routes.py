@@ -38,6 +38,32 @@ def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('plan_production.html', recipe=recipe)
 
+@recipes_bp.route('/<int:recipe_id>/variation')
+@login_required
+def create_variation(recipe_id):
+    original = Recipe.query.get_or_404(recipe_id)
+    variation = Recipe(
+        name=f"Variation of {original.name}",
+        instructions=original.instructions,
+        label_prefix=original.label_prefix,
+        parent_id=original.id
+    )
+    db.session.add(variation)
+    db.session.flush()
+
+    for ingredient in original.recipe_ingredients:
+        new_ingredient = RecipeIngredient(
+            recipe_id=variation.id,
+            inventory_item_id=ingredient.inventory_item_id,
+            amount=ingredient.amount,
+            unit=ingredient.unit
+        )
+        db.session.add(new_ingredient)
+
+    db.session.commit()
+    flash('Variation created successfully')
+    return redirect(url_for('recipes.edit_recipe', recipe_id=variation.id))
+
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
