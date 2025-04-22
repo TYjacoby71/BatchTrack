@@ -8,7 +8,7 @@
         <h3>{{ recipe.name }}</h3>
         <div class="actions">
             <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn">Edit</a>
-            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn">View</a>
+            <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn">View</a>
         </div>
     </div>
     {% endfor %}
