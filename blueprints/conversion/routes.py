@@ -49,7 +49,14 @@ def manage_units():
             'base_unit': unit.base_unit,
             'multiplier_to_base': unit.multiplier_to_base
         } for unit in units])
-    return render_template('conversion/units.html', units=units, mappings=[])
+    # Group units by type
+    units_by_type = {}
+    for unit in units:
+        if unit.type not in units_by_type:
+            units_by_type[unit.type] = []
+        units_by_type[unit.type].append(unit)
+    
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=[])
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 @login_required
