@@ -136,7 +136,8 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
-    product_units = ProductUnit.query.all()
+    from utils.unit_utils import get_global_unit_list
+    units = get_global_unit_list()
 
     # Build cost summary
     total_cost = 0
@@ -165,7 +166,7 @@ def view_batch_in_progress(batch_identifier):
     return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
-                         product_units=product_units,
+                         units=units,
                          batch_cost=batch_cost,
                          product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs)
