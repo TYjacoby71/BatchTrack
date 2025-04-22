@@ -1,17 +1,4 @@
-function filterUnits() {
-  const filter = document.getElementById('unitFilter').value;
-  const unitCards = document.querySelectorAll('.card.mb-3');
-
-  unitCards.forEach(card => {
-    const type = card.querySelector('h5').textContent.toLowerCase();
-    if (filter === 'all' || filter === type) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
-  });
-}
-
+// Unit Management and Conversion
 function loadUnits() {
   fetch('/conversion/units', {
     method: 'GET',
@@ -30,13 +17,13 @@ function loadUnits() {
         console.warn('No units available');
         return;
       }
-      document.addEventListener('DOMContentLoaded', () => {
-        const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
-        if (!unitSelectors) return;
-        unitSelectors.forEach(select => {
+      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
+      if (!unitSelectors.length) return;
+
+      unitSelectors.forEach(select => {
         if (!select) return;
         select.innerHTML = '';
-        //Added grouping of units by category
+
         const unitGroups = {};
         units.forEach(unit => {
           const category = unit.type || 'Other';
@@ -55,22 +42,82 @@ function loadUnits() {
           });
           select.appendChild(optgroup);
         }
-        // Initialize Select2 with search
-        $(select).select2({
-          placeholder: 'Search for a unit...',
-          width: '100%',
-          allowClear: true
-        });
+
+        try {
+          $(select).select2({
+            placeholder: 'Search for a unit...',
+            width: '100%',
+            allowClear: true
+          });
+        } catch (e) {
+          console.warn('Select2 not available:', e);
+        }
       });
     })
     .catch(error => console.error('Error loading units:', error));
 }
 
-// Load units when page loads and when converter modal opens
-document.addEventListener('DOMContentLoaded', loadUnits);
-document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
+// Filter units by type
+function filterUnits() {
+  const filter = document.getElementById('unitFilter')?.value || 'all';
+  const unitCards = document.querySelectorAll('.card.mb-3');
 
+  unitCards.forEach(card => {
+    const type = card.querySelector('h5')?.textContent.toLowerCase();
+    if (filter === 'all' || filter === type) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// Initialize units when page loads
+document.addEventListener('DOMContentLoaded', loadUnits);
+
+// Initialize units when unit converter modal opens
+const unitConverterModal = document.getElementById('unitConverterModal');
+if (unitConverterModal) {
+  unitConverterModal.addEventListener('show.bs.modal', loadUnits);
+}
+
+// Unit conversion function
+function convertUnits() {
+  const amount = document.getElementById('amount')?.value;
+  const fromUnit = document.getElementById('fromUnit')?.value;
+  const toUnit = document.getElementById('toUnit')?.value;
+  const ingredientId = document.getElementById('ingredientId')?.value;
+  const resultDiv = document.getElementById('converterResult');
+
+  if (!amount || !fromUnit || !toUnit || !resultDiv) return;
+
+  fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error && data.error.includes("without density")) {
+        const useDefault = confirm(
+          `Converting ${fromUnit} to ${toUnit} requires density.\n` +
+          `No density defined. Use water (1.0 g/mL)?`
+        );
+        if (useDefault) {
+          return fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}&density=1.0`)
+            .then(r => r.json());
+        }
+        throw new Error('Conversion canceled');
+      }
+      return data;
+    })
+    .then(data => {
+      displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
+    })
+    .catch(err => {
+      resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    });
+}
+
+// Utility functions
 function displayResult(element, text) {
+  if (!element) return;
   element.innerHTML = `
     <p>${text}</p>
     <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
@@ -78,51 +125,16 @@ function displayResult(element, text) {
 }
 
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('Copied to clipboard!');
-  }).catch(err => {
-    console.error('Failed to copy:', err);
-  });
+  navigator.clipboard.writeText(text)
+    .then(() => alert('Copied to clipboard!'))
+    .catch(err => console.error('Failed to copy:', err));
 }
 
-
-function convertUnits() {
-  const amount = document.getElementById('amount').value;
-  const fromUnit = document.getElementById('fromUnit').value;
-  const toUnit = document.getElementById('toUnit').value;
-  const ingredientId = document.getElementById('ingredientId').value;
-  const resultDiv = document.getElementById('converterResult');
-
-  fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.error && data.error.includes("without density")) {
-        const useDefault = confirm(
-          `Heads up! You're converting ${fromUnit} to ${toUnit}, which requires a density.\n` +
-          `This ingredient doesn't have one defined.\n\nWould you like to:\n✅ Use water (1.0 g/mL)\nℹ️ Or go define it manually?`
-        );
-        if (useDefault) {
-          fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}&density=1.0`)
-            .then(r => r.json())
-            .then(result => {
-              displayResult(resultDiv, `${amount} ${fromUnit} = ${result.result} ${result.unit}`);
-            });
-        } else {
-          resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
-        }
-      } else {
-        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
-      }
-    })
-    .catch(err => {
-      resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
-    });
-}
-
-async function checkStock() {
+//This part remains from original code.
+function checkStock() {
   const recipeSelect = document.getElementById('recipeSelect');
   const scaleInput = document.getElementById('scaleInput');
-  
+
   if (!recipeSelect || !scaleInput) {
     console.error('Required elements not found');
     return;
@@ -136,42 +148,42 @@ async function checkStock() {
     return;
   }
 
-  try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        recipe_id: recipeId,
-        scale: scale
-      })
+  fetch('/stock/check', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recipe_id: recipeId,
+      scale: scale
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      const tableBody = document.getElementById('stockCheckTableBody');
+      if (!tableBody) {
+        console.error('Stock check table body not found');
+        return;
+      }
+
+      tableBody.innerHTML = data.stock_check.map(item => `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.name}</td>
+          <td>${item.needed} ${item.unit}</td>
+          <td>${item.available} ${item.unit}</td>
+          <td>${item.status}</td>
+        </tr>
+      `).join('');
+
+      document.querySelector('.stock-check-results').style.display = 'block';
+    })
+    .catch(error => {
+      console.error('Error checking stock:', error);
+      alert('Error checking stock. Please try again.');
     });
-
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-
-    const data = await response.json();
-    
-    const tableBody = document.getElementById('stockCheckTableBody');
-    if (!tableBody) {
-      console.error('Stock check table body not found');
-      return;
-    }
-
-    tableBody.innerHTML = data.stock_check.map(item => `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.name}</td>
-        <td>${item.needed} ${item.unit}</td>
-        <td>${item.available} ${item.unit}</td>
-        <td>${item.status}</td>
-      </tr>
-    `).join('');
-
-    document.querySelector('.stock-check-results').style.display = 'block';
-  } catch (error) {
-    console.error('Error checking stock:', error);
-    alert('Error checking stock. Please try again.');
-  }
 }
