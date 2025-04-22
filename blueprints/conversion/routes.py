@@ -18,16 +18,15 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 @login_required
 def manage_units():
-    from models import InventoryUnit
-    units = InventoryUnit.query.all()
+    from models import Unit
+    units = Unit.query.all()
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
             'id': unit.id,
             'name': unit.name,
             'type': unit.type,
-            'base_unit': unit.base_equivalent,
-            'multiplier_to_base': unit.base_equivalent,
-            'density_required': unit.density_required
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base
         } for unit in units])
     return render_template('conversion/units.html', units=units)
 
