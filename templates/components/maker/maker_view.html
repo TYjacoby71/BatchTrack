@@ -1,0 +1,19 @@
+
+{# Maker View Component #}
+<div class="maker-view">
+  <div class="maker-controls">
+    <button onclick="startNewBatch()" class="btn btn-primary">Start New Batch</button>
+    <button onclick="planProduction()" class="btn btn-info">Plan Production</button>
+    {% if has_active_batch %}
+    <button onclick="resumeBatch()" class="btn btn-warning">Resume Batch</button>
+    {% endif %}
+  </div>
+  
+  <div id="planningPanel" class="d-none">
+    {% include "components/maker/plan_batch_card.html" %}
+  </div>
+  
+  <div id="activeBatchPanel" class="d-none">
+    {% include "components/maker/active_batch_panel.html" %}
+  </div>
+</div>
