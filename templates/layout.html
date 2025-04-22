@@ -26,7 +26,7 @@
                     <!-- Production -->
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.check') }}">Bulk Stock Check</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     <li><hr class="dropdown-divider"></li>
                     
                     <!-- Inventory -->
@@ -46,6 +46,8 @@
                     <!-- FIFO & Tracking -->
                     <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('fault_log.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.manage_tags') }}">Tag Manager</a></li>
                     <li><hr class="dropdown-divider"></li>
                     
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
