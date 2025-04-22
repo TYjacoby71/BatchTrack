@@ -36,6 +36,7 @@ def seed_units():
 
         # Area Units
         {"name": "sqcm", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 1.0},
+        {"name": "sqin", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 6.4516},
         {"name": "sqft", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 929.03},
         {"name": "sqm", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 10000.0},
 
