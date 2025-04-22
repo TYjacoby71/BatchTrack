@@ -23,7 +23,7 @@ def manage_units():
         type = request.form.get('type', 'count')
         base_unit = request.form.get('base_unit', name)
         multiplier = request.form.get('multiplier', 1.0)
-        is_custom = bool(request.form.get('is_custom', False)) # Added to handle custom units
+        is_custom = True  # All new units are custom by default # Added to handle custom units
 
         existing_unit = Unit.query.filter_by(name=name).first()
         if existing_unit:

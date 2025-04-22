@@ -4,15 +4,7 @@ function filterUnits() {
 
   unitCards.forEach(card => {
     const type = card.querySelector('h5').textContent.toLowerCase();
-    const hasCustomUnits = card.querySelectorAll('tr.table-secondary').length > 0;
-
-    if (filter === 'all') {
-      card.style.display = '';
-    } else if (filter === 'custom' && hasCustomUnits) {
-      card.style.display = '';
-    } else if (filter === 'standard') {
-      card.style.display = hasCustomUnits ? 'none' : '';
-    } else if (filter === type) {
+    if (filter === 'all' || filter === type) {
       card.style.display = '';
     } else {
       card.style.display = 'none';
