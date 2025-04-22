@@ -38,6 +38,12 @@ function loadUnits() {
         units.forEach(unit => {
           select.add(new Option(unit.name, unit.name));
         });
+        // Initialize Select2 with search
+        $(select).select2({
+          placeholder: 'Search for a unit...',
+          width: '100%',
+          allowClear: true
+        });
       });
     })
     .catch(error => console.error('Error loading units:', error));
