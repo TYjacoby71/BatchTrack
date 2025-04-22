@@ -31,9 +31,18 @@ def list_recipes():
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
 def view_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    inventory_units = get_global_unit_list()
-    return render_template('view_recipe.html', recipe=recipe, inventory_units=inventory_units)
+    try:
+        recipe = Recipe.query.get_or_404(recipe_id)
+        inventory_units = get_global_unit_list()
+        if not inventory_units:
+            flash("Warning: No units found in system", "warning")
+            inventory_units = []
+        return render_template('view_recipe.html', 
+                             recipe=recipe, 
+                             inventory_units=inventory_units)
+    except Exception as e:
+        flash(f"Error loading recipe: {str(e)}", "error")
+        return redirect(url_for('recipes.list_recipes'))
 
 @recipes_bp.route('/<int:recipe_id>/plan')
 @login_required
@@ -119,7 +128,7 @@ def edit_recipe(recipe_id):
         except Exception as e:
             flash(f'Error updating recipe: {str(e)}')
 
-    return render_template('recipes/edit.html', 
+    return render_template('recipe_form.html', 
                          recipe=recipe,
                          all_ingredients=all_ingredients,
-                         units=units)
+                         inventory_units=units)
