@@ -10,7 +10,7 @@ db = SQLAlchemy()
 
 # Create app and attach config
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'devkey'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
