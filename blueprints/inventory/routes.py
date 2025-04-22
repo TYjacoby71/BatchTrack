@@ -9,7 +9,17 @@ inventory_bp = Blueprint('inventory', __name__)
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
-    return render_template('inventory_list.html', items=items)
+    units = Unit.query.order_by(Unit.type, Unit.is_custom, Unit.name).all()
+    return render_template('inventory_list.html', items=items, units=units)
+
+@inventory_bp.route('/delete/<int:id>')
+@login_required
+def delete_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Inventory item deleted successfully.')
+    return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
