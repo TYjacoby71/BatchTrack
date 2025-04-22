@@ -1,31 +1,111 @@
 
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 {% block content %}
-<div class="container mt-4">
-  <h2>Unit Management</h2>
-  <div class="card">
-    <div class="card-body">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Base Unit</th>
-            <th>Multiplier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for unit in units %}
-          <tr>
-            <td>{{ unit.name }}</td>
-            <td>{{ unit.type }}</td>
-            <td>{{ unit.base_unit }}</td>
-            <td>{{ unit.multiplier_to_base }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<h2>Unit Manager</h2>
+<div class="card p-3 mb-3">
+  <h4>Inventory Units</h4>
+  <form method="POST" action="{{ url_for('conversion.manage_units') }}">
+    <div class="row mb-2">
+      <div class="col">
+        <input type="text" class="form-control" name="name" placeholder="Name" required>
+      </div>
+      <div class="col">
+        <select name="type" class="form-control" required>
+          <option value="weight">Weight</option>
+          <option value="volume">Volume</option>
+          <option value="count">Count</option>
+          <option value="length">Length</option>
+          <option value="area">Area</option>
+        </select>
+      </div>
+      <div class="col">
+        <input type="text" class="form-control" name="base_unit" placeholder="Base Unit" required>
+      </div>
+      <div class="col">
+        <input type="number" step="0.0001" class="form-control" name="multiplier" placeholder="Multiplier to base" required>
+      </div>
+      <div class="col">
+        <button type="submit" class="btn btn-primary">Add Unit</button>
+      </div>
     </div>
-  </div>
+  </form>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mt-2">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <h4>Units by Type</h4>
+  {% for unit_type in ['weight', 'volume', 'length', 'area', 'count', 'time', 'custom'] %}
+    <div class="card mb-3">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">{{ unit_type.capitalize() }}</h5>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Base Unit</th>
+              <th>Multiplier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for unit in units if unit.type == unit_type %}
+            <tr>
+              <td>{{ unit.name }}</td>
+              <td>{{ unit.base_unit }}</td>
+              <td>{{ unit.multiplier_to_base }}</td>
+            </tr>
+            {% endfor %}
+            {% if not (units|selectattr('type', 'equalto', unit_type)|list)|length %}
+            <tr><td colspan="3" class="text-muted">No {{ unit_type }} units defined</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Custom Mappings Form (Improved UI) -->
+<div class="card p-3">
+  <h4>Custom Unit Mappings</h4>
+  <form method="POST" action="{{ url_for('conversion.manage_mappings') }}">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="form-label">1</label>
+      </div>
+      <div class="col">
+        <input name="from_unit" class="form-control" placeholder="pinch" required>
+      </div>
+      <div class="col-auto">
+        <label class="form-label">equals</label>
+      </div>
+      <div class="col">
+        <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="1.0" required>
+      </div>
+      <div class="col">
+        <input name="to_unit" class="form-control" placeholder="gram" required>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-success">Add Mapping</button>
+      </div>
+    </div>
+  </form>
+
+  <table class="table table-sm mt-3">
+    <thead><tr><th>Custom Unit</th><th>Equals</th><th>Base Unit</th></tr></thead>
+    <tbody>{% for mapping in mappings %}
+      <tr>
+        <td>1 {{ mapping.from_unit }}</td>
+        <td>{{ mapping.multiplier }}</td>
+        <td>{{ mapping.to_unit }}</td>
+      </tr>
+    {% endfor %}</tbody>
+  </table>
 </div>
 {% endblock %}
