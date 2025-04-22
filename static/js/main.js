@@ -1,25 +1,17 @@
-// Load and populate unit dropdowns
-async function loadUnits() {
-  try {
-    const response = await fetch('/conversion/units', {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    const data = await response.json();
-    // Data comes directly as array of units
-    const units = data;
-    const unitSelectors = document.querySelectorAll('select[data-unit-select]');
-    unitSelectors.forEach(select => {
-      select.innerHTML = '';
-      units.forEach(unit => {
-        const option = new Option(unit.name, unit.name);
-        select.add(option);
+function loadUnits() {
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(units => {
+      const unitSelectors = document.querySelectorAll('select[data-unit-select]');
+      unitSelectors.forEach(select => {
+        select.innerHTML = '';
+        units.forEach(unit => {
+          const option = new Option(unit.name, unit.name);
+          select.add(option);
+        });
       });
-    });
-  } catch (error) {
-    console.error("Error loading units:", error);
-  }
+    })
+    .catch(error => console.error('Error loading units:', error));
 }
 
 // Load units when relevant modals or pages are shown
@@ -35,12 +27,29 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+function loadUnits() {
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(units => {
+      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
+      unitSelectors.forEach(select => {
+        if (!select) return;
+        select.innerHTML = '';
+        units.forEach(unit => {
+          select.add(new Option(unit.name, unit.name));
+        });
+      });
+    })
+    .catch(error => console.error('Error loading units:', error));
+}
+
+// Load units when page loads and when converter modal opens
+document.addEventListener('DOMContentLoaded', loadUnits);
 document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
 
-function displayResult(element, text, note = '') {
+function displayResult(element, text) {
   element.innerHTML = `
     <p>${text}</p>
-    ${note ? `<p class="text-muted small">${note}</p>` : ''}
     <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
   `;
 }
@@ -52,8 +61,6 @@ function copyToClipboard(text) {
     console.error('Failed to copy:', err);
   });
 }
-
-// Load units for conversion dropdowns (This function is now redundant and removed)
 
 
 function convertUnits() {
@@ -81,11 +88,7 @@ function convertUnits() {
           resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
         }
       } else {
-        let note = '';
-        if (data.mapping_used) {
-          note = `Using custom mapping: 1 ${fromUnit} = ${data.mapping_multiplier} ${data.unit}`;
-        }
-        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`, note);
+        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
       }
     })
     .catch(err => {
