@@ -5,11 +5,32 @@ from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 
 recipes_bp = Blueprint('recipes', __name__)
 
+@recipes_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+def new_recipe():
+    if request.method == 'POST':
+        recipe = Recipe(
+            name=request.form.get('name'),
+            instructions=request.form.get('instructions'),
+            label_prefix=request.form.get('label_prefix')
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        flash('Recipe created successfully.')
+        return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
+    return render_template('recipes/edit.html', recipe=None, all_ingredients=InventoryItem.query.all(), units=Unit.query.all())
+
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
     recipes = Recipe.query.filter_by(parent_id=None).all()
     return render_template('recipe_list.html', recipes=recipes)
+
+@recipes_bp.route('/<int:recipe_id>/view')
+@login_required
+def view_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('view_recipe.html', recipe=recipe)
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
