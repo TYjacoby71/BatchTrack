@@ -4,60 +4,62 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app, db
-from models import Unit, Product, ProductInventory, Ingredient, Batch
+from models import Unit, Product, ProductInventory, InventoryItem, Batch, ProductVariation
 from datetime import datetime, timedelta
 
 def run_demo():
     with app.app_context():
+        # Reset database
         db.drop_all()
         db.create_all()
 
-        # Add units
-        units = [
-            Unit(name="gram", type="weight", base_unit="gram", multiplier_to_base=1),
-            Unit(name="kg", type="weight", base_unit="gram", multiplier_to_base=1000),
-            Unit(name="jar", type="product", base_unit="unit", multiplier_to_base=1)
-        ]
-        db.session.add_all(units)
-        db.session.commit()
+        # Add base units
+        gram = Unit(name="gram", type="weight", base_unit="gram", multiplier_to_base=1)
+        jar = Unit(name="Jar", type="count", base_unit="unit", multiplier_to_base=1)
+        db.session.add_all([gram, jar])
 
-        # Add ingredients
-        ingredients = [
-            Ingredient(name="Tallow", unit="gram", quantity=1000, low_stock_threshold=200),
-            Ingredient(name="Lavender EO", unit="gram", quantity=250, low_stock_threshold=50),
-            Ingredient(name="Coconut Oil", unit="gram", quantity=500, low_stock_threshold=100)
-        ]
-        db.session.add_all(ingredients)
-        db.session.commit()
+        # Add ingredients as inventory items
+        tallow = InventoryItem(name="Tallow", unit="gram", quantity=1000, low_stock_threshold=200, is_perishable=False)
+        lavender = InventoryItem(name="Lavender EO", unit="gram", quantity=500, low_stock_threshold=100, is_perishable=True)
+        db.session.add_all([tallow, lavender])
 
-        # Add products
-        product = Product(name="Royal Tallow Soap", default_unit="jar", low_stock_threshold=5)
+        # Add product
+        product = Product(name="Royal Tallow", default_unit="Jar", low_stock_threshold=5)
         db.session.add(product)
-        db.session.commit()
+        db.session.flush()
+
+        # Add product variation
+        variation = ProductVariation(product_id=product.id, name="Lavender", sku="RT-LAV-001")
+        db.session.add(variation)
 
         # Add inventory
-        inventory = ProductInventory(
+        inv1 = ProductInventory(
             product_id=product.id,
             variant="Lavender",
-            unit="jar",
-            quantity=20,
+            unit="Jar",
+            quantity=12,
             expiration_date=datetime.utcnow().date() + timedelta(days=90),
             notes="Demo batch"
         )
-        db.session.add(inventory)
+        db.session.add(inv1)
 
         # Add batch
         batch = Batch(
-            recipe_name="Royal Tallow - Lavender",
+            recipe_name="Royal Tallow - Lavender", 
             status="completed",
-            label_code="DEMO-001",
-            scale=1.0,
-            notes="Initial demo batch"
+            product_unit="Jar",
+            product_quantity=12,
+            label_code="D-001",
+            scale=1,
+            timestamp=datetime.utcnow(),
+            notes="Demo starter batch"
         )
         db.session.add(batch)
-        db.session.commit()
+        db.session.flush()
+        inv1.batch_id = batch.id
 
-        print("✅ Demo data loaded successfully")
+        db.session.commit()
+        print("✅ Demo data seeded successfully")
 
 if __name__ == "__main__":
     run_demo()
