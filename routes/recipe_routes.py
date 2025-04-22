@@ -63,7 +63,7 @@ def new_recipe():
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
-    inventory_units = InventoryUnit.query.order_by(InventoryUnit.name).all()
+    inventory_units = Unit.query.order_by(Unit.name).all()
 
     if request.method == 'POST':
         try:
