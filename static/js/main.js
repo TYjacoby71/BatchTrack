@@ -125,4 +125,44 @@ async function checkStock() {
     alert('Please select a recipe and enter a valid scale');
     return;
   }
+
+  try {
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        scale: scale
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    
+    const tableBody = document.getElementById('stockCheckTableBody');
+    if (!tableBody) {
+      console.error('Stock check table body not found');
+      return;
+    }
+
+    tableBody.innerHTML = data.stock_check.map(item => `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.name}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
+        <td>${item.status}</td>
+      </tr>
+    `).join('');
+
+    document.querySelector('.stock-check-results').style.display = 'block';
+  } catch (error) {
+    console.error('Error checking stock:', error);
+    alert('Error checking stock. Please try again.');
+  }
+  }
 }
