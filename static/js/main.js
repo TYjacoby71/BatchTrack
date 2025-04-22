@@ -16,6 +16,25 @@ function copyToClipboard(text) {
   });
 }
 
+function loadUnits() {
+  fetch('/conversion/units', {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    const fromUnit = document.getElementById('fromUnit');
+    const toUnit = document.getElementById('toUnit');
+    if (fromUnit && toUnit) {
+      data.forEach(unit => {
+        fromUnit.add(new Option(unit.name, unit.name));
+        toUnit.add(new Option(unit.name, unit.name));
+      });
+    }
+  });
+}
+
 function convertUnits() {
   const amount = document.getElementById('amount').value;
   const fromUnit = document.getElementById('fromUnit').value;

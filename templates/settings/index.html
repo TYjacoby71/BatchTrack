@@ -59,30 +59,9 @@
                 <h3>Unit Management</h3>
             </div>
             <div class="card-body">
-                <p>Unit definition management will be implemented here.</p>
-                <div id="unitManagementPlaceholder">
-                    {% if inventory_units %}
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Unit Name</th>
-                                <th>Base Unit</th>
-                                <th>Conversion Factor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for unit in inventory_units %}
-                            <tr>
-                                <td>{{ unit.name }}</td>
-                                <td>{{ unit.base_unit }}</td>
-                                <td>{{ unit.conversion_factor }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p>No units defined yet.</p>
-                    {% endif %}
+                <a href="{{ url_for('admin.unit_manager') }}" class="btn btn-primary">Manage Units</a>
+                <div class="mt-3">
+                    <p>Click the button above to manage inventory and product units.</p>
                 </div>
             </div>
         </div>
