@@ -27,6 +27,7 @@
 
 <h3>Add New Item</h3>
 <form method="post" action="/inventory/add">
+    {{ csrf_token() }}
     <input type="text" name="name" placeholder="Name" required>
     <input type="number" step="0.01" name="quantity" placeholder="Quantity" required>
     <select name="unit">

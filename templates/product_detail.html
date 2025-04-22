@@ -9,6 +9,7 @@
 
 <h3>Log Event</h3>
 <form method="post">
+  {{ csrf_token() }}
   <label>Type:</label>
   <select name="event_type">
     <option value="sold">Sold</option>
