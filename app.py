@@ -108,8 +108,8 @@ def login():
         if u and u.check_password(password):
             login_user(u)
             return redirect(url_for('dashboard.dashboard'))
-        flash('Invalid username or password')
-    return render_template('login.html')
+        flash('Invalid credentials')
+    return render_template('login.html', form=form)
 
 @app.route('/logout')
 @login_required

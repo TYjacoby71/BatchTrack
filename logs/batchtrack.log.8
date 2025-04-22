@@ -1,9 +1,4 @@
-2025-04-22 21:02:41,115 ERROR: Unexpected error viewing recipe: (sqlite3.OperationalError) no such column: inventory_item.low_stock_threshold
-[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.type AS inventory_item_type, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.perishable AS inventory_item_perishable, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.category_id AS inventory_item_category_id 
-FROM inventory_item 
-WHERE inventory_item.id = ?]
-[parameters: (1,)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/blueprints/recipes/routes.py:61]
+2025-04-22 21:02:37,228 ERROR: Exception on /recipes/2/edit [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -14,48 +9,30 @@ sqlite3.OperationalError: no such column: inventory_item.low_stock_threshold
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 56, in view_recipe
-    return render_template('view_recipe.html',
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/view_recipe.html", line 2, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 58, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/view_recipe.html", line 33, in block 'content'
-    <li>{{ assoc.inventory_item.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
-    return getattr(obj, attribute)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 566, in __get__
-    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1086, in get
-    value = self._fire_loader_callables(state, key, passive)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1121, in _fire_loader_callables
-    return self.callable_(state, passive)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
-    return self._emit_lazyload(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/strategies.py", line 1079, in _emit_lazyload
-    return loading.load_on_pk_identity(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 694, in load_on_pk_identity
-    session.execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 153, in edit_recipe
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
     return self._execute_internal(
            ^^^^^^^^^^^^^^^^^^^^^^^
@@ -87,7 +64,5 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_item.low_stock_threshold
 [SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.type AS inventory_item_type, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.perishable AS inventory_item_perishable, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.category_id AS inventory_item_category_id 
-FROM inventory_item 
-WHERE inventory_item.id = ?]
-[parameters: (1,)]
+FROM inventory_item ORDER BY inventory_item.name]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)

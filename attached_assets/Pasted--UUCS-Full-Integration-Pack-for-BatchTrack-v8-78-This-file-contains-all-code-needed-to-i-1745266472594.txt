@@ -1,0 +1,55 @@
+# === UUCS Full Integration Pack for BatchTrack v8.78 ===
+# This file contains all code needed to implement the Unit Converter Modal + Universal Unit Conversion System (UUCS) as discussed.
+# Copy file-by-file into your Replit app following the structure below.
+
+[... previous sections omitted for brevity ...]
+
+# == [7] seeders/unit_seeder.py ==
+
+from models import Unit, db
+
+def seed_units():
+    units = [
+        {"name": "gram", "type": "weight", "base_unit": "gram", "multiplier_to_base": 1.0},
+        {"name": "kg", "type": "weight", "base_unit": "gram", "multiplier_to_base": 1000.0},
+        {"name": "oz", "type": "weight", "base_unit": "gram", "multiplier_to_base": 28.3495},
+        {"name": "lb", "type": "weight", "base_unit": "gram", "multiplier_to_base": 453.592},
+        {"name": "ml", "type": "volume", "base_unit": "ml", "multiplier_to_base": 1.0},
+        {"name": "liter", "type": "volume", "base_unit": "ml", "multiplier_to_base": 1000.0},
+        {"name": "tsp", "type": "volume", "base_unit": "ml", "multiplier_to_base": 4.92892},
+        {"name": "tbsp", "type": "volume", "base_unit": "ml", "multiplier_to_base": 14.7868},
+        {"name": "cup", "type": "volume", "base_unit": "ml", "multiplier_to_base": 236.588},
+        {"name": "count", "type": "count", "base_unit": "count", "multiplier_to_base": 1.0},
+        {"name": "pack", "type": "count", "base_unit": "count", "multiplier_to_base": 1.0},
+        {"name": "cm", "type": "length", "base_unit": "cm", "multiplier_to_base": 1.0},
+        {"name": "inch", "type": "length", "base_unit": "cm", "multiplier_to_base": 2.54},
+        {"name": "sqcm", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 1.0},
+        {"name": "sqft", "type": "area", "base_unit": "sqcm", "multiplier_to_base": 929.03},
+    ]
+
+    for unit in units:
+        if not Unit.query.filter_by(name=unit["name"]).first():
+            new_unit = Unit(**unit)
+            db.session.add(new_unit)
+    db.session.commit()
+
+
+# == [8] seeders/ingredient_category_seeder.py ==
+
+from models import IngredientCategory, db
+
+def seed_categories():
+    categories = [
+        {"name": "Oil", "default_density": 0.92},
+        {"name": "Liquid", "default_density": 1.0},
+        {"name": "Solid", "default_density": 0.8},
+        {"name": "Powder", "default_density": 0.5},
+        {"name": "Dairy", "default_density": 1.03},
+        {"name": "Syrup", "default_density": 1.33},
+    ]
+
+    for category in categories:
+        if not IngredientCategory.query.filter_by(name=category["name"]).first():
+            new_cat = IngredientCategory(**category)
+            db.session.add(new_cat)
+    db.session.commit()

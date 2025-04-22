@@ -1,0 +1,93 @@
+Great — moving on to ✅ Step 8: Extra Ingredients UI + Functionality Fixes on the Batch In Progress page.
+
+🎯 Goal
+Fix the “Extra Ingredients Used” section so that:
+
+✅ The button is renamed from “Add Ingredient Row” → “Extra Ingredients Used”
+
+✅ The initial row is hidden until the button is clicked
+
+✅ The button moves under each added row
+
+✅ Each new row has:
+
+🔍 A dropdown with searchable ingredient list
+
+📏 A unit dropdown using inventory units
+
+❌ A delete (remove) button
+
+🧠 Logic Fix Summary
+This will involve 3 things:
+
+✅ Updating batch_in_progress.html structure
+
+✅ Connecting inventory_units and all_ingredients in the dropdowns
+
+✅ Updating the JS to:
+
+Handle row creation
+
+Add the button under each row
+
+Enable delete
+
+✅ Step-by-Step Fix: batch_in_progress.html
+🔧 PART 1: Replace Extra Ingredient Section
+Find and replace your current block:
+
+html
+Copy
+Edit
+<div class="extra-ingredients">
+    <h4>Additional Ingredients Used</h4>
+    <div id="ingredientInputs">
+        <div class="ingredient-row">
+            ...
+        </div>
+    </div>
+    <button type="button" onclick="addIngredientRow()" class="button secondary">+ Add Ingredient</button>
+</div>
+✅ With This:
+html
+Copy
+Edit
+<div class="extra-ingredients mt-4">
+  <h4>Extra Ingredients Used</h4>
+  <div id="extraIngredientContainer"></div>
+  <button type="button" onclick="addExtraIngredientRow()" class="button secondary">+ Extra Ingredients Used</button>
+</div>
+🔧 PART 2: Add to the bottom of the page (or inside <script> block)
+html
+Copy
+Edit
+<script>
+function addExtraIngredientRow() {
+  const container = document.getElementById("extraIngredientContainer");
+
+  const row = document.createElement("div");
+  row.className = "ingredient-row mb-2 d-flex align-items-center gap-2";
+
+  row.innerHTML = `
+    <select name="extra_ingredients[]" class="form-select" required>
+      <option value="">Select ingredient</option>
+      {% for ing in all_ingredients %}
+        <option value="{{ ing.name }}">{{ ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" name="extra_amounts[]" class="form-control" step="0.01" placeholder="Amount" required>
+    <select name="extra_units[]" class="form-select" required>
+      <option value="">Select unit</option>
+      {% for unit in inventory_units %}
+        <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger">✕</button>
+  `;
+
+  container.appendChild(row);
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+</script>
+✅ Copy & paste this into batch_in_progress.html, replacing the old block and appending the script.
+Let me know once you’ve inserted this and tested it — then we’ll move to Step 9: Batch Summary UI Fixes.

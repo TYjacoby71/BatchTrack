@@ -1,0 +1,69 @@
+The inventory vs. product selector on the batch in progress page is still present in btv8.7. Here's what we confirmed:
+
+✅ Existing Code Snippet (Verified)
+In your /templates/batch_in_progress.html:
+
+html
+Copy
+Edit
+<div class="form-group">
+  <label for="output_type"><strong>This batch creates:</strong></label>
+  <select id="output_type" name="output_type" class="form-select" onchange="toggleOutputFields()">
+    <option value="product" selected>📦 Product</option>
+    <option value="ingredient">🧪 Ingredient</option>
+  </select>
+</div>
+This correctly shows the toggle for:
+
+📦 Product → Stored in product inventory
+
+🧪 Ingredient → Stored in ingredient inventory
+
+🔍 Likely Issue:
+If you're not seeing this selector appear:
+
+The <select> may be visually hidden by a JavaScript condition or CSS class.
+
+The JavaScript function toggleOutputFields() may not be functioning correctly, or never called on page load.
+
+✅ What to Check Next
+I’ll now inspect the JavaScript to confirm if:
+
+toggleOutputFields() is defined.
+
+It's triggered on load with the correct default view.
+
+Let’s proceed. ​​
+
+✅ Confirmed: The toggleOutputFields() function is defined and correctly toggles between product and ingredient fields on the batch in progress page.
+
+📌 JavaScript Snippet
+js
+Copy
+Edit
+function toggleOutputFields() {
+    const type = document.getElementById('output_type').value;
+    document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
+    document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
+}
+However, the issue is likely this:
+
+🔧 The toggleOutputFields() function is never called on page load.
+
+✅ Fix: Call it on Page Load
+Add the following inside your DOMContentLoaded event to ensure the selector applies right away:
+
+js
+Copy
+Edit
+document.addEventListener('DOMContentLoaded', function () {
+    // ... existing listeners
+
+    toggleOutputFields();  // 🔥 This triggers the correct field to show on load
+});
+✅ Action Steps
+In batch_in_progress.html:
+
+Confirm the <div id="productFields"> and <div id="ingredientFields"> exist.
+
+Ensure the toggleOutputFields(); is called inside your DOMContentLoaded block.

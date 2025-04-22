@@ -1,0 +1,67 @@
+Awesome — here’s Step 4: Add shelf life and expiration tracking for perishable batches.
+
+This step lets you track expiration at the batch level if the ingredient (or product) is marked as perishable.
+
+✅ STEP 4.1: Add Expiration Tracking to ProductInventory and/or Batch
+📄 In models.py
+If you want perishable inventory tracking, add to ProductInventory:
+
+python
+Copy
+Edit
+expiration_date = db.Column(db.Date, nullable=True)
+If you also want to store this in the Batch model directly:
+
+python
+Copy
+Edit
+shelf_life_days = db.Column(db.Integer, nullable=True)
+expiration_date = db.Column(db.Date, nullable=True)
+✅ STEP 4.2: Add Expiration Input to batch_in_progress.html
+Inside the product output section (when output type is “product”), drop this in:
+
+jinja
+Copy
+Edit
+{% if is_perishable %}
+  <div class="mb-3">
+    <label for="expiration_date" class="form-label">Expiration Date</label>
+    <input type="date" name="expiration_date" class="form-control">
+  </div>
+
+  OR
+
+  <div class="mb-3">
+    <label for="shelf_life_days" class="form-label">Shelf Life (in days)</label>
+    <input type="number" name="shelf_life_days" class="form-control">
+  </div>
+{% endif %}
+You can dynamically show/hide this with JS if you want, based on ingredient is_perishable.
+
+✅ STEP 4.3: Update the Batch Finish Logic
+In your batches.finish_batch route, handle expiration:
+
+python
+Copy
+Edit
+from datetime import datetime, timedelta
+
+expiration_str = request.form.get("expiration_date")
+shelf_life_days = request.form.get("shelf_life_days")
+
+if expiration_str:
+    expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d").date()
+elif shelf_life_days:
+    expiration_date = datetime.utcnow().date() + timedelta(days=int(shelf_life_days))
+else:
+    expiration_date = None
+
+# Save to batch or ProductInventory row
+product_inventory.expiration_date = expiration_date
+✅ That’s it — you now track:
+
+Shelf life (from a number of days)
+
+Or set fixed expiration dates manually
+
+And later: can create logic to warn before expiration, or archive expired batches

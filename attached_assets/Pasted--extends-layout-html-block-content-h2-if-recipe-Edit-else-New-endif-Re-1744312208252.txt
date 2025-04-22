@@ -1,0 +1,208 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>{% if recipe %}Edit{% else %}New{% endif %} Recipe</h2>
+
+{% if recipe %}
+  <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+{% else %}
+  <form method="post" action="{{ url_for('recipes.new_recipe') }}">
+{% endif %}
+
+    <div class="form-group">
+        <label for="name">Recipe Name:</label>
+        <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="instructions">Instructions:</label>
+        <textarea name="instructions" rows="4">{{ recipe.instructions if recipe else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="label_prefix">Label Prefix:</label>
+        <input type="text" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8">
+    </div>
+
+    <div class="form-group">
+        <label>Ingredients:</label>
+        <button type="button" onclick="addIngredient()">Add Ingredient</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal">Quick Add Ingredient</button>
+        <div id="ingredients-container">
+            {% if recipe and recipe.recipe_ingredients %}
+                {% for assoc in recipe.recipe_ingredients %}
+                <div class="ingredient-entry">
+                    <select name="ingredient_ids[]" required>
+                        <option value="">Select an ingredient</option>
+                        {% for available_ing in all_ingredients %}
+                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.ingredient.id %}selected{% endif %}>
+                            {{ available_ing.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" step="0.01" name="amounts[]" value="{{ assoc.amount }}" required>
+                    <select name="units[]" required>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>
+                            {{ unit.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="form-group mt-3">
+        <button type="submit" class="btn btn-primary">Save Recipe</button>
+    </div>
+</form>
+
+<!-- Quick Add Ingredient Modal -->
+<div class="modal fade" id="quickAddIngredientModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Ingredient</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="quickIngredientName" class="form-label">Ingredient Name</label>
+          <input type="text" class="form-control" id="quickIngredientName">
+        </div>
+        <div class="mb-3">
+          <label for="quickIngredientUnit" class="form-label">Unit</label>
+          <select id="quickIngredientUnit" class="form-select">
+            {% for unit in inventory_units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">+ Add New Unit</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveQuickIngredient">Add Ingredient</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Unit Modal -->
+<div class="modal fade" id="quickAddUnitModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Unit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickAddUnitForm">
+          <div class="mb-3">
+            <label for="unitName" class="form-label">Unit Name</label>
+            <input type="text" class="form-control" id="unitName" required>
+          </div>
+          <div class="mb-3">
+            <label for="unitType" class="form-label">Type</label>
+            <select class="form-select" id="unitType">
+              <option value="count">Count</option>
+              <option value="volume">Volume</option>
+              <option value="weight">Weight</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveQuickUnit">Add Unit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function addIngredient() {
+  const container = document.getElementById('ingredients-container');
+  const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `
+    <select name="ingredient_ids[]" required>
+      <option value="">Select an ingredient</option>
+      {% for available_ing in all_ingredients %}
+      <option value="{{ available_ing.id }}">{{ available_ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="amounts[]" required>
+    <select name="units[]" required>
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  container.appendChild(entry);
+}
+
+document.getElementById('saveQuickIngredient').addEventListener('click', function () {
+  const name = document.getElementById('quickIngredientName').value;
+  const unit = document.getElementById('quickIngredientUnit').value;
+
+  fetch('/ingredients/quick-add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, unit })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) return alert('Error: ' + data.error);
+
+    const container = document.getElementById('ingredients-container');
+    const entry = document.createElement('div');
+    entry.classList.add('ingredient-entry');
+    entry.innerHTML = `
+      <select name="ingredient_ids[]" required>
+        <option selected value="${data.id}">${data.name}</option>
+      </select>
+      <input type="number" step="0.01" name="amounts[]" required>
+      <select name="units[]" required>
+        <option selected value="${data.unit}">${data.unit}</option>
+      </select>
+      <button type="button" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    container.appendChild(entry);
+    bootstrap.Modal.getInstance(document.getElementById("quickAddIngredientModal")).hide();
+  });
+});
+
+document.getElementById('saveQuickUnit').addEventListener('click', function () {
+  const name = document.getElementById('unitName').value;
+  const type = document.getElementById('unitType').value;
+
+  if (!name) return alert('Unit name required.');
+
+  fetch('/recipes/units/quick-add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, type })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) return alert("Error: " + data.error);
+
+    document.querySelectorAll("select[name='units[]']").forEach(select => {
+      let option = new Option(data.name, data.name, false, true);
+      select.add(option);
+    });
+
+    const quickUnit = document.getElementById('quickIngredientUnit');
+    let option = new Option(data.name, data.name, false, true);
+    quickUnit.add(option);
+    quickUnit.value = data.name;
+
+    bootstrap.Modal.getInstance(document.getElementById("quickAddUnitModal")).hide();
+  });
+});
+</script>
+{% endblock %}

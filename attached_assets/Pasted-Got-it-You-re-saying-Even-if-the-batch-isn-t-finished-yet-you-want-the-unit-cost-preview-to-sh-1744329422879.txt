@@ -1,0 +1,91 @@
+Got it! You're saying:
+
+❗ Even if the batch isn’t finished yet, you want the unit cost preview to show based on:
+
+The current total ingredient cost
+
+Divided by the value in the Product Quantity input field (default: 1)
+
+That totally makes sense for an MVP-style live estimator.
+
+✅ Let’s Implement: Real-Time Unit Cost Preview (Using Input Value)
+Since Jinja can’t “watch” the <input> value after render, we’ll use JavaScript to dynamically:
+
+Read the current Product Quantity input value
+
+Read the data-batch-cost value from a hidden element
+
+Compute and display Unit Cost live as user types
+
+✏️ Step-by-Step Implementation
+✅ 1. Update the Summary Section in batch_in_progress.html
+Replace your current summary with this:
+
+jinja2
+Copy
+Edit
+<div class="summary-section mt-4">
+    <h4>Batch Summary</h4>
+    <ul>
+        <li><strong>Total Batch Cost:</strong> 
+            <span id="totalBatchCost">${{ batch_cost or 0 }}</span>
+        </li>
+        <li><strong>Product Quantity:</strong> 
+            <span id="productQuantityPreview">—</span>
+        </li>
+        <li><strong>Unit Cost:</strong>
+            <span id="unitCostPreview" class="text-muted">Calculating...</span>
+        </li>
+    </ul>
+</div>
+Add this hidden data hook below your form field:
+
+jinja2
+Copy
+Edit
+<input type="number" name="product_quantity" id="product_quantity_input"
+       value="1" min="1" required>
+
+<input type="hidden" id="batchCostData" value="{{ batch_cost or 0 }}">
+✅ 2. Add JavaScript for Live Calculation
+Put this at the bottom of the page:
+
+html
+Copy
+Edit
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const quantityInput = document.getElementById('product_quantity_input');
+    const unitCostOutput = document.getElementById('unitCostPreview');
+    const productQtyOutput = document.getElementById('productQuantityPreview');
+    const batchCost = parseFloat(document.getElementById('batchCostData').value || 0);
+
+    function updateUnitCost() {
+        const qty = parseFloat(quantityInput.value);
+        if (!qty || qty <= 0) {
+            unitCostOutput.innerText = "—";
+            productQtyOutput.innerText = "—";
+            return;
+        }
+
+        const unitCost = batchCost / qty;
+        productQtyOutput.innerText = qty;
+        unitCostOutput.innerText = `$${unitCost.toFixed(2)}`;
+    }
+
+    quantityInput.addEventListener('input', updateUnitCost);
+
+    // Initial load
+    updateUnitCost();
+});
+</script>
+✅ Final Behavior:
+When the user adjusts the Product Quantity input:
+
+🧮 Unit cost is updated live
+
+✅ Based on whatever batch cost was passed in from the backend
+
+Even before submitting, the user sees:
+
+“If you yield 5 jars, unit cost will be $3.40”
