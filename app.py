@@ -105,6 +105,10 @@ def login():
             login_user(u)
             return redirect(url_for('dashboard.dashboard'))
         flash('Invalid credentials')
+    return render_template('login.html', form=form)
+            login_user(u)
+            return redirect(url_for('dashboard.dashboard'))
+        flash('Invalid credentials')
     return render_template('login.html')
 
 @app.route('/logout')
