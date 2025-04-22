@@ -7,7 +7,6 @@
 {% for unit_type in types %}
   <h3>{{ unit_type | title }} Units</h3>
   
-  <!-- System Units -->
   <table class="table table-bordered">
     <thead>
       <tr>
@@ -18,8 +17,13 @@
       </tr>
     </thead>
     <tbody>
-      {% for unit in units if unit.type == unit_type and not unit.is_custom %}
-        <tr>
+      {% for unit in units if unit.type == unit_type %}
+        {% if unit.is_custom and loop.first %}
+          <tr class="table-secondary">
+            <td colspan="4"><strong>Custom Units</strong></td>
+          </tr>
+        {% endif %}
+        <tr{% if unit.is_custom %} class="table-light"{% endif %}>
           <td>{{ unit.name }}</td>
           <td>{{ unit.type }}</td>
           <td>{{ unit.base_unit }}</td>
@@ -28,22 +32,6 @@
       {% endfor %}
     </tbody>
   </table>
-
-  <!-- Custom Units -->
-  {% set custom_units = units | selectattr("is_custom") | selectattr("type", "equalto", unit_type) | list %}
-  {% if custom_units %}
-    <tr class="table-secondary">
-      <td colspan="4"><strong>Custom Units</strong></td>
-    </tr>
-    {% for unit in custom_units %}
-      <tr>
-        <td>{{ unit.name }}</td>
-        <td>{{ unit.type }}</td>
-        <td>{{ unit.base_unit }}</td>
-        <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
-      </tr>
-    {% endfor %}
-  {% endif %}
 {% endfor %}
 
 <div class="card p-3 mb-3">
