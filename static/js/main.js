@@ -1,4 +1,3 @@
-// Load and populate unit dropdowns
 async function loadUnits() {
   try {
     const response = await fetch('/conversion/units', {
@@ -6,33 +5,59 @@ async function loadUnits() {
         'Accept': 'application/json'
       }
     });
-    const data = await response.json();
-    // Data comes directly as array of units
-    const units = data;
-    const unitSelectors = document.querySelectorAll('select[data-unit-select]');
+    const units = await response.json();
+
+    // Populate all unit selectors
+    const unitSelectors = document.querySelectorAll('select[data-unit-select], select[name="base_unit"], #fromUnit, #toUnit');
     unitSelectors.forEach(select => {
+      const currentValue = select.value;
       select.innerHTML = '';
       units.forEach(unit => {
-        const option = new Option(unit.name, unit.name);
-        select.add(option);
+        const option = document.createElement('option');
+        option.value = unit.name;
+        option.textContent = unit.name;
+        select.appendChild(option);
       });
+      // Restore selected value if it exists
+      if (currentValue && [...select.options].find(opt => opt.value === currentValue)) {
+        select.value = currentValue;
+      }
     });
+
+    // Type-specific population for the base unit dropdown
+    const typeSelect = document.querySelector('select[name="type"]');
+    const baseUnitSelect = document.querySelector('select[name="base_unit"]');
+
+    if (typeSelect && baseUnitSelect) {
+      const updateBaseUnits = () => {
+        const selectedType = typeSelect.value;
+        const typeUnits = units.filter(unit => unit.type === selectedType);
+        baseUnitSelect.innerHTML = '';
+        typeUnits.forEach(unit => {
+          const option = document.createElement('option');
+          option.value = unit.name;
+          option.textContent = unit.name;
+          baseUnitSelect.appendChild(option);
+        });
+      };
+
+      typeSelect.addEventListener('change', updateBaseUnits);
+      updateBaseUnits(); // Initial population
+    }
   } catch (error) {
     console.error("Error loading units:", error);
   }
 }
 
-// Load units when relevant modals or pages are shown
-document.addEventListener('DOMContentLoaded', function() {
-  const unitModals = document.querySelectorAll('[data-load-units]');
-  unitModals.forEach(modal => {
-    modal.addEventListener('show.bs.modal', loadUnits);
-  });
+// Add event listeners for unit loading
+document.addEventListener('DOMContentLoaded', () => {
+  loadUnits();
 
-  // If we're on a page that needs units loaded immediately
-  if (document.querySelector('[data-unit-select]')) {
-    loadUnits();
-  }
+  // Reload units when modals with unit selectors are shown
+  const modalsWithUnits = document.querySelectorAll('[data-bs-toggle="modal"]');
+  modalsWithUnits.forEach(modalTrigger => {
+    modalTrigger.addEventListener('click', loadUnits);
+  });
 });
 
 document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
@@ -52,8 +77,6 @@ function copyToClipboard(text) {
     console.error('Failed to copy:', err);
   });
 }
-
-// Load units for conversion dropdowns (This function is now redundant and removed)
 
 
 function convertUnits() {
