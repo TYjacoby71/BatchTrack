@@ -17,7 +17,7 @@ def convert(amount, from_unit, to_unit):
                 from_unit=from_unit,
                 to_unit=to_unit
             ).first()
-            
+
             if mapping:
                 result = amount * mapping.multiplier
                 return jsonify({
@@ -38,26 +38,26 @@ def convert(amount, from_unit, to_unit):
 def manage_units():
     if request.method == 'POST':
         name = request.form.get('name')
-        unit_type = request.form.get('type')
+        type = request.form.get('type')
         base_unit = request.form.get('base_unit')
-        multiplier = request.form.get('multiplier')
-        if Unit.query.filter_by(name=name).first():
-            flash('Unit already exists.', 'danger')
-        else:
+        multiplier = float(request.form.get('multiplier'))
+
+        if not Unit.query.filter_by(name=name).first():
             new_unit = Unit(
                 name=name,
-                type=unit_type,
+                type=type,
                 base_unit=base_unit,
-                multiplier_to_base=float(multiplier),
-                user_id=current_user.id
+                multiplier_to_base=multiplier
             )
             db.session.add(new_unit)
             db.session.commit()
-            flash('Unit added successfully.', 'success')
-        return redirect(url_for('conversion.manage_units'))
+            flash('Unit added successfully!', 'success')
+        else:
+            flash('Unit already exists!', 'error')
 
-    units = Unit.query.all()
-    return render_template('conversion/units.html', units=units)
+    units = Unit.query.order_by(Unit.type, Unit.name).all()
+    mappings = CustomUnitMapping.query.all()
+    return render_template('conversion/units.html', units=units, mappings=mappings)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 @login_required
