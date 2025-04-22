@@ -40,6 +40,8 @@ def update_inventory(id):
         item.unit = request.form.get('unit')
         item.type = request.form.get('type')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        item.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+        item.is_perishable = request.form.get('is_perishable', 'false') == 'true'
         db.session.commit()
         flash('Inventory item updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
