@@ -1,0 +1,18 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Database Cleanup Tools</h2>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Archive Zeroed Inventory</h5>
+      <p class="card-text">Remove all product inventory entries with zero quantity. This helps keep your FIFO views clean.</p>
+      <form method="POST" action="{{ url_for('admin.archive_zeroed_inventory') }}" onsubmit="return confirm('Are you sure? This will permanently remove zeroed inventory entries.')">
+        <button type="submit" class="btn btn-warning">Archive Zeroed Entries</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
