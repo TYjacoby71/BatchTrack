@@ -64,6 +64,15 @@ def create_variation(recipe_id):
     flash('Variation created successfully')
     return redirect(url_for('recipes.edit_recipe', recipe_id=variation.id))
 
+@recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
+@login_required
+def lock_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe.is_locked = True
+    db.session.commit()
+    flash('Recipe locked.')
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
+
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
