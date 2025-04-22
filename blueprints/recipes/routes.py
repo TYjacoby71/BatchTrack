@@ -193,18 +193,3 @@ def edit_recipe(recipe_id):
                          all_ingredients=all_ingredients,
                          inventory_units=inventory_units)
 
-@recipes_bp.route('/<int:recipe_id>/delete', methods=['GET', 'POST'])
-@login_required
-def delete_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    try:
-        if request.method == 'POST':
-            db.session.delete(recipe)
-            db.session.commit()
-            flash('Recipe deleted successfully.')
-            return redirect(url_for('recipes.list_recipes'))
-        return render_template('confirm_delete.html', recipe=recipe)
-    except Exception as e:
-        flash(f"Error deleting recipe: {str(e)}", "error")
-        current_app.logger.exception(f"Unexpected error deleting recipe: {str(e)}")
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
