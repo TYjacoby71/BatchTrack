@@ -21,24 +21,38 @@
         </select>
     </div>
 
-    <!-- Product Yield Section -->
+    <!-- Product Yield Section (Refined) -->
     <div id="productFields" class="form-group mt-4">
-        <label for="product_quantity">
-            Batch Yield
-            <span data-bs-toggle="tooltip" title="How much usable product or inventory this batch created. Example: 12 jars, 3 bottles, etc.">❓</span>
-        </label>
-        <input type="number" name="product_quantity" value="1" min="1" class="form-control" required>
-        <select name="product_unit" class="form-select select2" data-unit-select required>
-            <option value="">Select unit</option>
-            {% for unit in units %}
-            <option value="{{ unit.name }}" 
-                    {% if unit.name == batch.product_unit %}selected{% endif %}
-                    {% if unit.type != 'product' %}style="display:none;" class="inventory-unit"{% endif %}
-                    {% if unit.type == 'product' %}class="product-unit"{% endif %}>
-                {{ unit.name }} ({{ unit.type }})
-            </option>
-            {% endfor %}
-        </select>
+        <h4>Product Output</h4>
+
+        <div class="mb-3">
+            <label for="product_id" class="form-label">Link to Product</label>
+            <select name="product_id" class="form-select" required>
+                {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <a href="/products/new" class="btn btn-link">+ Add New Product</a>
+        </div>
+
+        <div class="mb-3">
+            <label for="variant_label" class="form-label">Variant (optional)</label>
+            <input type="text" class="form-control" name="variant_label" placeholder="e.g., 4 oz, Citrus">
+        </div>
+
+        <div class="mb-3">
+            <label for="output_unit" class="form-label">Output Unit</label>
+            <select name="output_unit" class="form-select" required>
+                {% for unit in units if unit.type == 'count' %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="final_quantity" class="form-label">Final Quantity Produced</label>
+            <input type="number" step="1" class="form-control" name="final_quantity" required>
+        </div>
     </div>
 
     <!-- Ingredient Yield Section -->

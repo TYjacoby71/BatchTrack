@@ -1,10 +1,10 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
+from services.fifo_inventory import deduct_product_fifo
 
 product_bp = Blueprint('product', __name__)
 
@@ -46,3 +46,35 @@ def edit_product(product_id):
         flash('Product updated.')
         return redirect(url_for('product.view_product', product_id=product.id))
     return render_template('edit_product.html', product=product)
+
+@product_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
+@login_required
+def deduct_product(product_id):
+    variant = request.form.get("variant")
+    unit = request.form.get("unit")
+    try:
+        quantity = float(request.form.get("quantity", 0))
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive")
+
+        used = deduct_product_fifo(product_id, variant, unit, quantity)
+
+        if used:
+            flash(f"Deducted {quantity} {unit} from inventory using FIFO", "success")
+            # Log the deduction as a product event
+            product = Product.query.get_or_404(product_id)
+            db.session.add(ProductEvent(
+                product_id=product_id,
+                event_type="inventory_deduction",
+                note=f"FIFO deduction of {quantity} {unit}"
+            ))
+            db.session.commit()
+        else:
+            flash("Not enough stock to fulfill request", "danger")
+
+    except ValueError as e:
+        flash(str(e), "danger")
+    except Exception as e:
+        flash("Error processing deduction request", "danger")
+
+    return redirect(url_for('product.view_product', product_id=product_id))

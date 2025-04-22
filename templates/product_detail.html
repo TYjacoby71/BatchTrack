@@ -30,5 +30,18 @@
 {% if not events %}
 <p>No events logged yet.</p>
 {% endif %}
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h4>Manual FIFO Deduction</h4>
+    <form method="POST" action="{{ url_for('product.deduct_product', product_id=product.id) }}">
+      {{ csrf_token() }}
+      <input type="text" name="variant" placeholder="Variant (e.g. 4 oz)" class="form-control mb-2" required>
+      <input type="text" name="unit" placeholder="Unit (e.g. Jar)" class="form-control mb-2" required>
+      <input type="number" step="1" name="quantity" placeholder="Qty to deduct" class="form-control mb-2" required>
+      <button type="submit" class="btn btn-warning">Deduct FIFO</button>
+    </form>
+  </div>
+</div>
 <a href="/">Back to Home</a>
 {% endblock %}
