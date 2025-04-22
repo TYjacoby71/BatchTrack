@@ -46,11 +46,7 @@
         <input type="hidden" name="recipe_token" value="{{ recipe.id }}">
         <button type="submit" class="btn btn-primary">Edit Recipe</button>
     </form>
-    <form method="post" action="{{ url_for('recipes.prompt_clone', recipe_id=recipe.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="recipe_token" value="{{ recipe.id }}">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
-    </form>
+    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">Duplicate Recipe</a>
     <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="recipe_token" value="{{ recipe.id }}">
