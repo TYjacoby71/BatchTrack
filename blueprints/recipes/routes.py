@@ -26,6 +26,12 @@ def list_recipes():
     recipes = Recipe.query.filter_by(parent_id=None).all()
     return render_template('recipe_list.html', recipes=recipes)
 
+@recipes_bp.route('/<int:recipe_id>/view')
+@login_required
+def view_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('view_recipe.html', recipe=recipe)
+
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
