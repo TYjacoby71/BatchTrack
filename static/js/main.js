@@ -1,31 +1,24 @@
-function loadUnits() {
-  fetch('/conversion/units')
-    .then(response => response.json())
-    .then(units => {
-      const unitSelectors = document.querySelectorAll('select[data-unit-select]');
-      unitSelectors.forEach(select => {
-        select.innerHTML = '';
-        units.forEach(unit => {
-          const option = new Option(unit.name, unit.name);
-          select.add(option);
-        });
-      });
-    })
-    .catch(error => console.error('Error loading units:', error));
-}
+function filterUnits() {
+  const filter = document.getElementById('unitFilter').value;
+  const unitCards = document.querySelectorAll('.card.mb-3');
 
-// Load units when relevant modals or pages are shown
-document.addEventListener('DOMContentLoaded', function() {
-  const unitModals = document.querySelectorAll('[data-load-units]');
-  unitModals.forEach(modal => {
-    modal.addEventListener('show.bs.modal', loadUnits);
+  unitCards.forEach(card => {
+    const type = card.querySelector('h5').textContent.toLowerCase();
+    const hasCustomUnits = card.querySelectorAll('tr.table-secondary').length > 0;
+
+    if (filter === 'all') {
+      card.style.display = '';
+    } else if (filter === 'custom' && hasCustomUnits) {
+      card.style.display = '';
+    } else if (filter === 'standard') {
+      card.style.display = hasCustomUnits ? 'none' : '';
+    } else if (filter === type) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
   });
-
-  // If we're on a page that needs units loaded immediately
-  if (document.querySelector('[data-unit-select]')) {
-    loadUnits();
-  }
-});
+}
 
 function loadUnits() {
   fetch('/conversion/units')
@@ -35,9 +28,24 @@ function loadUnits() {
       unitSelectors.forEach(select => {
         if (!select) return;
         select.innerHTML = '';
+        //Added grouping of units by category
+        const unitGroups = {};
         units.forEach(unit => {
-          select.add(new Option(unit.name, unit.name));
+          if (!unitGroups[unit.category]) {
+            unitGroups[unit.category] = [];
+          }
+          unitGroups[unit.category].push(unit);
         });
+
+        for (const category in unitGroups) {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = category;
+          unitGroups[category].forEach(unit => {
+            const option = new Option(unit.name, unit.name);
+            optgroup.appendChild(option);
+          });
+          select.appendChild(optgroup);
+        }
         // Initialize Select2 with search
         $(select).select2({
           placeholder: 'Search for a unit...',
