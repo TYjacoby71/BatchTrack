@@ -18,7 +18,21 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 @login_required
 def manage_units():
-    from models import Unit
+    if request.method == 'POST':
+        name = request.form.get('name')
+        type = request.form.get('type', 'count')
+        base_unit = request.form.get('base_unit', name)
+        multiplier = request.form.get('multiplier', 1.0)
+        
+        new_unit = Unit(
+            name=name,
+            type=type,
+            base_unit=base_unit,
+            multiplier_to_base=float(multiplier)
+        )
+        db.session.add(new_unit)
+        db.session.commit()
+
     units = Unit.query.all()
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
