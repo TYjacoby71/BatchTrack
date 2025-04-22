@@ -107,6 +107,9 @@ def login():
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
             return redirect(url_for('dashboard.dashboard'))
         flash('Invalid credentials')
     return render_template('login.html', form=form)
