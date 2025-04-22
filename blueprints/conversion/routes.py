@@ -63,6 +63,14 @@ def manage_units():
             'name': unit.name,
             'type': unit.type,
             'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base
+        } for unit in units])
+    
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify([{
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
             'multiplier': unit.multiplier_to_base
         } for unit in units])
         
