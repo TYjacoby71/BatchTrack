@@ -32,6 +32,12 @@ def view_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('view_recipe.html', recipe=recipe)
 
+@recipes_bp.route('/<int:recipe_id>/plan')
+@login_required
+def plan_production(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('plan_production.html', recipe=recipe)
+
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
