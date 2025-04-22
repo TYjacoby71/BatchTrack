@@ -81,7 +81,12 @@
         <label class="form-label">1</label>
       </div>
       <div class="col">
-        <input name="from_unit" class="form-control" placeholder="pinch" required>
+        <select name="from_unit" class="form-control" required>
+          <option value="">Select From Unit</option>
+          {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }} ({{ unit.type }})</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-auto">
         <label class="form-label">equals</label>
@@ -90,7 +95,12 @@
         <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="1.0" required>
       </div>
       <div class="col">
-        <input name="to_unit" class="form-control" placeholder="gram" required>
+        <select name="to_unit" class="form-control" required>
+          <option value="">Select To Unit</option>
+          {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }} ({{ unit.type }})</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-auto">
         <button class="btn btn-success">Add Mapping</button>
