@@ -19,7 +19,8 @@ def new_recipe():
         db.session.commit()
         flash('Recipe created successfully.')
         return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
-    return render_template('recipes/edit.html', recipe=None, all_ingredients=InventoryItem.query.all(), units=Unit.query.all())
+    inventory_units = get_global_unit_list()
+    return render_template('recipe_form.html', recipe=None, all_ingredients=InventoryItem.query.all(), inventory_units=inventory_units)
 
 @recipes_bp.route('/')
 @login_required
@@ -115,7 +116,7 @@ def clone_recipe(recipe_id):
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
-    units = Unit.query.order_by(Unit.name).all()
+    inventory_units = get_global_unit_list()
 
     if request.method == 'POST':
         try:
@@ -131,4 +132,4 @@ def edit_recipe(recipe_id):
     return render_template('recipe_form.html', 
                          recipe=recipe,
                          all_ingredients=all_ingredients,
-                         inventory_units=units)
+                         inventory_units=inventory_units)
