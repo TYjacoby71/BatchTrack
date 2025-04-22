@@ -164,5 +164,4 @@ async function checkStock() {
     console.error('Error checking stock:', error);
     alert('Error checking stock. Please try again.');
   }
-  }
 }
