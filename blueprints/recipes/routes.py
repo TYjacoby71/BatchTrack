@@ -100,19 +100,6 @@ def create_variation(recipe_id):
 
 
 
-@recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
-@login_required
-def delete_recipe(recipe_id):
-    try:
-        recipe = Recipe.query.get_or_404(recipe_id)
-        db.session.delete(recipe)
-        db.session.commit()
-        flash('Recipe deleted successfully.')
-        return redirect(url_for('recipes.list_recipes'))
-    except Exception as e:
-        flash(f"Error deleting recipe: {str(e)}", "error")
-        return redirect(url_for('recipes.edit_recipe', recipe_id=recipe_id))
-
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 def lock_recipe(recipe_id):
@@ -132,21 +119,16 @@ def lock_recipe(recipe_id):
 @login_required
 def clone_recipe(recipe_id):
     try:
-        # Get original recipe with ingredients
         original = Recipe.query.get_or_404(recipe_id)
-        original_ingredients = list(original.recipe_ingredients)  # Create list to avoid lazy loading issues
-        
-        # Create new recipe
         clone = Recipe(
             name=f"Copy of {original.name}",
             instructions=original.instructions,
             label_prefix=original.label_prefix
         )
         db.session.add(clone)
-        db.session.flush()  # Get clone.id
+        db.session.flush()
 
-        # Clone ingredients
-        for ingredient in original_ingredients:
+        for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
                 inventory_item_id=ingredient.inventory_item_id,
@@ -154,28 +136,13 @@ def clone_recipe(recipe_id):
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
-            db.session.flush()  # Ensure each ingredient is added
 
         db.session.commit()
-        
-        # Verify ingredients were copied
-        ingredient_count = len(list(clone.recipe_ingredients))
-        current_app.logger.info(f"Recipe {original.id} cloned to {clone.id} with {ingredient_count} ingredients")
-        
-        if ingredient_count == 0:
-            raise ValueError("No ingredients were copied")
-            
-        flash(f'Recipe cloned successfully with {ingredient_count} ingredients')
+        flash('Recipe cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.error(f"Database error cloning recipe {recipe_id}: {str(e)}")
-        flash('Error cloning recipe ingredients', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.exception(f"Error cloning recipe {recipe_id}")
-        flash('Unexpected error while cloning recipe', 'error')
+        flash(f"Error cloning recipe: {str(e)}", "error")
+        current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
