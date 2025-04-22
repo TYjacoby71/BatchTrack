@@ -1,22 +1,24 @@
 // Load and populate unit dropdowns
-function loadUnits() {
-  fetch('/conversion/units', {
-    headers: {
-      'Accept': 'application/json'
+async function loadUnits() {
+  try {
+    const response = await fetch('/conversion/units');
+    const data = await response.json();
+    if (!data.success) {
+      console.error("Error loading units:", data);
+      return {};
     }
-  })
-    .then(response => response.json())
-    .then(units => {
-      const unitSelectors = document.querySelectorAll('select[data-unit-select]');
-      unitSelectors.forEach(select => {
-        select.innerHTML = '';
-        units.forEach(unit => {
-          const option = new Option(unit.name, unit.name);
-          select.add(option);
-        });
+    const units = data.units;
+    const unitSelectors = document.querySelectorAll('select[data-unit-select]');
+    unitSelectors.forEach(select => {
+      select.innerHTML = '';
+      units.forEach(unit => {
+        const option = new Option(unit.name, unit.name);
+        select.add(option);
       });
-    })
-    .catch(error => console.error('Error loading units:', error));
+    });
+  } catch (error) {
+    console.error("Error loading units:", error);
+  }
 }
 
 // Load units when relevant modals or pages are shown
@@ -52,6 +54,7 @@ function copyToClipboard(text) {
 
 // Load units for conversion dropdowns (This function is now redundant and removed)
 
+
 function convertUnits() {
   const amount = document.getElementById('amount').value;
   const fromUnit = document.getElementById('fromUnit').value;
@@ -86,27 +89,5 @@ function convertUnits() {
     })
     .catch(err => {
       resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
-    });
-}
-function loadUnits() {
-  const typeSelect = document.getElementById('newUnitType');
-  const baseSelect = document.getElementById('newUnitBase');
-  
-  if (!typeSelect || !baseSelect) return;
-
-  fetch('/conversion/units')
-    .then(response => response.json())
-    .then(units => {
-      const filteredUnits = units.filter(unit => unit.type === typeSelect.value);
-      baseSelect.innerHTML = '';
-      filteredUnits.forEach(unit => {
-        const option = document.createElement('option');
-        option.value = unit.name;
-        option.textContent = unit.name;
-        baseSelect.appendChild(option);
-      });
-    })
-    .catch(error => {
-      console.error('Error loading units:', error);
     });
 }
