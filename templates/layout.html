@@ -23,33 +23,15 @@
                     <i class="fas fa-bars"></i> Menu
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
-                    <!-- Production -->
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    
-                    <!-- Inventory -->
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('inventory_adjust.index') }}">Inventory Adjust</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('product_log.view') }}">Product Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
-                    <!-- Tools & Management -->
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('admin.cleanup_tools') }}">Cleanup Tools</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
-                    <!-- FIFO & Tracking -->
-                    <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Inventory</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('fault_log.view_fault_log') }}">Fault Log</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.manage_tags') }}">Tag Manager</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
