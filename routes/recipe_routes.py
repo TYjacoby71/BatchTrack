@@ -99,13 +99,13 @@ def edit_recipe(recipe_id):
     add_ingredient_line = session.pop('add_ingredient_line', False)
 
     base_recipes = Recipe.query.filter_by(parent_id=None).all()
-    inventory_units = InventoryUnit.query.all()
+    units = Unit.query.all()
     parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     return render_template('recipe_form.html',
         recipe=recipe,
         all_ingredients=all_ingredients,
-        inventory_units=inventory_units,
+        inventory_units=units,
         preselect_ingredient_id=preselect_ingredient_id,
         add_ingredient_line=add_ingredient_line,
         parent_recipes=parent_recipes,
