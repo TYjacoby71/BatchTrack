@@ -1,5 +1,10 @@
+// Load and populate unit dropdowns
 function loadUnits() {
-  fetch('/conversion/units')
+  fetch('/conversion/units', {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
     .then(response => response.json())
     .then(units => {
       const unitSelectors = document.querySelectorAll('select[data-unit-select]');
@@ -45,23 +50,7 @@ function copyToClipboard(text) {
   });
 }
 
-
-// Load units for conversion dropdowns
-function loadUnits() {
-  fetch('/conversion/units')
-    .then(response => response.json())
-    .then(data => {
-      const fromUnit = document.getElementById('fromUnit');
-      const toUnit = document.getElementById('toUnit');
-      if (fromUnit && toUnit) {
-        data.units.forEach(unit => {
-          fromUnit.add(new Option(unit.name, unit.name));
-          toUnit.add(new Option(unit.name, unit.name));
-        });
-      }
-    })
-    .catch(err => console.log("Error loading units:", err));
-}
+// Load units for conversion dropdowns (This function is now redundant and removed)
 
 function convertUnits() {
   const amount = document.getElementById('amount').value;
