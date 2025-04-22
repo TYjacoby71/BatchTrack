@@ -4,6 +4,17 @@
 
 <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 
+{% if low_stock_items %}
+<div class="alert alert-warning mt-3">
+  <strong>⚠️ Low Stock Alerts:</strong>
+  <ul class="list-unstyled mb-0 mt-2">
+    {% for item in low_stock_items %}
+      <li>{{ item.name }} – {{ item.quantity }} {{ item.unit }} remaining (Threshold: {{ item.low_stock_threshold }} {{ item.unit }})</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <div class="mb-3 d-flex gap-2">
   {% if active_batch %}
     <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>

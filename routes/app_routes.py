@@ -5,11 +5,14 @@ from flask_login import login_required, current_user
 
 app_routes_bp = Blueprint('dashboard', __name__)
 
+from services.inventory_alerts import get_low_stock_ingredients
+
 @app_routes_bp.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
+    low_stock_items = get_low_stock_ingredients()
     stock_check = None
     selected_recipe = None
     scale = 1
@@ -37,7 +40,8 @@ def dashboard():
                          scale=scale,
                          status=status,
                          active_batch=active_batch,
-                         current_user=current_user)
+                         current_user=current_user,
+                         low_stock_items=low_stock_items)
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
