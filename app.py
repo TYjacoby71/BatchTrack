@@ -10,7 +10,7 @@ db = SQLAlchemy()
 
 # Create app and attach config
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'devkey'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
@@ -90,13 +90,15 @@ def load_user(user_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
+    from flask_wtf import FlaskForm
+    form = FlaskForm()
+    if request.method == 'POST' and form.validate_on_submit():
         username = request.form.get('username')
         password = request.form.get('password')
 
         if not username or not password:
             flash('Please provide both username and password')
-            return render_template('login.html')
+            return render_template('login.html', form=form)
 
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
