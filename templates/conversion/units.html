@@ -59,4 +59,43 @@
     </tbody>
   </table>
 </div>
+
+<!-- Custom Mappings Form (Improved UI) -->
+<div class="card p-3">
+  <h4>Custom Unit Mappings</h4>
+  <form method="POST" action="{{ url_for('conversion.manage_mappings') }}">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="form-label">1</label>
+      </div>
+      <div class="col">
+        <input name="from_unit" class="form-control" placeholder="pinch" required>
+      </div>
+      <div class="col-auto">
+        <label class="form-label">equals</label>
+      </div>
+      <div class="col">
+        <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="1.0" required>
+      </div>
+      <div class="col">
+        <input name="to_unit" class="form-control" placeholder="gram" required>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-success">Add Mapping</button>
+      </div>
+    </div>
+  </form>
+
+  <table class="table table-sm mt-3">
+    <thead><tr><th>Custom Unit</th><th>Equals</th><th>Base Unit</th></tr></thead>
+    <tbody>{% for mapping in mappings %}
+      <tr>
+        <td>1 {{ mapping.from_unit }}</td>
+        <td>{{ mapping.multiplier }}</td>
+        <td>{{ mapping.to_unit }}</td>
+      </tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}
 {% endblock %}
