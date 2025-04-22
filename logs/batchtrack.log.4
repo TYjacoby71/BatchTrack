@@ -1,4 +1,4 @@
-2025-04-22 00:29:01,813 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-22 00:35:15,539 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -87,8 +87,57 @@ FROM user
 WHERE user.id = ?]
 [parameters: (1,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-04-22 00:33:56,835 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 00:35:05,602 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 00:35:09,152 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 00:35:09,967 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
-2025-04-22 00:35:13,744 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:35:52,639 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:37:09,094 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:37:57,111 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:39:14,849 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:39:16,196 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:39:57,493 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:40:04,328 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:41:14,682 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:43:04,644 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:44:43,323 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:47:44,865 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 39, in manage_units
+    units = ConversionEngine.get_units_by_type()
+            ^^^^^^^^^^^^^^^^
+NameError: name 'ConversionEngine' is not defined
+2025-04-22 00:47:58,227 ERROR: Exception on /conversion/custom-mappings [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 67, in manage_mappings
+    mappings = CustomUnitMapping.query.filter_by(user_id=current_user.id).all()
+                                                         ^^^^^^^^^^^^
+NameError: name 'current_user' is not defined
+2025-04-22 00:48:50,719 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
+2025-04-22 00:50:06,733 INFO: BatchTrack startup [in /home/runner/workspace/utils.py:26]
