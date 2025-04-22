@@ -1,13 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from models import db, Unit, CustomUnitMapping, ConversionLog
-
-conversion_bp = Blueprint('conversion', __name__)
-
-@conversion_bp.route('/units')
-def get_units():
-    units = Unit.query.all()
-    return jsonify([{'name': unit.name, 'type': unit.type} for unit in units])
 from services.unit_conversion import ConversionEngine
 
 conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
@@ -25,29 +18,7 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 @login_required
 def manage_units():
-    if request.method == 'POST':
-        data = request.get_json() if request.is_json else request.form
-        name = data.get('name')
-        unit_type = data.get('type')
-        base_unit = data.get('base_unit')
-        multiplier = float(data.get('multiplier'))
-        if Unit.query.filter_by(name=name).first():
-            if request.is_json:
-                return jsonify({'error': 'Unit already exists.'}), 400
-            flash('Unit already exists.', 'danger')
-        else:
-            new_unit = Unit(name=name, type=unit_type, base_unit=base_unit, multiplier_to_base=multiplier, user_id=current_user.id)
-            db.session.add(new_unit)
-            db.session.commit()
-            if request.is_json:
-                return jsonify({'success': 'Unit added.'})
-            flash('Unit added successfully.', 'success')
-        return redirect(url_for('conversion.manage_units'))
-
-    units = ConversionEngine.get_units_by_type()
-    if request.headers.get('Accept') == 'application/json':
-        return jsonify([{'name': u.name, 'type': u.type, 'base_unit': u.base_unit, 'multiplier_to_base': u.multiplier_to_base} for u in units])
-    return render_template('conversion/units.html', units=units)
+    return render_template('conversion/units.html')
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 @login_required
