@@ -1,4 +1,4 @@
-2025-04-22 21:01:57,522 ERROR: Exception on /inventory/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-22 21:02:15,251 ERROR: Exception on /inventory/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -66,4 +66,3 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inve
 [SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.type AS inventory_item_type, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.perishable AS inventory_item_perishable, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.category_id AS inventory_item_category_id 
 FROM inventory_item]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-04-22 21:02:08,111 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
