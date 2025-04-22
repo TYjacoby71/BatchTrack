@@ -94,6 +94,17 @@ class Product(db.Model):
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
+    inventory = db.relationship('ProductInventory', backref='product', lazy=True)
+
+class ProductInventory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    variant = db.Column(db.String(100))
+    unit = db.Column(db.String(50))
+    quantity = db.Column(db.Float)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
+    notes = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
