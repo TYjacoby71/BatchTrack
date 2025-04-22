@@ -57,6 +57,15 @@ def manage_units():
 
     units = Unit.query.order_by(Unit.type, Unit.name).all()
     mappings = CustomUnitMapping.query.all()
+    
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify([{
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier': unit.multiplier_to_base
+        } for unit in units])
+        
     return render_template('conversion/units.html', units=units, mappings=mappings)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])

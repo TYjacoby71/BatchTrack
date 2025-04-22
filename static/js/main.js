@@ -99,3 +99,25 @@ function convertUnits() {
       resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     });
 }
+function loadUnits() {
+  const typeSelect = document.getElementById('newUnitType');
+  const baseSelect = document.getElementById('newUnitBase');
+  
+  if (!typeSelect || !baseSelect) return;
+
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(units => {
+      const filteredUnits = units.filter(unit => unit.type === typeSelect.value);
+      baseSelect.innerHTML = '';
+      filteredUnits.forEach(unit => {
+        const option = document.createElement('option');
+        option.value = unit.name;
+        option.textContent = unit.name;
+        baseSelect.appendChild(option);
+      });
+    })
+    .catch(error => {
+      console.error('Error loading units:', error);
+    });
+}
