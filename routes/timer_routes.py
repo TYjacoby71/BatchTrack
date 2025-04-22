@@ -1,9 +1,15 @@
 
-from flask import Blueprint, redirect, url_for, flash
+from flask import Blueprint, redirect, url_for, flash, render_template
 from flask_login import login_required
 from models import db, BatchTimer
 
 timers_bp = Blueprint('timers', __name__, url_prefix='/timers')
+
+@timers_bp.route('/list')
+@login_required
+def list_timers():
+    timers = BatchTimer.query.all()
+    return render_template('timer_list.html', timers=timers)
 
 @timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
 @login_required
