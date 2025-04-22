@@ -72,6 +72,12 @@ app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 
+@app.context_processor
+def inject_units():
+    units = Unit.query.order_by(Unit.type, Unit.name).all()
+    categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+    return dict(units=units, categories=categories)
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
