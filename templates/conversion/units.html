@@ -83,6 +83,13 @@
       <div class="col">
         <select name="from_unit" class="form-control select2" data-unit-select required>
           <option value="">Select From Unit</option>
+          {% for type, type_units in units_by_type.items() %}
+          <optgroup label="{{ type|title }}">
+            {% for unit in type_units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
         </select>
       </div>
       <div class="col-auto">
@@ -94,6 +101,13 @@
       <div class="col">
         <select name="to_unit" class="form-control select2" data-unit-select required>
           <option value="">Select To Unit</option>
+          {% for type, type_units in units_by_type.items() %}
+          <optgroup label="{{ type|title }}">
+            {% for unit in type_units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
         </select>
       </div>
       <div class="col-auto">
