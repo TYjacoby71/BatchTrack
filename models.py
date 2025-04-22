@@ -49,11 +49,18 @@ class ConversionLog(db.Model):
 
 class RecipeIngredient(db.Model):
     __tablename__ = 'recipe_ingredients'
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
-    amount = db.Column(db.Float)
-    unit = db.Column(db.String(32))
-    inventory_item = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic'))
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id', ondelete='CASCADE'), primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id', ondelete='CASCADE'), primary_key=True)
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    unit = db.Column(db.String(32), nullable=False, default='count')
+    inventory_item = db.relationship('InventoryItem', backref=db.backref('recipe_ingredients', lazy='dynamic', cascade="all, delete-orphan"))
+
+    def __init__(self, **kwargs):
+        super(RecipeIngredient, self).__init__(**kwargs)
+        if not self.unit:
+            self.unit = 'count'
+        if self.amount is None:
+            self.amount = 0.0
 
 class Recipe(db.Model):
     __tablename__ = 'recipe'
