@@ -142,20 +142,20 @@ def clone_recipe(recipe_id):
         db.session.flush()
 
         # Clone all recipe ingredients with exact amounts and units
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
+        for assoc in original.recipe_ingredients:
+            new_assoc = RecipeIngredient(
                 recipe_id=clone.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
+                inventory_item_id=assoc.inventory_item_id,
+                amount=assoc.amount,
+                unit=assoc.unit
             )
-            db.session.add(new_ingredient)
-            db.session.flush()  # Ensure each ingredient gets added properly
+            db.session.add(new_assoc)
 
         db.session.commit()
-        flash('Recipe and all ingredients cloned successfully')
+        flash('Recipe and ingredients cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
     except Exception as e:
+        db.session.rollback()
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
