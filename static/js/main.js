@@ -46,6 +46,23 @@ function copyToClipboard(text) {
 }
 
 
+// Load units for conversion dropdowns
+function loadUnits() {
+  fetch('/conversion/units')
+    .then(response => response.json())
+    .then(data => {
+      const fromUnit = document.getElementById('fromUnit');
+      const toUnit = document.getElementById('toUnit');
+      if (fromUnit && toUnit) {
+        data.units.forEach(unit => {
+          fromUnit.add(new Option(unit.name, unit.name));
+          toUnit.add(new Option(unit.name, unit.name));
+        });
+      }
+    })
+    .catch(err => console.log("Error loading units:", err));
+}
+
 function convertUnits() {
   const amount = document.getElementById('amount').value;
   const fromUnit = document.getElementById('fromUnit').value;
