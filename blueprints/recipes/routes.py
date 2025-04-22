@@ -146,6 +146,19 @@ def clone_recipe(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+@recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
+@login_required
+def delete_recipe(recipe_id):
+    try:
+        recipe = Recipe.query.get_or_404(recipe_id)
+        db.session.delete(recipe)
+        db.session.commit()
+        flash('Recipe deleted successfully.')
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as e:
+        flash(f'Error deleting recipe: {str(e)}', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
