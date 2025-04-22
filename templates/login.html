@@ -3,7 +3,7 @@
 {% block content %}
 <h2>Login</h2>
 <form method="post">
-    {{ csrf_token() }}
+    {{ form.hidden_tag() }}
     <label for="username">Username:</label><br>
     <input type="text" name="username" required><br>
     <label for="password">Password:</label><br>
