@@ -22,7 +22,7 @@ def manage_units():
         type_ = request.form.get('type')
         base_unit = request.form.get('base_unit')
         multiplier = float(request.form.get('multiplier', 1.0))
-        
+
         unit = Unit(
             name=name,
             type=type_,

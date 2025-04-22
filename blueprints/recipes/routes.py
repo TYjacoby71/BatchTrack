@@ -5,6 +5,21 @@ from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 
 recipes_bp = Blueprint('recipes', __name__)
 
+@recipes_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+def new_recipe():
+    if request.method == 'POST':
+        recipe = Recipe(
+            name=request.form.get('name'),
+            instructions=request.form.get('instructions'),
+            label_prefix=request.form.get('label_prefix')
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        flash('Recipe created successfully.')
+        return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
+    return render_template('recipes/edit.html', recipe=None, all_ingredients=InventoryItem.query.all(), units=Unit.query.all())
+
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
