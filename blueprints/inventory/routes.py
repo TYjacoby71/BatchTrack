@@ -39,7 +39,9 @@ def delete_inventory(id):
 @inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_inventory(id):
+    from utils.unit_utils import get_global_unit_list
     item = InventoryItem.query.get_or_404(id)
+    units = get_global_unit_list()
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))

@@ -29,7 +29,9 @@
     </div>
     <div class="mb-3">
         <label for="unit" class="form-label">Unit</label>
-        <input type="text" class="form-control" id="unit" name="unit" value="{{ item.unit }}" required>
+        <select class="form-select" id="unit" name="unit" data-unit-select required>
+            <option value="{{ item.unit }}" selected>{{ item.unit }}</option>
+        </select>
     </div>
     <div class="mb-3">
         <label for="type" class="form-label">Type</label>
