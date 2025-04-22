@@ -1,0 +1,29 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Custom Unit Mappings</h2>
+  <div class="card">
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>From Unit</th>
+            <th>To Unit</th>
+            <th>Multiplier</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mapping in mappings %}
+          <tr>
+            <td>{{ mapping.from_unit }}</td>
+            <td>{{ mapping.to_unit }}</td>
+            <td>{{ mapping.multiplier }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

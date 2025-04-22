@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required, current_user
 from models import db, Unit, CustomUnitMapping, ConversionLog
+from services.unit_conversion import ConversionEngine
 
-conversion_bp = Blueprint('conversion', __name__)
+conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
