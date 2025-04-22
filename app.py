@@ -29,7 +29,7 @@ migrate = Migrate(app, db)
 from models import User, Recipe, InventoryItem, Unit, IngredientCategory
 
 # Setup logging
-from utils import setup_logging
+from utils.unit_utils import setup_logging
 setup_logging(app)
 
 # Setup LoginManager

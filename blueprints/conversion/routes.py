@@ -35,8 +35,8 @@ def manage_units():
         flash('Unit added successfully', 'success')
         return redirect(url_for('conversion.manage_units'))
 
-    from utils.unit_utils import get_global_unit_list
-    units = get_global_unit_list()
+    from models import Unit
+    units = Unit.query.order_by(Unit.type, Unit.is_custom, Unit.name).all()
     mappings = CustomUnitMapping.query.filter_by(user_id=current_user.id).all() if current_user.is_authenticated else []
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{

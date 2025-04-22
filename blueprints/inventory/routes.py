@@ -9,7 +9,7 @@ inventory_bp = Blueprint('inventory', __name__)
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
-    return render_template('inventory/list.html', items=items)
+    return render_template('inventory_list.html', items=items)
 
 @inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
