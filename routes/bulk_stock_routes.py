@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask_login import login_required
 from models import db, Recipe, InventoryItem
 from stock_check_utils import check_stock_for_recipe
 from services.unit_conversion import ConversionEngine
