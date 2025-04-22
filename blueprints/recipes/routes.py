@@ -132,40 +132,41 @@ def lock_recipe(recipe_id):
 @login_required
 def clone_recipe(recipe_id):
     try:
+        # Get original recipe with ingredients
         original = Recipe.query.get_or_404(recipe_id)
         
-        # Create new recipe with copied attributes
+        # Create new recipe
         clone = Recipe(
             name=f"Copy of {original.name}",
             instructions=original.instructions,
             label_prefix=original.label_prefix
         )
         db.session.add(clone)
-        db.session.flush()  # Get clone.id
+        db.session.flush()
 
-        # Copy all ingredients with their amounts and units
-        for ing in original.recipe_ingredients:
+        # Explicitly clone all ingredients
+        for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
-                inventory_item_id=ing.inventory_item_id,
-                amount=ing.amount,
-                unit=ing.unit
+                inventory_item_id=ingredient.inventory_item_id,
+                amount=ingredient.amount,
+                unit=ingredient.unit
             )
             db.session.add(new_ingredient)
-            db.session.flush()  # Ensure each ingredient is properly added
 
         db.session.commit()
-        flash('Recipe and all ingredients cloned successfully')
+        current_app.logger.info(f"Recipe {original.id} cloned to {clone.id} with {len(original.recipe_ingredients)} ingredients")
+        flash('Recipe and ingredients cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.error(f"Database error cloning recipe: {str(e)}")
+        current_app.logger.error(f"Database error cloning recipe {recipe_id}: {str(e)}")
         flash('Error cloning recipe ingredients', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
-        flash(f"Error cloning recipe: {str(e)}", "error")
+        current_app.logger.exception(f"Error cloning recipe {recipe_id}")
+        flash('Unexpected error while cloning recipe', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
