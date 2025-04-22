@@ -110,7 +110,8 @@
 
     <!-- Submission Buttons -->
     <div class="button-group mt-4">
-        {% if not batch.timers or batch.timers|selectattr('completed', 'equalto', False)|list|length == 0 %}
+        {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
+        {% if not has_active_timers %}
             <button type="submit" name="action" value="finish" class="btn btn-success">✓ Complete Batch</button>
             <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
         {% else %}
