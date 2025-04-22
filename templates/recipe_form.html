@@ -20,8 +20,10 @@
 
 {% if recipe %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+    {{ csrf_token() }}
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
+    {{ csrf_token() }}
 {% endif %}
 
     <div class="form-group">
