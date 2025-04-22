@@ -21,7 +21,14 @@ def manage_units():
     from models import InventoryUnit
     units = InventoryUnit.query.all()
     if request.headers.get('Accept') == 'application/json':
-        return jsonify([{'id': unit.id, 'name': unit.name, 'type': unit.type} for unit in units])
+        return jsonify([{
+            'id': unit.id,
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_equivalent,
+            'multiplier_to_base': unit.base_equivalent,
+            'density_required': unit.density_required
+        } for unit in units])
     return render_template('conversion/units.html', units=units)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
