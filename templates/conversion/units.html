@@ -32,27 +32,17 @@
   <!-- Custom Units -->
   {% set custom_units = units | selectattr("is_custom") | selectattr("type", "equalto", unit_type) | list %}
   {% if custom_units %}
-    <h4 class="mt-3">Custom:</h4>
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Base Unit</th>
-          <th>Multiplier</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for unit in custom_units %}
-          <tr>
-            <td>{{ unit.name }}</td>
-            <td>{{ unit.type }}</td>
-            <td>{{ unit.base_unit }}</td>
-            <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <tr class="table-secondary">
+      <td colspan="4"><strong>Custom Units</strong></td>
+    </tr>
+    {% for unit in custom_units %}
+      <tr>
+        <td>{{ unit.name }}</td>
+        <td>{{ unit.type }}</td>
+        <td>{{ unit.base_unit }}</td>
+        <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
+      </tr>
+    {% endfor %}
   {% endif %}
 {% endfor %}
 
