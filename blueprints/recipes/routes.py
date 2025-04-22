@@ -133,31 +133,39 @@ def lock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
+        
+        # Create new recipe with copied attributes
         clone = Recipe(
             name=f"Copy of {original.name}",
             instructions=original.instructions,
             label_prefix=original.label_prefix
         )
         db.session.add(clone)
-        db.session.flush()
+        db.session.flush()  # Get clone.id
 
-        # Clone all recipe ingredients with exact amounts and units
-        for assoc in original.recipe_ingredients:
-            new_assoc = RecipeIngredient(
+        # Copy all ingredients with their amounts and units
+        for ing in original.recipe_ingredients:
+            new_ingredient = RecipeIngredient(
                 recipe_id=clone.id,
-                inventory_item_id=assoc.inventory_item_id,
-                amount=assoc.amount,
-                unit=assoc.unit
+                inventory_item_id=ing.inventory_item_id,
+                amount=ing.amount,
+                unit=ing.unit
             )
-            db.session.add(new_assoc)
+            db.session.add(new_ingredient)
+            db.session.flush()  # Ensure each ingredient is properly added
 
         db.session.commit()
-        flash('Recipe and ingredients cloned successfully')
+        flash('Recipe and all ingredients cloned successfully')
         return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Database error cloning recipe: {str(e)}")
+        flash('Error cloning recipe ingredients', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     except Exception as e:
         db.session.rollback()
-        flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
+        flash(f"Error cloning recipe: {str(e)}", "error")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
