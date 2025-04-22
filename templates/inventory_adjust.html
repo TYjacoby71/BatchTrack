@@ -4,6 +4,7 @@
 <h2>Inventory Adjustment</h2>
 
 <form method="post">
+    {{ csrf_token() }}
     <label for="ingredient">Ingredient:</label>
     <select name="ingredient_id">
         {% for ing in ingredients %}

@@ -54,6 +54,7 @@
 
         <!-- Column Visibility -->
         <form method="post" action="{{ url_for('batches.set_column_visibility') }}" id="columnForm">
+    {{ csrf_token() }}
             <div class="d-flex gap-3 align-items-center">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>

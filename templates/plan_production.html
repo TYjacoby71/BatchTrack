@@ -3,6 +3,7 @@
 <h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
+    {{ csrf_token() }}
     {% if recipe.variations %}
     <div class="form-group">
         <label for="variation_id">Variation:</label>

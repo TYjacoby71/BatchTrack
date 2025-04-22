@@ -1,9 +1,12 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
 from models import db, Recipe, InventoryItem
 from stock_check_utils import check_stock_for_recipe
 from services.unit_conversion import ConversionEngine
+from sqlalchemy.exc import SQLAlchemyError
+import io
+import csv
+from flask import make_response
 
 bulk_stock_bp = Blueprint('bulk_stock', __name__)
 
@@ -20,7 +23,7 @@ def bulk_stock_check():
             if not selected_ids:
                 flash('Please select at least one recipe')
                 return redirect(url_for('bulk_stock.bulk_stock_check'))
-                
+
             try:
                 scale = float(request.form.get('scale', 1.0))
                 if scale <= 0:
@@ -29,7 +32,7 @@ def bulk_stock_check():
             except ValueError:
                 flash('Invalid scale value')
                 return redirect(url_for('bulk_stock.bulk_stock_check'))
-                
+
             session['bulk_recipe_ids'] = selected_ids
             session['bulk_scale'] = scale
 
@@ -51,9 +54,9 @@ def bulk_stock_check():
                     to_unit = ingredient.unit
                     try:
                         needed_converted = ConversionEngine.convert_units(needed, from_unit, to_unit)
-                    except Exception:
-                        needed_converted = needed
-                        to_unit = from_unit
+                    except (KeyError, ValueError) as e:
+                        flash(f"Invalid stock check input: {e}", "warning")
+                        return redirect(request.referrer or url_for('stock.bulk_check'))
 
                     key = (name, to_unit)
                     if key not in summary:
@@ -89,7 +92,7 @@ def export_shopping_list_csv():
         if not summary:
             flash('No stock check results available')
             return redirect(url_for('bulk_stock.bulk_stock_check'))
-            
+
         missing = [item for item in summary if item['status'] in ['LOW', 'NEEDED']]
         if not missing:
             flash('No items need restocking')
@@ -105,6 +108,9 @@ def export_shopping_list_csv():
         output.headers["Content-Disposition"] = "attachment; filename=shopping_list.csv"
         output.headers["Content-type"] = "text/csv"
         return output
-    except Exception as e:
-        flash(f'Error exporting CSV: {str(e)}')
+    except ValueError as e:
+        flash(f"Bulk stock processing failed: {e}", "warning")
+        return redirect(request.referrer or url_for('stock.bulk_check'))
+    except SQLAlchemyError as e:
+        flash("Database error exporting CSV.", "danger")
         return redirect(url_for('bulk_stock.bulk_stock_check'))

@@ -11,6 +11,7 @@
 </div>
 
 <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+    {{ csrf_token() }}
     <!-- Output Type Selection -->
     <div class="form-group">
         <label for="output_type">Output Type:</label>
