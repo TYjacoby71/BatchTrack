@@ -115,13 +115,19 @@ def lock_recipe(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
+@recipes_bp.route('/<int:recipe_id>/prompt-clone')
+@login_required
+def prompt_clone(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template("recipes/clone_prompt.html", recipe=recipe)
+
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
         clone = Recipe(
-            name=f"Copy of {original.name}",
+            name=f"{original.name} Copy",
             instructions=original.instructions,
             label_prefix=original.label_prefix
         )
@@ -143,6 +149,44 @@ def clone_recipe(recipe_id):
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+@recipes_bp.route('/<int:recipe_id>/clone-all')
+@login_required
+def clone_recipe_with_variations(recipe_id):
+    try:
+        original = Recipe.query.get_or_404(recipe_id)
+
+        def deep_clone(recipe, parent_id=None):
+            cloned = Recipe(
+                name=f"{recipe.name} Copy",
+                instructions=recipe.instructions,
+                label_prefix=recipe.label_prefix,
+                parent_id=parent_id
+            )
+            db.session.add(cloned)
+            db.session.flush()
+
+            for assoc in recipe.recipe_ingredients:
+                db.session.add(RecipeIngredient(
+                    recipe_id=cloned.id,
+                    inventory_item_id=assoc.inventory_item_id,
+                    amount=assoc.amount,
+                    unit=assoc.unit
+                ))
+
+            for variation in recipe.variations:
+                deep_clone(variation, parent_id=cloned.id)
+
+            return cloned
+
+        deep_clone(original)
+        db.session.commit()
+        flash("Recipe and variations duplicated successfully")
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as e:
+        flash(f"Error cloning recipe and variations: {str(e)}", "error")
+        current_app.logger.exception(f"Unexpected error in clone_recipe_with_variations: {str(e)}")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 
