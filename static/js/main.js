@@ -30,8 +30,10 @@ function loadUnits() {
         console.warn('No units available');
         return;
       }
-      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
-      unitSelectors.forEach(select => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
+        if (!unitSelectors) return;
+        unitSelectors.forEach(select => {
         if (!select) return;
         select.innerHTML = '';
         //Added grouping of units by category
