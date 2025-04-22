@@ -18,7 +18,10 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 @login_required
 def manage_units():
-    return render_template('conversion/units.html')
+    units = Unit.query.all()
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify([{'name': unit.name, 'type': unit.type} for unit in units])
+    return render_template('conversion/units.html', units=units)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 @login_required
