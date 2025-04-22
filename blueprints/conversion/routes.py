@@ -15,8 +15,26 @@ def convert(amount, from_unit, to_unit):
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
-@conversion_bp.route('/units', methods=['GET'])
+@conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        type_ = request.form.get('type')
+        base_unit = request.form.get('base_unit')
+        multiplier = float(request.form.get('multiplier', 1.0))
+        
+        unit = Unit(
+            name=name,
+            type=type_,
+            base_unit=base_unit,
+            multiplier_to_base=multiplier,
+            is_custom=True
+        )
+        db.session.add(unit)
+        db.session.commit()
+        flash('Unit added successfully', 'success')
+        return redirect(url_for('conversion.manage_units'))
+
     units = Unit.query.order_by(Unit.type, Unit.is_custom, Unit.name).all()
     mappings = CustomUnitMapping.query.filter_by(user_id=current_user.id).all() if current_user.is_authenticated else []
     if request.headers.get('Accept') == 'application/json':
