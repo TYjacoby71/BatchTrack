@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
-from models import db, Recipe, InventoryUnit, RecipeIngredient, InventoryItem
+from models import db, Recipe, Unit, RecipeIngredient, InventoryItem
 from flask import jsonify
 from stock_check_utils import check_stock_for_recipe
 
@@ -22,7 +22,7 @@ def view_recipe(recipe_id):
 @login_required
 def new_recipe():
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
-    inventory_units = InventoryUnit.query.all()
+    inventory_units = Unit.query.all()
     parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     if request.method == 'POST':
