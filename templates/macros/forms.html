@@ -1,6 +1,6 @@
 
-{% macro csrf_form(action='', method='post', classes='', **kwargs) %}
-<form method="{{ method }}" action="{{ action }}" class="{{ classes }}" {% for key, value in kwargs.items() %}{{ key }}="{{ value }}"{% endfor %}>
+{% macro csrf_form(action='', method='post', classes='') %}
+<form method="{{ method }}" action="{{ action }}" class="{{ classes }}">
     {{ form.hidden_tag() }}
     {{ caller() }}
 </form>
