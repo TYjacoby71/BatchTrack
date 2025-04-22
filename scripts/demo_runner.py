@@ -11,6 +11,15 @@ def run_demo():
         # Reset database
         db.drop_all()
         db.create_all()
+        
+        # Create test user
+        from werkzeug.security import generate_password_hash
+        test_user = User(
+            username="admin",
+            password_hash=generate_password_hash("admin"),
+            role="admin"
+        )
+        db.session.add(test_user)
 
         # Add base units
         gram = Unit(name="gram", type="weight", base_unit="gram", multiplier_to_base=1)
