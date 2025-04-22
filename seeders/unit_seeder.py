@@ -2,6 +2,19 @@
 from models import Unit, db
 
 def seed_units():
+    # Product units for batch output
+    product_units = [
+        {"name": "box", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "bottle", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "jar", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "tube", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "tin", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "pouch", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "sachet", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "pack", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0},
+        {"name": "kit", "type": "product", "base_unit": "box", "multiplier_to_base": 1.0}
+    ]
+
     units = [
         # Weight Units
         {"name": "gram", "type": "weight", "base_unit": "gram", "multiplier_to_base": 1.0},
@@ -60,7 +73,14 @@ def seed_units():
         {"name": "day", "type": "time", "base_unit": "second", "multiplier_to_base": 86400.0},
     ]
 
+    # Seed regular units
     for unit in units:
         if not Unit.query.filter_by(name=unit["name"]).first():
             db.session.add(Unit(**unit))
+
+    # Seed product units
+    for unit in product_units:
+        if not Unit.query.filter_by(name=unit["name"]).first():
+            db.session.add(Unit(**unit))
+            
     db.session.commit()

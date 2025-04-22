@@ -14,17 +14,21 @@ function filterUnits() {
 
 function loadUnits() {
   fetch('/conversion/units', {
+    method: 'GET',
     headers: {
-      'Accept': 'application/json'
-    }
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    credentials: 'same-origin'
   })
     .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return response.json();
     })
     .then(units => {
-      if (!Array.isArray(units) || units.length === 0) {
-        throw new Error('No units received');
+      if (!units || (Array.isArray(units) && units.length === 0)) {
+        console.warn('No units available');
+        return;
       }
       const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
       unitSelectors.forEach(select => {
@@ -111,4 +115,54 @@ function convertUnits() {
     .catch(err => {
       resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     });
+}
+
+async function checkStock() {
+  const recipeId = document.getElementById('recipeSelect')?.value;
+  const scale = parseFloat(document.getElementById('scaleInput')?.value || '1.0');
+
+  if (!recipeId || isNaN(scale) || scale <= 0) {
+    alert('Please select a recipe and enter a valid scale');
+    return;
+  }
+
+  try {
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        scale: scale
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    
+    const tableBody = document.getElementById('stockCheckTableBody');
+    if (!tableBody) {
+      console.error('Stock check table body not found');
+      return;
+    }
+
+    tableBody.innerHTML = data.stock_check.map(item => `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.name}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
+        <td>${item.status}</td>
+      </tr>
+    `).join('');
+
+    document.querySelector('.stock-check-results').style.display = 'block';
+  } catch (error) {
+    console.error('Error checking stock:', error);
+    alert('Error checking stock. Please try again.');
+  }
+  }
 }

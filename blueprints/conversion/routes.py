@@ -18,8 +18,12 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
     from utils.unit_utils import get_global_unit_list
-    units = get_global_unit_list()
-    
+    try:
+        units = get_global_unit_list()
+    except Exception as e:
+        return jsonify({'error': f'Error loading units: {str(e)}'}), 500
+
+
     # Handle JSON requests first
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
@@ -32,22 +36,27 @@ def manage_units():
         } for unit in units])
 
     if request.method == 'POST':
-        name = request.form.get('name')
-        type_ = request.form.get('type')
-        base_unit = request.form.get('base_unit')
-        multiplier = float(request.form.get('multiplier', 1.0))
+        try:
+            name = request.form.get('name')
+            type_ = request.form.get('type')
+            base_unit = request.form.get('base_unit')
+            multiplier = float(request.form.get('multiplier', 1.0))
 
-        unit = Unit(
-            name=name,
-            type=type_,
-            base_unit=base_unit,
-            multiplier_to_base=multiplier,
-            is_custom=True
-        )
-        db.session.add(unit)
-        db.session.commit()
-        flash('Unit added successfully', 'success')
-        return redirect(url_for('conversion.manage_units'))
+            unit = Unit(
+                name=name,
+                type=type_,
+                base_unit=base_unit,
+                multiplier_to_base=multiplier,
+                is_custom=True
+            )
+            db.session.add(unit)
+            db.session.commit()
+            flash('Unit added successfully', 'success')
+            return redirect(url_for('conversion.manage_units'))
+        except Exception as e:
+            flash(f'Error adding unit: {str(e)}', 'error')
+            return redirect(url_for('conversion.manage_units'))
+
 
     mappings = CustomUnitMapping.query.filter_by(user_id=current_user.id).all() if current_user.is_authenticated else []
     if request.headers.get('Accept') == 'application/json':

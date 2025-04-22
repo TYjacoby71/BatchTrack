@@ -175,40 +175,45 @@ def view_batch_in_progress(batch_identifier):
 @login_required
 def finish_batch(batch_id, force=False):
     batch = Batch.query.get_or_404(batch_id)
-
     action = request.form.get('action')
-    
-    # Prevent redundant status changes
-    if batch.status == "completed" and action == "finish":
+
+    try:
+        # Prevent redundant status changes
+        if batch.status == "completed" and action == "finish":
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        elif batch.status == "failed" and action == "fail":
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+        # Timer check unless forced
+        if not force and action == "finish":
+            active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
+            if active_timers:
+                flash("This batch has active timers. Complete timers or confirm finish.", "warning")
+                return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
+
+        # Update batch data
+        batch.notes = request.form.get("notes", "")
+        batch.tags = request.form.get("tags", "")
+        batch.total_cost = batch.total_cost or 0
+
+        # Set status based on action
+        if action == "finish":
+            batch.status = "completed"
+            flash("✅ Batch marked as completed.")
+        elif action == "fail":
+            batch.status = "failed" 
+            flash("⚠️ Batch marked as failed.")
+        else:
+            flash("Unknown action. Please try again.")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
+        db.session.commit()
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-    elif batch.status == "failed" and action == "fail":
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
-    # Timer check unless forced
-    if not force and action == "finish":
-        active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
-        if active_timers:
-            flash("This batch has active timers. Complete timers or confirm finish.", "warning")
-            return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
-
-    # Handle cost + product logic (already handled earlier in your app)
-    batch.notes = request.form.get("notes", "")
-    batch.tags = request.form.get("tags", "")
-    batch.total_cost = batch.total_cost or 0  # fallback
-
-    action = request.form.get('action')
-    if action == "finish":
-        batch.status = "completed"
-        flash("✅ Batch marked as completed.")
-    elif action == "fail":
-        batch.status = "failed"
-        flash("⚠️ Batch marked as failed.")
-    else:
-        flash("Unknown action. Please try again.")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error completing batch: {str(e)}", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
-    db.session.commit()
-    return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required

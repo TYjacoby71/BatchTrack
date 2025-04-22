@@ -1,0 +1,22 @@
+{# Stock Check Results Component #}
+<div class="stock-check-results">
+  <h4>Stock Check Results</h4>
+  <div class="results-table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ingredient</th>
+          <th>Required</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="stockCheckTableBody">
+      </tbody>
+    </table>
+  </div>
+  <div class="action-buttons mt-3">
+    <button type="button" class="btn btn-success" onclick="confirmStartBatch()">Start Batch</button>
+    <button type="button" class="btn btn-secondary" onclick="resetStartFlow()">Cancel</button>
+  </div>
+</div>

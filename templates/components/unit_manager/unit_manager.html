@@ -1,0 +1,36 @@
+{# Unit Manager Component #}
+<div class="unit-manager">
+  <div class="card">
+    <div class="card-header">
+      <h3>Unit Management</h3>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Base Unit</th>
+              <th>Multiplier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for unit in units %}
+            <tr>
+              <td>{{ unit.name }}</td>
+              <td>{{ unit.type }}</td>
+              <td>{{ unit.base_unit }}</td>
+              <td>{{ unit.multiplier_to_base }}</td>
+              <td>
+                <button class="btn btn-sm btn-primary edit-unit" data-unit-id="{{ unit.id }}">Edit</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
