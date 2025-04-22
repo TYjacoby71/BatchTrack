@@ -1,6 +1,6 @@
 
 from flask import Blueprint, request, jsonify
-from models import db, InventoryItem, InventoryUnit
+from models import db, InventoryItem, Unit
 
 quick_add_bp = Blueprint('quick_add', __name__)
 
@@ -36,7 +36,7 @@ def quick_add_unit():
     if not name or not type_:
         return jsonify({'error': 'Name and type are required.'}), 400
 
-    existing = InventoryUnit.query.filter_by(name=name).first()
+    existing = Unit.query.filter_by(name=name).first()
     if existing:
         return jsonify({'error': 'Unit already exists.'}), 409
 
