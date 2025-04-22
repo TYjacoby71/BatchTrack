@@ -15,33 +15,9 @@ def convert(amount, from_unit, to_unit):
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
-@conversion_bp.route('/units', methods=['GET', 'POST'])
-@login_required
+@conversion_bp.route('/units', methods=['GET'])
 def manage_units():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        type = request.form.get('type', 'count')
-        base_unit = request.form.get('base_unit', name)
-        multiplier = request.form.get('multiplier', 1.0)
-        is_custom = True  # Mark all user-added units as custom
-
-        existing_unit = Unit.query.filter_by(name=name).first()
-        if existing_unit:
-            existing_unit.type = type
-            existing_unit.base_unit = base_unit
-            existing_unit.multiplier_to_base = float(multiplier)
-        else:
-            new_unit = Unit(
-                name=name,
-                type=type,
-                base_unit=base_unit,
-                multiplier_to_base=float(multiplier),
-                is_custom=is_custom # Added is_custom field to Unit model.  Requires database schema update.
-            )
-            db.session.add(new_unit)
-        db.session.commit()
-
-    units = Unit.query.all()
+    units = Unit.query.order_by(Unit.type, Unit.custom, Unit.name).all()
     if request.headers.get('Accept') == 'application/json':
         return jsonify([{
             'id': unit.id,
