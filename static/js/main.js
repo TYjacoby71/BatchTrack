@@ -1,13 +1,14 @@
 // Load and populate unit dropdowns
 async function loadUnits() {
   try {
-    const response = await fetch('/conversion/units');
+    const response = await fetch('/conversion/units', {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
     const data = await response.json();
-    if (!data.success) {
-      console.error("Error loading units:", data);
-      return {};
-    }
-    const units = data.units;
+    // Data comes directly as array of units
+    const units = data;
     const unitSelectors = document.querySelectorAll('select[data-unit-select]');
     unitSelectors.forEach(select => {
       select.innerHTML = '';
