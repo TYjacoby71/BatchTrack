@@ -151,7 +151,11 @@ def clone_recipe(recipe_id):
 def delete_recipe(recipe_id):
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
-        # First delete associated ingredients
+        # Delete child recipes (variations) first
+        for variation in recipe.variations:
+            RecipeIngredient.query.filter_by(recipe_id=variation.id).delete()
+            db.session.delete(variation)
+        # Then delete this recipe's ingredients
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
         db.session.delete(recipe)
         db.session.commit()
