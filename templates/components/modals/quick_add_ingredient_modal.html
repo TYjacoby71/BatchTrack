@@ -43,9 +43,12 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('quickAddIngredientForm');
-  if (!form) return;
+  if (!form) {
+    console.error('Quick add ingredient form not found');
+    return;
+  }
   
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', async function(e) {
   e.preventDefault();
   
   const name = document.getElementById('new-ingredient-name').value.trim();
