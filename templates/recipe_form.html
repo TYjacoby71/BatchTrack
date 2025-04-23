@@ -90,36 +90,7 @@
     </div>
 </form>
 
-<!-- Quick Add Ingredient Modal -->
-<div class="modal fade" id="quickAddIngredientModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Quick Add Ingredient</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="quickIngredientName" class="form-label">Ingredient Name</label>
-          <input type="text" class="form-control" id="quickIngredientName">
-        </div>
-        <div class="mb-3">
-          <label for="quickIngredientUnit" class="form-label">Unit</label>
-          <select id="quickIngredientUnit" class="form-select">
-            {% for unit in inventory_units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-          </select>
-          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal" onclick="unitReturnContext = 'ingredient';">+ Add New Unit</button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="saveQuickIngredient">Add Ingredient</button>
-      </div>
-    </div>
-  </div>
-</div>
+{% include 'components/modals/quick_add_ingredient_modal.html' %}
 
 <!-- Quick Add Unit Modal -->
 <div class="modal fade" id="quickAddUnitModal" tabindex="-1">
