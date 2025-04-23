@@ -14,13 +14,41 @@ async function checkProductionStock() {
         }
 
         const result = await response.text();
-        // Replace the current page content with the response
-        document.documentElement.innerHTML = result;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(result, 'text/html');
+        
+        // Update only the stock check results section
+        const stockCheckResults = doc.querySelector('.stock-check-results');
+        if (stockCheckResults) {
+            const currentResults = document.querySelector('.stock-check-results');
+            if (currentResults) {
+                currentResults.replaceWith(stockCheckResults);
+            } else {
+                form.appendChild(stockCheckResults);
+            }
+        }
+        
+        // Reinitialize any necessary event listeners
+        initializeEventListeners();
         
     } catch (error) {
         console.error('Error checking stock:', error);
         alert('Error checking stock. Please try again.');
     }
+}
+
+function initializeEventListeners() {
+    // Add any event listeners that need to be reinitialized after content update
+    document.getElementById('showContainerSelection')?.addEventListener('click', function() {
+        const containerSelection = document.getElementById('containerSelection');
+        containerSelection.style.display = 'block';
+        this.style.display = 'none';
+        addContainerRow();
+    });
+
+    document.getElementById('addAnotherContainer')?.addEventListener('click', function() {
+        addContainerRow();
+    });
 }
 
 
