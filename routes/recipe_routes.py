@@ -165,38 +165,43 @@ def add_variation(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
-    base_recipe = Recipe.query.get_or_404(recipe_id)
-    variations = base_recipe.variations if base_recipe else []
-    inventory_items = InventoryItem.query.all()
-    containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
+    try:
+        base_recipe = Recipe.query.get_or_404(recipe_id)
+        variations = base_recipe.variations if base_recipe else []
+        inventory_items = InventoryItem.query.all()
+        containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
 
-    recipe = base_recipe
-    selected_variation_id = request.args.get('variation_id', type=int)
-    if selected_variation_id:
-        recipe = Recipe.query.get(selected_variation_id)
+        recipe = base_recipe
+        selected_variation_id = request.args.get('variation_id', type=int)
+        if selected_variation_id:
+            recipe = Recipe.query.get(selected_variation_id)
 
-    scale = 1.0
-    stock_check = []
-    all_ok = False
-    status = None
+        scale = 1.0
+        stock_check = []
+        all_ok = False
+        status = None
 
-    if request.method == 'POST':
-        scale = float(request.form.get('scale', 1.0))
-        selected_id = request.form.get('variation_id') or recipe.id
-        selected_recipe = Recipe.query.get(selected_id)
+        if request.method == 'POST':
+            try:
+                scale = float(request.form.get('scale', 1.0))
+                selected_id = request.form.get('variation_id') or recipe.id
+                selected_recipe = Recipe.query.get(selected_id)
 
-        # Process container selections
-        container_ids = request.form.getlist('container_ids[]')
-        container_check, containers_ok = check_container_availability(container_ids, scale)
-        recipe_check, ingredients_ok = check_stock_for_recipe(selected_recipe, scale)
+                # Process container selections
+                container_ids = request.form.getlist('container_ids[]')
+                container_check, containers_ok = check_container_availability(container_ids, scale)
+                recipe_check, ingredients_ok = check_stock_for_recipe(selected_recipe, scale)
 
-        stock_check = recipe_check + container_check
-        all_ok = ingredients_ok and containers_ok
+                stock_check = recipe_check + container_check
+                all_ok = ingredients_ok and containers_ok
 
-        status = "ok" if all_ok else "bad"
-        for item in stock_check:
-            if item["status"] == "LOW" and status != "bad":
-                status = "low"
+                status = "ok" if all_ok else "bad"
+                for item in stock_check:
+                    if item["status"] == "LOW" and status != "bad":
+                        status = "low"
+            except ValueError as e:
+                flash("Invalid scale value", "error")
+                return redirect(url_for('recipes.plan_production', recipe_id=recipe_id))
 
     return render_template(
         'plan_production.html',
