@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   const quickAddForm = document.getElementById('quickAddIngredientForm');
   if (quickAddForm) {
@@ -8,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const name = document.getElementById('new-ingredient-name').value;
       const unit = document.getElementById('new-ingredient-unit').value;
 
-      fetch('/ingredient', {
+      fetch('/quick-add/ingredient', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -158,7 +157,7 @@ function convertUnits() {
 async function checkStock() {
   const recipeSelect = document.getElementById('recipeSelect');
   const scaleInput = document.getElementById('scaleInput');
-  
+
   if (!recipeSelect || !scaleInput) {
     console.error('Required elements not found');
     return;
@@ -189,7 +188,7 @@ async function checkStock() {
     }
 
     const data = await response.json();
-    
+
     const tableBody = document.getElementById('stockCheckTableBody');
     if (!tableBody) {
       console.error('Stock check table body not found');
