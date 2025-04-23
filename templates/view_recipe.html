@@ -79,9 +79,7 @@
         <button type="submit" 
                 class="btn btn-primary" 
                 >Edit Recipe</button>
-    </form>
-    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+
     </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
