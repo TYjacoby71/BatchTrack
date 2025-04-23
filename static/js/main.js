@@ -14,7 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(r => r.json())
     .then(data => {
-      if (data.error) return alert('Error: ' + data.error);
+      if (data.error) {
+        alert('Error: ' + data.error);
+        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+        if (unitModal) unitModal.hide();
+        return;
+      }
 
       // Add to all unit dropdowns
       document.querySelectorAll("select[name='units[]']").forEach(select => {
