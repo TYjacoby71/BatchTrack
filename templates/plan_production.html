@@ -48,7 +48,7 @@
   </div>
 </div>
 
-<button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+<button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
 
     {% if stock_check %}
     <div class="stock-check-results mt-4">
@@ -135,3 +135,32 @@
         }
     </script>
 {% endblock %}
+
+<script>
+async function checkProductionStock() {
+    const scale = document.getElementById('scale').value;
+    const variationId = document.querySelector('select[name="variation_id"]')?.value;
+    const recipeId = '{{ recipe.id }}';
+    const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
+
+    try {
+        const response = await fetch('/stock/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                recipe_id: variationId || recipeId,
+                scale: parseFloat(scale),
+                container_ids: containerIds
+            })
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+        location.reload();
+    } catch (error) {
+        alert('Error checking stock: ' + error.message);
+    }
+}
+</script>
