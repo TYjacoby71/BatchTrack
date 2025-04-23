@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
@@ -40,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`Creating unit: ${name} (${type})`);
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
+      
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
@@ -272,60 +273,4 @@ async function checkStock() {
     console.error('Error checking stock:', error);
     alert('Error checking stock. Please try again.');
   }
-}
-
-async function checkProductionStock() {
-    const form = document.querySelector('.production-plan-form');
-    if (!form) return;
-
-    const formData = new FormData(form);
-    const submitButton = document.querySelector('button[type="submit"]');
-    if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = 'Checking...';
-    }
-
-    try {
-        const response = await fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const result = await response.text();
-        document.querySelector('.container').innerHTML = result;
-
-        // Reattach event listeners
-        initializeContainerHandlers();
-
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error checking stock. Please try again.');
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = 'Check Stock';
-        }
-    }
-}
-
-function initializeContainerHandlers() {
-    const containerBtn = document.getElementById('showContainerSelection');
-    if (containerBtn) {
-        containerBtn.addEventListener('click', function() {
-            const containerSelection = document.getElementById('containerSelection');
-            containerSelection.style.display = 'block';
-            this.style.display = 'none';
-            addContainerRow();
-        });
-    }
-
-    const addAnotherBtn = document.getElementById('addAnotherContainer');
-    if (addAnotherBtn) {
-        addAnotherBtn.addEventListener('click', addContainerRow);
-    }
 }
