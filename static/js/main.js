@@ -1,5 +1,19 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
+    const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+    if (unitModal) unitModal.hide();
+
+    setTimeout(() => {
+      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+      ingredientModal.show();
+      document.getElementById('ingredientName')?.focus();
+    }, 300);
+  });
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
