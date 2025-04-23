@@ -95,29 +95,21 @@ def plan_production(recipe_id):
 def create_variation(recipe_id):
     try:
         parent = Recipe.query.get_or_404(recipe_id)
-        variation = Recipe(
+        # Create variation object but don't save to database yet
+        new_variation = Recipe(
             name=f"{parent.name} Variation",
             instructions=parent.instructions,
             label_prefix=parent.label_prefix,
             parent_id=parent.id
         )
-        db.session.add(variation)
-        db.session.flush()  # Get the ID for the new variation
-
-        # Copy ingredients from parent
-        for ingredient in parent.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=variation.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
-
-        db.session.commit()
         all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
         inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
+            recipe=new_variation,
+            all_ingredients=all_ingredients,
+            inventory_units=inventory_units,
+            is_variation=True,
+            parent_recipe=parent)
                              recipe=variation,
                              all_ingredients=all_ingredients,
                              inventory_units=inventory_units,
