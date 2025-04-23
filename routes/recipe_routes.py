@@ -248,11 +248,63 @@ def quick_add_unit():
 @login_required
 def clone_recipe(recipe_id):
     original = Recipe.query.get_or_404(recipe_id)
-    cloned = Recipe(
-        name=f"{original.name} Copy",
-        instructions=original.instructions,
-        label_prefix=original.label_prefix
-    )
+    clone_type = request.args.get('type', 'single')
+    
+    if clone_type == 'full' and not original.parent_id:
+        # Clone parent and all variations
+        cloned = Recipe(
+            name=f"{original.name} Copy",
+            instructions=original.instructions,
+            label_prefix=original.label_prefix
+        )
+        db.session.add(cloned)
+        db.session.flush()
+        
+        # Clone ingredients
+        for ingredient in original.recipe_ingredients:
+            new_ingredient = RecipeIngredient(
+                recipe_id=cloned.id,
+                inventory_item_id=ingredient.inventory_item_id,
+                amount=ingredient.amount,
+                unit=ingredient.unit
+            )
+            db.session.add(new_ingredient)
+            
+        # Clone variations
+        for variation in original.variations:
+            cloned_variation = Recipe(
+                name=f"{variation.name} Copy",
+                instructions=variation.instructions,
+                label_prefix=variation.label_prefix,
+                parent_id=cloned.id
+            )
+            db.session.add(cloned_variation)
+            db.session.flush()
+            
+            for ingredient in variation.recipe_ingredients:
+                new_ingredient = RecipeIngredient(
+                    recipe_id=cloned_variation.id,
+                    inventory_item_id=ingredient.inventory_item_id,
+                    amount=ingredient.amount,
+                    unit=ingredient.unit
+                )
+                db.session.add(new_ingredient)
+    
+    elif clone_type == 'fork' and original.parent_id:
+        # Fork variation into new base recipe
+        cloned = Recipe(
+            name=f"{original.name} (Forked)",
+            instructions=original.instructions,
+            label_prefix=original.label_prefix
+        )
+    else:
+        # Simple clone (single recipe or variation under same parent)
+        cloned = Recipe(
+            name=f"{original.name} Copy",
+            instructions=original.instructions,
+            label_prefix=original.label_prefix,
+            parent_id=original.parent_id if clone_type == 'under_parent' else None
+        )
     db.session.add(cloned)
     db.session.flush()  # So it gets an ID before adding ingredients
 
