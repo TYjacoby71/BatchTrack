@@ -34,7 +34,21 @@
         <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
     </div>
 
-<button type="button" onclick="checkProductionStock()" class="btn btn-primary mt-3">Check Stock</button>
+
+    <div class="container-selection mb-3">
+  <h3>Select Containers</h3>
+  <div class="form-group">
+    <label for="containers">Containers for this batch:</label>
+    <select name="container_ids[]" id="containers" class="form-select" multiple>
+      {% for container in containers %}
+      <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }})</option>
+      {% endfor %}
+    </select>
+    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+  </div>
+</div>
+
+<button type="submit" class="btn btn-primary mt-3">Check Stock</button>
 
     {% if stock_check %}
     <div class="stock-check-results mt-4">
