@@ -16,7 +16,9 @@
 
 <div class="action-buttons mb-3">
   <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
+  {% if not recipe.parent_id %}
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
+  {% endif %}
   {% if not recipe.is_locked %}
     <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
