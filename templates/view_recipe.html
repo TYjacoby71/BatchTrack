@@ -22,13 +22,11 @@
                 {% endif %}>Edit Recipe</button>
     </form>
     {% if not recipe.parent_id %}
-    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
-    </form>
+    <button type="button" class="btn btn-secondary" onclick="showDuplicateOptions({{ recipe.id }})">Duplicate Recipe</button>
     <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-info">New Variation</a>
     {% else %}
-      <button type="button" class="btn btn-secondary" onclick="showDuplicateOptions({{ recipe.id }})">Duplicate Variation</button>
-      <!-- Duplicate Variation Modal -->
+    <button type="button" class="btn btn-secondary" onclick="showDuplicateOptions({{ recipe.id }})">Duplicate Variation</button>
+      <!-- Duplicate Modal -->
       <div class="modal fade" id="duplicateModal-{{ recipe.id }}" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
