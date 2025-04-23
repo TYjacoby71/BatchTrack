@@ -1,11 +1,5 @@
-Absolutely — here's the fully updated Quick Add Unit modal with:
-
-✅ Cancel and Add Unit buttons
-✅ Blocked backdrop + ESC closing
-✅ Seamless return to the ingredient modal
-✅ Reset-safe structure for reuse
-
-✅ Quick Add Unit Modal HTML (Drop into quick_add_unit_modal.html)
+✅ Here’s What You Should Do
+🔁 1. Replace the Existing Unit Modal Block in quick_add_ingredient_modal.html with this:
 html
 Copy
 Edit
@@ -39,11 +33,10 @@ Edit
     </div>
   </div>
 </div>
-✅ JavaScript (Drop into main.js or inline script block)
+🔁 2. Add This Script to Your JS (in main.js or inline):
 js
 Copy
 Edit
-// Cancel button logic
 document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
   const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
   if (unitModal) unitModal.hide();
@@ -54,6 +47,9 @@ document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     document.getElementById('ingredientName')?.focus();
   }, 300);
 });
-This makes the modal strict and user-intent-driven — no more hanging if you click away or press Escape.
+✅ Result
+❌ User can’t click out or press Esc to escape
 
-Would you like a download of the fully updated quick_add_unit_modal.html file with this code preloaded?
+✅ Must explicitly click "Cancel" or "Add Unit"
+
+✅ Either way, user is returned to ingredient modal
