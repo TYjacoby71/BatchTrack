@@ -84,11 +84,16 @@ def view_recipe(recipe_id):
         current_app.logger.exception(f"Unexpected error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
 
-@recipes_bp.route('/<int:recipe_id>/plan')
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    return render_template('plan_production.html', recipe=recipe)
+    # If it's a variation, use that directly
+    if recipe.parent_id:
+        base_recipe = recipe.parent
+    else:
+        base_recipe = recipe
+    return render_template('plan_production.html', recipe=recipe, base_recipe=base_recipe, hide_variations=True)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required

@@ -3,12 +3,12 @@
 <h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
-    {{ csrf_token() }}
-    {% if recipe.variations %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if recipe.variations and not hide_variations %}
     <div class="form-group">
         <label for="variation_id">Variation:</label>
         <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-            <option value="">Base Recipe ({{ recipe.name }})</option>
+            <option value="">None</option>
             {% for variant in recipe.variations %}
             <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>
                 {{ variant.name }}
@@ -18,52 +18,21 @@
     </div>
     {% endif %}
 
-    {% if containers %}
     <div class="form-group mt-3">
-        <label>Select Containers:</label>
-        <div id="containerSelection">
-            {% for container in containers %}
-            <div class="d-flex align-items-center mb-2">
-                <label class="me-2 flex-grow-1">{{ container.name }} ({{ container.quantity }} available)</label>
-                <input type="number" 
-                       name="container_{{ container.id }}" 
-                       class="form-control form-control-sm w-auto" 
-                       placeholder="Qty" 
-                       min="0"
-                       max="{{ container.quantity }}"
-                       value="{{ request.form.get('container_' ~ container.id, '0') }}">
+        <button type="button" class="btn btn-secondary" id="showContainerSelection">Add container(s) for this batch?</button>
+
+        <div id="containerSelection" class="mt-3" style="display: none;">
+            <div class="container-rows">
+                <!-- Container rows will be added here dynamically -->
             </div>
-            {% endfor %}
+            <button type="button" class="btn btn-outline-secondary mt-2" id="addAnotherContainer">Add another container size</button>
         </div>
     </div>
-    {% endif %}
 
     <div class="form-group mt-3">
         <label for="scale">Batch Scale:</label>
         <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
     </div>
-
-    <div class="form-group mt-3">
-        <label for="containers">Select Containers (optional):</label>
-        <select name="containers[]" id="containers" class="form-select" multiple>
-            {% for container in containers %}
-            <option value="{{ container.id }}">{{ container.name }} ({{ container.unit }})</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="container-selection mb-3">
-  <h3>Select Containers</h3>
-  <div class="form-group">
-    <label for="containers">Containers for this batch:</label>
-    <select name="container_ids[]" id="containers" class="form-select" multiple>
-      {% for container in containers %}
-      <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }})</option>
-      {% endfor %}
-    </select>
-    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple containers</small>
-  </div>
-</div>
 
 <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
 
@@ -117,4 +86,38 @@
     </div>
     {% endif %}
 </form>
+
+<script>
+        document.getElementById('showContainerSelection').addEventListener('click', function() {
+            const containerSelection = document.getElementById('containerSelection');
+            containerSelection.style.display = 'block';
+            this.style.display = 'none';
+            addContainerRow();
+        });
+
+        document.getElementById('addAnotherContainer').addEventListener('click', function() {
+            addContainerRow();
+        });
+
+        function addContainerRow() {
+            const containerRow = document.createElement('div');
+            containerRow.className = 'd-flex align-items-center mb-2 container-row';
+            containerRow.innerHTML = `
+                <select class="form-select me-2" name="container_ids[]">
+                    <option value="">Select Container</option>
+                    {% for container in containers %}
+                    <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} available)</option>
+                    {% endfor %}
+                </select>
+                <input type="number" 
+                       name="container_quantities[]" 
+                       class="form-control w-25" 
+                       placeholder="Qty"
+                       min="0"
+                       required>
+                <button type="button" class="btn btn-danger ms-2" onclick="this.closest('.container-row').remove()">✕</button>
+            `;
+            document.querySelector('.container-rows').appendChild(containerRow);
+        }
+    </script>
 {% endblock %}
