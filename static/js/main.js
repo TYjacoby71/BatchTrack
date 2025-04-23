@@ -1,5 +1,6 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
     if (unitModal) unitModal.hide();
@@ -9,6 +10,12 @@ document.addEventListener('DOMContentLoaded', function() {
       ingredientModal.show();
       document.getElementById('ingredientName')?.focus();
     }, 300);
+  });
+
+  // Quick Add Ingredient cancel handler
+  document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+    if (modal) modal.hide();
   });
 });
 
