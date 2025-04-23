@@ -153,53 +153,14 @@ def unlock_recipe(recipe_id):
 @login_required
 def clone_recipe(recipe_id):
     try:
-        with_variations = request.args.get('with_variations', 'false') == 'true'
         original = Recipe.query.get_or_404(recipe_id)
-        
-        # Clone the parent recipe
-        cloned = Recipe(
-            name=f"Copy of {original.name}",
-            instructions=original.instructions,
-            label_prefix=original.label_prefix
-        )
-        db.session.add(cloned)
-        db.session.flush()  # Get the ID for the new recipe
-
-        # Copy ingredients from parent
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=cloned.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
-
-        # Clone variations if requested
-        if with_variations and original.variations:
-            for variation in original.variations:
-                cloned_variation = Recipe(
-                    name=f"Copy of {variation.name}",
-                    instructions=variation.instructions,
-                    label_prefix=variation.label_prefix,
-                    parent_id=cloned.id
-                )
-                db.session.add(cloned_variation)
-                db.session.flush()
-
-                # Copy ingredients from variation
-                for ingredient in variation.recipe_ingredients:
-                    new_ingredient = RecipeIngredient(
-                        recipe_id=cloned_variation.id,
-                        inventory_item_id=ingredient.inventory_item_id,
-                        amount=ingredient.amount,
-                        unit=ingredient.unit
-                    )
-                    db.session.add(new_ingredient)
-
-        db.session.commit()
-        flash('Recipe cloned successfully.')
-        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
+        # Allow cloning regardless of lock status
+        original.name = f"Copy of {original.name}"
+        return render_template('recipe_form.html',
+                            recipe=original,
+                            is_clone=True,
+                            all_ingredients=InventoryItem.query.all(),
+                            inventory_units=get_global_unit_list())
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")

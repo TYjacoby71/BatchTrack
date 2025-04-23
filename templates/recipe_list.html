@@ -28,28 +28,7 @@
                        onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
                        {% endif %}>Edit</a>
                     <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">Plan</a>
-                    <button class="btn btn-info btn-sm" onclick="showDuplicateModal({{ recipe.id }}, {{ recipe.variations|length }})">Duplicate</button>
-                    
-                    <!-- Duplicate Modal -->
-                    <div class="modal fade" id="duplicateModal{{ recipe.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Duplicate Recipe</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>How would you like to duplicate this recipe?</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id, with_variations='false') }}" class="btn btn-secondary">Parent Recipe Only</a>
-                                    {% if recipe.variations %}
-                                    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id, with_variations='true') }}" class="btn btn-primary">Include Variations</a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">Duplicate</a>
                     <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-success btn-sm">+ Variation</a>
                 </div>
             </div>
@@ -81,14 +60,6 @@ function toggleVariations(id) {
         btn.classList.replace('fa-chevron-right', 'fa-chevron-down');
     } else {
         el.style.display = 'none';
-
-<script>
-function showDuplicateModal(recipeId, variationCount) {
-    const modal = new bootstrap.Modal(document.getElementById(`duplicateModal${recipeId}`));
-    modal.show();
-}
-</script>
-
         btn.classList.replace('fa-chevron-down', 'fa-chevron-right');
     }
 }
