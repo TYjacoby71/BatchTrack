@@ -1,10 +1,10 @@
 
-<div class="modal fade" id="quickAddIngredientModal" tabindex="-1">
+<div class="modal fade" id="quickAddIngredientModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Quick Add Ingredient</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="quickAddIngredientForm">
@@ -36,12 +36,12 @@
 </div>
 
 <!-- Quick Add Unit Modal -->
-<div class="modal fade" id="quickAddUnitModal" tabindex="-1">
+<div class="modal fade" id="quickAddUnitModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Quick Add Unit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="quickAddUnitForm">
@@ -60,7 +60,7 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" id="cancelQuickUnit">Cancel</button>
         <button type="button" class="btn btn-primary" id="saveQuickUnit">Add Unit</button>
       </div>
     </div>
