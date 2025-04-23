@@ -11,8 +11,12 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        input[name="csrf_token"] {
-            display: none;
+        input[name="csrf_token"],
+        input[type="hidden"][name="csrf_token"] {
+            display: none !important;
+        }
+        .csrf-token {
+            display: none !important;
         }
     </style>
 </head>

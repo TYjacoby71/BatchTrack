@@ -19,7 +19,7 @@
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
   {% if not recipe.is_locked %}
     <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm btn-warning">Lock Recipe</button>
     </form>
   {% endif %}
