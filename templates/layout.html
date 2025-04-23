@@ -12,11 +12,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         input[name="csrf_token"],
-        input[type="hidden"][name="csrf_token"] {
+        input[type="hidden"][name="csrf_token"],
+        .csrf-token,
+        [name="csrf_token"],
+        form > .csrf_token {
             display: none !important;
-        }
-        .csrf-token {
-            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
         }
     </style>
 </head>
