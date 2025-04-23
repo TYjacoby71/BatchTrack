@@ -34,7 +34,7 @@
         <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
     </div>
 
-<button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+<button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
 
     {% if stock_check %}
     <div class="stock-check-results mt-4">
@@ -88,16 +88,45 @@
 </form>
 
 <script>
-        document.getElementById('showContainerSelection').addEventListener('click', function() {
-            const containerSelection = document.getElementById('containerSelection');
-            containerSelection.style.display = 'block';
-            this.style.display = 'none';
-            addContainerRow();
+        $(document).ready(function() {
+            $('.select2').select2({
+                placeholder: 'Select containers...',
+                allowClear: true
+            });
         });
 
-        document.getElementById('addAnotherContainer').addEventListener('click', function() {
-            addContainerRow();
-        });
+        async function checkProductionStock() {
+            const scaleInput = document.getElementById('scale').value;
+            const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
+            const variationId = document.querySelector('select[name="variation_id"]')?.value;
+            const recipeId = '{{ recipe.id }}';
+            const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
+
+            if (isNaN(scale) || scale <= 0) {
+                alert('Please enter a valid scale greater than 0');
+                return;
+            }
+
+            try {
+                const response = await fetch('/stock/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        recipe_id: variationId || recipeId,
+                        scale: scale,
+                        container_ids: containerIds
+                    })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                location.reload();
+            } catch (error) {
+                alert('Error checking stock: ' + error.message);
+            }
+        }
 
         function addContainerRow() {
             const containerRow = document.createElement('div');

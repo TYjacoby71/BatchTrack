@@ -169,7 +169,7 @@ def plan_production(recipe_id):
         base_recipe = Recipe.query.get_or_404(recipe_id)
         variations = base_recipe.variations if base_recipe else []
         inventory_items = InventoryItem.query.all()
-        containers = InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
+        containers = get_available_containers()
 
         recipe = base_recipe
         selected_variation_id = request.args.get('variation_id', type=int)
