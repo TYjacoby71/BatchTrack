@@ -110,9 +110,6 @@ def create_variation(recipe_id):
             inventory_units=inventory_units,
             is_variation=True,
             parent_recipe=parent)
-                             recipe=variation,
-                             all_ingredients=all_ingredients,
-                             inventory_units=inventory_units,
                              is_variation=True,
                              parent_recipe=parent)
     except Exception as e:
