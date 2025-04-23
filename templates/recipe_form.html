@@ -16,6 +16,10 @@
 <div class="alert alert-info mb-3">
     <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
+{% elif is_clone and recipe %}
+<div class="alert alert-info mb-3">
+    <strong>Creating a copy of:</strong> {{ recipe.name }}
+</div>
 {% endif %}
 
 {% if recipe and not is_clone %}
@@ -79,7 +83,7 @@
     <div class="form-group mt-3 d-flex justify-content-between">
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
-            {% if recipe %}
+            {% if recipe and not is_clone %}
             <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
                 {% if recipe.parent_id %}
                 Delete Variation
