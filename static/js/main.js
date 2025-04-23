@@ -2,12 +2,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Keep existing code for unit modal handling
   document.getElementById('saveQuickUnit')?.addEventListener('click', function() {
-    const name = document.getElementById('unitName').value;
+    const name = document.getElementById('unitName').value.trim();
     const type = document.getElementById('unitType').value;
 
     if (!name) return alert('Unit name required.');
 
-    fetch('/recipes/units/quick-add', {
+    fetch('/quick-add/unit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, type })
