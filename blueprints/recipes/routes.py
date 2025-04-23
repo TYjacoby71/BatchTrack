@@ -110,8 +110,6 @@ def create_variation(recipe_id):
             inventory_units=inventory_units,
             is_variation=True,
             parent_recipe=parent)
-                             is_variation=True,
-                             parent_recipe=parent)
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
