@@ -160,19 +160,7 @@ def add_variation(recipe_id):
     )
 
 
-@recipes_bp.route('/<int:recipe_id>/delete')
-@login_required
-def delete_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    try:
-        db.session.delete(recipe)
-        db.session.commit()
-        flash('Recipe deleted.')
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash("Database error while deleting recipe.", "danger")
-        return redirect(url_for('recipes.view_all'))
-    return redirect(url_for('recipes.list_recipes'))
+# Delete route moved to blueprints/recipes/routes.py
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
