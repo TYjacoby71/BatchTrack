@@ -15,7 +15,7 @@
 {% endif %}
 
 <div class="action-buttons mb-3">
-  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
+  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">{% if recipe.parent_id %}Make New Parent{% else %}Duplicate{% endif %}</a>
   {% if not recipe.parent_id %}
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
   {% endif %}
@@ -79,9 +79,7 @@
         <button type="submit" 
                 class="btn btn-primary" 
                 >Edit Recipe</button>
-    </form>
-    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+
     </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
