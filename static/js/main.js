@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`Creating unit: ${name} (${type})`);
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
+      
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
