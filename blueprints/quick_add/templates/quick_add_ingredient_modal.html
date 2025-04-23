@@ -35,37 +35,7 @@
   </div>
 </div>
 
-<!-- Quick Add Unit Modal -->
-<div class="modal fade" id="quickAddUnitModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Quick Add Unit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="quickAddUnitForm">
-          <div class="mb-3">
-            <label for="unitName" class="form-label">Unit Name</label>
-            <input type="text" class="form-control" id="unitName" required>
-          </div>
-          <div class="mb-3">
-            <label for="unitType" class="form-label">Type</label>
-            <select class="form-select" id="unitType">
-              <option value="count">Count</option>
-              <option value="volume">Volume</option>
-              <option value="weight">Weight</option>
-            </select>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="cancelQuickUnit">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveQuickUnit">Add Unit</button>
-      </div>
-    </div>
-  </div>
-</div>
+{% include "components/modals/quick_add_unit_modal.html" %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
