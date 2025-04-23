@@ -90,7 +90,7 @@ def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     return render_template('plan_production.html', recipe=recipe)
 
-@recipes_bp.route('/<int:recipe_id>/variation')
+@recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
 def create_variation(recipe_id):
     try:
@@ -114,6 +114,48 @@ def create_variation(recipe_id):
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
+
+        if request.method == 'POST':
+            new_variation.name = request.form['name']
+            new_variation.instructions = request.form.get('instructions', '')
+            new_variation.label_prefix = request.form.get('label_prefix', '')
+
+            # Clear existing ingredient links (important for updates)
+            RecipeIngredient.query.filter_by(recipe_id=new_variation.id).delete()
+
+            # Re-add ingredients from the form
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                if ing_id and amt and unit:
+                    try:
+                        recipe_ingredient = RecipeIngredient(
+                            recipe_id=new_variation.id,
+                            inventory_item_id=int(ing_id),
+                            amount=float(amt.strip()),
+                            unit=unit.strip()
+                        )
+                        db.session.add(recipe_ingredient)
+                    except ValueError as e:
+                        current_app.logger.error(f"Invalid ingredient data: {e}")
+                        flash(f"Invalid ingredient data: {e}", "error")
+                        continue
+
+            try:
+                db.session.commit()
+                flash('Recipe variation created successfully.')
+                return redirect(url_for('recipes.view_recipe', recipe_id=new_variation.id))
+            except SQLAlchemyError as e:
+                current_app.logger.error(f"Database error saving variation: {str(e)}")
+                flash('Database error saving variation', 'error')
+                db.session.rollback()
+            except Exception as e:
+                current_app.logger.exception(f"Unexpected error saving variation: {str(e)}")
+                flash('An unexpected error occurred saving variation', 'error')
+                db.session.rollback()
+
 
         all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
         inventory_units = get_global_unit_list()

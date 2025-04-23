@@ -40,6 +40,7 @@
                     <div>
                         <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
                         <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=variation.id) }}" class="btn btn-info btn-sm">Make New Parent</a>
                         <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-sm">Plan</a>
                     </div>
                 </li>
