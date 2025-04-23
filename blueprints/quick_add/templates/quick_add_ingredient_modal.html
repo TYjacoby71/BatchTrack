@@ -14,17 +14,54 @@
           </div>
           <div class="mb-3">
             <label for="new-ingredient-unit" class="form-label">Unit</label>
-            <select class="form-control" id="new-ingredient-unit" required>
-              {% for unit in inventory_units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
-              {% endfor %}
-            </select>
+            <div class="input-group">
+              <select class="form-control" id="new-ingredient-unit" required>
+                {% for unit in inventory_units %}
+                  <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">
+                Add Unit
+              </button>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary">Add Ingredient</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Unit Modal -->
+<div class="modal fade" id="quickAddUnitModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Unit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickAddUnitForm">
+          <div class="mb-3">
+            <label for="unitName" class="form-label">Unit Name</label>
+            <input type="text" class="form-control" id="unitName" required>
+          </div>
+          <div class="mb-3">
+            <label for="unitType" class="form-label">Type</label>
+            <select class="form-select" id="unitType">
+              <option value="count">Count</option>
+              <option value="volume">Volume</option>
+              <option value="weight">Weight</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveQuickUnit">Add Unit</button>
       </div>
     </div>
   </div>
@@ -58,7 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token() }}'
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ name, unit })
       });
@@ -80,6 +118,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Reset form
       form.reset();
+      
+      // Reload page to refresh dropdowns
+      window.location.reload();
 
     } catch (error) {
       console.error('Error:', error);
@@ -88,6 +129,40 @@ document.addEventListener('DOMContentLoaded', function() {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Ingredient';
     }
+  });
+
+  // Quick Add Unit Handler
+  document.getElementById('saveQuickUnit')?.addEventListener('click', function() {
+    const name = document.getElementById('unitName').value;
+    const type = document.getElementById('unitType').value;
+
+    if (!name) return alert('Unit name required.');
+
+    fetch('/recipes/units/quick-add', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({ name, type })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return alert('Error: ' + data.error);
+
+      // Add to ingredient unit dropdown
+      const quickUnit = document.getElementById('new-ingredient-unit');
+      quickUnit.add(new Option(data.name, data.name, false, true));
+      quickUnit.value = data.name;
+
+      // Close unit modal
+      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+      unitModal.hide();
+
+      // Reset form
+      document.getElementById('unitName').value = '';
+      document.getElementById('unitType').selectedIndex = 0;
+    });
   });
 });
 </script>

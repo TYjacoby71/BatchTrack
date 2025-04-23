@@ -3,7 +3,7 @@ from models import db, InventoryItem
 
 quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 
-@quick_add_bp.route('/quick-add/ingredient', methods=['POST'])
+@quick_add_bp.route('/ingredient', methods=['POST'])
 def quick_add_ingredient():
     data = request.get_json()
     name = data.get('name', '').strip()
