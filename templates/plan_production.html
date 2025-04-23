@@ -39,7 +39,7 @@
   <h3>Select Containers</h3>
   <div class="form-group">
     <label for="containers">Containers for this batch:</label>
-    <select name="container_ids[]" id="containers" class="form-select" multiple>
+    <select name="container_ids[]" id="containers" class="form-select select2" multiple>
       {% for container in containers %}
       <option value="{{ container.id }}">{{ container.name }} ({{ "%.0f"|format(container.quantity) }} {{ container.unit }} in stock)</option>
       {% endfor %}
