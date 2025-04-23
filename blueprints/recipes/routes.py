@@ -113,17 +113,28 @@ def create_variation(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 def lock_recipe(recipe_id):
-    try:
-        recipe = Recipe.query.get_or_404(recipe_id)
-        recipe.is_locked = True
-        db.session.commit()
-        flash('Recipe locked.')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
-    except Exception as e:
-        flash(f"Error locking recipe: {str(e)}", "error")
-        current_app.logger.exception(f"Unexpected error locking recipe: {str(e)}")
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe.is_locked = True
+    db.session.commit()
+    flash('Recipe locked successfully.')
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+@recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
+@login_required
+def unlock_recipe(recipe_id):
+    from flask_login import current_user
+    
+    recipe = Recipe.query.get_or_404(recipe_id)
+    unlock_password = request.form.get('unlock_password')
+
+    if current_user.check_password(unlock_password):
+        recipe.is_locked = False
+        db.session.commit()
+        flash('Recipe unlocked successfully.')
+    else:
+        flash('Incorrect password.', 'error')
+
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
@@ -187,6 +198,9 @@ def delete_recipe(recipe_id):
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
+    if recipe.is_locked:
+        flash('This recipe is locked and cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
 

@@ -14,12 +14,42 @@
   </p>
 {% endif %}
 
-<div class="action-buttons mb-3">
+<div class="actions mb-4">
+    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" 
+                class="btn btn-primary" 
+                {% if recipe.is_locked %}
+                onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
+                {% endif %}>Edit Recipe</button>
+    </form>
+    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+    </form>
+    {% if not recipe.parent_id %}
+    <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-info">New Variation</a>
+    {% endif %}
+    {% if recipe.is_locked %}
+      <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
+        {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
+      </button>
+    {% else %}
+      <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-warning">
+          {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+        </button>
+      </form>
+    {% endif %}
+</div>
   <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
   {% if not recipe.parent_id %}
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
   {% endif %}
-  {% if not recipe.is_locked %}
+  {% if recipe.is_locked %}
+    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
+      {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
+    </button>
+  {% else %}
     <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm btn-warning">
@@ -27,6 +57,31 @@
       </button>
     </form>
   {% endif %}
+</div>
+
+<!-- Unlock Modal -->
+<div class="modal fade" id="unlockModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enter Password to Unlock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('recipes.unlock_recipe', recipe_id=recipe.id) }}">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="unlock_password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="unlock_password" name="unlock_password" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Unlock</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="recipe-details">
@@ -45,13 +100,7 @@
     {% endif %}
 </div>
 
-<div class="actions">
-    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-primary">Edit Recipe</button>
-    </form>
-    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
-    </form>
+<div class="actions mt-4">
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
