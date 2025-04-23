@@ -23,7 +23,7 @@
 {% endif %}
 
 {% if recipe and not is_clone %}
-  <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" id="recipeForm">
+  <form method="post" action="{{ url_for('recipes.edit_recipe' if not is_variation else 'recipes.edit_recipe', recipe_id=recipe.id) }}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% elif is_clone %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
