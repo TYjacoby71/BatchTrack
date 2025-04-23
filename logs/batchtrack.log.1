@@ -1,8 +1,47 @@
-2025-04-23 21:18:28,834 ERROR: Unexpected error viewing recipe: Could not build url for endpoint 'recipes.clone_variation' with values ['recipe_id']. Did you mean 'recipes.create_variation' instead? [in /home/runner/workspace/blueprints/recipes/routes.py:84]
+2025-04-23 21:36:02,597 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:37:52,230 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:39:21,473 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:42:17,007 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:51:51,577 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:52:10,578 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:53:53,070 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:55:33,272 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:56:13,333 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:57:37,869 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:00:48,614 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:00:58,917 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:01:10,963 ERROR: Unexpected error creating variation: name 'variation' is not defined [in /home/runner/workspace/blueprints/recipes/routes.py:112]
 Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 79, in view_recipe
-    return render_template('view_recipe.html',
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 105, in create_variation
+    recipe=variation,
+           ^^^^^^^^^
+NameError: name 'variation' is not defined
+2025-04-23 22:01:31,272 ERROR: Unexpected error creating variation: name 'variation' is not defined [in /home/runner/workspace/blueprints/recipes/routes.py:112]
+Traceback (most recent call last):
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 105, in create_variation
+    recipe=variation,
+           ^^^^^^^^^
+NameError: name 'variation' is not defined
+2025-04-23 22:02:37,257 ERROR: Exception on /recipes/18/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 91, in plan_production
+    return render_template('plan_production.html', recipe=recipe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13,82 +52,27 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/view_recipe.html", line 1, in top-level template code
+  File "/home/runner/workspace/templates/plan_production.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/view_recipe.html", line 45, in block 'content'
-    <a href="{{ url_for('recipes.clone_variation', recipe_id=recipe.id) }}" class="btn btn-primary">Duplicate</a>
+  File "/home/runner/workspace/templates/plan_production.html", line 3, in block 'content'
+    <h2>Plan Production: {{ base_recipe.name }}</h2>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.clone_variation' with values ['recipe_id']. Did you mean 'recipes.create_variation' instead?
-2025-04-23 21:18:58,961 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:162]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'base_recipe' is undefined
+2025-04-23 22:03:22,588 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:03:32,030 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:03:54,653 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:04:02,106 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:04:18,601 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:04:24,093 ERROR: Unexpected error creating variation: Could not build url for endpoint 'recipes.edit_recipe'. Did you forget to specify values ['recipe_id']? [in /home/runner/workspace/blueprints/recipes/routes.py:115]
 Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 154, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:19:05,052 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:162]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 154, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:19:32,033 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:19:48,919 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:193]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 185, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:23:39,718 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:24:46,207 ERROR: Unexpected error cloning variation: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:167]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 154, in clone_variation
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:24:54,414 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:193]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 185, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:25:28,346 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:193]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 185, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:25:34,419 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:193]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 185, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:25:37,573 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:193]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 185, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:25:48,836 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:27:01,405 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:28:02,548 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:30:34,763 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:30:50,399 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:30:54,122 ERROR: Unexpected error creating variation: Could not build url for endpoint 'recipes.edit_recipe'. Did you forget to specify values ['recipe_id']? [in /home/runner/workspace/blueprints/recipes/routes.py:112]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 104, in create_variation
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 107, in create_variation
     return render_template('recipe_form.html',
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
@@ -119,13 +103,3 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.edit_recipe'. Did you forget to specify values ['recipe_id']?
-2025-04-23 21:31:29,044 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:31:46,801 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:162]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 154, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:33:39,987 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:34:23,605 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:35:03,706 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]

@@ -94,15 +94,22 @@ def plan_production(recipe_id):
 @login_required
 def create_variation(recipe_id):
     try:
-        original = Recipe.query.get_or_404(recipe_id)
-        original.name = f"Variation of {original.name}"
-        original.parent_id = recipe_id
+        parent = Recipe.query.get_or_404(recipe_id)
+        # Create variation object but don't save to database yet
+        new_variation = Recipe(
+            name=f"{parent.name} Variation",
+            instructions=parent.instructions,
+            label_prefix=parent.label_prefix,
+            parent_id=parent.id
+        )
+        all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+        inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
-                            recipe=original,
-                            is_variation=True,
-                            parent_recipe=original,
-                            all_ingredients=InventoryItem.query.all(),
-                            inventory_units=get_global_unit_list())
+            recipe=new_variation,
+            all_ingredients=all_ingredients,
+            inventory_units=inventory_units,
+            is_variation=True,
+            parent_recipe=parent)
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
@@ -123,7 +130,7 @@ def lock_recipe(recipe_id):
 @login_required
 def unlock_recipe(recipe_id):
     from flask_login import current_user
-    
+
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')
 
@@ -141,6 +148,7 @@ def unlock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
+        # Allow cloning regardless of lock status
         original.name = f"Copy of {original.name}"
         return render_template('recipe_form.html',
                             recipe=original,

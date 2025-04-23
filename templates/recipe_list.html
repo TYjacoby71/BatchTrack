@@ -18,6 +18,9 @@
                     <h5 class="mb-0">{{ recipe.name }}</h5>
                 </div>
                 <div>
+                    {% if recipe.is_locked %}
+                    <i class="fas fa-lock me-2"></i>
+                    {% endif %}
                     <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
                     <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" 
                        class="btn btn-outline-secondary btn-sm"
