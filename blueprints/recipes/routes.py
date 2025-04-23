@@ -11,6 +11,27 @@ def list_recipes():
     recipes = Recipe.query.all()
     return render_template('recipe_list.html', recipes=recipes)
 
+@recipes_bp.route('/<int:recipe_id>')
+@login_required
+def view_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('view_recipe.html', recipe=recipe)
+
+@recipes_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+def new_recipe():
+    if request.method == 'POST':
+        recipe = Recipe(
+            name=request.form.get('name'),
+            instructions=request.form.get('instructions'),
+            label_prefix=request.form.get('label_prefix')
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        flash('Recipe created successfully.')
+        return redirect(url_for('recipes.list_recipes'))
+    return render_template('recipe_form.html', recipe=None)
+
 @recipes_bp.route('/<int:recipe_id>/variation/new')
 @login_required
 def create_variation(recipe_id):
