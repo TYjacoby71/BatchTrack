@@ -1,0 +1,104 @@
+✅ Let's clean this up the right way. Here's a complete patch set to unify your Quick Add Ingredient flow using a single, clean, JSON-based blueprint — ready for AJAX and future ShadCN integration.
+
+✅ 1. ROUTE — blueprints/quick_add/routes.py
+📍 Replace everything in this file with:
+
+python
+Copy
+Edit
+from flask import Blueprint, request, jsonify
+from flask_wtf.csrf import csrf_exempt
+from models import db, InventoryItem
+
+quick_add_bp = Blueprint("quick_add", __name__)
+
+@quick_add_bp.route('/quick-add/ingredient', methods=['POST'])
+@csrf_exempt
+def quick_add_ingredient():
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    unit = data.get('unit', '').strip()
+
+    if not name or not unit:
+        return jsonify({"error": "Missing name or unit"}), 400
+
+    # Check for existing
+    existing = InventoryItem.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
+
+    new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+    db.session.add(new_item)
+    db.session.commit()
+
+    return jsonify({"id": new_item.id, "name": new_item.name, "unit": new_item.unit}), 200
+✅ 2. APP ENTRY — app.py
+Ensure this is included after db and login setup:
+
+python
+Copy
+Edit
+from blueprints.quick_add.routes import quick_add_bp
+app.register_blueprint(quick_add_bp)
+✅ 3. TEMPLATE — templates/components/modals/quick_add_ingredient_modal.html
+🧼 Replace the form with:
+
+html
+Copy
+Edit
+<form id="quickAddIngredientForm">
+  <div class="mb-3">
+    <label for="new-ingredient-name" class="form-label">Ingredient Name</label>
+    <input type="text" class="form-control" id="new-ingredient-name" required>
+  </div>
+  <div class="mb-3">
+    <label for="new-ingredient-unit" class="form-label">Unit</label>
+    <input type="text" class="form-control" id="new-ingredient-unit" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Add Ingredient</button>
+</form>
+✅ 4. JAVASCRIPT — Add to main.js or below the modal
+js
+Copy
+Edit
+document.getElementById('quickAddIngredientForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  const name = document.getElementById('new-ingredient-name').value;
+  const unit = document.getElementById('new-ingredient-unit').value;
+
+  fetch('/quick-add/ingredient', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, unit })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data && data.id && data.name) {
+        const dropdown = document.querySelector('#ingredient-select');
+        const option = new Option(data.name, data.id, true, true);
+        dropdown.add(option);
+        dropdown.value = data.id;
+      }
+      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+      modal.hide();
+    })
+    .catch(error => {
+      console.error('Quick Add Error:', error);
+      alert('Failed to add ingredient.');
+    });
+});
+🧼 5. REMOVE LEGACY ROUTES
+Search your project and delete or comment out any old @recipes_bp.route('/ingredients/quick-add') logic.
+
+✅ This setup is now:
+
+ShadCN-ready
+
+Fully JS-driven
+
+CSRF-free via scoped exemption
+
+Doesn’t reload the page
+
+Works with dropdown injection
