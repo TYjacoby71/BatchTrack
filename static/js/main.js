@@ -1,39 +1,48 @@
 
 async function checkProductionStock() {
     const form = document.querySelector('.production-plan-form');
+    if (!form) return;
+    
     const formData = new FormData(form);
+    const submitButton = document.querySelector('button[onclick="checkProductionStock()"]');
+    if (submitButton) submitButton.disabled = true;
     
     try {
         const response = await fetch(window.location.href, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        // Replace entire content with response
         const result = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(result, 'text/html');
+        document.querySelector('.container').innerHTML = result;
         
-        // Update only the stock check results section
-        const stockCheckResults = doc.querySelector('.stock-check-results');
-        if (stockCheckResults) {
-            const currentResults = document.querySelector('.stock-check-results');
-            if (currentResults) {
-                currentResults.replaceWith(stockCheckResults);
-            } else {
-                form.appendChild(stockCheckResults);
-            }
+        // Reattach event listeners
+        const containerBtn = document.getElementById('showContainerSelection');
+        if (containerBtn) {
+            containerBtn.addEventListener('click', function() {
+                const containerSelection = document.getElementById('containerSelection');
+                containerSelection.style.display = 'block';
+                this.style.display = 'none';
+                addContainerRow();
+            });
         }
         
-        // Reinitialize any necessary event listeners
-        initializeEventListeners();
+        const addAnotherBtn = document.getElementById('addAnotherContainer');
+        if (addAnotherBtn) {
+            addAnotherBtn.addEventListener('click', addContainerRow);
+        }
         
     } catch (error) {
-        console.error('Error checking stock:', error);
+        console.error('Error:', error);
         alert('Error checking stock. Please try again.');
+    } finally {
+        if (submitButton) submitButton.disabled = false;
     }
 }
 
