@@ -242,4 +242,4 @@ def edit_recipe(recipe_id):
     return render_template('recipe_form.html', 
                          recipe=recipe,
                          all_ingredients=all_ingredients,
-                         inventory_units=inventory_units)
+                         inventory_units=inventory_units, edit_mode=True)
