@@ -1,39 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const quickAddForm = document.getElementById('quickAddIngredientForm');
-  if (quickAddForm) {
-    quickAddForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      const name = document.getElementById('new-ingredient-name').value;
-      const unit = document.getElementById('new-ingredient-unit').value;
-
-      fetch('/quick-add/ingredient', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name, unit })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data && data.id && data.name) {
-          // Update any ingredient dropdowns on the page
-          document.querySelectorAll("select[name='ingredient_ids[]']").forEach(select => {
-            const option = new Option(data.name, data.id, true, true);
-            select.add(option);
-            select.value = data.id;
-          });
-        }
-        const modalEl = document.getElementById('quickAddIngredientModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-      })
-      .catch(error => {
-        console.error('Quick Add Error:', error);
-        alert('Failed to add ingredient. Please try again.');
-      });
-    });
-  }
 
   // Keep existing code for unit modal handling
   document.getElementById('saveQuickUnit')?.addEventListener('click', function() {
