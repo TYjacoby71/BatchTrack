@@ -177,11 +177,32 @@ def edit_recipe(recipe_id):
 
     if request.method == 'POST':
         try:
+            # First handle ingredients
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+            
+            # Clear existing ingredients
+            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+            
+            # Add new ingredients
+            for i in range(len(ingredient_ids)):
+                if ingredient_ids[i]:  # Only add if ingredient was selected
+                    new_ingredient = RecipeIngredient(
+                        recipe_id=recipe.id,
+                        inventory_item_id=int(ingredient_ids[i]),
+                        amount=float(amounts[i]),
+                        unit=units[i]
+                    )
+                    db.session.add(new_ingredient)
+            
+            # Then update recipe details
             recipe.name = request.form.get('name')
             recipe.instructions = request.form.get('instructions')
             recipe.label_prefix = request.form.get('label_prefix')
+            
             db.session.commit()
-            flash('Recipe updated successfully.')
+            flash('Recipe and ingredients updated successfully.')
             return redirect(url_for('recipes.list_recipes'))
         except ValueError as e:
             current_app.logger.error(f"Value error updating recipe: {str(e)}")
