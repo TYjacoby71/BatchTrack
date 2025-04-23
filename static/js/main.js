@@ -1,16 +1,21 @@
 document.addEventListener('DOMContentLoaded', function() {
+  initQuickAddUnit();
 
-  // Keep existing code for unit modal handling
-  document.getElementById('saveQuickUnit')?.addEventListener('click', function() {
-    const name = document.getElementById('unitName').value.trim();
-    const type = document.getElementById('unitType').value;
+  // Quick Add Unit Handler
+  function initQuickAddUnit() {
+    const saveButton = document.getElementById('saveQuickUnit');
+    if (!saveButton) return;
 
-    if (!name) return alert('Unit name required.');
+    saveButton.addEventListener('click', function() {
+      const name = document.getElementById('unitName').value.trim();
+      const type = document.getElementById('unitType').value;
 
-    fetch('/quick-add/unit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type })
+      if (!name) return alert('Unit name required.');
+
+      fetch('/quick-add/unit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type })
     })
     .then(r => r.json())
     .then(data => {
