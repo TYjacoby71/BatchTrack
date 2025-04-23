@@ -197,6 +197,9 @@ def delete_recipe(recipe_id):
 @login_required
 def edit_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
+    if recipe.is_locked:
+        flash('This recipe is locked and cannot be edited.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
 

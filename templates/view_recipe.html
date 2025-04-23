@@ -76,7 +76,7 @@
 
 <div class="actions">
     <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-primary">Edit Recipe</button>
+        <button type="submit" class="btn btn-primary" {% if recipe.is_locked %}disabled title="Recipe is locked"{% endif %}>Edit Recipe</button>
     </form>
     <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
