@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+{% from 'macros/forms.html' import csrf_form %}
+{% block content %}
+<h2>{{ recipe.name }}</h2>
+
+{% if recipe.is_locked %}
+  <span class="badge bg-secondary">Locked</span>
+{% endif %}
+{% if recipe.parent_id %}
+  <p class="text-muted">Variation of: 
+    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">
+      {{ recipe.parent.name }}
+    </a>
+  </p>
+{% endif %}
+
+<div class="action-buttons mb-3">
+  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
+  {% if not recipe.parent_id %}
+  <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
+  {% endif %}
+  {% if not recipe.is_locked %}
+    <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-warning">
+        {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="recipe-details">
+    <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
+
+    <h3>Ingredients</h3>
+    <ul>
+        {% for assoc in recipe.recipe_ingredients %}
+        <li>{{ assoc.inventory_item.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if recipe.instructions %}
+    <h3>Instructions</h3>
+    <p>{{ recipe.instructions }}</p>
+    {% endif %}
+</div>
+
+<div class="actions">
+    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-primary">Edit Recipe</button>
+    </form>
+    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+    </form>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
+</div>
+{% endblock %}
