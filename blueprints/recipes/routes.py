@@ -11,6 +11,12 @@ def list_recipes():
     recipes = Recipe.query.all()
     return render_template('recipe_list.html', recipes=recipes)
 
+@recipes_bp.route('/<int:recipe_id>')
+@login_required
+def view_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return render_template('view_recipe.html', recipe=recipe)
+
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_recipe():
