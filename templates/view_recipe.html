@@ -27,6 +27,27 @@
     {% if not recipe.parent_id %}
     <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-info">New Variation</a>
     {% endif %}
+    {% if recipe.parent_id %}
+      <button type="button" class="btn btn-secondary" onclick="showDuplicateOptions({{ recipe.id }})">Duplicate Variation</button>
+      <!-- Duplicate Variation Modal -->
+      <div class="modal fade" id="duplicateModal-{{ recipe.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Duplicate Variation</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to duplicate this variation?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <a href="{{ url_for('recipes.clone_variation', recipe_id=recipe.id) }}" class="btn btn-primary">Duplicate</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
     {% if recipe.is_locked %}
       <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
         {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
@@ -85,4 +106,11 @@
 <div class="actions mt-4">
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
+<script>
+function showDuplicateOptions(recipeId) {
+    const modalId = `duplicateModal-${recipeId}`;
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
+}
+</script>
 {% endblock %}
