@@ -8,7 +8,7 @@
     <div class="form-group">
         <label for="variation_id">Variation:</label>
         <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-            <option value="">Base Recipe ({{ recipe.name }})</option>
+            <option value="">None</option>
             {% for variant in recipe.variations %}
             <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>
                 {{ variant.name }}
