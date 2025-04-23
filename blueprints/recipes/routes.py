@@ -102,19 +102,38 @@ def create_variation(recipe_id):
             label_prefix=parent.label_prefix,
             parent_id=parent.id
         )
-        db.session.add(new_variation)
-        db.session.flush()  # Get an ID for the new variation
 
-        # Copy ingredients from parent
-        for ingredient in parent.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=new_variation.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
+        if request.method == 'POST':
+            new_variation.name = request.form['name']
+            new_variation.instructions = request.form.get('instructions', '')
+            new_variation.label_prefix = request.form.get('label_prefix', '')
+            db.session.add(new_variation)
+            db.session.flush()
 
+            # Handle ingredients
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                if ing_id and amt and unit:
+                    try:
+                        recipe_ingredient = RecipeIngredient(
+                            recipe_id=new_variation.id,
+                            inventory_item_id=int(ing_id),
+                            amount=float(amt.strip()),
+                            unit=unit.strip()
+                        )
+                        db.session.add(recipe_ingredient)
+                    except ValueError as e:
+                        current_app.logger.error(f"Invalid ingredient data: {e}")
+                        continue
+
+            db.session.commit()
+            flash('Recipe variation created successfully.')
+            return redirect(url_for('recipes.view_recipe', recipe_id=new_variation.id))
+
+        # For GET request, prepare form
         all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
         inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
