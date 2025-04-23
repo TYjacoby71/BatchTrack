@@ -74,7 +74,7 @@
 
     <div class="form-group mt-3 d-flex justify-content-between">
         <div>
-            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" name="cancel" class="btn btn-secondary">Cancel</button>
             {% if recipe and edit_mode %}
             <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -28,6 +28,10 @@ def new_recipe():
     parent_recipes = Recipe.query.filter_by(parent_id=None).all()
 
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            flash('Recipe creation canceled.', 'info')
+            return redirect(url_for('recipes.list_recipes'))
+            
         try:
             recipe = Recipe(
                 name=request.form['name'],
