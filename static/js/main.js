@@ -14,70 +14,59 @@ document.addEventListener('DOMContentLoaded', function() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) {
-        alert('Error: ' + data.error);
-        return;
-      }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+          }
 
-      // Insert unit into ingredient modal dropdown
-      const unitSelect = document.getElementById('quickIngredientUnit');
-      if (unitSelect) {
-        const newOption = new Option(data.name, data.name, false, true);
-        unitSelect.add(newOption);
-        unitSelect.value = data.name;
-      }
+          // Insert unit into ingredient modal dropdown
+          const unitSelect = document.getElementById('quickIngredientUnit');
+          if (unitSelect) {
+            const newOption = new Option(data.name, data.name, false, true);
+            unitSelect.add(newOption);
+            unitSelect.value = data.name;
+          }
 
-      // Update all other unit dropdowns
-      document.querySelectorAll("select[name='units[]']").forEach(select => {
-        const option = new Option(data.name, data.name);
-        select.add(option);
-      });
+          // Update all other unit dropdowns
+          document.querySelectorAll("select[name='units[]']").forEach(select => {
+            const option = new Option(data.name, data.name);
+            select.add(option);
+          });
 
-      // Close unit modal
-      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-      if (unitModal) {
-        unitModal.hide();
-        
-        // Re-open ingredient modal after brief delay
-        setTimeout(() => {
-          const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-          ingredientModal.show();
-          document.getElementById('ingredientName')?.focus();
-        }, 300);
-      }
-        select.add(new Option(data.name, data.name, false, true));
-      });
 
-      // Add to quick ingredient unit dropdown
-      const quickUnit = document.getElementById('new-ingredient-unit');
-      if (quickUnit) {
-        quickUnit.add(new Option(data.name, data.name, false, true));
-        quickUnit.value = data.name;
-      }
+          // Add to quick ingredient unit dropdown
+          const quickUnit = document.getElementById('new-ingredient-unit');
+          if (quickUnit) {
+            quickUnit.add(new Option(data.name, data.name, false, true));
+            quickUnit.value = data.name;
+          }
 
-      // Handle modal transitions
-      const unitModalEl = document.getElementById('quickAddUnitModal');
-      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
-      if (unitModal) {
-        unitModal.hide();
-
-        if (unitReturnContext === 'ingredient') {
-          setTimeout(() => {
-            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-            ingredientModal.show();
-            unitReturnContext = 'main';
-          }, 300);
-        }
-      }
-
-      // Reset form
-      document.getElementById('unitName').value = '';
-      document.getElementById('unitType').selectedIndex = 0;
+          // Reset form
+          document.getElementById('unitName').value = '';
+          document.getElementById('unitType').selectedIndex = 0;
+        });
     });
-  });
+  }
+
+  initQuickAddUnit();
+
+  // Initialize modals
+  const quickAddUnitModal = document.getElementById('quickAddUnitModal');
+  const quickAddIngredientModal = document.getElementById('quickAddIngredientModal');
+
+  if (quickAddUnitModal) {
+    const unitModal = new bootstrap.Modal(quickAddUnitModal);
+    quickAddUnitModal.addEventListener('hidden.bs.modal', function() {
+      setTimeout(() => {
+        const ingredientModal = new bootstrap.Modal(quickAddIngredientModal);
+        ingredientModal.show();
+        document.getElementById('ingredientName')?.focus();
+      }, 300);
+    });
+  }
 });
 
 function filterUnits() {
