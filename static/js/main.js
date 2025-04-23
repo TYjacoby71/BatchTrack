@@ -1,38 +1,53 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const quickAddForm = document.getElementById('quickAddIngredientForm');
-  if (quickAddForm) {
-    quickAddForm.addEventListener('submit', function(e) {
-      e.preventDefault();
 
-      const name = document.getElementById('new-ingredient-name').value;
-      const unit = document.getElementById('new-ingredient-unit').value;
+  // Keep existing code for unit modal handling
+  document.getElementById('saveQuickUnit')?.addEventListener('click', function() {
+    const name = document.getElementById('unitName').value;
+    const type = document.getElementById('unitType').value;
 
-      fetch('/quick-add/ingredient', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({ name, unit })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data && data.id && data.name) {
-          const dropdown = document.querySelector('#ingredient-select');
-          const option = new Option(data.name, data.id, true, true);
-          dropdown.add(option);
-          dropdown.value = data.id;
-        }
-        const modalEl = document.getElementById('quickAddIngredientModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
-      })
-      .catch(error => {
-        console.error('Quick Add Error:', error);
-        alert('Failed to add ingredient. Please try again.');
+    if (!name) return alert('Unit name required.');
+
+    fetch('/recipes/units/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return alert('Error: ' + data.error);
+
+      // Add to all unit dropdowns
+      document.querySelectorAll("select[name='units[]']").forEach(select => {
+        select.add(new Option(data.name, data.name, false, true));
       });
+
+      // Add to quick ingredient unit dropdown
+      const quickUnit = document.getElementById('new-ingredient-unit');
+      if (quickUnit) {
+        quickUnit.add(new Option(data.name, data.name, false, true));
+        quickUnit.value = data.name;
+      }
+
+      // Handle modal transitions
+      const unitModalEl = document.getElementById('quickAddUnitModal');
+      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
+      if (unitModal) {
+        unitModal.hide();
+
+        if (unitReturnContext === 'ingredient') {
+          setTimeout(() => {
+            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+            ingredientModal.show();
+            unitReturnContext = 'main';
+          }, 300);
+        }
+      }
+
+      // Reset form
+      document.getElementById('unitName').value = '';
+      document.getElementById('unitType').selectedIndex = 0;
     });
-  }
+  });
 });
 
 function filterUnits() {

@@ -39,3 +39,68 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('quickAddIngredientForm');
+  if (!form) return;
+  
+  form.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('new-ingredient-name').value.trim();
+  const unit = document.getElementById('new-ingredient-unit').value;
+  const submitButton = this.querySelector('button[type="submit"]');
+  
+  if (!name || !unit) {
+    alert('Both name and unit are required');
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = 'Adding...';
+
+  fetch('/quick-add/ingredient', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({ name, unit })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    // Update ingredient dropdowns
+    document.querySelectorAll('select[name="ingredient_ids[]"]').forEach(select => {
+      const option = new Option(data.name, data.id, true, true);
+      select.add(option);
+      select.value = data.id;
+    });
+
+    // Close modal
+    const modalEl = document.getElementById('quickAddIngredientModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    // Reset form
+    this.reset();
+  })
+  .catch(error => {
+    console.error('Quick Add Error:', error);
+    alert(`Failed to add ingredient: ${error.message}`);
+  })
+  .finally(() => {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Add Ingredient';
+  });
+});
+</script>
