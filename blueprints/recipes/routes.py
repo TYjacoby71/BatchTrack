@@ -95,27 +95,14 @@ def plan_production(recipe_id):
 def create_variation(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        variation = Recipe(
-            name=f"Variation of {original.name}",
-            instructions=original.instructions,
-            label_prefix=original.label_prefix,
-            parent_id=original.id
-        )
-        db.session.add(variation)
-        db.session.flush()
-
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=variation.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
-
-        db.session.commit()
-        flash('Variation created successfully')
-        return redirect(url_for('recipes.edit_recipe', recipe_id=variation.id))
+        original.name = f"Variation of {original.name}"
+        original.parent_id = recipe_id
+        return render_template('recipe_form.html',
+                            recipe=original,
+                            is_variation=True,
+                            parent_recipe=original,
+                            all_ingredients=InventoryItem.query.all(),
+                            inventory_units=get_global_unit_list())
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
