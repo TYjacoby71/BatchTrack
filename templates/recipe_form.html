@@ -76,23 +76,14 @@
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
             {% if recipe %}
-            <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+            <form id="deleteForm" method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {% if recipe.parent_id %}
-                <button type="submit" class="btn btn-danger" 
-                        onclick="return confirm('Are you sure you want to delete this variation? This action cannot be undone.')">
-                    Delete Variation
-                </button>
+                <button type="submit" class="btn btn-danger" id="deleteBtn">Delete Variation</button>
                 {% elif recipe.variations %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this recipe and ALL its variations?')">
-                    Delete Recipe & Variations
-                </button>
+                <button type="submit" class="btn btn-danger" id="deleteBtn">Delete Recipe & Variations</button>
                 {% else %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this recipe?')">
-                    Delete Recipe
-                </button>
+                <button type="submit" class="btn btn-danger" id="deleteBtn">Delete Recipe</button>
                 {% endif %}
             </form>
             {% endif %}
@@ -100,6 +91,22 @@
         <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
+
+<script>
+document.getElementById('deleteForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('deleteBtn');
+    const msg = btn.textContent.includes('Variation') ? 
+        'Are you sure you want to delete this variation? This action cannot be undone.' :
+        btn.textContent.includes('& Variations') ?
+        'Are you sure you want to delete this recipe and ALL its variations?' :
+        'Are you sure you want to delete this recipe?';
+        
+    if (confirm(msg)) {
+        this.submit();
+    }
+});
+</script>
 
 {% include 'quick_add_ingredient_modal.html' %}
 
