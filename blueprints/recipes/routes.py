@@ -42,7 +42,7 @@ def new_recipe():
 
             db.session.commit()
             flash('Recipe created successfully with ingredients.')
-            return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
         except ValueError as e:
             current_app.logger.error(f"Value error creating recipe: {str(e)}")
             flash('Invalid values in recipe form', 'error')
