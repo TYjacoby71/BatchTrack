@@ -1,12 +1,10 @@
 from flask import Blueprint, request, jsonify
-from flask_wtf import csrf
 from models import db, InventoryItem
 
-quick_add_bp = Blueprint("quick_add", __name__)
+quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 
 @quick_add_bp.route('/quick-add/ingredient', methods=['POST'])
 def quick_add_ingredient():
-    csrf.exempt(quick_add_ingredient)
     data = request.get_json()
     name = data.get('name', '').strip()
     unit = data.get('unit', '').strip()
@@ -23,33 +21,8 @@ def quick_add_ingredient():
     db.session.add(new_item)
     db.session.commit()
 
-    return jsonify({"id": new_item.id, "name": new_item.name, "unit": new_item.unit}), 200
-
-@quick_add_bp.route('/unit', methods=['POST'])
-def quick_add_unit():
-    data = request.get_json()
-    name = data.get('name', '').strip()
-    type_ = data.get('type', '').strip()
-
-    if not name or not type_:
-        return jsonify({'error': 'Name and type are required.'}), 400
-
-    existing = Unit.query.filter_by(name=name).first()
-    if existing:
-        return jsonify({'error': 'Unit already exists.'}), 409
-
-    new_unit = Unit(
-        name=name,
-        type=type_,
-        base_unit=name,
-        multiplier_to_base=1.0,
-        discipline_tags="custom",
-        custom=True
-    )
-    db.session.add(new_unit)
-    db.session.commit()
-
     return jsonify({
-        'name': new_unit.name,
-        'type': new_unit.type
-    }), 201
+        "id": new_item.id,
+        "name": new_item.name,
+        "unit": new_item.unit
+    }), 200
