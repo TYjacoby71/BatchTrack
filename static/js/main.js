@@ -3,6 +3,16 @@ async function checkProductionStock() {
     const form = document.querySelector('.production-plan-form');
     if (!form) return;
     
+    // Validate container selection
+    const containerSelects = form.querySelectorAll('select[name="container_ids[]"]');
+    if (containerSelects.length > 0) {
+        const hasSelectedContainer = Array.from(containerSelects).some(select => select.value);
+        if (!hasSelectedContainer) {
+            alert('Please select at least one container');
+            return;
+        }
+    }
+    
     const formData = new FormData(form);
     const submitButton = document.querySelector('button[onclick="checkProductionStock()"]');
     if (submitButton) submitButton.disabled = true;
