@@ -2,6 +2,10 @@
 from models import InventoryItem, RecipeIngredient
 from services.unit_conversion import ConversionEngine
 
+def get_available_containers():
+    """Get all available containers ordered by name"""
+    return InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
+
 def check_stock_for_recipe(recipe, scale=1.0):
     results = []
     all_ok = True
