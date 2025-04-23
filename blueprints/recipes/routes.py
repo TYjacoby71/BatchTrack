@@ -125,13 +125,12 @@ def unlock_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')
 
-    # You can change this password or store it in environment variables
-    if unlock_password == 'admin123':
+    if current_user.check_password(unlock_password):
         recipe.is_locked = False
         db.session.commit()
         flash('Recipe unlocked successfully.')
     else:
-        flash('Invalid password.', 'error')
+        flash('Incorrect password.', 'error')
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
