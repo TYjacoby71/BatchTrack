@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify
-from flask_wtf.csrf import csrf_exempt
+from flask_wtf import csrf
 from models import db, InventoryItem
 
 quick_add_bp = Blueprint("quick_add", __name__)
 
 @quick_add_bp.route('/quick-add/ingredient', methods=['POST'])
-@csrf_exempt
 def quick_add_ingredient():
+    csrf.exempt(quick_add_ingredient)
     data = request.get_json()
     name = data.get('name', '').strip()
     unit = data.get('unit', '').strip()
