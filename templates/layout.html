@@ -13,9 +13,15 @@
     <style>
         input[name="csrf_token"],
         input[type="hidden"][name="csrf_token"],
+        input[name="confirm_token"],
+        input[type="hidden"][name="confirm_token"],
         .csrf-token,
+        .confirm-token,
         [name="csrf_token"],
-        form > .csrf_token {
+        [name="confirm_token"],
+        form > .csrf_token,
+        form > .confirm_token,
+        .token-field {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -23,6 +29,7 @@
             width: 0 !important;
             position: absolute !important;
             left: -9999px !important;
+            pointer-events: none !important;
         }
     </style>
 </head>

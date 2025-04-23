@@ -151,13 +151,20 @@ def clone_recipe(recipe_id):
 def delete_recipe(recipe_id):
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
+        # Delete child recipes (variations) first
+        for variation in recipe.variations:
+            RecipeIngredient.query.filter_by(recipe_id=variation.id).delete()
+            db.session.delete(variation)
+        # Then delete this recipe's ingredients
+        RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
         db.session.delete(recipe)
         db.session.commit()
         flash('Recipe deleted successfully.')
-        return redirect(url_for('recipes.list_recipes'))
     except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting recipe {recipe_id}: {str(e)}")
         flash(f'Error deleting recipe: {str(e)}', 'error')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    return redirect(url_for('recipes.list_recipes'))
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required

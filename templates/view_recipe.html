@@ -46,9 +46,10 @@
         <button type="submit" class="btn btn-primary">Edit Recipe</button>
     </form>
     <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">Duplicate Recipe</a>
-    {% call csrf_form(url_for('recipes.delete_recipe', recipe_id=recipe.id), method='post', classes='d-inline') %}
-        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this recipe?')">Delete Recipe</button>
-    {% endcall %}
+    <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this recipe? This action cannot be undone.')">Delete Recipe</button>
+    </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
