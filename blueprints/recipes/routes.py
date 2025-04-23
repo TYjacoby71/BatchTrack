@@ -151,7 +151,7 @@ def clone_variation(recipe_id):
         db.session.add(cloned)
         
         # Copy ingredients
-        for ingredient in original.ingredients:
+        for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
                 recipe_id=cloned.id,
                 inventory_item_id=ingredient.inventory_item_id,
@@ -182,7 +182,7 @@ def clone_recipe(recipe_id):
         )
         db.session.add(cloned)
         #Also copy ingredients
-        for ingredient in original.ingredients:
+        for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(recipe_id=cloned.id, inventory_item_id=ingredient.inventory_item_id, amount=ingredient.amount, unit=ingredient.unit)
             db.session.add(new_ingredient)
 
