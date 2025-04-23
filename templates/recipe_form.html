@@ -44,7 +44,7 @@
     <div class="form-group">
         <label>Ingredients:</label>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal">Quick Add Ingredient</button>
         <div id="ingredients-container">
             {% if recipe and recipe.recipe_ingredients %}
                 {% for assoc in recipe.recipe_ingredients %}
