@@ -174,16 +174,24 @@ def clone_recipe(recipe_id):
         original = Recipe.query.get_or_404(recipe_id)
         as_parent = request.args.get('as_parent', 'false') == 'true'
 
+        # Create new recipe
         cloned = Recipe(
             name=f"{original.name} Copy",
             instructions=original.instructions,
             label_prefix=original.label_prefix,
-            parent_id=None if as_parent else original.parent_id
+            parent_id=None if (as_parent or not original.parent_id) else original.parent_id
         )
         db.session.add(cloned)
-        #Also copy ingredients
+        db.session.flush()  # Get the ID for the new recipe
+
+        # Copy ingredients
         for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(recipe_id=cloned.id, inventory_item_id=ingredient.inventory_item_id, amount=ingredient.amount, unit=ingredient.unit)
+            new_ingredient = RecipeIngredient(
+                recipe_id=cloned.id,
+                inventory_item_id=ingredient.inventory_item_id,
+                amount=ingredient.amount,
+                unit=ingredient.unit
+            )
             db.session.add(new_ingredient)
 
         db.session.commit()
