@@ -94,13 +94,17 @@ def plan_production(recipe_id):
 @login_required
 def create_variation(recipe_id):
     try:
-        original = Recipe.query.get_or_404(recipe_id)
-        original.name = f"Variation of {original.name}"
-        original.parent_id = recipe_id
+        parent = Recipe.query.get_or_404(recipe_id)
+        variation = Recipe(
+            name=f"Variation of {parent.name}",
+            instructions=parent.instructions,
+            label_prefix=parent.label_prefix,
+            parent_id=recipe_id
+        )
         return render_template('recipe_form.html',
-                            recipe=original,
+                            recipe=variation,
                             is_variation=True,
-                            parent_recipe=original,
+                            parent_recipe=parent,
                             all_ingredients=InventoryItem.query.all(),
                             inventory_units=get_global_unit_list())
     except Exception as e:
