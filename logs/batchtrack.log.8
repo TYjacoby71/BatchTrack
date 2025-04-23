@@ -1,4 +1,4 @@
-2025-04-22 21:02:41,115 ERROR: Unexpected error viewing recipe: (sqlite3.OperationalError) no such column: inventory_item.low_stock_threshold
+2025-04-22 21:02:49,127 ERROR: Unexpected error viewing recipe: (sqlite3.OperationalError) no such column: inventory_item.low_stock_threshold
 [SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.type AS inventory_item_type, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.perishable AS inventory_item_perishable, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.category_id AS inventory_item_category_id 
 FROM inventory_item 
 WHERE inventory_item.id = ?]
@@ -91,3 +91,4 @@ FROM inventory_item
 WHERE inventory_item.id = ?]
 [parameters: (1,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-04-22 21:02:58,463 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
