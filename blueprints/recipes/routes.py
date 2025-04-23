@@ -32,6 +32,43 @@ def new_recipe():
         return redirect(url_for('recipes.list_recipes'))
     return render_template('recipe_form.html', recipe=None)
 
+@recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+    inventory_units = Unit.query.order_by(Unit.name).all()
+    
+    if request.method == 'POST':
+        recipe.name = request.form.get('name')
+        recipe.instructions = request.form.get('instructions')
+        recipe.label_prefix = request.form.get('label_prefix')
+        
+        RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+        
+        ingredient_ids = request.form.getlist('ingredient_ids[]')
+        amounts = request.form.getlist('amounts[]')
+        units = request.form.getlist('units[]')
+        
+        for ing_id, amount, unit in zip(ingredient_ids, amounts, units):
+            if ing_id and amount and unit:
+                ingredient = RecipeIngredient(
+                    recipe_id=recipe.id,
+                    inventory_item_id=int(ing_id),
+                    amount=float(amount),
+                    unit=unit
+                )
+                db.session.add(ingredient)
+                
+        db.session.commit()
+        flash('Recipe updated successfully.')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
+        
+    return render_template('recipe_form.html', 
+                         recipe=recipe,
+                         all_ingredients=all_ingredients,
+                         inventory_units=inventory_units)
+
 @recipes_bp.route('/<int:recipe_id>/variation/new')
 @login_required
 def create_variation(recipe_id):
