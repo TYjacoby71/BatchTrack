@@ -1,55 +1,5 @@
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Duplicate Recipe Handlers
-  document.querySelectorAll('.duplicate-recipe-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      const recipeId = this.dataset.recipeId;
-      const isVariation = this.dataset.isVariation === 'true';
-      
-      if (isVariation) {
-        const variationModal = new bootstrap.Modal(document.getElementById('duplicateVariationModal'));
-        variationModal.show();
-      } else {
-        const parentModal = new bootstrap.Modal(document.getElementById('duplicateParentModal'));
-        parentModal.show();
-      }
-    });
-  });
-
-  // Parent Recipe Duplicate Handler
-  document.getElementById('confirmDuplicate')?.addEventListener('click', function() {
-    const duplicateType = document.querySelector('input[name="duplicateType"]:checked').value;
-    const recipeId = document.querySelector('.duplicate-recipe-btn').dataset.recipeId;
-    window.location.href = `/recipes/${recipeId}/clone?type=${duplicateType}`;
-  });
-
-  // Variation Duplicate Handler
-  document.getElementById('confirmVariationDuplicate')?.addEventListener('click', function() {
-    const variationType = document.querySelector('input[name="variationType"]:checked').value;
-    const recipeId = document.querySelector('.duplicate-recipe-btn').dataset.recipeId;
-    window.location.href = `/recipes/${recipeId}/clone?type=${variationType}`;
-  });
-
-  // Unit Change Handler
-  let originalUnit = '';
-  document.querySelector('select[name="default_unit"]')?.addEventListener('change', function() {
-    if (originalUnit && this.value !== originalUnit) {
-      const unitModal = new bootstrap.Modal(document.getElementById('unitChangeModal'));
-      unitModal.show();
-    }
-  });
-
-  document.getElementById('confirmUnitUpdate')?.addEventListener('click', function() {
-    document.getElementById('updateVariations').value = 'true';
-    document.getElementById('recipeForm').submit();
-  });
-
-  document.getElementById('skipUnitUpdate')?.addEventListener('click', function() {
-    document.getElementById('updateVariations').value = 'false';
-    document.getElementById('recipeForm').submit();
-  });
-
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
