@@ -122,6 +122,8 @@ def lock_recipe(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
 @login_required
 def unlock_recipe(recipe_id):
+    from flask_login import current_user
+    
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')
 
