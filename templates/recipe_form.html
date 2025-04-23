@@ -83,7 +83,7 @@
     <div class="form-group mt-3 d-flex justify-content-between">
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
-            {% if recipe and not is_clone %}
+            {% if recipe and not is_clone and not is_variation %}
             <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
                 {% if recipe.parent_id %}
                 Delete Variation
