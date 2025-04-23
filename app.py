@@ -53,22 +53,20 @@ from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
-from blueprints.quick_add.routes import quick_add_bp
 from routes.timer_routes import timers_bp
 from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
-from blueprints.settings.routes import settings_bp
-from blueprints.conversion.routes import conversion_bp
+from routes.admin_routes import admin_bp
+from routes.app_routes import app_routes_bp
+
 
 # Register blueprints
 app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
-from routes.admin_routes import admin_bp
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(product_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
-from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
