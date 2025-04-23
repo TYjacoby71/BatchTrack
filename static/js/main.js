@@ -25,7 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
-      console.warn('Save button not found: saveQuickUnit');
+      // Retry after a short delay if button not found
+      setTimeout(initQuickAddUnit, 100);
       return;
     }
 
