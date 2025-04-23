@@ -76,7 +76,7 @@
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
             {% if recipe %}
-            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, '{{ 'variation' if recipe.parent_id else 'recipe' }}', {{ recipe.variations|length }})">
+            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
                 {% if recipe.parent_id %}
                 Delete Variation
                 {% elif recipe.variations %}
@@ -92,12 +92,15 @@
 </form>
 
 <script>
-function confirmDelete(recipeId, type, variationCount) {
-    const msg = type === 'variation' ? 
-        'Are you sure you want to delete this variation? This action cannot be undone.' :
-        variationCount > 0 ?
-        'Are you sure you want to delete this recipe and ALL its variations?' :
-        'Are you sure you want to delete this recipe?';
+function confirmDelete(recipeId, isVariation, variationCount) {
+    let msg;
+    if (isVariation) {
+        msg = 'Are you sure you want to delete this variation?';
+    } else if (variationCount > 0) {
+        msg = 'Deleting the parent recipe will delete all variations under it.';
+    } else {
+        msg = 'Are you sure you want to delete this recipe?';
+    }
         
     if (confirm(msg)) {
         const form = document.createElement('form');
