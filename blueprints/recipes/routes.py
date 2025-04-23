@@ -123,7 +123,7 @@ def lock_recipe(recipe_id):
 @login_required
 def unlock_recipe(recipe_id):
     from flask_login import current_user
-
+    
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')
 
@@ -141,22 +141,12 @@ def unlock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        as_parent = request.args.get('as_parent', 'false') == 'true'
-
-        cloned = Recipe(
-            name=f"{original.name} Copy",
-            instructions=original.instructions,
-            label_prefix=original.label_prefix,
-            parent_id=None if as_parent else original.parent_id
-        )
-        db.session.add(cloned)
-        #Also copy ingredients
-        for ingredient in original.ingredients:
-            new_ingredient = RecipeIngredient(recipe_id=cloned.id, inventory_item_id=ingredient.inventory_item_id, amount=ingredient.amount, unit=ingredient.unit)
-            db.session.add(new_ingredient)
-
-        db.session.commit()
-        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
+        original.name = f"Copy of {original.name}"
+        return render_template('recipe_form.html',
+                            recipe=original,
+                            is_clone=True,
+                            all_ingredients=InventoryItem.query.all(),
+                            inventory_units=get_global_unit_list())
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
