@@ -113,17 +113,27 @@ def create_variation(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 def lock_recipe(recipe_id):
-    try:
-        recipe = Recipe.query.get_or_404(recipe_id)
-        recipe.is_locked = True
-        db.session.commit()
-        flash('Recipe locked.')
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
-    except Exception as e:
-        flash(f"Error locking recipe: {str(e)}", "error")
-        current_app.logger.exception(f"Unexpected error locking recipe: {str(e)}")
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    recipe = Recipe.query.get_or_404(recipe_id)
+    recipe.is_locked = True
+    db.session.commit()
+    flash('Recipe locked successfully.')
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+@recipes_bp.route('/<int:recipe_id>/unlock', methods=['POST'])
+@login_required
+def unlock_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    unlock_password = request.form.get('unlock_password')
+
+    # You can change this password or store it in environment variables
+    if unlock_password == 'admin123':
+        recipe.is_locked = False
+        db.session.commit()
+        flash('Recipe unlocked successfully.')
+    else:
+        flash('Invalid password.', 'error')
+
+    return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
