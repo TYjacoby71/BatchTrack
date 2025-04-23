@@ -1,3 +1,38 @@
+
+document.addEventListener('DOMContentLoaded', function() {
+  const quickAddForm = document.getElementById('quickAddIngredientForm');
+  if (quickAddForm) {
+    quickAddForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('new-ingredient-name').value;
+      const unit = document.getElementById('new-ingredient-unit').value;
+
+      fetch('/ingredient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ name, unit })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.id && data.name) {
+          const dropdown = document.querySelector('#ingredient-select');
+          const option = new Option(data.name, data.id, true, true);
+          dropdown.add(option);
+        }
+        const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+        modal.hide();
+      })
+      .catch(err => {
+        console.error('Quick add failed', err);
+      });
+    });
+  }
+});
+
 function filterUnits() {
   const filter = document.getElementById('unitFilter').value;
   const unitCards = document.querySelectorAll('.card.mb-3');
