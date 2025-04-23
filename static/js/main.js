@@ -1,4 +1,29 @@
 
+async function checkProductionStock() {
+    const form = document.querySelector('.production-plan-form');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const result = await response.text();
+        // Replace the current page content with the response
+        document.documentElement.innerHTML = result;
+        
+    } catch (error) {
+        console.error('Error checking stock:', error);
+        alert('Error checking stock. Please try again.');
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
