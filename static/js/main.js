@@ -19,9 +19,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
       console.log(`Creating unit: ${name} (${type})`);
 
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      
       fetch('/quick-add/unit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
         body: JSON.stringify({ name, type })
       })
       .then(r => r.json())
