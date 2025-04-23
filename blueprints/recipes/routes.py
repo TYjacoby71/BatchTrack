@@ -174,19 +174,40 @@ def clone_recipe(recipe_id):
 def delete_recipe(recipe_id):
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
-        # Delete child recipes (variations) first
-        for variation in recipe.variations:
-            RecipeIngredient.query.filter_by(recipe_id=variation.id).delete()
-            db.session.delete(variation)
-        # Then delete this recipe's ingredients
-        RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
-        db.session.delete(recipe)
-        db.session.commit()
-        flash('Recipe deleted successfully.')
+        
+        # Start transaction
+        db.session.begin_nested()
+        
+        try:
+            # For variations, only delete the variation itself
+            if recipe.parent_id:
+                # Delete variation's ingredients
+                RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+                db.session.delete(recipe)
+                flash('Variation deleted successfully.')
+            else:
+                # For main recipes, delete all variations first
+                for variation in recipe.variations:
+                    RecipeIngredient.query.filter_by(recipe_id=variation.id).delete()
+                    db.session.delete(variation)
+                
+                # Then delete the main recipe
+                RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+                db.session.delete(recipe)
+                flash('Recipe and all variations deleted successfully.')
+            
+            db.session.commit()
+            
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.error(f"Database error deleting recipe {recipe_id}: {str(e)}")
+            flash('Database error occurred while deleting recipe.', 'error')
+            raise
+            
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Error deleting recipe {recipe_id}: {str(e)}")
-        flash(f'Error deleting recipe: {str(e)}', 'error')
+        flash('An error occurred while deleting the recipe.', 'error')
+        
     return redirect(url_for('recipes.list_recipes'))
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
