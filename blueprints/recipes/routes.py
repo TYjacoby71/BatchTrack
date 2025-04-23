@@ -12,26 +12,49 @@ recipes_bp = Blueprint('recipes', __name__)
 def new_recipe():
     if request.method == 'POST':
         try:
+            # Create recipe first
             recipe = Recipe(
                 name=request.form.get('name'),
                 instructions=request.form.get('instructions'),
                 label_prefix=request.form.get('label_prefix')
             )
             db.session.add(recipe)
+            db.session.flush()  # Get recipe.id before committing
+
+            # Handle ingredients
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                if ing_id and amt and unit:
+                    try:
+                        recipe_ingredient = RecipeIngredient(
+                            recipe_id=recipe.id,
+                            inventory_item_id=int(ing_id),
+                            amount=float(amt.strip()),
+                            unit=unit.strip()
+                        )
+                        db.session.add(recipe_ingredient)
+                    except ValueError as e:
+                        current_app.logger.error(f"Invalid ingredient data: {e}")
+                        continue
+
             db.session.commit()
-            flash('Recipe created successfully.')
-            return redirect(url_for('recipes.edit_recipe', recipe_id=recipe.id))
+            flash('Recipe created successfully with ingredients.')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
         except ValueError as e:
             current_app.logger.error(f"Value error creating recipe: {str(e)}")
             flash('Invalid values in recipe form', 'error')
+            db.session.rollback()
         except SQLAlchemyError as e:
             current_app.logger.error(f"Database error creating recipe: {str(e)}")
             flash('Database error creating recipe', 'error')
-            db.session.rollback() # Rollback transaction on database error
+            db.session.rollback()
         except Exception as e:
             current_app.logger.exception(f"Unexpected error creating recipe: {str(e)}")
             flash('An unexpected error occurred', 'error')
-            db.session.rollback() # Rollback transaction on unexpected error
+            db.session.rollback()
 
 
     inventory_units = get_global_unit_list()
@@ -169,41 +192,41 @@ def delete_recipe(recipe_id):
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_recipe(recipe_id):
-    if request.method == 'POST' and request.form.get('recipe_token'):
-        return redirect(url_for('recipes.edit_recipe', recipe_id=request.form.get('recipe_token')))
     recipe = Recipe.query.get_or_404(recipe_id)
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
 
     if request.method == 'POST':
         try:
-            # First handle ingredients
+            recipe.name = request.form['name']
+            recipe.instructions = request.form.get('instructions', '')
+            recipe.label_prefix = request.form.get('label_prefix', '')
+
+            # Clear existing ingredient links
+            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+
+            # Re-add ingredients
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
             units = request.form.getlist('units[]')
-            
-            # Clear existing ingredients
-            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
-            
-            # Add new ingredients
-            for i in range(len(ingredient_ids)):
-                if ingredient_ids[i]:  # Only add if ingredient was selected
-                    new_ingredient = RecipeIngredient(
-                        recipe_id=recipe.id,
-                        inventory_item_id=int(ingredient_ids[i]),
-                        amount=float(amounts[i]),
-                        unit=units[i]
-                    )
-                    db.session.add(new_ingredient)
-            
-            # Then update recipe details
-            recipe.name = request.form.get('name')
-            recipe.instructions = request.form.get('instructions')
-            recipe.label_prefix = request.form.get('label_prefix')
-            
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                if ing_id and amt and unit:
+                    try:
+                        assoc = RecipeIngredient(
+                            recipe_id=recipe.id,
+                            inventory_item_id=int(ing_id),
+                            amount=float(amt.strip()),
+                            unit=unit.strip()
+                        )
+                        db.session.add(assoc)
+                    except Exception as e:
+                        current_app.logger.error(f"Error updating ingredient: {e}")
+                        flash(f'Error updating ingredient: {str(e)}', 'error')
+
             db.session.commit()
-            flash('Recipe and ingredients updated successfully.')
-            return redirect(url_for('recipes.list_recipes'))
+            flash('Recipe updated successfully.')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
         except ValueError as e:
             current_app.logger.error(f"Value error updating recipe: {str(e)}")
             flash('Invalid values in recipe form', 'error')
