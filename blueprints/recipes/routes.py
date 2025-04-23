@@ -143,26 +143,11 @@ def lock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        clone = Recipe(
-            name=f"Copy of {original.name}",
-            instructions=original.instructions,
-            label_prefix=original.label_prefix
-        )
-        db.session.add(clone)
-        db.session.flush()
-
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=clone.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
-
-        db.session.commit()
-        flash('Recipe cloned successfully')
-        return redirect(url_for('recipes.edit_recipe', recipe_id=clone.id))
+        return render_template('recipe_form.html',
+                            recipe=original,
+                            is_clone=True,
+                            all_ingredients=InventoryItem.query.all(),
+                            inventory_units=get_global_unit_list())
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
@@ -174,10 +159,10 @@ def clone_recipe(recipe_id):
 def delete_recipe(recipe_id):
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
-        
+
         # Start transaction
         db.session.begin_nested()
-        
+
         try:
             # For variations, only delete the variation itself
             if recipe.parent_id:
@@ -190,24 +175,24 @@ def delete_recipe(recipe_id):
                 for variation in recipe.variations:
                     RecipeIngredient.query.filter_by(recipe_id=variation.id).delete()
                     db.session.delete(variation)
-                
+
                 # Then delete the main recipe
                 RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
                 db.session.delete(recipe)
                 flash('Recipe and all variations deleted successfully.')
-            
+
             db.session.commit()
-            
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.error(f"Database error deleting recipe {recipe_id}: {str(e)}")
             flash('Database error occurred while deleting recipe.', 'error')
             raise
-            
+
     except Exception as e:
         current_app.logger.error(f"Error deleting recipe {recipe_id}: {str(e)}")
         flash('An error occurred while deleting the recipe.', 'error')
-        
+
     return redirect(url_for('recipes.list_recipes'))
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
