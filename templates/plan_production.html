@@ -4,7 +4,7 @@
 
 <form method="post" class="production-plan-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% if recipe.variations %}
+    {% if recipe.variations and not hide_variations %}
     <div class="form-group">
         <label for="variation_id">Variation:</label>
         <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
