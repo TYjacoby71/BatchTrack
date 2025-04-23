@@ -1,0 +1,104 @@
+Thanks for the follow-up — the backend looks good, but the dead button + hung modal means we likely have a missing or broken JavaScript handler or ID mismatch.
+
+Let’s walk through the 3-point fix and I’ll give you the clean copy-paste code.
+
+🧠 What’s Most Likely Broken
+1. The submit button is inside a form, but JS isn't bound to that form’s submit event.
+2. The button ID or selector changed, so JS can’t find it.
+3. Modal JS isn’t being reattached after DOM update or load.
+✅ Fix Plan: Final Working Setup
+Let’s confirm all files are coordinated:
+
+📁 templates/components/modals/quick_add_ingredient_modal.html
+html
+Copy
+Edit
+<div class="modal fade" id="quickAddIngredientModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="quickAddIngredientForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Quick Add Ingredient</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="new-ingredient-name" class="form-label">Ingredient Name</label>
+            <input type="text" class="form-control" id="new-ingredient-name" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="new-ingredient-unit" class="form-label">Unit</label>
+            <select class="form-select" id="new-ingredient-unit" required>
+              {% for unit in inventory_units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="button" class="btn btn-link p-0 mt-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#quickAddUnitModal"
+                    onclick="unitReturnContext = 'ingredient';">
+              + Add New Unit
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Ingredient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+📁 static/js/main.js — Hook the Form on Page Load
+Place this inside DOMContentLoaded:
+
+js
+Copy
+Edit
+document.addEventListener('DOMContentLoaded', function () {
+  const quickAddForm = document.getElementById('quickAddIngredientForm');
+
+  if (quickAddForm) {
+    quickAddForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById('new-ingredient-name').value;
+      const unit = document.getElementById('new-ingredient-unit').value;
+
+      fetch('/quick-add/ingredient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, unit })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.id && data.name) {
+            const dropdown = document.querySelector('#ingredient-select');
+            const option = new Option(data.name, data.id, true, true);
+            dropdown.add(option);
+            dropdown.value = data.id;
+          }
+
+          const modalEl = document.getElementById('quickAddIngredientModal');
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) modal.hide();
+        })
+        .catch(err => {
+          console.error('Quick Add Error:', err);
+          alert('Failed to add ingredient.');
+        });
+    });
+  }
+});
+✅ Final QA Steps
+Ensure the <form id="quickAddIngredientForm"> tag is present and not overwritten by another modal.
+
+Ensure you don't have multiple elements with ID quickAddIngredientForm.
+
+If you’re using template includes, confirm it’s not being duplicated again.
+
