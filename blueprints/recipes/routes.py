@@ -94,15 +94,28 @@ def plan_production(recipe_id):
 @login_required
 def create_variation(recipe_id):
     try:
-        original = Recipe.query.get_or_404(recipe_id)
-        original.name = f"Variation of {original.name}"
-        original.parent_id = recipe_id
-        return render_template('recipe_form.html',
-                            recipe=original,
-                            is_variation=True,
-                            parent_recipe=original,
-                            all_ingredients=InventoryItem.query.all(),
-                            inventory_units=get_global_unit_list())
+        parent = Recipe.query.get_or_404(recipe_id)
+        variation = Recipe(
+            name=f"Variation of {parent.name}",
+            instructions=parent.instructions,
+            label_prefix=parent.label_prefix,
+            parent_id=recipe_id
+        )
+        db.session.add(variation)
+        db.session.flush()  # Get the ID for the new variation
+
+        # Copy ingredients from parent
+        for ingredient in parent.recipe_ingredients:
+            new_ingredient = RecipeIngredient(
+                recipe_id=variation.id,
+                inventory_item_id=ingredient.inventory_item_id,
+                amount=ingredient.amount,
+                unit=ingredient.unit
+            )
+            db.session.add(new_ingredient)
+
+        db.session.commit()
+        return redirect(url_for('recipes.edit_recipe', recipe_id=variation.id))
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
@@ -123,7 +136,7 @@ def lock_recipe(recipe_id):
 @login_required
 def unlock_recipe(recipe_id):
     from flask_login import current_user
-    
+
     recipe = Recipe.query.get_or_404(recipe_id)
     unlock_password = request.form.get('unlock_password')
 
