@@ -21,13 +21,12 @@
                 onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
                 {% endif %}>Edit Recipe</button>
     </form>
+    {% if not recipe.parent_id %}
     <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
     </form>
-    {% if not recipe.parent_id %}
     <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-info">New Variation</a>
-    {% endif %}
-    {% if recipe.parent_id %}
+    {% else %}
       <button type="button" class="btn btn-secondary" onclick="showDuplicateOptions({{ recipe.id }})">Duplicate Variation</button>
       <!-- Duplicate Variation Modal -->
       <div class="modal fade" id="duplicateModal-{{ recipe.id }}" tabindex="-1">
@@ -38,11 +37,11 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-              Are you sure you want to duplicate this variation?
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <a href="{{ url_for('recipes.clone_variation', recipe_id=recipe.id) }}" class="btn btn-primary">Duplicate as Variation</a>
+              <p>How would you like to duplicate this variation?</p>
+              <div class="d-grid gap-2">
+                <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id, as_parent='true') }}" class="btn btn-primary">Create New Parent Recipe</a>
+                <a href="{{ url_for('recipes.clone_variation', recipe_id=recipe.id) }}" class="btn btn-secondary">Create New Variation</a>
+              </div>
             </div>
           </div>
         </div>
