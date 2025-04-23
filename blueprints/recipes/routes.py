@@ -5,6 +5,12 @@ from models import db, Recipe, RecipeIngredient
 
 recipes_bp = Blueprint('recipes', __name__)
 
+@recipes_bp.route('/')
+@login_required
+def list_recipes():
+    recipes = Recipe.query.all()
+    return render_template('recipe_list.html', recipes=recipes)
+
 @recipes_bp.route('/<int:recipe_id>/variation/new')
 @login_required
 def create_variation(recipe_id):
