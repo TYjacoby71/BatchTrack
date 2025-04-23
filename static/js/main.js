@@ -1,7 +1,18 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
+    // Cancel button handler
+    document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
+      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+      if (unitModal) unitModal.hide();
+
+      setTimeout(() => {
+        const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+        ingredientModal.show();
+        document.getElementById('ingredientName')?.focus();
+      }, 300);
+    });
+
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
       console.warn('Save button not found: saveQuickUnit');
@@ -20,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`Creating unit: ${name} (${type})`);
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      
+
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
