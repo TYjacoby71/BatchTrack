@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const name = document.getElementById('new-ingredient-name').value;
       const unit = document.getElementById('new-ingredient-unit').value;
 
-      fetch('/ingredient', {
+      fetch('/quick-add/ingredient', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

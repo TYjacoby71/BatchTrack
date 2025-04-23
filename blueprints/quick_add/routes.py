@@ -1,31 +1,29 @@
-
 from flask import Blueprint, request, jsonify
-from models import db, InventoryItem, Unit
+from flask_wtf.csrf import csrf_exempt
+from models import db, InventoryItem
 
-quick_add_bp = Blueprint('quick_add', __name__)
+quick_add_bp = Blueprint("quick_add", __name__)
 
-@quick_add_bp.route('/ingredient', methods=['POST'])
+@quick_add_bp.route('/quick-add/ingredient', methods=['POST'])
+@csrf_exempt
 def quick_add_ingredient():
     data = request.get_json()
     name = data.get('name', '').strip()
     unit = data.get('unit', '').strip()
 
     if not name or not unit:
-        return jsonify({'error': 'Name and unit are required.'}), 400
+        return jsonify({"error": "Missing name or unit"}), 400
 
+    # Check for existing
     existing = InventoryItem.query.filter_by(name=name).first()
     if existing:
-        return jsonify({'error': 'Item already exists.'}), 409
+        return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
 
-    ingredient = InventoryItem(name=name, quantity=0.0, unit=unit, cost_per_unit=0.0)
-    db.session.add(ingredient)
+    new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+    db.session.add(new_item)
     db.session.commit()
 
-    return jsonify({
-        'id': ingredient.id,
-        'name': ingredient.name,
-        'unit': ingredient.unit
-    }), 201
+    return jsonify({"id": new_item.id, "name": new_item.name, "unit": new_item.unit}), 200
 
 @quick_add_bp.route('/unit', methods=['POST'])
 def quick_add_unit():
