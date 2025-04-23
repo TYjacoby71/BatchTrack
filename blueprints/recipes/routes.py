@@ -136,6 +136,37 @@ def unlock_recipe(recipe_id):
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+@recipes_bp.route('/<int:recipe_id>/clone-variation')
+@login_required
+def clone_variation(recipe_id):
+    try:
+        original = Recipe.query.get_or_404(recipe_id)
+        # Clone as variation under the same parent
+        cloned = Recipe(
+            name=f"{original.name} Copy",
+            instructions=original.instructions,
+            label_prefix=original.label_prefix,
+            parent_id=original.parent_id
+        )
+        db.session.add(cloned)
+        
+        # Copy ingredients
+        for ingredient in original.ingredients:
+            new_ingredient = RecipeIngredient(
+                recipe_id=cloned.id,
+                inventory_item_id=ingredient.inventory_item_id,
+                amount=ingredient.amount,
+                unit=ingredient.unit
+            )
+            db.session.add(new_ingredient)
+
+        db.session.commit()
+        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
+    except Exception as e:
+        flash(f"Error cloning variation: {str(e)}", "error")
+        current_app.logger.exception(f"Unexpected error cloning variation: {str(e)}")
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
