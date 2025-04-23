@@ -1,72 +1,81 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
-    if (!saveButton) return;
+    if (!saveButton) {
+      console.warn('Save button not found: saveQuickUnit');
+      return;
+    }
 
-    saveButton.addEventListener('click', function() {
+    saveButton.addEventListener('click', () => {
       const name = document.getElementById('unitName').value.trim();
       const type = document.getElementById('unitType').value;
 
-      if (!name) return alert('Unit name required.');
+      if (!name) {
+        alert('Unit name required');
+        return;
+      }
+
+      console.log(`Creating unit: ${name} (${type})`);
 
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type })
       })
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) {
-            alert('Error: ' + data.error);
-            return;
-          }
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
 
-          // Insert unit into ingredient modal dropdown
-          const unitSelect = document.getElementById('quickIngredientUnit');
-          if (unitSelect) {
-            const newOption = new Option(data.name, data.name, false, true);
-            unitSelect.add(newOption);
-            unitSelect.value = data.name;
-          }
+        // Insert unit into ingredient modal dropdown
+        const unitSelect = document.getElementById('quickIngredientUnit');
+        if (unitSelect) {
+          const newOption = new Option(data.name, data.name, false, true);
+          unitSelect.add(newOption);
+          unitSelect.value = data.name;
+        }
 
-          // Update all other unit dropdowns
-          document.querySelectorAll("select[name='units[]']").forEach(select => {
-            const option = new Option(data.name, data.name);
-            select.add(option);
-          });
+        // Add to quick ingredient unit dropdown
+        const quickUnit = document.getElementById('new-ingredient-unit');
+        if (quickUnit) {
+          quickUnit.add(new Option(data.name, data.name, false, true));
+          quickUnit.value = data.name;
+        }
 
-
-          // Add to quick ingredient unit dropdown
-          const quickUnit = document.getElementById('new-ingredient-unit');
-          if (quickUnit) {
-            quickUnit.add(new Option(data.name, data.name, false, true));
-            quickUnit.value = data.name;
-          }
-
-          // Reset form
-          document.getElementById('unitName').value = '';
-          document.getElementById('unitType').selectedIndex = 0;
+        // Update all other unit dropdowns
+        document.querySelectorAll("select[name='units[]']").forEach(select => {
+          const option = new Option(data.name, data.name);
+          select.add(option);
         });
+
+        // Handle modal transitions
+        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+        if (unitModal) {
+          unitModal.hide();
+          setTimeout(() => {
+            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+            ingredientModal.show();
+            document.getElementById('ingredientName')?.focus();
+          }, 300);
+        }
+
+        // Reset form
+        document.getElementById('unitName').value = '';
+        document.getElementById('unitType').selectedIndex = 0;
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to add unit");
+      });
     });
   }
 
   initQuickAddUnit();
-
-  // Initialize modals
-  const quickAddUnitModal = document.getElementById('quickAddUnitModal');
-  const quickAddIngredientModal = document.getElementById('quickAddIngredientModal');
-
-  if (quickAddUnitModal) {
-    const unitModal = new bootstrap.Modal(quickAddUnitModal);
-    quickAddUnitModal.addEventListener('hidden.bs.modal', function() {
-      setTimeout(() => {
-        const ingredientModal = new bootstrap.Modal(quickAddIngredientModal);
-        ingredientModal.show();
-        document.getElementById('ingredientName')?.focus();
-      }, 300);
-    });
-  }
+  loadUnits();
 });
 
 function filterUnits() {
@@ -135,10 +144,6 @@ function loadUnits() {
     .catch(error => console.error('Error loading units:', error));
 }
 
-// Load units when page loads and when converter modal opens
-document.addEventListener('DOMContentLoaded', loadUnits);
-document.getElementById('unitConverterModal')?.addEventListener('show.bs.modal', loadUnits);
-
 function displayResult(element, text) {
   element.innerHTML = `
     <p>${text}</p>
@@ -153,7 +158,6 @@ function copyToClipboard(text) {
     console.error('Failed to copy:', err);
   });
 }
-
 
 function convertUnits() {
   const amount = document.getElementById('amount').value;
