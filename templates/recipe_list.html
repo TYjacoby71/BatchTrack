@@ -19,7 +19,11 @@
                 </div>
                 <div>
                     <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
-                    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" 
+                       class="btn btn-outline-secondary btn-sm"
+                       {% if recipe.is_locked %}
+                       onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
+                       {% endif %}>Edit</a>
                     <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">Plan</a>
                     <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">Duplicate</a>
                     <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-success btn-sm">+ Variation</a>
