@@ -14,33 +14,7 @@
   </p>
 {% endif %}
 
-<div class="actions mb-4">
-    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" 
-                class="btn btn-primary" 
-                {% if recipe.is_locked %}
-                onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
-                {% endif %}>Edit Recipe</button>
-    </form>
-    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
-    </form>
-    {% if not recipe.parent_id %}
-    <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-info">New Variation</a>
-    {% endif %}
-    {% if recipe.is_locked %}
-      <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
-        {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
-      </button>
-    {% else %}
-      <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-warning">
-          {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
-        </button>
-      </form>
-    {% endif %}
-</div>
+<div class="action-buttons mb-3">
   <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">Duplicate</a>
   {% if not recipe.parent_id %}
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
@@ -100,7 +74,17 @@
     {% endif %}
 </div>
 
-<div class="actions mt-4">
+<div class="actions">
+    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" 
+                class="btn btn-primary" 
+                {% if recipe.is_locked %}
+                onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
+                {% endif %}>Edit Recipe</button>
+    </form>
+    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+    </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
