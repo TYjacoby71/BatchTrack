@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% from 'macros/forms.html' import csrf_form %}
 {% block content %}
 <h2>{{ recipe.name }}</h2>
 
@@ -18,7 +19,7 @@
   <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
   {% if not recipe.is_locked %}
     <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm btn-warning">Lock Recipe</button>
     </form>
   {% endif %}
@@ -41,17 +42,13 @@
 </div>
 
 <div class="actions">
-    <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="recipe_token" value="{{ recipe.id }}">
+    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <button type="submit" class="btn btn-primary">Edit Recipe</button>
     </form>
     <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">Duplicate Recipe</a>
-    <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="recipe_token" value="{{ recipe.id }}">
+    {% call csrf_form(url_for('recipes.delete_recipe', recipe_id=recipe.id), method='post', classes='d-inline') %}
         <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this recipe?')">Delete Recipe</button>
-    </form>
+    {% endcall %}
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
