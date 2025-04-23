@@ -149,7 +149,7 @@ def clone_variation(recipe_id):
             parent_id=original.parent_id
         )
         db.session.add(cloned)
-        
+
         # Copy ingredients
         for ingredient in original.recipe_ingredients:
             new_ingredient = RecipeIngredient(
@@ -161,7 +161,7 @@ def clone_variation(recipe_id):
             db.session.add(new_ingredient)
 
         db.session.commit()
-        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
+        return redirect(url_for('recipes.edit_recipe', recipe_id=cloned.id))
     except Exception as e:
         flash(f"Error cloning variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning variation: {str(e)}")
@@ -195,7 +195,7 @@ def clone_recipe(recipe_id):
             db.session.add(new_ingredient)
 
         db.session.commit()
-        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
+        return redirect(url_for('recipes.edit_recipe', recipe_id=cloned.id))
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
