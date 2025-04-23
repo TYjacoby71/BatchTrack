@@ -143,7 +143,7 @@ def lock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        original.name = f"{original.name} Copy"
+        original.name = f"Copy of {original.name}"
         return render_template('recipe_form.html',
                             recipe=original,
                             is_clone=True,
