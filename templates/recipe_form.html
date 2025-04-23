@@ -88,12 +88,7 @@
             </form>
             {% endif %}
         </div>
-        <div>
-            {% if recipe and recipe.parent_id %}
-            <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-info">Duplicate</a>
-            {% endif %}
-            <button type="submit" class="btn btn-primary">Save Recipe</button>
-        </div>
+        <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
 
