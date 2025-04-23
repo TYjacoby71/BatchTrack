@@ -45,7 +45,9 @@
     <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <button type="submit" class="btn btn-primary">Edit Recipe</button>
     </form>
-    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">Duplicate Recipe</a>
+    <form method="get" action="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-secondary">Duplicate Recipe</button>
+    </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
