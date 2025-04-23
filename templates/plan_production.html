@@ -41,12 +41,80 @@
     <label for="containers">Containers for this batch:</label>
     <select name="container_ids[]" id="containers" class="form-select" multiple>
       {% for container in containers %}
-      <option value="{{ container.id }}">{{ container.name }} ({{ "%.0f"|format(container.quantity) }} {{ container.unit }} available)</option>
+      <option value="{{ container.id }}">{{ container.name }} ({{ "%.0f"|format(container.quantity) }} {{ container.unit }} in stock)</option>
       {% endfor %}
     </select>
     <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple containers</small>
+    <button type="button" class="btn btn-outline-secondary mt-2" onclick="showQuickAddContainerModal()">Quick Add Container</button>
   </div>
 </div>
+
+<!-- Quick Add Container Modal -->
+<div class="modal fade" id="quickAddContainerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Container</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickAddContainerForm">
+          <div class="mb-3">
+            <label class="form-label">Container Name</label>
+            <input type="text" class="form-control" id="containerName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Unit</label>
+            <select class="form-select" id="containerUnit" required>
+              {% for unit in inventory_units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Add Container</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showQuickAddContainerModal() {
+  const modal = new bootstrap.Modal(document.getElementById('quickAddContainerModal'));
+  modal.show();
+}
+
+document.getElementById('quickAddContainerForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('containerName').value;
+  const unit = document.getElementById('containerUnit').value;
+  
+  try {
+    const response = await fetch('/quick-add/ingredient', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        name: name,
+        unit: unit,
+        type: 'container'
+      })
+    });
+    
+    if (response.ok) {
+      const container = await response.json();
+      const containerSelect = document.getElementById('containers');
+      const option = new Option(`${container.name} (0 ${container.unit} in stock)`, container.id);
+      containerSelect.add(option);
+      bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal')).hide();
+    }
+  } catch (error) {
+    console.error('Error adding container:', error);
+  }
+});
+</script>
 
 <button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
 

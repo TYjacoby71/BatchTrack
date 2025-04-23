@@ -1,4 +1,3 @@
-
 from models import InventoryItem, RecipeIngredient
 from services.unit_conversion import ConversionEngine
 
@@ -24,7 +23,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
         status = 'OK' if available >= needed_converted else 'LOW' if available > 0 else 'NEEDED'
         if status != 'OK':
             all_ok = False
-            
+
         results.append({
             'name': ing.name,
             'unit': ing.unit,
@@ -38,7 +37,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
 def check_container_availability(container_ids, scale=1.0):
     results = []
     all_ok = True
-    
+
     from models import InventoryItem
 
     for cid in container_ids:
