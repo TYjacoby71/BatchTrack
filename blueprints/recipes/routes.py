@@ -243,4 +243,3 @@ def edit_recipe(recipe_id):
                          recipe=recipe,
                          all_ingredients=all_ingredients,
                          inventory_units=inventory_units)
-
