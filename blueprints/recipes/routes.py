@@ -141,6 +141,7 @@ def unlock_recipe(recipe_id):
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
+        # Allow cloning regardless of lock status
         original.name = f"Copy of {original.name}"
         return render_template('recipe_form.html',
                             recipe=original,
