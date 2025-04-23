@@ -16,11 +16,19 @@
 <div class="alert alert-info mb-3">
     <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
+{% elif is_clone and recipe %}
+<div class="alert alert-info mb-3">
+    <strong>Creating a copy of:</strong> {{ recipe.name }}
+</div>
 {% endif %}
 
-{% if recipe %}
+{% if recipe and not is_clone %}
   <form method="post" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% elif is_clone %}
+  <form method="post" action="{{ url_for('recipes.new_recipe') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="is_clone" value="true">
 {% else %}
   <form method="post" action="{{ url_for('recipes.new_recipe') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -75,31 +83,49 @@
     <div class="form-group mt-3 d-flex justify-content-between">
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
-            {% if recipe %}
-            <form method="post" action="{{ url_for('recipes.delete_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if recipe and not is_clone and not is_variation and not parent_recipe %}
+            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
                 {% if recipe.parent_id %}
-                <button type="submit" class="btn btn-danger" 
-                        onclick="return confirm('Are you sure you want to delete this variation? This action cannot be undone.')">
-                    Delete Variation
-                </button>
+                Delete Variation
                 {% elif recipe.variations %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this recipe and ALL its variations?')">
-                    Delete Recipe & Variations
-                </button>
+                Delete Recipe & Variations
                 {% else %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this recipe?')">
-                    Delete Recipe
-                </button>
+                Delete Recipe
                 {% endif %}
-            </form>
+            </button>
             {% endif %}
         </div>
         <button type="submit" class="btn btn-primary">Save Recipe</button>
     </div>
 </form>
+
+<script>
+function confirmDelete(recipeId, isVariation, variationCount) {
+    let msg;
+    if (isVariation) {
+        msg = 'Are you sure you want to delete this variation?';
+    } else if (variationCount > 0) {
+        msg = 'Deleting the parent recipe will delete all variations under it.';
+    } else {
+        msg = 'Are you sure you want to delete this recipe?';
+    }
+        
+    if (confirm(msg)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/recipes/${recipeId}/delete`;
+        
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrf_token';
+        csrf.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 
 {% include 'quick_add_ingredient_modal.html' %}
 
