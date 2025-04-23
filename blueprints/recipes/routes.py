@@ -94,17 +94,13 @@ def plan_production(recipe_id):
 @login_required
 def create_variation(recipe_id):
     try:
-        parent = Recipe.query.get_or_404(recipe_id)
-        variation = Recipe(
-            name=f"Variation of {parent.name}",
-            instructions=parent.instructions,
-            label_prefix=parent.label_prefix,
-            parent_id=recipe_id
-        )
+        original = Recipe.query.get_or_404(recipe_id)
+        original.name = f"Variation of {original.name}"
+        original.parent_id = recipe_id
         return render_template('recipe_form.html',
-                            recipe=variation,
+                            recipe=original,
                             is_variation=True,
-                            parent_recipe=parent,
+                            parent_recipe=original,
                             all_ingredients=InventoryItem.query.all(),
                             inventory_units=get_global_unit_list())
     except Exception as e:
@@ -140,37 +136,6 @@ def unlock_recipe(recipe_id):
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
-@recipes_bp.route('/<int:recipe_id>/clone-variation')
-@login_required
-def clone_variation(recipe_id):
-    try:
-        original = Recipe.query.get_or_404(recipe_id)
-        # Clone as variation under the same parent
-        cloned = Recipe(
-            name=f"{original.name} Copy",
-            instructions=original.instructions,
-            label_prefix=original.label_prefix,
-            parent_id=original.parent_id
-        )
-        db.session.add(cloned)
-
-        # Copy ingredients
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=cloned.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
-            db.session.add(new_ingredient)
-
-        db.session.commit()
-        return redirect(url_for('recipes.edit_recipe', recipe_id=cloned.id))
-    except Exception as e:
-        flash(f"Error cloning variation: {str(e)}", "error")
-        current_app.logger.exception(f"Unexpected error cloning variation: {str(e)}")
-        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
@@ -178,28 +143,20 @@ def clone_recipe(recipe_id):
         original = Recipe.query.get_or_404(recipe_id)
         as_parent = request.args.get('as_parent', 'false') == 'true'
 
-        # Create new recipe
         cloned = Recipe(
             name=f"{original.name} Copy",
             instructions=original.instructions,
             label_prefix=original.label_prefix,
-            parent_id=None if (as_parent or not original.parent_id) else original.parent_id
+            parent_id=None if as_parent else original.parent_id
         )
         db.session.add(cloned)
-        db.session.flush()  # Get the ID for the new recipe
-
-        # Copy ingredients
-        for ingredient in original.recipe_ingredients:
-            new_ingredient = RecipeIngredient(
-                recipe_id=cloned.id,
-                inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
-                unit=ingredient.unit
-            )
+        #Also copy ingredients
+        for ingredient in original.ingredients:
+            new_ingredient = RecipeIngredient(recipe_id=cloned.id, inventory_item_id=ingredient.inventory_item_id, amount=ingredient.amount, unit=ingredient.unit)
             db.session.add(new_ingredient)
 
         db.session.commit()
-        return redirect(url_for('recipes.edit_recipe', recipe_id=cloned.id))
+        return redirect(url_for('recipes.view_recipe', recipe_id=cloned.id))
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")

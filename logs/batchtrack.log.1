@@ -1,4 +1,4 @@
-2025-04-23 21:00:40,031 ERROR: Exception on /recipes/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-23 20:59:09,855 ERROR: Exception on /recipes/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -16,8 +16,57 @@ Traceback (most recent call last):
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/blueprints/recipes/routes.py", line 12, in list_recipes
-    def new_recipe():
-               ^^^^^^^
+    return render_template('recipe_list.html', recipes=recipes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/recipe_list.html", line 2, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/recipe_list.html", line 22, in block 'content'
+    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.edit_recipe' with values ['recipe_id']. Did you mean 'recipes.list_recipes' instead?
+2025-04-23 21:00:08,297 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 21:00:10,639 ERROR: Exception on /recipes/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 12, in list_recipes
+    return render_template('recipe_list.html', recipes=recipes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -46,73 +95,3 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.plan_production' with values ['recipe_id']. Did you mean 'recipes.new_recipe' instead?
-2025-04-23 21:00:47,007 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:03:35,507 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:05:09,422 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:06:20,064 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:06:35,596 ERROR: Exception on /recipes/7/unlock [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 128, in unlock_recipe
-    if current_user.check_password(unlock_password):
-       ^^^^^^^^^^^^
-NameError: name 'current_user' is not defined
-2025-04-23 21:07:28,087 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:09:29,732 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:12:18,669 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:13:43,226 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:16:51,017 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:17:10,031 ERROR: Unexpected error cloning recipe: 'Recipe' object has no attribute 'ingredients' [in /home/runner/workspace/blueprints/recipes/routes.py:162]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 154, in clone_recipe
-    for ingredient in original.ingredients:
-                      ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Recipe' object has no attribute 'ingredients'
-2025-04-23 21:18:12,380 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:18:24,459 ERROR: Unexpected error viewing recipe: Could not build url for endpoint 'recipes.clone_variation' with values ['recipe_id']. Did you mean 'recipes.create_variation' instead? [in /home/runner/workspace/blueprints/recipes/routes.py:84]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 79, in view_recipe
-    return render_template('view_recipe.html',
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/view_recipe.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/view_recipe.html", line 45, in block 'content'
-    <a href="{{ url_for('recipes.clone_variation', recipe_id=recipe.id) }}" class="btn btn-primary">Duplicate</a>
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.clone_variation' with values ['recipe_id']. Did you mean 'recipes.create_variation' instead?

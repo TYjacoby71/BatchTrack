@@ -1,4 +1,4 @@
-2025-04-23 20:59:09,855 ERROR: Exception on /recipes/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-23 15:42:43,382 ERROR: Exception on /recipes/7/edit [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,9 +15,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 12, in list_recipes
-    return render_template('recipe_list.html', recipes=recipes)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 242, in edit_recipe
+    return render_template('recipe_form.html',
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,26 +28,25 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/recipe_list.html", line 2, in top-level template code
-    {% extends "layout.html" %}
+  File "/home/runner/workspace/templates/recipe_form.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
+  File "/home/runner/workspace/templates/layout.html", line 96, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/recipe_list.html", line 22, in block 'content'
-    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+  File "/home/runner/workspace/templates/recipe_form.html", line 93, in block 'content'
+    {% include 'quick_add/quick_add_ingredient_modal.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.edit_recipe' with values ['recipe_id']. Did you mean 'recipes.list_recipes' instead?
-2025-04-23 21:00:08,297 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-23 21:00:10,639 ERROR: Exception on /recipes/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: quick_add/quick_add_ingredient_modal.html
+2025-04-23 15:43:20,108 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:44:58,867 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:46:09,464 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:46:13,255 ERROR: Exception on /recipes/7/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -64,9 +63,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 12, in list_recipes
-    return render_template('recipe_list.html', recipes=recipes)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 91, in plan_production
+    return render_template('plan_production.html', recipe=recipe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,21 +76,66 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/recipe_list.html", line 2, in top-level template code
-    {% extends "layout.html" %}
+  File "/home/runner/workspace/templates/plan_production.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 96, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/plan_production.html", line 3, in block 'content'
+    <h2>Plan Production: {{ base_recipe.name }}</h2>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'base_recipe' is undefined
+2025-04-23 15:48:02,446 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:48:45,230 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:53:18,887 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 15:55:06,227 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 16:00:43,592 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 16:02:16,800 ERROR: Exception on /recipes/7/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 91, in plan_production
+    return render_template('plan_production.html', recipe=recipe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/plan_production.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/recipe_list.html", line 23, in block 'content'
-    <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">Plan</a>
+  File "/home/runner/workspace/templates/plan_production.html", line 3, in block 'content'
+    <h2>Plan Production: {{ base_recipe.name }}</h2>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.plan_production' with values ['recipe_id']. Did you mean 'recipes.new_recipe' instead?
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'base_recipe' is undefined
+2025-04-23 16:03:55,516 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 16:11:17,603 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
