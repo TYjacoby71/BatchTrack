@@ -251,7 +251,28 @@ function updateStockCheckTable(data) {
   }
 }
 
-const tableBody = document.getElementById('stockCheckTableBody'); // Assumed ID for table body
-if (tableBody && data) { //Added null check for data
-  updateStockCheckTable(data);
+// Remove the direct data reference, updateStockCheckTable is now called from plan_production.html
+function updateStockCheckTable(data) {
+  const tableBody = document.getElementById('stockCheckTableBody');
+  const startBatchBtn = document.getElementById('startBatchBtn');
+
+  if (!tableBody) return;
+
+  tableBody.innerHTML = data.stock_check.map(item => {
+    const showUnit = item.type !== 'container';
+    return `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.type || 'ingredient'}</td>
+        <td>${item.name}</td>
+        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${showUnit ? item.unit : '-'}</td>
+        <td>${item.status}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (startBatchBtn) {
+    startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+  }
 }
