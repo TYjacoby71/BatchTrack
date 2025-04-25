@@ -154,22 +154,37 @@ async function checkProductionStock() {
     }
 
     const data = await response.json();
+    console.log("Stock check response:", data);
+    
     const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) return;
+    if (!resultsDiv) {
+      console.log("Results div not found");
+      return;
+    }
 
     resultsDiv.style.display = 'block';
     const tableBody = document.getElementById('stockCheckTableBody');
+    const startBatchBtn = document.getElementById('startBatchBtn');
+    
     if (!tableBody) return;
 
-    tableBody.innerHTML = data.stock_check.map(item => `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed} ${item.unit}</td>
-        <td>${item.available} ${item.unit}</td>
-        <td>${item.status}</td>
-      </tr>
-    `).join('');
+    tableBody.innerHTML = data.stock_check.map(item => {
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>${item.status}</td>
+        </tr>
+      `;
+    }).join('');
+
+    if (startBatchBtn) {
+      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+    }
 
     //Display containers used (assuming data structure returned from server)
     const containerInputsDiv = document.getElementById('container_inputs');
