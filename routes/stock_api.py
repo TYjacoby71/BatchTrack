@@ -14,8 +14,8 @@ def api_check_stock():
             return jsonify({'error': 'No data provided'}), 400
 
         recipe_id = data.get('recipe_id')
-        if not recipe_id:
-            return jsonify({'error': 'Missing recipe ID'}), 400
+        if not recipe_id or not isinstance(recipe_id, int):
+            return jsonify({'error': 'Invalid or missing recipe ID'}), 400
 
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
