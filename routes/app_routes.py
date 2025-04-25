@@ -66,7 +66,14 @@ def check_stock():
             return jsonify({"error": "Invalid scale value"}), 400
 
         recipe = Recipe.query.get_or_404(recipe_id)
+        
+        # Use stock check utils for both recipe and containers
         stock_check, all_ok = check_stock_for_recipe(recipe, scale)
+        
+        if data.get('container_ids'):
+            container_check, containers_ok = check_container_availability(data['container_ids'], scale)
+            stock_check.extend(container_check)
+            all_ok = all_ok and containers_ok
 
         status = "ok" if all_ok else "bad"
         for item in stock_check:

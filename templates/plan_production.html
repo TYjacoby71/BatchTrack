@@ -169,7 +169,23 @@ async function checkProductionStock() {
     });
 
     if (!response.ok) throw new Error('Network response was not ok');
-    location.reload();
+    
+    const data = await response.json();
+    const resultsDiv = document.querySelector('.stock-check-results');
+    if (!resultsDiv) return;
+
+    resultsDiv.style.display = 'block';
+    const tableBody = document.getElementById('stockCheckTableBody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = data.stock_check.map(item => `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.name}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
+        <td>${item.status}</td>
+      </tr>
+    `).join('');
   } catch (error) {
     alert('Error checking stock: ' + error.message);
   }
