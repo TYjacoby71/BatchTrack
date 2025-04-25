@@ -1,38 +1,69 @@
 
 from flask import Blueprint, request, jsonify
 from models import Recipe
-from stock_check_utils import check_stock_for_recipe
+from stock_check_utils import check_stock_for_recipe, check_container_availability
 import logging
+
+logger = logging.getLogger(__name__)
 
 stock_api_bp = Blueprint('stock_api', __name__)
 
-@stock_api_bp.route('/api/check-stock', methods=['POST'])
+@stock_api_bp.route('/check-stock', methods=['POST'])
 def api_check_stock():
     try:
         data = request.get_json()
-        if not data or 'recipe_id' not in data:
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        if 'recipe_id' not in data:
             return jsonify({'error': 'Missing recipe ID'}), 400
 
-        recipe = Recipe.query.get(data['recipe_id'])
-        if not recipe:
-            return jsonify({'error': 'Recipe not found'}), 404
+        try:
+            recipe_id = data.get('recipe_id')
+            if not recipe_id:
+                return jsonify({'error': 'Missing recipe ID'}), 400
 
-        scale = float(data.get('scale', 1.0))
-        if scale <= 0:
-            return jsonify({'error': 'Scale must be greater than 0'}), 400
+            try:
+                recipe_id = int(recipe_id)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid recipe ID format'}), 400
 
-        stock_results, all_ok = check_stock_for_recipe(recipe, scale)
-        
-        return jsonify({
-            'ok': all_ok,
-            'details': stock_results,
-            'recipe_name': recipe.name,
-            'missing': [r['name'] for r in stock_results if r['status'] != 'OK']
-        })
+            recipe = Recipe.query.get(recipe_id)
+            if not recipe:
+                return jsonify({'error': 'Recipe not found'}), 404
 
-    except ValueError as e:
-        logging.error(f"Stock check validation error: {e}")
-        return jsonify({'error': str(e)}), 400
+            try:
+                scale = float(data.get('scale', 1.0))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid scale value'}), 400
+
+            if scale <= 0:
+                return jsonify({'error': 'Scale must be greater than 0'}), 400
+
+            # Check recipe ingredients
+            stock_results, ingredients_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
+            
+            # Check containers if provided
+            container_ids = data.get('container_ids', [])
+            if container_ids:
+                container_results, containers_ok = check_container_availability(container_ids, scale)
+                stock_results.extend(container_results)
+                all_ok = ingredients_ok and containers_ok
+            else:
+                all_ok = ingredients_ok
+
+            return jsonify({
+                'all_ok': all_ok,
+                'stock_check': stock_results,
+                'conversion_warning': conversion_warning,
+                'recipe_name': recipe.name,
+                'status': 'success' if all_ok else 'warning'
+            })
+
+        except ValueError:
+            return jsonify({'error': 'Invalid recipe ID format'}), 400
+
     except Exception as e:
         logging.exception("Stock check API failed")
         return jsonify({'error': 'Stock check failed'}), 500
+

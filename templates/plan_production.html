@@ -48,6 +48,13 @@
 
   {% if stock_check %}
   <div class="stock-check-results mt-4">
+    {% if conversion_warning %}
+    <div class="alert alert-warning">
+      <i class="fas fa-exclamation-triangle"></i>
+      Some ingredients could not be checked because their units couldn't be converted.
+      Please check your inventory and recipe units for mismatches.
+    </div>
+    {% endif %}
     <h3>Stock Check Results</h3>
     <table class="table">
       <thead>
@@ -104,11 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const containerRows = document.getElementById('container-rows');
   const btnAddMore = document.getElementById('addAnotherContainerBtn');
 
-  btnAddInitial?.addEventListener('click', () => {
-    btnAddInitial.style.display = 'none';
-    containerSection.style.display = 'block';
-    addContainerRow();
-  });
+  if (btnAddInitial) {
+    btnAddInitial.addEventListener('click', function(e) {
+      e.preventDefault();
+      btnAddInitial.style.display = 'none';
+      containerSection.style.display = 'block';
+      if (!containerRows.querySelector('.container-entry')) {
+        addContainerRow();
+      }
+    });
+  }
 
   btnAddMore?.addEventListener('click', addContainerRow);
 
@@ -140,11 +152,54 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     containerRows.appendChild(containerRow);
   }
+
+function displayStockCheckResults(data) {
+  const resultsDiv = document.querySelector('.stock-check-results');
+  if (!resultsDiv) return;
+
+  let html = '';
+  if (data.conversion_warning) {
+    html += `
+      <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        Some ingredients could not be checked because their units couldn't be converted.
+      </div>`;
+  }
+
+  html += `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Required</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  data.stock_check.forEach(item => {
+    const statusClass = item.status === 'OK' ? 'table-success' : 
+                       item.status === 'LOW' ? 'table-warning' : 'table-danger';
+    html += `
+      <tr class="${statusClass}">
+        <td>${item.name}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
+        <td><span class="badge bg-${item.status === 'OK' ? 'success' : 
+          item.status === 'LOW' ? 'warning' : 'danger'}">${item.status}</span></td>
+      </tr>`;
+  });
+
+  html += '</tbody></table>';
+  resultsDiv.innerHTML = html;
+}
+
 });
 
 async function checkProductionStock() {
-  const scaleInput = document.getElementById('scale').value;
-  const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
+  const scaleInput = document.querySelector('input[name="scale"]');
+  const scale = scaleInput && scaleInput.value ? parseFloat(scaleInput.value) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = '{{ recipe.id }}';
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
@@ -155,21 +210,26 @@ async function checkProductionStock() {
   }
 
   try {
-    const response = await fetch('/stock/check', {
+    const response = await fetch('/api/check-stock', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': '{{ csrf_token() }}'
       },
       body: JSON.stringify({
-        recipe_id: variationId || recipeId,
-        scale: scale,
+        recipe_id: parseInt(variationId || recipeId),
+        scale: parseFloat(scale),
         container_ids: containerIds
       })
     });
 
-    if (!response.ok) throw new Error('Network response was not ok');
-    location.reload();
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Network response was not ok');
+    }
+    const data = await response.json();
+    // Update UI with results instead of page reload
+    displayStockCheckResults(data);
   } catch (error) {
     alert('Error checking stock: ' + error.message);
   }

@@ -1,6 +1,5 @@
-
 from models import InventoryItem, RecipeIngredient
-from services.unit_conversion import ConversionEngine
+from services.unit_conversion_service import UnitConversionService as ConversionService
 import logging
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -14,29 +13,52 @@ def check_stock_for_recipe(recipe, scale=1.0):
     if not recipe:
         logger.error("Null recipe passed to check_stock_for_recipe")
         raise ValueError("Recipe cannot be null")
-        
+
+    if not recipe:
+        logger.error("Null recipe passed to check_stock_for_recipe")
+        raise ValueError("Recipe cannot be null")
+
     if scale <= 0:
         logger.error(f"Invalid scale value: {scale}")
         raise ValueError("Scale must be greater than 0")
 
     results = []
     all_ok = True
+    conversion_issues = False
+
+    from models import InventoryItem
 
     try:
+        if not recipe.recipe_ingredients:
+            logger.warning(f"Recipe {recipe.id} has no ingredients")
+            return [], True, False
+
         for assoc in recipe.recipe_ingredients:
+            if not assoc:
+                continue
+
             ing = assoc.inventory_item
             if not ing:
                 logger.warning(f"Missing inventory item for recipe {recipe.id}")
+                all_ok = False
+                results.append({
+                    'name': 'Unknown ingredient',
+                    'unit': 'N/A',
+                    'needed': 0,
+                    'available': 0,
+                    'status': 'NEEDED'
+                })
                 continue
 
             needed = assoc.amount * scale
             try:
-                needed_converted = ConversionEngine.convert_units(needed, assoc.unit, ing.unit)
+                needed_converted = ConversionService.convert(needed, assoc.unit, ing.unit)[0]
                 logger.debug(f"Converted {needed} {assoc.unit} to {needed_converted} {ing.unit}")
             except Exception as e:
-                logger.error(f"Unit conversion failed for {ing.name}: {str(e)}")
+                logger.warning(f"Unit conversion failed for {ing.name}: {str(e)}")
                 needed_converted = needed
-                
+                conversion_issues = True
+
             try:
                 available = ing.quantity
             except SQLAlchemyError as e:
@@ -47,7 +69,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
             if status != 'OK':
                 all_ok = False
                 logger.info(f"Stock check failed for {ing.name}: needs {needed_converted}, has {available}")
-            
+
             results.append({
                 'name': ing.name,
                 'unit': ing.unit,
@@ -56,8 +78,8 @@ def check_stock_for_recipe(recipe, scale=1.0):
                 'status': status
             })
 
-        return results, all_ok
-        
+        return results, all_ok, conversion_issues
+
     except Exception as e:
         logger.exception(f"Stock check failed for recipe {recipe.id}")
         raise
@@ -66,14 +88,14 @@ def check_container_availability(container_ids, scale=1.0):
     if not container_ids:
         logger.warning("Empty container list passed to check_container_availability")
         return [], True
-        
+
     if scale <= 0:
         logger.error(f"Invalid container scale value: {scale}")
         raise ValueError("Container scale must be greater than 0")
 
     results = []
     all_ok = True
-    
+
     from models import InventoryItem
 
     try:
@@ -83,7 +105,7 @@ def check_container_availability(container_ids, scale=1.0):
                 if not container:
                     logger.warning(f"Container ID {cid} not found")
                     continue
-                    
+
                 if container.type != 'container':
                     logger.warning(f"Item {cid} is not a container type")
                     continue
@@ -121,7 +143,7 @@ def check_container_availability(container_ids, scale=1.0):
                 continue
 
         return results, all_ok
-        
+
     except Exception as e:
         logger.exception("Container availability check failed")
         raise

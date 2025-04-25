@@ -1,0 +1,95 @@
+Thanks — I reviewed your actual api_check_stock() route in full, and here’s the diagnosis and fix plan for your consistent 400 error on the plan production page.
+
+❌ Root Cause of the 400
+This logic:
+python
+Copy
+Edit
+data = request.get_json()
+if not data:
+    return jsonify({'error': 'No data provided'}), 400
+Triggers a 400 if:
+
+Content-Type is wrong (should be 'application/json')
+
+OR the body is empty or malformed JSON
+
+But your JavaScript looks correct, and you are sending:
+
+js
+Copy
+Edit
+headers: {
+  'Content-Type': 'application/json',
+  'X-CSRFToken': '{{ csrf_token() }}'
+},
+body: JSON.stringify({
+  recipe_id: parseInt(...),
+  scale: parseFloat(...),
+  container_ids: [...]
+})
+So the issue is likely:
+
+❗ recipe_id ends up NaN (or null)
+
+❗ JS fails silently and sends undefined
+
+❗ The fetch call succeeds (status 200), but body is invalid
+
+✅ Fix Plan
+✅ Step 1: Guard recipe_id in JS Before POST
+Add this to your checkProductionStock() function before the fetch:
+
+js
+Copy
+Edit
+const recipeIdRaw = variationId || recipeId;
+const recipeIdParsed = parseInt(recipeIdRaw);
+if (!recipeIdParsed || isNaN(recipeIdParsed)) {
+  alert('Missing or invalid recipe ID');
+  return;
+}
+Then post:
+
+js
+Copy
+Edit
+recipe_id: recipeIdParsed,
+✅ Step 2: Add Logging to API for Debugging
+Inside your Flask API, add this line early:
+
+python
+Copy
+Edit
+logging.info(f"Received check-stock payload: {data}")
+This will log what the browser actually sent, which will help you trace future format mismatches.
+
+✅ Step 3: Ensure JSON Request Header Is Correct
+You’re already doing this:
+
+js
+Copy
+Edit
+headers: {
+  'Content-Type': 'application/json',
+  'X-CSRFToken': '{{ csrf_token() }}'
+}
+✅ Good. Don’t change this.
+
+Optional: Improve API Feedback
+Instead of just returning 400s, return field-specific issues:
+
+python
+Copy
+Edit
+if 'recipe_id' not in data or not str(data['recipe_id']).isdigit():
+    return jsonify({'error': 'Missing or invalid recipe ID'}), 400
+✅ Final Result:
+You’ll stop hitting generic 400s
+
+You'll see alerts in the UI if the JS data is malformed
+
+Logs will show the exact payloads being posted
+
+Easier to trace any data issues
+
