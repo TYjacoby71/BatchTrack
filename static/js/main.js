@@ -227,8 +227,9 @@ function convertUnits() {
 async function checkStock() {
   const scaleInput = document.getElementById('scale');
   const scale = parseFloat(scaleInput?.value || '1.0');
+  const recipeIdInput = document.getElementById('recipe_id');
   const path = window.location.pathname;
-  const recipeId = path.includes('/recipes/') ? path.split('/')[2] : null;
+  const recipeId = recipeIdInput?.value || (path.includes('/recipes/') ? path.split('/')[2] : null);
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
     .map(s => s.value)
     .filter(Boolean);

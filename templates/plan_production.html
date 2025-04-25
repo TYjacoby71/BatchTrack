@@ -4,6 +4,7 @@
 
 <form method="post" class="production-plan-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="recipe_id" id="recipe_id" value="{{ recipe.id }}">
 
   {% if recipe.variations and not hide_variations %}
   <div class="form-group">
