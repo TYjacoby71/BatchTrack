@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+// Initialize unit loading when unit converter modal opens
+const unitConverterModal = document.getElementById('unitConverterModal');
+if (unitConverterModal) {
+  unitConverterModal.addEventListener('show.bs.modal', loadUnits);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
