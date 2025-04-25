@@ -278,12 +278,17 @@ async function checkStock() {
     }
 
     // Update table with results
+    if (!Array.isArray(data.stock_check)) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">⚠️ No results found or invalid response.</td></tr>';
+      return;
+    }
+
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
         <td>${item.type || 'ingredient'}</td>
         <td>${item.name}</td>
-        <td>${item.needed}</td>
-        <td>${item.available}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
         <td>${item.unit}</td>
         <td>
           <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
