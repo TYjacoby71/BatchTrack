@@ -1,0 +1,113 @@
+Thanks for the full dump — here’s your diagnostic breakdown for the Plan Production stock check issue, and how to fix it with absolute precision.
+
+🚨 Your Problem Recap
+You're getting:
+
+400 errors before
+
+Now it's looping and refreshing the Plan Production page
+
+Logs show /conversion/check-stock or /check-stock returning 200, but nothing renders or updates
+
+🧠 Root Cause Summary
+This appears to be a logic or JS/HTML mismatch, not a backend failure. Here's why:
+
+
+Checkpoint	Status
+✅ Route /conversion/check-stock (or similar) returns 200	Server is responding
+❌ Frontend not consuming the result	Likely DOM not updating or redirect is misfiring
+❌ Page appears to reload or loop	JS fetch might be falling through or misfiring location.reload()
+⚠️ May be due to malformed fetch() or silent JS error	Needs browser console inspection
+❌ 400 errors earlier may have been missing data in POST	If no recipe_id or scale sent
+✅ Fix Steps (Confirmed Plan Production Patch)
+1. 🔍 Confirm Stock Check JS Logic
+Locate your checkStock() function (likely in plan_production.js or inline script) and verify:
+
+js
+Copy
+Edit
+function checkStock() {
+  const recipeId = document.getElementById('recipe').value;
+  const scale = parseFloat(document.getElementById('scale').value || 1);
+
+  fetch('/conversion/check-stock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe_id: recipeId, scale: scale })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.ok) {
+      // ✅ Show results
+      document.getElementById('stock-message').innerText = "All ingredients are in stock!";
+      document.getElementById('stock-options').style.display = 'block';
+    } else {
+      // 🚫 Handle stock shortage
+      document.getElementById('stock-message').innerText = "Missing ingredients!";
+    }
+  })
+  .catch(err => {
+    console.error('Stock check failed:', err);
+    alert('Could not check stock — check console/logs');
+  });
+}
+🔁 Replace /conversion/check-stock with your actual route if different.
+
+2. ✅ Ensure Backend Route Accepts JSON Cleanly
+Inside conversion/routes.py or wherever this lives:
+
+python
+Copy
+Edit
+@conversion_bp.route('/check-stock', methods=['POST'])
+def check_stock():
+    data = request.get_json()
+    recipe_id = data.get('recipe_id')
+    scale = data.get('scale', 1.0)
+
+    if not recipe_id:
+        return jsonify({'error': 'Missing recipe_id'}), 400
+
+    # Perform stock check logic here
+    ...
+    return jsonify({'ok': True, 'missing': []})
+🧠 Missing recipe_id or incorrect header (not application/json) will trigger 400.
+
+3. ✅ Update HTML IDs in Form
+Ensure these fields exist in plan_production.html or similar:
+
+html
+Copy
+Edit
+<select id="recipe">
+  <option value="1">Salve Base</option>
+</select>
+<input type="number" id="scale" value="1">
+4. ✅ Test in Dev Console
+Open your browser:
+
+Dev Tools → Console
+
+Type:
+
+js
+Copy
+Edit
+checkStock();
+Watch Network tab → check-stock POST → Status code + response
+
+Watch console → Any JS errors?
+
+✅ Optional: Enable Visual Debug Mode
+In checkStock() JS, add:
+
+js
+Copy
+Edit
+console.log('Sending to /check-stock', { recipe_id: recipeId, scale });
+And after response:
+
+js
+Copy
+Edit
+console.log('Stock check result:', data);
