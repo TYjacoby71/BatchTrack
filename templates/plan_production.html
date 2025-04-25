@@ -19,25 +19,25 @@
     {% endif %}
 
     <div class="form-group mt-3">
-        <button type="button" class="btn btn-secondary" id="showContainerSelection">Add container(s) for this batch?</button>
-
-        <div id="containerSelection" class="mt-3" style="display: none;">
-            <div id="container-rows">
-                {% if containers %}
-                <div class="container-entry">
-                    <select name="container_ids[]" class="form-select" required>
-                        <option value="">Select a container</option>
-                        {% for container in containers %}
-                        <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" step="1" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.container-entry').remove()">✕</button>
-                </div>
-                {% endif %}
+        <h4>Containers</h4>
+        <div id="container-rows">
+            <div class="container-entry d-flex align-items-center gap-2 mb-2">
+                <select name="container_ids[]" class="form-select" required>
+                    <option value="">Select a container</option>
+                    {% for container in containers %}
+                    <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
+                    {% endfor %}
+                </select>
+                <input type="number" 
+                       name="container_quantities[]" 
+                       class="form-control w-25" 
+                       placeholder="Qty"
+                       min="1"
+                       required>
+                <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
             </div>
-            <button type="button" id="addAnotherContainerBtn" class="btn btn-outline-secondary mt-2">Add another container</button>
         </div>
+        <button type="button" class="btn btn-outline-secondary mt-2" onclick="addContainerRow()">Add Container</button>
     </div>
 
     <div class="form-group mt-3">
@@ -100,36 +100,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const btnAddInitial = document.getElementById('showContainerSelection');
-  const containerSection = document.getElementById('containerSelection');
   const containerRows = document.getElementById('container-rows');
-  const btnAddMore = document.getElementById('addAnotherContainerBtn');
-
-  if (btnAddInitial) {
-    btnAddInitial.addEventListener('click', handleInitialAdd);
-  }
-
-  if (btnAddMore) {
-    btnAddMore.addEventListener('click', addContainerRow);
-  }
-
-  containerRows.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-container')) {
-      e.target.closest('.container-entry').remove();
-      handleContainerVisibility();
-    }
-  });
-
-  function handleInitialAdd() {
-    btnAddInitial.style.display = 'none';
-    containerSection.style.display = 'block';
-    addContainerRow();
-  }
-
-  function handleContainerVisibility() {
-    const hasRows = !!containerRows.querySelector('.container-entry');
-    containerSection.style.display = hasRows ? 'block' : 'none';
-    btnAddInitial.style.display = hasRows ? 'none' : 'inline-block';
+  
+  if (containerRows) {
+    containerRows.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-container')) {
+        e.target.closest('.container-entry').remove();
+      }
+    });
   }
 
   function addContainerRow() {
