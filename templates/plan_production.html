@@ -111,11 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const containerRows = document.getElementById('container-rows');
   const btnAddMore = document.getElementById('addAnotherContainerBtn');
 
-  btnAddInitial?.addEventListener('click', () => {
-    btnAddInitial.style.display = 'none';
-    containerSection.style.display = 'block';
-    addContainerRow();
-  });
+  if (btnAddInitial) {
+    btnAddInitial.addEventListener('click', function(e) {
+      e.preventDefault();
+      btnAddInitial.style.display = 'none';
+      containerSection.style.display = 'block';
+      if (!containerRows.querySelector('.container-entry')) {
+        addContainerRow();
+      }
+    });
+  }
 
   btnAddMore?.addEventListener('click', addContainerRow);
 
