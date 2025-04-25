@@ -34,7 +34,8 @@ def api_check_stock():
             'all_ok': all_ok,
             'stock_check': stock_results,
             'conversion_warning': conversion_warning,
-            'recipe_name': recipe.name
+            'recipe_name': recipe.name,
+            'status': 'success' if all_ok else 'warning'
         })
 
     except ValueError as e:
