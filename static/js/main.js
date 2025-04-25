@@ -224,76 +224,25 @@ function convertUnits() {
     });
 }
 
-async function checkStock() {
-  const scaleInput = document.getElementById('scale');
-  const scale = parseFloat(scaleInput?.value || '1.0');
-  const recipeIdInput = document.getElementById('recipe_id');
-  const path = window.location.pathname;
-  const recipeId = recipeIdInput?.value || (path.includes('/recipes/') ? path.split('/')[2] : null);
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => s.value)
-    .filter(Boolean);
-
-  if (!recipeId || isNaN(scale) || scale <= 0) {
-    alert('Please enter a valid scale greater than 0');
-    return;
-  }
-
-  try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-      },
-      body: JSON.stringify({
-        recipe_id: recipeId,
-        scale: scale,
-        container_ids: containerIds
-      })
-    });
-
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const data = await response.json();
-    console.log("Stock check response:", data);
-
-    const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) {
-      console.error("Results div not found");
-      return;
-    }
-
-    resultsDiv.style.display = 'block';
-    const tableBody = document.getElementById('stockCheckTableBody');
-    if (!tableBody) {
-      console.error("Table body not found");
-      return;
-    }
-
-    // Show start batch button if all ok
-    const startBatchBtn = document.querySelector('.start-batch-btn');
-    if (startBatchBtn) {
-      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-    }
-
-    // Update table with results
-    tableBody.innerHTML = data.stock_check.map(item => `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed}</td>
-        <td>${item.available}</td>
-        <td>${item.unit}</td>
-        <td>
-          <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
-            ${item.status}
-          </span>
-        </td>
-      </tr>
-    `).join('');
-  } catch (error) {
-    console.error('Error checking stock:', error);
-    alert('Error checking stock. Please try again.');
-  }
+// Stock check functionality is now handled in plan_production.html template
+// Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
+const tableBody = document.getElementById('stockCheckTableBody'); // Assumed ID for table body
+if (tableBody && data) { //Added null check for data
+  tableBody.innerHTML = data.stock_check.map(item => {
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>
+            <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
+              ${item.status}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
 }
