@@ -3,80 +3,176 @@
 <h2>Plan Production: {{ base_recipe.name }}</h2>
 
 <form method="post" class="production-plan-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    {% if recipe.variations and not hide_variations %}
-    <div class="form-group">
-        <label for="variation_id">Variation:</label>
-        <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-            <option value="">None</option>
-            {% for variant in recipe.variations %}
-            <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>
-                {{ variant.name }}
-            </option>
+  {% if recipe.variations and not hide_variations %}
+  <div class="form-group">
+    <label for="variation_id">Variation:</label>
+    <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
+      <option value="">None</option>
+      {% for variant in recipe.variations %}
+      <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>{{ variant.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <div class="form-group mt-3">
+    <button type="button" class="btn btn-secondary" id="showContainerSelection">Add container(s) for this batch?</button>
+
+    <div id="containerSelection" class="mt-3" style="display: none;">
+      <div id="container-rows">
+        {% if containers %}
+        <div class="container-entry d-flex align-items-center gap-2 mb-2">
+          <select name="container_ids[]" class="form-select" required>
+            <option value="">Select a container</option>
+            {% for container in containers %}
+            <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
             {% endfor %}
-        </select>
-    </div>
-    {% endif %}
-
-    <div class="form-group mt-3">
-        <button type="button" class="btn btn-secondary" id="showContainerSelection">Add container(s) for this batch?</button>
-
-        <div id="containerSelection" class="mt-3" style="display: none;">
-            <div id="container-rows"></div>
-            <button type="button" id="addAnotherContainerBtn" class="btn btn-outline-secondary mt-2">Add another container</button>
+          </select>
+          <input type="number" step="1" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
+          <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
         </div>
+        {% endif %}
+      </div>
+      <button type="button" id="addAnotherContainerBtn" class="btn btn-outline-secondary mt-2">Add another container</button>
     </div>
+  </div>
 
-    <div class="form-group mt-3">
-        <label for="scale">Batch Scale:</label>
-        <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
-    </div>
+  <div class="form-group mt-3">
+    <label for="scale">Batch Scale:</label>
+    <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
+  </div>
 
-    <button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
+  <button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
 
-    {% if stock_check %}
-    <div class="stock-check-results mt-4">
-        <h3>Stock Check Results</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Item</th>
-                    <th>Required</th>
-                    <th>Available</th>
-                    <th>Unit</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in stock_check %}
-                <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
-                    <td>{{ item.type or 'ingredient' }}</td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.needed }}</td>
-                    <td>{{ item.available }}</td>
-                    <td>{{ item.unit }}</td>
-                    <td>
-                        {% if item.status == 'OK' %}
-                        <span class="badge bg-success">OK</span>
-                        {% elif item.status == 'LOW' %}
-                        <span class="badge bg-warning">LOW</span>
-                        {% else %}
-                        <span class="badge bg-danger">NEEDED</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  {% if stock_check %}
+  <div class="stock-check-results mt-4">
+    <h3>Stock Check Results</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Item</th>
+          <th>Required</th>
+          <th>Available</th>
+          <th>Unit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in stock_check %}
+        <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
+          <td>{{ item.type or 'ingredient' }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.needed }}</td>
+          <td>{{ item.available }}</td>
+          <td>{{ item.unit }}</td>
+          <td>
+            {% if item.status == 'OK' %}
+            <span class="badge bg-success">OK</span>
+            {% elif item.status == 'LOW' %}
+            <span class="badge bg-warning">LOW</span>
+            {% else %}
+            <span class="badge bg-danger">NEEDED</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-        {% if all_ok %}
-        <form action="{{ url_for('batches.start_batch') }}" method="post">
-            <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-            <input type="hidden" name="scale" value="{{ scale }}">
-            <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
-            {% for container_id in request.form.getlist('containers[]') %}
-            <input type="hidden" name="containers[]" value="{{ container_id }}">
-            {% endfor %}
-            <button type="submit" class="btn btn
+    {% if all_ok %}
+    <form action="{{ url_for('batches.start_batch') }}" method="post">
+      <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+      <input type="hidden" name="scale" value="{{ scale }}">
+      <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
+      {% for container_id in request.form.getlist('containers[]') %}
+      <input type="hidden" name="containers[]" value="{{ container_id }}">
+      {% endfor %}
+      <button type="submit" class="btn btn-success">Start Batch</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAddInitial = document.getElementById('showContainerSelection');
+  const containerSection = document.getElementById('containerSelection');
+  const containerRows = document.getElementById('container-rows');
+  const btnAddMore = document.getElementById('addAnotherContainerBtn');
+
+  btnAddInitial?.addEventListener('click', () => {
+    btnAddInitial.style.display = 'none';
+    containerSection.style.display = 'block';
+    addContainerRow();
+  });
+
+  btnAddMore?.addEventListener('click', addContainerRow);
+
+  containerRows?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-container')) {
+      e.target.closest('.container-entry').remove();
+      handleContainerVisibility();
+    }
+  });
+
+  function handleContainerVisibility() {
+    const hasRows = !!containerRows.querySelector('.container-entry');
+    containerSection.style.display = hasRows ? 'block' : 'none';
+    btnAddInitial.style.display = hasRows ? 'none' : 'inline-block';
+  }
+
+  function addContainerRow() {
+    const containerRow = document.createElement('div');
+    containerRow.className = 'container-entry d-flex align-items-center gap-2 mb-2';
+    containerRow.innerHTML = `
+      <select name="container_ids[]" class="form-select" required>
+        <option value="">Select a container</option>
+        {% for container in containers %}
+          <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
+      <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
+    `;
+    containerRows.appendChild(containerRow);
+  }
+});
+
+async function checkProductionStock() {
+  const scaleInput = document.getElementById('scale').value;
+  const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
+  const variationId = document.querySelector('select[name="variation_id"]')?.value;
+  const recipeId = '{{ recipe.id }}';
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
+
+  if (isNaN(scale) || scale <= 0) {
+    alert('Please enter a valid scale greater than 0');
+    return;
+  }
+
+  try {
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        recipe_id: variationId || recipeId,
+        scale: scale,
+        container_ids: containerIds
+      })
+    });
+
+    if (!response.ok) throw new Error('Network response was not ok');
+    location.reload();
+  } catch (error) {
+    alert('Error checking stock: ' + error.message);
+  }
+}
+</script>
+{% endblock %}
