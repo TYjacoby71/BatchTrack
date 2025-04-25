@@ -202,6 +202,14 @@ async function checkProductionStock() {
   const scale = scaleInput && scaleInput.value ? parseFloat(scaleInput.value) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = '{{ recipe.id }}';
+  
+  const recipeIdRaw = variationId || recipeId;
+  const recipeIdParsed = parseInt(recipeIdRaw);
+  if (!recipeIdParsed || isNaN(recipeIdParsed)) {
+    alert('Missing or invalid recipe ID');
+    return;
+  }
+  
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
 
   if (isNaN(scale) || scale <= 0) {

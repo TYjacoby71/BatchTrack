@@ -12,8 +12,13 @@ stock_api_bp = Blueprint('stock_api', __name__)
 def api_check_stock():
     try:
         data = request.get_json()
+        logger.info(f"Received check-stock payload: {data}")
+        
         if not data:
             return jsonify({'error': 'No data provided'}), 400
+            
+        if 'recipe_id' not in data or not str(data['recipe_id']).isdigit():
+            return jsonify({'error': 'Missing or invalid recipe ID'}), 400
             
         if 'recipe_id' not in data:
             return jsonify({'error': 'Missing recipe ID'}), 400
