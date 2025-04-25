@@ -225,8 +225,8 @@ async function checkProductionStock() {
       },
       body: JSON.stringify({
         recipe_id: recipeIdToUse,
-        scale: parseFloat(scale),
-        container_ids: containerIds
+        scale: scale,
+        container_ids: containerIds.length ? containerIds : []
       })
     });
 
