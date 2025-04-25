@@ -232,7 +232,8 @@ async function checkStock() {
     const response = await fetch('/stock/check', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify({
         recipe_id: recipeId,
@@ -245,16 +246,37 @@ async function checkStock() {
     }
 
     const data = await response.json();
-
-    const tableBody = document.getElementById('stockCheckTableBody');
-    const resultsDiv = document.querySelector('.stock-check-results');
     
-    if (!tableBody || !resultsDiv) {
-      console.error('Stock check elements not found');
+    const resultsDiv = document.querySelector('.stock-check-results');
+    if (!resultsDiv) {
+      console.error('Stock check results div not found');
       return;
     }
 
+    // Show results container
     resultsDiv.style.display = 'block';
+
+    // Get or create table body
+    let tableBody = document.getElementById('stockCheckTableBody');
+    if (!tableBody) {
+      const table = document.createElement('table');
+      table.className = 'table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Required</th>
+            <th>Available</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="stockCheckTableBody"></tbody>
+      `;
+      resultsDiv.appendChild(table);
+      tableBody = document.getElementById('stockCheckTableBody');
+    }
+
+    // Update table content
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
         <td>${item.name}</td>
