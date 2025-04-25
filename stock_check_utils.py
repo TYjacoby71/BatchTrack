@@ -33,7 +33,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
 
             needed = assoc.amount * scale
             try:
-                needed_converted = ConversionService.convert_units(needed, assoc.unit, ing.unit)
+                needed_converted = ConversionService.convert(needed, assoc.unit, ing.unit)[0]
                 logger.debug(f"Converted {needed} {assoc.unit} to {needed_converted} {ing.unit}")
             except Exception as e:
                 logger.warning(f"Unit conversion failed for {ing.name}: {str(e)}")
