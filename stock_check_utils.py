@@ -14,6 +14,10 @@ def check_stock_for_recipe(recipe, scale=1.0):
         logger.error("Null recipe passed to check_stock_for_recipe")
         raise ValueError("Recipe cannot be null")
 
+    if not recipe:
+        logger.error("Null recipe passed to check_stock_for_recipe")
+        raise ValueError("Recipe cannot be null")
+
     if scale <= 0:
         logger.error(f"Invalid scale value: {scale}")
         raise ValueError("Scale must be greater than 0")
@@ -25,10 +29,25 @@ def check_stock_for_recipe(recipe, scale=1.0):
     from models import InventoryItem
 
     try:
+        if not recipe.recipe_ingredients:
+            logger.warning(f"Recipe {recipe.id} has no ingredients")
+            return [], True, False
+
         for assoc in recipe.recipe_ingredients:
+            if not assoc:
+                continue
+
             ing = assoc.inventory_item
             if not ing:
                 logger.warning(f"Missing inventory item for recipe {recipe.id}")
+                all_ok = False
+                results.append({
+                    'name': 'Unknown ingredient',
+                    'unit': 'N/A',
+                    'needed': 0,
+                    'available': 0,
+                    'status': 'NEEDED'
+                })
                 continue
 
             needed = assoc.amount * scale

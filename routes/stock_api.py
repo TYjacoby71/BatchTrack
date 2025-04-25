@@ -10,14 +10,21 @@ stock_api_bp = Blueprint('stock_api', __name__)
 def api_check_stock():
     try:
         data = request.get_json()
-        if not data or 'recipe_id' not in data:
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        if 'recipe_id' not in data:
             return jsonify({'error': 'Missing recipe ID'}), 400
 
         recipe = Recipe.query.get(data['recipe_id'])
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
-        scale = float(data.get('scale', 1.0))
+        try:
+            scale = float(data.get('scale', 1.0))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid scale value'}), 400
+
         if scale <= 0:
             return jsonify({'error': 'Scale must be greater than 0'}), 400
 
