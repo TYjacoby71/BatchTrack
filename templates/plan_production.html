@@ -199,7 +199,7 @@ function displayStockCheckResults(data) {
 
 async function checkProductionStock() {
   const scaleInput = document.querySelector('input[name="scale"]');
-  const scale = scaleInput && scaleInput.value ? parseFloat(scaleInput.value) : 1.0;
+  const scale = scaleInput?.value ? parseFloat(scaleInput.value) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = {{ recipe.id }};  // This will be a raw number, not a string
 
@@ -211,8 +211,6 @@ async function checkProductionStock() {
 
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
 
-  const scaleRaw = document.querySelector('input[name="scale"]')?.value;
-  const scale = parseFloat(scaleRaw);
   if (isNaN(scale) || scale <= 0) {
     alert('⚠ Please enter a valid scale greater than 0.');
     return;
