@@ -4,6 +4,7 @@
 
 <form method="post" class="production-plan-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="recipe_id" id="recipe_id" value="{{ recipe.id }}">
 
   {% if recipe.variations and not hide_variations %}
   <div class="form-group">
@@ -46,55 +47,26 @@
 
   <button type="button" class="check-stock-btn btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
 
-  {% if stock_check %}
-  <div class="stock-check-results mt-4">
+  <div class="stock-check-results mt-4" style="display: none;">
     <h3>Stock Check Results</h3>
-    <table class="table">
+    <table class="table table-bordered">
       <thead>
         <tr>
           <th>Type</th>
-          <th>Item</th>
-          <th>Required</th>
+          <th>Name</th>
+          <th>Needed</th>
           <th>Available</th>
           <th>Unit</th>
           <th>Status</th>
         </tr>
       </thead>
-      <tbody id="stockCheckTableBody">
-        {% for item in stock_check %}
-        <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
-          <td>{{ item.type or 'ingredient' }}</td>
-          <td>{{ item.name }}</td>
-          <td>{{ item.needed }}</td>
-          <td>{{ item.available }}</td>
-          <td>{{ item.unit }}</td>
-          <td>
-            {% if item.status == 'OK' %}
-            <span class="badge bg-success">OK</span>
-            {% elif item.status == 'LOW' %}
-            <span class="badge bg-warning">LOW</span>
-            {% else %}
-            <span class="badge bg-danger">NEEDED</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
+      <tbody id="stockCheckTableBody"></tbody>
     </table>
 
-    {% if all_ok %}
-    <form action="{{ url_for('batches.start_batch') }}" method="post">
-      <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-      <input type="hidden" name="scale" value="{{ scale }}">
-      <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
-      {% for container_id in request.form.getlist('containers[]') %}
-      <input type="hidden" name="containers[]" value="{{ container_id }}">
-      {% endfor %}
-      <button type="submit" class="btn btn-success">Start Batch</button>
-    </form>
-    {% endif %}
+    <div id="container_inputs" style="display: none;">
+      <!-- Container inputs will be dynamically added here -->
+    </div>
   </div>
-  {% endif %}
 </form>
 
 <script>
@@ -147,7 +119,10 @@ async function checkProductionStock() {
   const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = '{{ recipe.id }}';
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
+    .filter(c => c.id);
+
 
   if (isNaN(scale) || scale <= 0) {
     alert('Please enter a valid scale greater than 0');
@@ -164,12 +139,16 @@ async function checkProductionStock() {
       body: JSON.stringify({
         recipe_id: variationId || recipeId,
         scale: scale,
-        container_ids: containerIds
+        containers: containerIds
       })
     });
 
-    if (!response.ok) throw new Error('Network response was not ok');
-    
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
+      return;
+    }
+
     const data = await response.json();
     const resultsDiv = document.querySelector('.stock-check-results');
     if (!resultsDiv) return;
@@ -180,12 +159,23 @@ async function checkProductionStock() {
 
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.type || 'ingredient'}</td>
         <td>${item.name}</td>
         <td>${item.needed} ${item.unit}</td>
         <td>${item.available} ${item.unit}</td>
         <td>${item.status}</td>
       </tr>
     `).join('');
+
+    //Display containers used (assuming data structure returned from server)
+    const containerInputsDiv = document.getElementById('container_inputs');
+    containerInputsDiv.style.display = 'block';
+    containerInputsDiv.innerHTML = data.containers.map(container => `
+        <input type="hidden" name="container_ids[]" value="${container.id}">
+        <p>Using container: ${container.name} (Qty: ${container.quantity})</p>
+    `).join('');
+
+
   } catch (error) {
     alert('Error checking stock: ' + error.message);
   }
