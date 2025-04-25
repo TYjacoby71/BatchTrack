@@ -48,6 +48,13 @@
 
   {% if stock_check %}
   <div class="stock-check-results mt-4">
+    {% if conversion_warning %}
+    <div class="alert alert-warning">
+      <i class="fas fa-exclamation-triangle"></i>
+      Some ingredients could not be checked because their units couldn't be converted.
+      Please check your inventory and recipe units for mismatches.
+    </div>
+    {% endif %}
     <h3>Stock Check Results</h3>
     <table class="table">
       <thead>
