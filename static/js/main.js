@@ -225,8 +225,15 @@ async function checkStock(event) {
     event.preventDefault();
   }
 
+  // Initialize elements
+  const checkStockBtn = document.querySelector('.check-stock-btn');
+  if (checkStockBtn) {
+    checkStockBtn.disabled = true;
+  }
+
   // Get scale and recipe ID either from URL or form inputs
-  const scale = parseFloat(document.querySelector('input[name="scale"]')?.value || document.getElementById('scaleInput')?.value || '1.0');
+  const scaleInput = document.querySelector('input[name="scale"]') || document.getElementById('scaleInput');
+  const scale = parseFloat(scaleInput?.value || '1.0');
   const recipeId = document.getElementById('recipeSelect')?.value || window.location.pathname.split('/')[2];
   
   if (!recipeId || isNaN(scale) || scale <= 0) {
