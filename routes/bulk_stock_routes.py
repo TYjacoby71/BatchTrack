@@ -93,16 +93,18 @@ def export_shopping_list_csv():
             flash('No stock check results available')
             return redirect(url_for('bulk_stock.bulk_stock_check'))
 
-        missing = [item for item in summary if item['status'] in ['LOW', 'NEEDED']]
-        if not missing:
-            flash('No items need restocking')
-            return redirect(url_for('bulk_stock.bulk_stock_check'))
-
         si = io.StringIO()
-        cw = csv.writer(si)
-        cw.writerow(['Ingredient', 'Needed', 'Available', 'Unit', 'Status'])
-        for item in missing:
-            cw.writerow([item['name'], item['needed'], item['available'], item['unit'], item['status']])
+        writer = csv.writer(si)
+        writer.writerow(['Name', 'Unit', 'Needed', 'Available', 'Status'])
+        
+        for row in summary:
+            writer.writerow([
+                row.get('name', ''),
+                row.get('unit', ''),
+                row.get('needed', 0),
+                row.get('available', 0),
+                row.get('status', '')
+            ])
 
         output = make_response(si.getvalue())
         output.headers["Content-Disposition"] = "attachment; filename=shopping_list.csv"
