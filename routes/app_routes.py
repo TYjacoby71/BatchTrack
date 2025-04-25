@@ -46,26 +46,6 @@ def dashboard():
                          low_stock_items=low_stock_items,
                          expired=expired)
 
-@app_routes_bp.route('/api/check-stock', methods=['POST']) #Assumed this is the new endpoint
-@login_required
-def check_stock_endpoint():
-    data = request.get_json()
-    if not data or 'recipe_id' not in data or 'scale' not in data:
-        return jsonify({'error': 'Missing required data'}), 400
-
-    recipe = Recipe.query.get(data['recipe_id'])
-    if not recipe:
-        return jsonify({'error': 'Recipe not found'}), 404
-
-    stock_check, all_ok, has_conversion_issues = check_stock_for_recipe(recipe, float(data['scale']))
-
-    return jsonify({
-        'recipe_name': recipe.name,
-        'stock_check': stock_check,
-        'status': 'ok' if all_ok else 'bad',
-        'conversion_warning': has_conversion_issues
-    })
-
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required
 
