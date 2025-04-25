@@ -203,9 +203,11 @@ async function checkProductionStock() {
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = {{ recipe.id }};  // This will be a raw number, not a string
 
-  const recipeIdToUse = variationId ? parseInt(variationId) : recipeId;
+  const recipeIdRaw = variationId || recipeId;
+  const recipeIdToUse = parseInt(recipeIdRaw, 10);
+  
   if (!recipeIdToUse || isNaN(recipeIdToUse)) {
-    alert('Missing or invalid recipe ID');
+    alert('❌ Please select a valid recipe.');
     return;
   }
 
