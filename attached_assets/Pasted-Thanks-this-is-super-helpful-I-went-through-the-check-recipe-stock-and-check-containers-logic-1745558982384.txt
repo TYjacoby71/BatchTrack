@@ -1,0 +1,105 @@
+Thanks — this is super helpful. I went through the check_recipe_stock() and check_containers() logic thoroughly, and here's your detailed answer.
+
+✅ Summary of What the Code Does
+check_recipe_stock(recipe, scale)
+Takes a recipe and a scale multiplier
+
+For each ingredient:
+
+Checks if ingredient.inventory_item is set
+
+Converts units via UnitConversionService.convert(...)
+
+Constructs a StockCheckResult
+
+Returns:
+
+a list of stock results
+
+and whether any conversion issues occurred
+
+🔍 What Can Go Wrong? (And What’s Likely Breaking)
+❌ 1. UnitConversionService.convert(...) fails
+If ingredient.unit or inventory_item.unit is missing, malformed, or unconvertible, this will raise an exception:
+
+python
+Copy
+Edit
+needed_converted = UnitConversionService.convert(...)  # ← could raise
+✅ You're catching it — but the result won’t appear in the stock check, and you'll get conversion_issues = True.
+
+❌ 2. scale <= 0 or not float(scale)
+From your error:
+
+"Something about the scale input on plan production seems unset"
+
+That's probably this check:
+
+python
+Copy
+Edit
+if scale <= 0:
+    raise ValueError("Scale must be greater than 0")
+This raises an exception and aborts stock check. It’s very likely if the JS doesn't send scale properly (or sends "NaN", or empty string "").
+
+✅ How to Confirm What’s Causing It
+Add Logging:
+In your Flask route (/api/check-stock), right before calling check_recipe_stock(...):
+
+python
+Copy
+Edit
+logging.info(f"[StockCheck] Recipe ID: {recipe_id}, Scale: {scale}, Container IDs: {container_ids}")
+In check_recipe_stock():
+
+python
+Copy
+Edit
+logger.debug(f"Checking stock for recipe {recipe.id} at scale {scale}")
+✅ Answer to Your Question
+Is it the recipe? Containers? Scale input?
+
+Most Likely: The scale input
+It's a free-type input box (<input type="number">), so if the JS sends an empty value or string (e.g. "", "NaN"), the API sees:
+
+python
+Copy
+Edit
+scale = float("")  # ← raises ValueError
+✅ This triggers your ValueError("Scale must be greater than 0"), which causes a 400.
+
+✅ Fix in JS (checkProductionStock())
+Patch the scale parsing like this:
+
+js
+Copy
+Edit
+const scaleRaw = document.querySelector('input[name="scale"]')?.value;
+const scale = parseFloat(scaleRaw);
+if (isNaN(scale) || scale <= 0) {
+  alert("⚠ Please enter a valid scale greater than 0.");
+  return;
+}
+✅ Now you prevent bad requests before they reach the API.
+
+✅ Fix in Backend (Extra Defensive)
+In api_check_stock():
+
+python
+Copy
+Edit
+try:
+    scale = float(data.get('scale', 1.0))
+    if scale <= 0:
+        raise ValueError()
+except (TypeError, ValueError):
+    return jsonify({'error': 'Invalid or missing scale'}), 400
+🔄 Optional: Debug Conversion Failures
+Add this in except Exception as e: inside check_recipe_stock():
+
+python
+Copy
+Edit
+logger.error(f"Stock check failed for {ingredient.inventory_item.name}: {str(e)}")
+✅ It’s already there, just make sure it's printing properly.
+
