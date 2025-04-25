@@ -227,8 +227,18 @@ function convertUnits() {
 // Helper function to update stock check table
 async function checkStock() {
   const recipeId = document.getElementById('recipeSelect').value;
-  const scale = document.getElementById('scaleInput').value;
+  const scale = parseFloat(document.getElementById('scaleInput').value);
   
+  if (!recipeId) {
+    alert('Please select a recipe');
+    return;
+  }
+  
+  if (!scale || scale <= 0) {
+    alert('Please enter a scale greater than 0');
+    return;
+  }
+
   try {
     const response = await fetch('/stock/check', {
       method: 'POST',
