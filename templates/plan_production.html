@@ -201,7 +201,7 @@ async function checkProductionStock() {
   const scaleInput = document.querySelector('input[name="scale"]');
   const scale = scaleInput && scaleInput.value ? parseFloat(scaleInput.value) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
-  const recipeId = {{ recipe.id }};
+  const recipeId = {{ recipe.id }};  // This will be a raw number, not a string
 
   const recipeIdToUse = variationId ? parseInt(variationId) : recipeId;
   if (!recipeIdToUse || isNaN(recipeIdToUse)) {
