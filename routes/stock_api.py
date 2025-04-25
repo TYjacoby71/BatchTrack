@@ -24,9 +24,10 @@ def api_check_stock():
         try:
             scale = float(data.get('scale', 1.0))
             if scale <= 0:
-                return jsonify({'error': 'Scale must be greater than 0'}), 400
+                raise ValueError()
+            logger.info(f"[StockCheck] Recipe ID: {recipe_id}, Scale: {scale}, Container IDs: {data.get('container_ids', [])}")
         except (TypeError, ValueError):
-            return jsonify({'error': 'Invalid scale value'}), 400
+            return jsonify({'error': 'Invalid or missing scale'}), 400
 
         # Check recipe ingredients
         ingredient_results, conversion_warning = check_recipe_stock(recipe, scale)
