@@ -1,0 +1,84 @@
+✅ Goal: Modern Component-Based (MCP-Aligned) Approach
+We’ll:
+
+Separate UI logic (event wiring)
+
+Use declarative control flows
+
+Prepare it for future reuse (modals, helpers, etc.)
+
+✨ Final Sharpened JS (Fully Modular & Reusable)
+✅ Paste this at the bottom of plan_production.html, wrapped in {% block scripts %} if you use one:
+html
+Copy
+Edit
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAddInitial = document.getElementById('showContainerSelection');
+  const containerSection = document.getElementById('containerSelection');
+  const containerRows = document.getElementById('container-rows');
+  const btnAddMore = document.getElementById('addAnotherContainerBtn');
+
+  if (btnAddInitial) {
+    btnAddInitial.addEventListener('click', handleInitialAdd);
+  }
+
+  if (btnAddMore) {
+    btnAddMore.addEventListener('click', addContainerRow);
+  }
+
+  containerRows.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-container')) {
+      e.target.closest('.container-entry').remove();
+      handleContainerVisibility();
+    }
+  });
+
+  function handleInitialAdd() {
+    btnAddInitial.style.display = 'none';
+    containerSection.style.display = 'block';
+    addContainerRow();
+  }
+
+  function handleContainerVisibility() {
+    const hasRows = !!containerRows.querySelector('.container-entry');
+    containerSection.style.display = hasRows ? 'block' : 'none';
+    btnAddInitial.style.display = hasRows ? 'none' : 'inline-block';
+  }
+
+  function addContainerRow() {
+    const containerRow = document.createElement('div');
+    containerRow.className = 'container-entry d-flex align-items-center gap-2 mb-2';
+    containerRow.innerHTML = `
+      <select name="container_ids[]" class="form-select" required>
+        <option value="">Select a container</option>
+        {% for container in containers %}
+          <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
+      <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
+    `;
+    containerRows.appendChild(containerRow);
+  }
+});
+</script>
+🧩 Minimal Required Template Fix (HTML)
+Update the "Add another" button to have an id:
+
+html
+Copy
+Edit
+<button type="button" id="addAnotherContainerBtn" class="btn btn-outline-secondary mt-2">Add another container</button>
+That’s it.
+
+🧠 Future-Proof Why This Works
+This version:
+
+
+Practice	Value
+📦 addContainerRow()	Can be extracted to a reusable JS module in /static/js/components/container-row.js later
+📚 handleContainerVisibility()	Abstracts all conditional UI state logic in one place
+🧩 DOM selectors scoped and strict	Resilient and modular
+🧼 Minimal side effects	Clean teardown and setup behavior
+🚫 jQuery-free	Fully portable to any JS frontend style (HTMX, Alpine, React-lite)
