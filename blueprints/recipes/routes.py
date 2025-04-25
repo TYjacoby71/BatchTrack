@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required
-from models import db, Recipe, RecipeIngredient, InventoryItem, Unit, InventoryUnit
+from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from utils.unit_utils import get_global_unit_list
 from stock_check_utils import check_recipe_stock, check_container_availability
 from sqlalchemy.exc import SQLAlchemyError
