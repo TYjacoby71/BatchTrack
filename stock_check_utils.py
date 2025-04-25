@@ -6,10 +6,14 @@ def get_available_containers():
     """Get all available containers ordered by name"""
     return InventoryItem.query.filter_by(type='container').order_by(InventoryItem.name).all()
 
-def check_stock_for_recipe(recipe, scale=1.0):
+def check_stock_for_recipe(recipe, scale=1.0, container_ids=None):
+    """
+    Comprehensive stock check that includes both ingredients and containers
+    """
     results = []
     all_ok = True
 
+    # Check ingredients
     for assoc in recipe.recipe_ingredients:
         ing = assoc.inventory_item
         if not ing:
@@ -19,9 +23,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
             needed_converted = ConversionEngine.convert_units(needed, assoc.unit, ing.unit)
         except Exception as e:
             print(f"Conversion error for {ing.name}: {str(e)}")
-            # Keep original values if conversion fails
             needed_converted = needed
-            # Mark status as error to highlight conversion issue
             status = 'ERROR'
             all_ok = False
 
@@ -35,8 +37,15 @@ def check_stock_for_recipe(recipe, scale=1.0):
             'unit': ing.unit,
             'needed': round(needed_converted, 2),
             'available': round(available, 2),
-            'status': status
+            'status': status,
+            'type': 'ingredient'
         })
+
+    # Check containers if specified
+    if container_ids:
+        container_results, containers_ok = check_container_availability(container_ids, scale)
+        results.extend(container_results)
+        all_ok = all_ok and containers_ok
 
     return results, all_ok
 
