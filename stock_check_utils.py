@@ -1,5 +1,5 @@
 from models import InventoryItem, RecipeIngredient
-from services.unit_conversion_service import ConversionService
+from services.unit_conversion_service import UnitConversionService as ConversionService
 import logging
 from sqlalchemy.exc import SQLAlchemyError
 
