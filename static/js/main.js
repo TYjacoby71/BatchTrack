@@ -220,16 +220,13 @@ function convertUnits() {
 }
 
 async function checkStock() {
-  const recipeSelect = document.getElementById('recipeSelect');
-  const scaleInput = document.getElementById('scaleInput');
-
-  if (!recipeSelect || !scaleInput) {
-    console.error('Required elements not found');
+  const scale = parseFloat(document.querySelector('input[name="scale"]')?.value || '1.0');
+  const recipeId = window.location.pathname.split('/')[2]; // Get recipe ID from URL
+  
+  if (!recipeId || isNaN(scale) || scale <= 0) {
+    alert('Please enter a valid scale greater than 0');
     return;
   }
-
-  const recipeId = recipeSelect.value;
-  const scale = parseFloat(scaleInput.value || '1.0');
 
   if (!recipeId || isNaN(scale) || scale <= 0) {
     alert('Please select a recipe and enter a valid scale');

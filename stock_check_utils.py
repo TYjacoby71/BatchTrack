@@ -18,7 +18,12 @@ def check_stock_for_recipe(recipe, scale=1.0):
         try:
             needed_converted = ConversionEngine.convert_units(needed, assoc.unit, ing.unit)
         except Exception as e:
+            print(f"Conversion error for {ing.name}: {str(e)}")
+            # Keep original values if conversion fails
             needed_converted = needed
+            # Mark status as error to highlight conversion issue
+            status = 'ERROR'
+            all_ok = False
 
         available = ing.quantity
         status = 'OK' if available >= needed_converted else 'LOW' if available > 0 else 'NEEDED'
