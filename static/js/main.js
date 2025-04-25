@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
@@ -42,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`Creating unit: ${name} (${type})`);
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      
+
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
@@ -219,23 +218,11 @@ function convertUnits() {
     });
 }
 
-async function checkStock(event) {
-  // Prevent form submission if called from a form
-  if (event) {
-    event.preventDefault();
-  }
-
-  // Initialize elements
-  const checkStockBtn = document.querySelector('.check-stock-btn');
-  if (checkStockBtn) {
-    checkStockBtn.disabled = true;
-  }
-
-  // Get scale and recipe ID either from URL or form inputs
-  const scaleInput = document.querySelector('input[name="scale"]') || document.getElementById('scaleInput');
+async function checkProductionStock() {
+  const scaleInput = document.getElementById('scale');
   const scale = parseFloat(scaleInput?.value || '1.0');
-  const recipeId = document.getElementById('recipeSelect')?.value || window.location.pathname.split('/')[2];
-  
+  const recipeId = window.location.pathname.split('/')[2];
+
   if (!recipeId || isNaN(scale) || scale <= 0) {
     alert('Please enter a valid scale greater than 0');
     return;
@@ -259,7 +246,7 @@ async function checkStock(event) {
     }
 
     const data = await response.json();
-    
+
     const resultsDiv = document.querySelector('.stock-check-results');
     if (!resultsDiv) {
       console.error('Stock check results div not found');

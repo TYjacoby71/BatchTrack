@@ -83,8 +83,18 @@ def check_stock():
                 status = "low"
                 break
 
+        # Format the response to match template expectations
+        results = [{
+            'name': item['name'],
+            'needed': item['needed'],
+            'available': item['available'],
+            'unit': item['unit'],
+            'status': item['status'],
+            'type': item.get('type', 'ingredient')
+        } for item in stock_check]
+        
         return jsonify({
-            "stock_check": stock_check,
+            "stock_check": results,
             "status": status,
             "all_ok": all_ok,
             "recipe_name": recipe.name
