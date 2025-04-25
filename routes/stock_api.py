@@ -38,8 +38,18 @@ def api_check_stock():
             if scale <= 0:
                 return jsonify({'error': 'Scale must be greater than 0'}), 400
 
-            stock_results, all_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
+            # Check recipe ingredients
+            stock_results, ingredients_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
             
+            # Check containers if provided
+            container_ids = data.get('container_ids', [])
+            if container_ids:
+                container_results, containers_ok = check_container_availability(container_ids, scale)
+                stock_results.extend(container_results)
+                all_ok = ingredients_ok and containers_ok
+            else:
+                all_ok = ingredients_ok
+
             return jsonify({
                 'all_ok': all_ok,
                 'stock_check': stock_results,
