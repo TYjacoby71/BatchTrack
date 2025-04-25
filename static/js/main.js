@@ -255,21 +255,28 @@ async function checkStock() {
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json();
+    console.log("Stock check response:", data);
+
     const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) return;
+    if (!resultsDiv) {
+      console.error("Results div not found");
+      return;
+    }
 
     resultsDiv.style.display = 'block';
     const tableBody = document.getElementById('stockCheckTableBody');
-    if (!tableBody) return;
-
-    resultsDiv.style.display = 'block';
+    if (!tableBody) {
+      console.error("Table body not found");
+      return;
+    }
 
     // Show start batch button if all ok
     const startBatchBtn = document.querySelector('.start-batch-btn');
     if (startBatchBtn) {
-        startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
     }
 
+    // Update table with results
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
         <td>${item.type || 'ingredient'}</td>
