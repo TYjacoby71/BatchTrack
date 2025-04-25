@@ -105,12 +105,9 @@ async function checkStock() {
   }
 
   try {
-    const response = await fetch('/api/check-stock', {
+    const response = await fetch('/stock/check', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipe_id: recipeId, scale: parseFloat(scale) })
     });
 
