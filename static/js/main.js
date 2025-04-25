@@ -228,11 +228,6 @@ async function checkStock() {
     return;
   }
 
-  if (!recipeId || isNaN(scale) || scale <= 0) {
-    alert('Please select a recipe and enter a valid scale');
-    return;
-  }
-
   try {
     const response = await fetch('/stock/check', {
       method: 'POST',
@@ -252,11 +247,14 @@ async function checkStock() {
     const data = await response.json();
 
     const tableBody = document.getElementById('stockCheckTableBody');
-    if (!tableBody) {
-      console.error('Stock check table body not found');
+    const resultsDiv = document.querySelector('.stock-check-results');
+    
+    if (!tableBody || !resultsDiv) {
+      console.error('Stock check elements not found');
       return;
     }
 
+    resultsDiv.style.display = 'block';
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
         <td>${item.name}</td>
