@@ -1,4 +1,16 @@
+// Unit loading and conversion functions
+async function loadUnits() {
+  try {
+    const response = await fetch('/conversion/units');
+    const units = await response.json();
+    return units;
+  } catch (error) {
+    console.error('Error loading units:', error);
+    return [];
+  }
+}
 
+// DOM Ready handler
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
@@ -17,15 +29,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     if (modal) modal.hide();
   });
-});
 
-
-document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
-      // Retry after a short delay if button not found
       setTimeout(initQuickAddUnit, 100);
       return;
     }
@@ -42,68 +50,127 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`Creating unit: ${name} (${type})`);
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      
+
       fetch('/quick-add/unit', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({ name, type })
       })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) {
-          alert('Error: ' + data.error);
-          return;
-        }
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+          }
 
-        // Insert unit into ingredient modal dropdown
-        const unitSelect = document.getElementById('quickIngredientUnit');
-        if (unitSelect) {
-          const newOption = new Option(data.name, data.name, false, true);
-          unitSelect.add(newOption);
-          unitSelect.value = data.name;
-        }
+          // Insert unit into ingredient modal dropdown
+          const unitSelect = document.getElementById('quickIngredientUnit');
+          if (unitSelect) {
+            const newOption = new Option(data.name, data.name, false, true);
+            unitSelect.add(newOption);
+            unitSelect.value = data.name;
+          }
 
-        // Add to quick ingredient unit dropdown
-        const quickUnit = document.getElementById('new-ingredient-unit');
-        if (quickUnit) {
-          quickUnit.add(new Option(data.name, data.name, false, true));
-          quickUnit.value = data.name;
-        }
+          // Add to quick ingredient unit dropdown
+          const quickUnit = document.getElementById('new-ingredient-unit');
+          if (quickUnit) {
+            quickUnit.add(new Option(data.name, data.name, false, true));
+            quickUnit.value = data.name;
+          }
 
-        // Update all other unit dropdowns
-        document.querySelectorAll("select[name='units[]']").forEach(select => {
-          const option = new Option(data.name, data.name);
-          select.add(option);
+          // Update all other unit dropdowns
+          document.querySelectorAll("select[name='units[]']").forEach(select => {
+            const option = new Option(data.name, data.name);
+            select.add(option);
+          });
+
+          // Handle modal transitions
+          const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+          if (unitModal) {
+            unitModal.hide();
+            setTimeout(() => {
+              const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+              ingredientModal.show();
+              document.getElementById('ingredientName')?.focus();
+            }, 300);
+          }
+
+          // Reset form
+          document.getElementById('unitName').value = '';
+          document.getElementById('unitType').selectedIndex = 0;
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Failed to add unit");
         });
-
-        // Handle modal transitions
-        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-        if (unitModal) {
-          unitModal.hide();
-          setTimeout(() => {
-            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-            ingredientModal.show();
-            document.getElementById('ingredientName')?.focus();
-          }, 300);
-        }
-
-        // Reset form
-        document.getElementById('unitName').value = '';
-        document.getElementById('unitType').selectedIndex = 0;
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Failed to add unit");
-      });
     });
   }
 
   initQuickAddUnit();
-  loadUnits();
+
+
+  // Container selection handlers
+  const containerSection = document.getElementById('containerSelection');
+  const btnAddInitial = document.getElementById('showContainerSelection');
+  const containerRows = document.getElementById('container-rows');
+  const btnAddMore = document.getElementById('addAnotherContainerBtn');
+
+  if (btnAddInitial) {
+    btnAddInitial.addEventListener('click', () => {
+      btnAddInitial.style.display = 'none';
+      containerSection.style.display = 'block';
+      addContainerRow();
+    });
+  }
+
+  if (btnAddMore) {
+    btnAddMore.addEventListener('click', addContainerRow);
+  }
+
+  if (containerRows) {
+    containerRows.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-container')) {
+        e.target.closest('.container-entry').remove();
+        handleContainerVisibility();
+      }
+    });
+  }
 });
+
+// Helper functions
+function handleContainerVisibility() {
+  const containerSection = document.getElementById('containerSelection');
+  const btnAddInitial = document.getElementById('showContainerSelection');
+  const containerRows = document.getElementById('container-rows');
+
+  if (!containerSection || !btnAddInitial || !containerRows) return;
+
+  const hasRows = !!containerRows.querySelector('.container-entry');
+  containerSection.style.display = hasRows ? 'block' : 'none';
+  btnAddInitial.style.display = hasRows ? 'none' : 'inline-block';
+}
+
+function addContainerRow() {
+  const containerRows = document.getElementById('container-rows');
+  if (!containerRows) return;
+
+  const containerRow = document.createElement('div');
+  containerRow.className = 'container-entry d-flex align-items-center gap-2 mb-2';
+  containerRow.innerHTML = `
+    <select name="container_ids[]" class="form-select" required>
+      <option value="">Select a container</option>
+      {% for container in containers %}
+        <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
+      {% endfor %}
+    </select>
+    <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
+    <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
+  `;
+  containerRows.appendChild(containerRow);
+}
 
 function filterUnits() {
   const filter = document.getElementById('unitFilter').value;
@@ -119,57 +186,6 @@ function filterUnits() {
   });
 }
 
-function loadUnits() {
-  fetch('/conversion/units', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    credentials: 'same-origin'
-  })
-    .then(response => {
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    })
-    .then(units => {
-      if (!units || (Array.isArray(units) && units.length === 0)) {
-        console.warn('No units available');
-        return;
-      }
-      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
-      unitSelectors.forEach(select => {
-        if (!select) return;
-        select.innerHTML = '';
-        //Added grouping of units by category
-        const unitGroups = {};
-        units.forEach(unit => {
-          const category = unit.type || 'Other';
-          if (!unitGroups[category]) {
-            unitGroups[category] = [];
-          }
-          unitGroups[category].push(unit);
-        });
-
-        for (const category in unitGroups) {
-          const optgroup = document.createElement('optgroup');
-          optgroup.label = category;
-          unitGroups[category].forEach(unit => {
-            const option = new Option(unit.name, unit.name);
-            optgroup.appendChild(option);
-          });
-          select.appendChild(optgroup);
-        }
-        // Initialize Select2 with search
-        $(select).select2({
-          placeholder: 'Search for a unit...',
-          width: '100%',
-          allowClear: true
-        });
-      });
-    })
-    .catch(error => console.error('Error loading units:', error));
-}
 
 function displayResult(element, text) {
   element.innerHTML = `
