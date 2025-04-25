@@ -100,4 +100,18 @@
     </div>
   </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const typeSelect = document.querySelector('select[name="type"]');
+  const categorySelect = document.querySelector('select[name="category_id"]');
+  
+  if (categorySelect && typeSelect) {
+    categorySelect.addEventListener('change', () => {
+      const selectedText = categorySelect.options[categorySelect.selectedIndex].text.toLowerCase();
+      typeSelect.value = selectedText.includes('container') ? 'container' : 'ingredient';
+    });
+  }
+});
+</script>
 {% endblock %}
