@@ -1,0 +1,98 @@
+the dev tool says scale has already been identified
+
+
+ChatGPT said:
+Ah — that’s the clue we needed. Let me unpack this for you:
+
+🧠 What “scale has already been identified” Likely Means
+This is not a browser error or a network issue — it's almost certainly coming from Flask or your route logic, and it suggests that:
+
+🔥 The name scale is:
+A query parameter
+
+AND a key in the JSON body
+
+OR it's being shadowed somewhere in your backend route or template
+
+📍 Potential Causes (Ranked)
+1. ❌ Flask is getting duplicate form fields
+You have:
+
+html
+Copy
+Edit
+<input type="number" name="scale" id="scale" class="form-control" ...>
+And you're also sending scale in:
+
+js
+Copy
+Edit
+body: JSON.stringify({
+  scale: parseFloat(scale),
+  ...
+})
+But if your form is submitting via fallback or fails to override default behavior, both versions of scale may reach Flask.
+
+2. ❌ Flask route is using both request.form and request.get_json()
+If your /api/check-stock or /stock/check route is mixing these:
+
+python
+Copy
+Edit
+scale = request.form.get("scale")  # 👈 from form
+# vs
+scale = request.get_json().get("scale")  # 👈 from JS
+… and both are defined, it may raise an exception or overwrite unexpectedly.
+
+✅ What To Do
+Step 1: Prevent Form Submission (Most Critical Fix)
+Even though your button is type="button", some browsers or frameworks still attempt a form submit. Add this hard stop:
+
+js
+Copy
+Edit
+document.querySelector("button.btn.btn-primary")?.addEventListener("click", e => e.preventDefault());
+Or inside checkProductionStock():
+
+js
+Copy
+Edit
+event?.preventDefault?.();
+Step 2: Add Debugging Output
+In your Flask route:
+
+python
+Copy
+Edit
+data = request.get_json()
+print("[DEBUG] Received stock check data:", data)
+Confirm:
+
+scale is defined once
+
+It's a float, not str, None, or "NaN"
+
+Step 3: Rename HTML Input name="scale" to Avoid Conflict
+Change this:
+
+html
+Copy
+Edit
+<input type="number" name="scale" id="scale" ...>
+To:
+
+html
+Copy
+Edit
+<input type="number" name="batch_scale" id="scale" ...>
+And update your JS accordingly:
+
+js
+Copy
+Edit
+const scaleRaw = document.getElementById("scale")?.value;
+✅ Now you're not sending scale via both form and fetch.
+
+✅ Confirm: JS-Only Flow
+You're relying on JS-only logic to send a fetch() request — you do not need the form to submit at all.
+
