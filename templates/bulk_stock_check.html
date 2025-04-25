@@ -4,7 +4,7 @@
 <h2>Bulk Stock Check</h2>
 
 <form method="post">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="recipe_ids">Select Recipes:</label><br>
     <select name="recipe_ids" multiple size="6" required>
         {% for recipe in recipes %}
