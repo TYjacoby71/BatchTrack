@@ -162,7 +162,7 @@ async function checkProductionStock() {
   }
 
   try {
-    const response = await fetch('/stock/check', {
+    const response = await fetch('/api/check-stock', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -170,8 +170,7 @@ async function checkProductionStock() {
       },
       body: JSON.stringify({
         recipe_id: variationId || recipeId,
-        scale: scale,
-        container_ids: containerIds
+        scale: scale
       })
     });
 
