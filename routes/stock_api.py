@@ -1,8 +1,10 @@
 
 from flask import Blueprint, request, jsonify
 from models import Recipe
-from stock_check_utils import check_stock_for_recipe
+from stock_check_utils import check_stock_for_recipe, check_container_availability
 import logging
+
+logger = logging.getLogger(__name__)
 
 stock_api_bp = Blueprint('stock_api', __name__)
 
