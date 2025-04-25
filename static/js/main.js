@@ -239,6 +239,14 @@ async function checkStock() {
     return;
   }
 
+  // Get container selections if any
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => ({ 
+      id: s.value, 
+      quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
+    }))
+    .filter(c => c.id);
+
   try {
     const response = await fetch('/stock/check', {
       method: 'POST',
@@ -247,12 +255,19 @@ async function checkStock() {
       },
       body: JSON.stringify({
         recipe_id: recipeId,
-        scale: parseFloat(scale)
+        scale: scale,
+        containers: containerIds
       })
     });
 
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(`Error checking stock: ${errorData.message || 'Unknown error'}`);
+      return;
+    }
+
     const data = await response.json();
+    console.log('Stock check response:', data);
     updateStockCheckTable(data);
     
     // Show step 2 after successful stock check
