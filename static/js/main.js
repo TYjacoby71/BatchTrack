@@ -224,15 +224,18 @@ function convertUnits() {
     });
 }
 
-async function checkStock() {
+async function checkProductionStock() {
   const scaleInput = document.getElementById('scale');
   const scale = parseFloat(scaleInput?.value || '1.0');
   const recipeIdInput = document.getElementById('recipe_id');
   const path = window.location.pathname;
   const recipeId = recipeIdInput?.value || (path.includes('/recipes/') ? path.split('/')[2] : null);
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => s.value)
-    .filter(Boolean);
+    .map(s => ({ 
+      id: s.value, 
+      quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value || '0', 10)
+    }))
+    .filter(c => c.id);
 
   if (!recipeId || isNaN(scale) || scale <= 0) {
     alert('Please enter a valid scale greater than 0');
@@ -249,7 +252,7 @@ async function checkStock() {
       body: JSON.stringify({
         recipe_id: recipeId,
         scale: scale,
-        container_ids: containerIds
+        containers: containerIds
       })
     });
 
