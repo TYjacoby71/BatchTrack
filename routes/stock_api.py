@@ -17,7 +17,15 @@ def api_check_stock():
             return jsonify({'error': 'Missing recipe ID'}), 400
 
         try:
-            recipe_id = int(data['recipe_id'])
+            recipe_id = data.get('recipe_id')
+            if not recipe_id:
+                return jsonify({'error': 'Missing recipe ID'}), 400
+
+            try:
+                recipe_id = int(recipe_id)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid recipe ID format'}), 400
+
             recipe = Recipe.query.get(recipe_id)
             if not recipe:
                 return jsonify({'error': 'Recipe not found'}), 404
