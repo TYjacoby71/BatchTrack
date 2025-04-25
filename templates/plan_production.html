@@ -60,7 +60,7 @@
           <th>Status</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="stockCheckTableBody">
         {% for item in stock_check %}
         <tr class="{% if item.status == 'NEEDED' %}table-danger{% elif item.status == 'LOW' %}table-warning{% else %}table-success{% endif %}">
           <td>{{ item.type or 'ingredient' }}</td>

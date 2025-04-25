@@ -70,8 +70,10 @@ def check_stock():
         # Use stock check utils for both recipe and containers
         stock_check, all_ok = check_stock_for_recipe(recipe, scale)
         
-        if data.get('container_ids'):
-            container_check, containers_ok = check_container_availability(data['container_ids'], scale)
+        # Handle container validation
+        container_ids = data.get('container_ids', [])
+        if container_ids and isinstance(container_ids, list):
+            container_check, containers_ok = check_container_availability(container_ids, scale)
             stock_check.extend(container_check)
             all_ok = all_ok and containers_ok
 
