@@ -49,22 +49,21 @@ def check_stock_for_recipe(recipe, scale=1.0, container_ids=None):
 
     return results, all_ok
 
-def check_container_availability(container_ids, scale=1.0):
+def check_container_availability(containers, scale=1.0):
     results = []
     all_ok = True
     
     from models import InventoryItem
 
-    for cid in container_ids:
-        container = InventoryItem.query.get(cid)
-        if not container or container.type != 'container':
+    for container in containers:
+        container_item = InventoryItem.query.get(container['id'])
+        if not container_item or container_item.type != 'container':
             continue
 
-        required = 1 * scale  # assume 1 per unit for now
-        available = container.quantity
-        unit = container.unit
+        needed = container['quantity']
+        available = container_item.quantity
 
-        if available >= required:
+        if available >= needed:
             status = 'OK'
         elif available > 0:
             status = 'LOW'
@@ -74,9 +73,8 @@ def check_container_availability(container_ids, scale=1.0):
             all_ok = False
 
         results.append({
-            'name': container.name,
-            'unit': unit,
-            'needed': required,
+            'name': container_item.name,
+            'needed': needed,
             'available': available,
             'status': status,
             'type': 'container'
