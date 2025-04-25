@@ -219,9 +219,15 @@ function convertUnits() {
     });
 }
 
-async function checkStock() {
-  const scale = parseFloat(document.querySelector('input[name="scale"]')?.value || '1.0');
-  const recipeId = window.location.pathname.split('/')[2]; // Get recipe ID from URL
+async function checkStock(event) {
+  // Prevent form submission if called from a form
+  if (event) {
+    event.preventDefault();
+  }
+
+  // Get scale and recipe ID either from URL or form inputs
+  const scale = parseFloat(document.querySelector('input[name="scale"]')?.value || document.getElementById('scaleInput')?.value || '1.0');
+  const recipeId = document.getElementById('recipeSelect')?.value || window.location.pathname.split('/')[2];
   
   if (!recipeId || isNaN(scale) || scale <= 0) {
     alert('Please enter a valid scale greater than 0');
