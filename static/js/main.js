@@ -271,16 +271,16 @@ async function checkStock() {
       return;
     }
 
-    // Show start batch button if all ok
-    const startBatchBtn = document.querySelector('.start-batch-btn');
-    if (startBatchBtn) {
-      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-    }
-
     // Update table with results
     if (!Array.isArray(data.stock_check)) {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">⚠️ No results found or invalid response.</td></tr>';
       return;
+    }
+
+    // Show start batch button if all ok
+    const startBatchBtn = document.getElementById('startBatchBtn');
+    if (startBatchBtn) {
+      startBatchBtn.style.display = data.all_ok ? 'inline-block' : 'none';
     }
 
     tableBody.innerHTML = data.stock_check.map(item => `
