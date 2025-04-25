@@ -255,6 +255,14 @@ async function checkStock() {
     const tableBody = document.getElementById('stockCheckTableBody');
     if (!tableBody) return;
 
+    resultsDiv.style.display = 'block';
+
+    // Show start batch button if all ok
+    const startBatchBtn = document.querySelector('.start-batch-btn');
+    if (startBatchBtn) {
+        startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+    }eturn;
+
     tableBody.innerHTML = data.stock_check.map(item => `
       <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
         <td>${item.type || 'ingredient'}</td>

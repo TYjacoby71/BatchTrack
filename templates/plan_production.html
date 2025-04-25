@@ -82,17 +82,13 @@
       </tbody>
     </table>
 
-    {% if all_ok %}
-    <form action="{{ url_for('batches.start_batch') }}" method="post">
+    <form action="{{ url_for('batches.start_batch') }}" method="post" class="start-batch-btn" style="display: none;">
       <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
-      <input type="hidden" name="scale" value="{{ scale }}">
+      <input type="hidden" name="scale" id="batch_scale">
       <input type="hidden" name="variation_id" value="{{ request.form.get('variation_id') }}">
-      {% for container_id in request.form.getlist('containers[]') %}
-      <input type="hidden" name="containers[]" value="{{ container_id }}">
-      {% endfor %}
-      <button type="submit" class="btn btn-success">Start Batch</button>
+      <div id="container_inputs"></div>
+      <button type="submit" class="btn btn-success mt-3">Start Batch</button>
     </form>
-    {% endif %}
   </div>
   {% endif %}
 </form>
