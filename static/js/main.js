@@ -224,88 +224,25 @@ function convertUnits() {
     });
 }
 
-// Helper function to update stock check table
-async function checkStock() {
-  const recipeId = document.getElementById('recipeSelect').value;
-  const scale = parseFloat(document.getElementById('scaleInput').value);
-  
-  if (!recipeId) {
-    alert('Please select a recipe');
-    return;
-  }
-  
-  if (!scale || scale <= 0) {
-    alert('Please enter a scale greater than 0');
-    return;
-  }
-
-  // Get container selections if any
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => ({ 
-      id: s.value, 
-      quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
-    }))
-    .filter(c => c.id);
-
-  try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        recipe_id: recipeId,
-        scale: scale,
-        containers: containerIds
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      alert(`Error checking stock: ${errorData.message || 'Unknown error'}`);
-      return;
-    }
-
-    const data = await response.json();
-    console.log('Stock check response:', data);
-    updateStockCheckTable(data);
-    
-    // Show step 2 after successful stock check
-    document.getElementById('step1').style.display = 'none';
-    document.getElementById('step2').style.display = 'block';
-    
-  } catch (error) {
-    console.log('Error checking stock:', error);
-  }
-}
-
-function updateStockCheckTable(data) {
-  const tableBody = document.getElementById('stockCheckTableBody');
-  const startBatchControls = document.getElementById('startBatchControls');
-  
-  if (!tableBody || !data) return;
-
-  // Update table contents
+// Stock check functionality is now handled in plan_production.html template
+// Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
+const tableBody = document.getElementById('stockCheckTableBody'); // Assumed ID for table body
+if (tableBody && data) { //Added null check for data
   tableBody.innerHTML = data.stock_check.map(item => {
-    const showUnit = item.type !== 'container';
-    return `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${showUnit ? item.unit : '-'}</td>
-        <td>
-          <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
-            ${item.status}
-          </span>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  // Show/hide start batch controls based on stock check results
-  if (startBatchControls) {
-    startBatchControls.style.display = data.all_ok ? 'block' : 'none';
-  }
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>
+            <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
+              ${item.status}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
 }
