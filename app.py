@@ -1,45 +1,37 @@
+
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_wtf.csrf import CSRFProtect # Added import for CSRF protection
+from flask_wtf.csrf import CSRFProtect
 import os
 
-# Create the db object first
 db = SQLAlchemy()
-
-# Create app and attach config
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-# Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
 os.makedirs('static/product_images', exist_ok=True)
-os.chmod(instance_path, 0o777)  # Ensure write permissions
+os.chmod(instance_path, 0o777)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
-# Initialize db with app
 db.init_app(app)
 migrate = Migrate(app, db)
 
-csrf = CSRFProtect() # Initialize CSRFProtect object
-csrf.init_app(app) # Initialize CSRF protection for the app
+csrf = CSRFProtect()
+csrf.init_app(app)
 
-# Import models after db initialization
 from models import User, Recipe, InventoryItem, Unit, IngredientCategory
 
-# Setup logging
 from utils.unit_utils import setup_logging
 setup_logging(app)
 
-# Setup LoginManager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Register all blueprints
 from routes.batch_routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
@@ -52,21 +44,17 @@ from routes.products import products_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
-from routes.product_routes import product_bp
 from routes.timer_routes import timers_bp
 from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
-from routes.stock_api import stock_api_bp # Added import for stock API blueprint
+from routes.stock_api import stock_api_bp
 
-
-# Register blueprints
 app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(product_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -80,8 +68,7 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(stock_api_bp, url_prefix='/api') # Registered stock_api_bp with /api prefix
-
+app.register_blueprint(stock_api_bp, url_prefix='/api')
 
 @app.context_processor
 def inject_units():
