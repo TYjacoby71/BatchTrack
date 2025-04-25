@@ -226,23 +226,32 @@ function convertUnits() {
 
 // Stock check functionality is now handled in plan_production.html template
 // Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
+function updateStockCheckTable(data) {
+  const tableBody = document.getElementById('stockCheckTableBody');
+  const startBatchBtn = document.getElementById('startBatchBtn');
+
+  if (!tableBody) return;
+
+  tableBody.innerHTML = data.stock_check.map(item => {
+    const showUnit = item.type !== 'container';
+    return `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.type || 'ingredient'}</td>
+        <td>${item.name}</td>
+        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${showUnit ? item.unit : '-'}</td>
+        <td>${item.status}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (startBatchBtn) {
+    startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+  }
+}
+
 const tableBody = document.getElementById('stockCheckTableBody'); // Assumed ID for table body
 if (tableBody && data) { //Added null check for data
-  tableBody.innerHTML = data.stock_check.map(item => {
-      const showUnit = item.type !== 'container';
-      return `
-        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-          <td>${item.type || 'ingredient'}</td>
-          <td>${item.name}</td>
-          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${showUnit ? item.unit : '-'}</td>
-          <td>
-            <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
-              ${item.status}
-            </span>
-          </td>
-        </tr>
-      `;
-    }).join('');
+  updateStockCheckTable(data);
 }
