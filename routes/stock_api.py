@@ -16,7 +16,9 @@ def api_check_stock():
         if 'recipe_id' not in data:
             return jsonify({'error': 'Missing recipe ID'}), 400
 
-        recipe = Recipe.query.get(data['recipe_id'])
+        try:
+            recipe_id = int(data['recipe_id'])
+            recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
@@ -40,7 +42,9 @@ def api_check_stock():
 
     except ValueError as e:
         logging.error(f"Stock check validation error: {e}")
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': f'Invalid input: {str(e)}'}), 400
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': 'Invalid recipe ID format'}), 400
     except Exception as e:
         logging.exception("Stock check API failed")
         return jsonify({'error': 'Stock check failed'}), 500
