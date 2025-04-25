@@ -19,32 +19,31 @@ def api_check_stock():
         try:
             recipe_id = int(data['recipe_id'])
             recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return jsonify({'error': 'Recipe not found'}), 404
+            if not recipe:
+                return jsonify({'error': 'Recipe not found'}), 404
 
-        try:
-            scale = float(data.get('scale', 1.0))
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Invalid scale value'}), 400
+            try:
+                scale = float(data.get('scale', 1.0))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid scale value'}), 400
 
-        if scale <= 0:
-            return jsonify({'error': 'Scale must be greater than 0'}), 400
+            if scale <= 0:
+                return jsonify({'error': 'Scale must be greater than 0'}), 400
 
-        stock_results, all_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
-        
-        return jsonify({
-            'all_ok': all_ok,
-            'stock_check': stock_results,
-            'conversion_warning': conversion_warning,
-            'recipe_name': recipe.name,
-            'status': 'success' if all_ok else 'warning'
-        })
+            stock_results, all_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
+            
+            return jsonify({
+                'all_ok': all_ok,
+                'stock_check': stock_results,
+                'conversion_warning': conversion_warning,
+                'recipe_name': recipe.name,
+                'status': 'success' if all_ok else 'warning'
+            })
 
-    except ValueError as e:
-        logging.error(f"Stock check validation error: {e}")
-        return jsonify({'error': f'Invalid input: {str(e)}'}), 400
-    except (ValueError, TypeError) as e:
-        return jsonify({'error': 'Invalid recipe ID format'}), 400
+        except ValueError:
+            return jsonify({'error': 'Invalid recipe ID format'}), 400
+
     except Exception as e:
         logging.exception("Stock check API failed")
         return jsonify({'error': 'Stock check failed'}), 500
+
