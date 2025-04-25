@@ -225,6 +225,35 @@ function convertUnits() {
 }
 
 // Helper function to update stock check table
+async function checkStock() {
+  const recipeId = document.getElementById('recipeSelect').value;
+  const scale = document.getElementById('scaleInput').value;
+  
+  try {
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        scale: parseFloat(scale)
+      })
+    });
+
+    if (!response.ok) throw new Error('Network response was not ok');
+    const data = await response.json();
+    updateStockCheckTable(data);
+    
+    // Show step 2 after successful stock check
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = 'block';
+    
+  } catch (error) {
+    console.log('Error checking stock:', error);
+  }
+}
+
 function updateStockCheckTable(data) {
   const tableBody = document.getElementById('stockCheckTableBody');
   const startBatchControls = document.getElementById('startBatchControls');
