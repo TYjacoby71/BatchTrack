@@ -3,10 +3,10 @@
 {% block content %}
 <h2>Bulk Stock Check</h2>
 
-<form method="post" id="bulkStockForm">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form method="post">
+    {{ csrf_token() }}
     <label for="recipe_ids">Select Recipes:</label><br>
-    <select name="recipe_ids" id="recipe_ids" multiple size="6" required>
+    <select name="recipe_ids" multiple size="6" required>
         {% for recipe in recipes %}
         <option value="{{ recipe.id }}">{{ recipe.name }}</option>
         {% endfor %}
@@ -33,14 +33,3 @@
 </table>
 {% endif %}
 {% endblock %}
-
-
-<script>
-document.getElementById('bulkStockForm').addEventListener('submit', function(e) {
-    const recipeSelect = document.getElementById('recipe_ids');
-    if (recipeSelect.selectedOptions.length === 0) {
-        e.preventDefault();
-        alert('Please select at least one recipe');
-    }
-});
-</script>

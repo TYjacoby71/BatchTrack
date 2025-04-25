@@ -58,7 +58,6 @@ from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
-from routes.stock_api import stock_api_bp # Added import for stock API blueprint
 
 
 # Register blueprints
@@ -80,8 +79,6 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(stock_api_bp, url_prefix='/api') # Registered stock_api_bp with /api prefix
-
 
 @app.context_processor
 def inject_units():

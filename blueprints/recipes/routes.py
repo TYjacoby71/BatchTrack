@@ -205,6 +205,24 @@ def unlock_recipe(recipe_id):
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+@recipes_bp.route('/units/quick-add', methods=['POST'])
+def quick_add_unit():
+    data = request.get_json()
+    name = data.get('name')
+    type = data.get('type', 'volume')
+
+    try:
+        unit = InventoryUnit(name=name, type=type)
+        db.session.add(unit)
+        db.session.commit()
+        return jsonify({
+            'name': unit.name,
+            'type': unit.type
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
