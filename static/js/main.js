@@ -227,8 +227,11 @@ function convertUnits() {
 // Helper function to update stock check table
 function updateStockCheckTable(data) {
   const tableBody = document.getElementById('stockCheckTableBody');
+  const startBatchControls = document.getElementById('startBatchControls');
+  
   if (!tableBody || !data) return;
 
+  // Update table contents
   tableBody.innerHTML = data.stock_check.map(item => {
     const showUnit = item.type !== 'container';
     return `
@@ -246,4 +249,9 @@ function updateStockCheckTable(data) {
       </tr>
     `;
   }).join('');
+
+  // Show/hide start batch controls based on stock check results
+  if (startBatchControls) {
+    startBatchControls.style.display = data.all_ok ? 'block' : 'none';
+  }
 }
