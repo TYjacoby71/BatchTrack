@@ -218,3 +218,59 @@ function convertUnits() {
     });
 }
 
+async function checkStock() {
+  const scaleInput = document.getElementById('scale');
+  const scale = parseFloat(scaleInput?.value || '1.0');
+  const recipeId = window.location.pathname.split('/')[2];
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => s.value)
+    .filter(Boolean);
+
+  if (!recipeId || isNaN(scale) || scale <= 0) {
+    alert('Please enter a valid scale greater than 0');
+    return;
+  }
+
+  try {
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+      },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        scale: scale,
+        container_ids: containerIds
+      })
+    });
+
+    if (!response.ok) throw new Error('Network response was not ok');
+
+    const data = await response.json();
+    const resultsDiv = document.querySelector('.stock-check-results');
+    if (!resultsDiv) return;
+
+    resultsDiv.style.display = 'block';
+    const tableBody = document.getElementById('stockCheckTableBody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = data.stock_check.map(item => `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.type || 'ingredient'}</td>
+        <td>${item.name}</td>
+        <td>${item.needed}</td>
+        <td>${item.available}</td>
+        <td>${item.unit}</td>
+        <td>
+          <span class="badge ${item.status === 'OK' ? 'bg-success' : item.status === 'LOW' ? 'bg-warning' : 'bg-danger'}">
+            ${item.status}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Error checking stock:', error);
+    alert('Error checking stock. Please try again.');
+  }
+}
