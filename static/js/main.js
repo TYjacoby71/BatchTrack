@@ -259,7 +259,7 @@ async function checkProductionStock(event) {
   }
 
   try {
-    const response = await fetch('/stock/check', {
+    const response = await fetch('/api/check-stock', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
