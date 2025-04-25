@@ -1,79 +1,108 @@
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Quick Add Unit Handler
-  function handleQuickUnitSave() {
-    const name = document.getElementById('unitName').value.trim();
-    const type = document.getElementById('unitType').value;
-
-    if (!name) {
-      alert('Unit name required');
-      return;
-    }
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-    fetch('/quick-add/unit', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify({ name, type })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) {
-        alert('Error: ' + data.error);
-        return;
-      }
-
-      // Update dropdowns with new unit
-      document.querySelectorAll("select[name='units[]']").forEach(select => {
-        const option = new Option(data.name, data.name);
-        select.add(option);
-      });
-
-      // Close modal and reset form
-      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-      if (unitModal) {
-        unitModal.hide();
-        document.getElementById('unitName').value = '';
-        document.getElementById('unitType').selectedIndex = 0;
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Failed to add unit");
-    });
-  }
-
-  // Initial button binding attempt
-  const saveButton = document.getElementById('saveQuickUnit');
-  if (saveButton) {
-    saveButton.addEventListener('click', handleQuickUnitSave);
-  } else {
-    // Single retry after modal potentially loads
-    setTimeout(() => {
-      const retry = document.getElementById('saveQuickUnit');
-      if (retry) retry.addEventListener('click', handleQuickUnitSave);
-    }, 500);
-  }
-
-  // Modal transition handlers
+  // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-    if (unitModal) {
-      unitModal.hide();
-      setTimeout(() => {
-        const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-        ingredientModal.show();
-      }, 300);
-    }
+    if (unitModal) unitModal.hide();
+
+    setTimeout(() => {
+      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+      ingredientModal.show();
+      document.getElementById('ingredientName')?.focus();
+    }, 300);
   });
 
+  // Quick Add Ingredient cancel handler
   document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     if (modal) modal.hide();
   });
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Quick Add Unit Handler
+  function initQuickAddUnit() {
+    const saveButton = document.getElementById('saveQuickUnit');
+    if (!saveButton) {
+      // Retry after a short delay if button not found
+      setTimeout(initQuickAddUnit, 100);
+      return;
+    }
+
+    saveButton.addEventListener('click', () => {
+      const name = document.getElementById('unitName').value.trim();
+      const type = document.getElementById('unitType').value;
+
+      if (!name) {
+        alert('Unit name required');
+        return;
+      }
+
+      console.log(`Creating unit: ${name} (${type})`);
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      
+      fetch('/quick-add/unit', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ name, type })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+
+        // Insert unit into ingredient modal dropdown
+        const unitSelect = document.getElementById('quickIngredientUnit');
+        if (unitSelect) {
+          const newOption = new Option(data.name, data.name, false, true);
+          unitSelect.add(newOption);
+          unitSelect.value = data.name;
+        }
+
+        // Add to quick ingredient unit dropdown
+        const quickUnit = document.getElementById('new-ingredient-unit');
+        if (quickUnit) {
+          quickUnit.add(new Option(data.name, data.name, false, true));
+          quickUnit.value = data.name;
+        }
+
+        // Update all other unit dropdowns
+        document.querySelectorAll("select[name='units[]']").forEach(select => {
+          const option = new Option(data.name, data.name);
+          select.add(option);
+        });
+
+        // Handle modal transitions
+        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+        if (unitModal) {
+          unitModal.hide();
+          setTimeout(() => {
+            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+            ingredientModal.show();
+            document.getElementById('ingredientName')?.focus();
+          }, 300);
+        }
+
+        // Reset form
+        document.getElementById('unitName').value = '';
+        document.getElementById('unitType').selectedIndex = 0;
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to add unit");
+      });
+    });
+  }
+
+  initQuickAddUnit();
+  loadUnits();
 });
 
 function filterUnits() {
