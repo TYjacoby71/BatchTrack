@@ -25,4 +25,4 @@ def init_db():
         print("✅ Database initialized")
 
 if __name__ == "__main__":
-    init_db()()
+    init_db()
