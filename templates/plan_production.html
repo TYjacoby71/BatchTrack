@@ -201,7 +201,14 @@ async function checkProductionStock() {
   const scaleInput = document.querySelector('input[name="scale"]');
   const scale = scaleInput && scaleInput.value ? parseFloat(scaleInput.value) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
-  const recipeId = '{{ recipe.id }}';
+  const recipeId = {{ recipe.id }};  // This will be a raw number, not a string
+
+  const recipeIdToUse = variationId ? parseInt(variationId) : recipeId;
+  if (!recipeIdToUse || isNaN(recipeIdToUse)) {
+    alert('Missing or invalid recipe ID');
+    return;
+  }
+
   const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => s.value).filter(Boolean);
 
   if (isNaN(scale) || scale <= 0) {
@@ -217,7 +224,7 @@ async function checkProductionStock() {
         'X-CSRFToken': '{{ csrf_token() }}'
       },
       body: JSON.stringify({
-        recipe_id: parseInt(variationId || recipeId),
+        recipe_id: recipeIdToUse,
         scale: parseFloat(scale),
         container_ids: containerIds
       })
