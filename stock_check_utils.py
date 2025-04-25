@@ -63,36 +63,65 @@ def check_stock_for_recipe(recipe, scale=1.0):
         raise
 
 def check_container_availability(container_ids, scale=1.0):
+    if not container_ids:
+        logger.warning("Empty container list passed to check_container_availability")
+        return [], True
+        
+    if scale <= 0:
+        logger.error(f"Invalid container scale value: {scale}")
+        raise ValueError("Container scale must be greater than 0")
+
     results = []
     all_ok = True
     
     from models import InventoryItem
 
-    for cid in container_ids:
-        container = InventoryItem.query.get(cid)
-        if not container or container.type != 'container':
-            continue
+    try:
+        for cid in container_ids:
+            try:
+                container = InventoryItem.query.get(cid)
+                if not container:
+                    logger.warning(f"Container ID {cid} not found")
+                    continue
+                    
+                if container.type != 'container':
+                    logger.warning(f"Item {cid} is not a container type")
+                    continue
 
-        required = 1 * scale  # assume 1 per unit for now
-        available = container.quantity
-        unit = container.unit
+                try:
+                    required = 1 * scale  # assume 1 per unit for now
+                    available = container.quantity
+                    unit = container.unit
 
-        if available >= required:
-            status = 'OK'
-        elif available > 0:
-            status = 'LOW'
-            all_ok = False
-        else:
-            status = 'NEEDED'
-            all_ok = False
+                    if available >= required:
+                        status = 'OK'
+                    elif available > 0:
+                        status = 'LOW'
+                        all_ok = False
+                        logger.info(f"Container {container.name} low: needs {required}, has {available}")
+                    else:
+                        status = 'NEEDED'
+                        all_ok = False
+                        logger.info(f"Container {container.name} needed: requires {required}, has none")
 
-        results.append({
-            'name': container.name,
-            'unit': unit,
-            'needed': required,
-            'available': available,
-            'status': status,
-            'type': 'container'
-        })
+                    results.append({
+                        'name': container.name,
+                        'unit': unit,
+                        'needed': round(required, 2),
+                        'available': round(available, 2),
+                        'status': status,
+                        'type': 'container'
+                    })
+                except (TypeError, ValueError) as e:
+                    logger.error(f"Error processing container {cid}: {str(e)}")
+                    continue
 
-    return results, all_ok
+            except SQLAlchemyError as e:
+                logger.error(f"Database error fetching container {cid}: {str(e)}")
+                continue
+
+        return results, all_ok
+        
+    except Exception as e:
+        logger.exception("Container availability check failed")
+        raise
