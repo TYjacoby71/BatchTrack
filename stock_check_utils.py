@@ -34,6 +34,8 @@ def check_recipe_stock(recipe, scale=1.0):
     if not recipe:
         logger.error("Null recipe passed to check_recipe_stock")
         raise ValueError("Recipe cannot be null")
+        
+    logger.debug(f"Checking stock for recipe {recipe.id} at scale {scale}")
 
     if scale <= 0:
         logger.error(f"Invalid scale value: {scale}")
