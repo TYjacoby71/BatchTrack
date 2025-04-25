@@ -1,5 +1,4 @@
-
-from models import IngredientCategory, db
+from models import IngredientCategory, db, InventoryItem # Added import for InventoryItem
 
 def seed_categories():
     categories = [
@@ -19,10 +18,19 @@ def seed_categories():
         {"name": "Extract", "default_density": 1.1},            # Vanilla, herbal extracts
         {"name": "Clay", "default_density": 1.6},               # Bentonite, kaolin
         {"name": "Other", "default_density": 1.0},              # Catch-all or uncategorized
+        {"name": "Container", "default_density": 1.0} # Added Container Category
     ]
 
-    for cat in categories:
-        if not IngredientCategory.query.filter_by(name=cat["name"]).first():
-            db.session.add(IngredientCategory(**cat))
+    for category in categories:
+        if not IngredientCategory.query.filter_by(name=category["name"]).first():
+            db.session.add(IngredientCategory(**category))
 
     db.session.commit()
+
+    # Update all items in Container category to have type='container'
+    container_cat = IngredientCategory.query.filter_by(name='Container').first()
+    if container_cat:
+        items = InventoryItem.query.filter_by(category_id=container_cat.id).all()
+        for item in items:
+            item.type = 'container'
+        db.session.commit()
