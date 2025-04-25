@@ -21,13 +21,13 @@ def api_check_stock():
         if scale <= 0:
             return jsonify({'error': 'Scale must be greater than 0'}), 400
 
-        stock_results, all_ok = check_stock_for_recipe(recipe, scale)
+        stock_results, all_ok, conversion_warning = check_stock_for_recipe(recipe, scale)
         
         return jsonify({
-            'ok': all_ok,
-            'details': stock_results,
-            'recipe_name': recipe.name,
-            'missing': [r['name'] for r in stock_results if r['status'] != 'OK']
+            'all_ok': all_ok,
+            'stock_check': stock_results,
+            'conversion_warning': conversion_warning,
+            'recipe_name': recipe.name
         })
 
     except ValueError as e:
