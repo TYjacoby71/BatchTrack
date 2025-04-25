@@ -22,7 +22,7 @@
 
     <div id="containerSelection" class="mt-3" style="display: none;">
       <div id="container-rows">
-        {% if containers %}
+        {% if containers is defined and containers %}
         <div class="container-entry d-flex align-items-center gap-2 mb-2">
           <select name="container_ids[]" class="form-select" required>
             <option value="">Select a container</option>

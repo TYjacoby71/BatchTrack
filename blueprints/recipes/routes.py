@@ -94,6 +94,7 @@ def plan_production(recipe_id):
     else:
         base_recipe = recipe
     containers = InventoryItem.query.filter_by(type='container').all()
+    containers = containers or []  # Ensure containers is never None
     return render_template('plan_production.html', recipe=recipe, base_recipe=base_recipe, hide_variations=True, containers=containers)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
