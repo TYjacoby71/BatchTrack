@@ -20,7 +20,7 @@
         .confirm-token,
         [name="csrf_token"],
         [name="confirm_token"],
-        form > .csrf_token,
+        form > .csrf-token,
         form > .confirm-token,
         .token-field {
             display: none !important;
@@ -54,6 +54,7 @@
 
                     <!-- Inventory Management -->
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_containers') }}">Containers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('adjust.inventory_adjust') }}">Inventory Adjust</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>
