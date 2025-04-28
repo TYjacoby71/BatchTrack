@@ -74,7 +74,6 @@
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="container">
-<input type="hidden" name="is_container" value="true">
       <div class="row g-3 align-items-end">
         <div class="col">
           <label class="form-label">Name</label>
