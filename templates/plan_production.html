@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <select name="container_ids[]" class="form-select" required>
         <option value="">Select a container</option>
         {% for container in containers %}
-          <option value="{{ container.id }}">{{ container.name }}</option>
+          <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
         {% endfor %}
       </select>
       <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
@@ -123,14 +123,9 @@ async function checkProductionStock() {
   const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = '{{ recipe.id }}';
-  const containerIds = document.getElementById('containerSelection')?.style.display !== 'none' 
-    ? Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-        .map(s => ({ 
-          id: s.value, 
-          quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
-        }))
-        .filter(c => c.id && c.quantity > 0)
-    : [];
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
+    .filter(c => c.id);
 
 
   if (isNaN(scale) || scale <= 0) {
@@ -139,54 +134,65 @@ async function checkProductionStock() {
   }
 
   try {
-        const response = await fetch('/stock/check', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
-          },
-          body: JSON.stringify({
-            recipe_id: variationId || recipeId,
-            scale: scale,
-            containers: containerIds
-          })
-        });
+    const response = await fetch('/stock/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        recipe_id: variationId || recipeId,
+        scale: scale,
+        containers: containerIds
+      })
+    });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
-          return;
-        }
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
+      return;
+    }
 
-        const data = await response.json();
-        console.log("Stock check response:", data);
+    const data = await response.json();
+    console.log("Stock check response:", data);
+    
+    const resultsDiv = document.querySelector('.stock-check-results');
+    if (!resultsDiv) {
+      console.log("Results div not found");
+      return;
+    }
 
-        const resultsDiv = document.querySelector('.stock-check-results');
-        if (!resultsDiv) {
-          console.log("Results div not found");
-          return;
-        }
+    resultsDiv.style.display = 'block';
+    const tableBody = document.getElementById('stockCheckTableBody');
+    const startBatchBtn = document.getElementById('startBatchBtn');
+    
+    if (!tableBody) return;
 
-        resultsDiv.style.display = 'block';
-        const tableBody = document.getElementById('stockCheckTableBody');
-        const startBatchBtn = document.getElementById('startBatchBtn');
+    tableBody.innerHTML = data.stock_check.map(item => {
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>${item.status}</td>
+        </tr>
+      `;
+    }).join('');
 
-        if (!tableBody) return;
+    if (startBatchBtn) {
+      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+    }
 
-        tableBody.innerHTML = data.stock_check.map(item => `
-          <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-            <td>${item.type || 'ingredient'}</td>
-            <td>${item.name}</td>
-            <td>${item.needed}${item.unit ? ' ' + item.unit : ''}</td>
-            <td>${item.available}${item.unit ? ' ' + item.unit : ''}</td>
-            <td>${item.unit || '-'}</td>
-            <td>${item.status}</td>
-          </tr>
-        `).join('');
-
-        if (startBatchBtn) {
-          startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-        }
+    //Display containers used (assuming data structure returned from server)
+    const containerInputsDiv = document.getElementById('container_inputs');
+    containerInputsDiv.style.display = 'block';
+    containerInputsDiv.innerHTML = data.containers.map(container => `
+        <input type="hidden" name="container_ids[]" value="${container.id}">
+        <p>Using container: ${container.name} (Qty: ${container.quantity})</p>
+    `).join('');
 
   } catch (error) {
     alert('Error checking stock: ' + error.message);
@@ -196,14 +202,9 @@ async function checkProductionStock() {
 async function startBatch() {
   const recipeId = document.getElementById('recipe_id').value;
   const scale = document.getElementById('scale').value;
-  const containerIds = document.getElementById('containerSelection')?.style.display !== 'none' 
-    ? Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-        .map(s => ({ 
-          id: s.value, 
-          quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
-        }))
-        .filter(c => c.id && c.quantity > 0)
-    : [];
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
+    .filter(c => c.id);
 
   try {
     const response = await fetch('/batches/start_batch', {
