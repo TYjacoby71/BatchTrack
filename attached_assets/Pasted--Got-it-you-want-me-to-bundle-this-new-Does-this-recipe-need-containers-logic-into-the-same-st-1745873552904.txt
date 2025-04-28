@@ -1,0 +1,100 @@
+✅ Got it — you want me to bundle this new "Does this recipe need containers?" logic
+into the same step where we already said we were adding Projected Yield to the Recipe Edit page.
+
+That's smart — it keeps your edits clean and grouped (instead of fragmenting the recipe page into 5 different edits).
+
+✅ I’ll merge them into one unified Step.
+
+🏗️ Corrected and Combined Step:
+Update the Recipe Edit Page to Handle Predicted Yield and Container Needs Together
+
+📋 Corrected Packet (Step 4: Update /templates/recipes/edit_recipe.html)
+✅ New Fields To Add to Recipe Edit Page
+html
+Copy
+Edit
+<!-- Projected Yield Section -->
+<div class="form-group">
+  <label for="predicted_yield">Projected Yield Amount:</label>
+  <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
+</div>
+
+<div class="form-group">
+  <label for="predicted_yield_unit">Projected Yield Unit:</label>
+  <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
+    <option value="">Select Unit</option>
+    <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
+    <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
+    <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
+    <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
+  </select>
+</div>
+
+<hr>
+
+<!-- Container Logic Section -->
+<div class="form-group">
+  <label>Does this recipe require containers?</label>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
+    <label class="form-check-label" for="requiresContainers">
+      Yes, this recipe needs containers.
+    </label>
+  </div>
+</div>
+
+<div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
+  <label for="allowed_containers">Select Allowed Containers:</label>
+  <select id="allowed_containers" name="allowed_containers" class="form-select" multiple>
+    {% for container in containers %}
+    <option value="{{ container.id }}" {% if container.id in allowed_container_ids %}selected{% endif %}>
+      {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+    </option>
+    {% endfor %}
+  </select>
+</div>
+
+<script>
+// Show/hide allowed containers dynamically
+document.addEventListener('DOMContentLoaded', function() {
+  const requiresContainersCheckbox = document.getElementById('requiresContainers');
+  const allowedContainersSection = document.getElementById('allowedContainersSection');
+  
+  if (requiresContainersCheckbox) {
+    requiresContainersCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        allowedContainersSection.style.display = 'block';
+      } else {
+        allowedContainersSection.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
+📂 Location in Project:
+
+Field	Value
+Path	/templates/recipes/edit_recipe.html
+Action	Add this full block together for Projected Yield + Container Settings.
+🛠 Backend Updates Needed (matching form fields):
+You (or Replit) will also need to:
+
+
+Backend Change	Why
+Add predicted_yield and predicted_yield_unit fields to Recipe model	To store yield prediction
+Add requires_containers boolean field to Recipe model	To store whether containers are needed
+Add allowed_containers list field (or JSON list) to Recipe model	To store IDs of allowed containers
+✅ I can generate the exact models/recipe.py and routes/recipes.py edits in the next packet once you upload this form correctly.
+
+📣 Summary of What We Did:
+✅ Projected Yield + Predicted Unit — added cleanly to Recipe Edit page.
+✅ Does this recipe require containers? — added cleanly right under it.
+✅ Allowed Containers multi-select (if checkbox checked).
+✅ Unified form structure — clean for user and clean for Replit developers.
+
+🚀 Action:
+✅ Upload this new form block into /templates/recipes/edit_recipe.html.
+✅ Confirm it's ready.
+
+✅ Then, reply "Ready for Recipe Model/Route Update Packet"
+and I’ll immediately give you the matching Python model and Flask route updates.
