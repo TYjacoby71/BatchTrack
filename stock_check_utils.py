@@ -62,20 +62,21 @@ def check_stock(recipe_id, scale=1.0, containers=[]):
         })
 
     # Check containers
-    for c in containers:
-        container = InventoryItem.query.get(c['id'])
-        if not container:
-            continue
-        needed_qty = c.get('quantity', 1)
-        available_qty = container.quantity
+    if containers:
+        for c in containers:
+            container = InventoryItem.query.get(c.get('id'))
+            if not container:
+                continue
+            needed_qty = int(c.get('quantity', 1))
+            available_qty = container.quantity
 
-        results.append({
-            'type': 'container',
-            'name': container.name,
-            'needed': needed_qty,
-            'available': available_qty,
-            'unit': container.unit,
-            'status': 'OK' if available_qty >= needed_qty else ('LOW' if available_qty > 0 else 'NEEDED')
-        })
+            results.append({
+                'type': 'container',
+                'name': container.name,
+                'needed': needed_qty,
+                'available': available_qty,
+                'unit': container.unit,
+                'status': 'OK' if available_qty >= needed_qty else ('LOW' if available_qty > 0 else 'NEEDED')
+            })
 
     return results

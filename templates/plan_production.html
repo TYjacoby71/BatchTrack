@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <select name="container_ids[]" class="form-select" required>
         <option value="">Select a container</option>
         {% for container in containers %}
-          <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
+          <option value="{{ container.id }}">{{ container.name }}</option>
         {% endfor %}
       </select>
       <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
