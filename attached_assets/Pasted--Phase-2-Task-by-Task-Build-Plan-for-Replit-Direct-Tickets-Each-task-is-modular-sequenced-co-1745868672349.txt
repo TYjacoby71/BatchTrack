@@ -1,0 +1,84 @@
+🏗️ Phase 2 — Task-by-Task Build Plan for Replit (Direct Tickets)
+Each task is modular, sequenced correctly, and can be copied into Replit as tickets.
+
+📋 Phase 2: BatchTrack v8+ Build Tasks
+📂 Section 1 — Container Inventory System Upgrade
+
+Step #	Task	Replit Instruction
+1	Update container inventory model	- Add storage_amount (float) and storage_unit (string) fields to container objects.
+- Existing containers can have blank defaults if not defined yet.
+2	Update container creation/edit forms	- On the Add/Edit Container page, add fields for Storage Amount and Storage Unit.
+- Storage Unit should be a dropdown (oz, ml, g, count).
+3	Update container listing views	- Display Storage Amount and Storage Unit next to container names in inventory lists.
+4	Add Quick Add Container Modal to Recipe Edit Page	- Create modal using /partials/quick_add_container_modal.html skeleton.
+- Connect it via "Quick Add Container" button next to "Quick Add Ingredient."
+- After adding, new container should be immediately available for allowed containers dropdown.
+📂 Section 2 — Recipe Page Enhancements
+
+Step #	Task	Replit Instruction
+5	Add Predicted Yield fields to Recipe Editor	- Add "Predicted Yield Amount" (float) and "Predicted Yield Unit" (dropdown: oz, ml, g, count) to recipe edit form.
+6	Auto-Determine Count-Based or Volume-Based Batch	- If Predicted Yield Unit is a "count type" (count, loaf, piece, bar), internally flag batch as count-based.
+- Otherwise, treat as volume-based (oz/ml/g).
+7	Add Allowed Containers selection to Recipe Editor	- After predicted yield fields, allow multi-select of allowed containers for each recipe. (Pull container names from inventory.)
+📂 Section 3 — Plan Production Setup Page
+
+Step #	Task	Replit Instruction
+8	Build Plan Production Setup Page /plan_production/plan_production_setup.html	- Scale selection field (default 1x).
+- Strict/Flex toggle (checkbox).
+- Auto-Fill toggle (checkbox, default ON).
+9	Load Allowed Containers dynamically	- If strict mode is ON, only show containers allowed by recipe.
+- If flex mode, allow selecting any container.
+10	Build Dynamic Container Selection System	- Users pick container type and quantity.
+- Show running "contained amount" or "contained count."
+- Live update vertical fill bar (0% → 100%).
+- Show remaining amount needed dynamically.
+11	Build Error Message + Override	- If user cannot fully contain batch, show static warning message:
+"⚠ Cannot fully contain batch at selected scale."
+- Show [Continue anyway — I'll put it in a Ziplock if I have to] button.
+12	Connect form submission to stock check backend (/plan-production/check)	- Package selected container plan + scale and send to stock check service.
+📂 Section 4 — Stock Check Revitalization (USCS)
+
+Step #	Task	Replit Instruction
+13	Create /api/check-stock API Endpoint	- POST route to accept {recipe_id, scale, containers: [{id, quantity}]} payload.
+- Return unified ingredient + container stock statuses.
+14	Build stock_check_service.py backend service	- Look up recipe ingredients, scale amounts.
+- Convert units using existing UUCS.
+- Compare stock and assign OK/LOW/NEEDED.
+- Check container stock based on selection.
+15	Return Unified Stock Check Result	- Return JSON list like: [{"type": "ingredient", "name": "Shea Butter", "needed": 400, "available": 500, "status": "OK"}, {"type": "container", "name": "4 oz Jar", "needed": 12, "available": 10, "status": "LOW"}]
+📂 Section 5 — Frontend JS Setup
+
+Step #	Task	Replit Instruction
+16	Build /static/js/plan_production.js	- Handles scale changes, strict/flex toggle, autofill logic, container fills.
+- Update vertical fill bar and dynamic "remaining to contain" status.
+17	Build /static/js/stock_check.js	- Simple universal fetch to POST stock check requests and handle result JSON.
+18	Integrate stock check into Plan Production Setup	- After user selects containers and hits "Check Stock," send to API.
+- Display unified result on new /plan_production/plan_production_check.html page.
+📂 Section 6 — Bonus (Batch Finish Yield Check — Future Stage)
+
+Step #	Task	Replit Instruction
+19	(Future Optional) Add Predicted vs Actual Yield on Batch Finish	- When finishing a batch, ask: "How much product did you actually produce?"
+- Compare to predicted yield.
+20	(Future Optional) Offer Recipe Adjustment or Variation Cloning	- Suggest user update recipe predicted yield, or create a cloned variation based on actual batch result.
+📣 Final Status:
+✅ You can now copy this Phase 2 Build Steps document directly into Replit task tickets, one at a time.
+✅ Each task is small, logical, testable, and controlled.
+
+✅ You remain in full command — no scope drift, no chaos.
+
+⚡ Recap of Where You Stand Right Now:
+
+Item	Status
+Phase 1 (File structure + skeleton templates)	✅ Done
+Phase 2 (Task-by-task build roadmap)	✅ Done
+Ready to manage Replit with clear tickets	✅ Yes
+📣 What's Next:
+✅ You upload Phase 1 + Phase 2 packets to Replit.
+✅ You feed them ONE TASK AT A TIME.
+✅ You approve manually after each task.
+✅ After each major module (like Plan Production), we can pause and QA check together before letting them move forward.
+
+🔥 FINAL REMINDER:
+You are building this at a senior engineer / project architect level now.
+If you stay on this process, this will be a truly scalable real system — not just a "hobby" build.
+

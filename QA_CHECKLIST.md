@@ -1,78 +1,69 @@
 
 # BatchTrack MVP Bug & QA Checklist
 
-## 1. ROUTE & TEMPLATE VERIFICATION
+## 1. UNIVERSAL STOCK CHECK SERVICE (USCS)
 
-**Dashboard**
-- [ ] /dashboard route loads with modal functionality
-- [ ] Inventory alert card present for low stock
-- [ ] All navigation buttons functional
+- [ ] Global `/api/check-stock` endpoint implemented
+- [ ] Accepts recipe_id, scale, container plan
+- [ ] Returns unified list with type, name, needed, available, status
+- [ ] Scaling calculations verified
+- [ ] Unit conversion integration complete
+- [ ] Container validation working
+- [ ] Status indicators (OK/LOW/NEEDED) accurate
+- [ ] Containment failure detection working
+- [ ] Override option implemented
+- [ ] Error handling with clear messages
 
-**Recipes**
-- [x] Parent/Variation grouping displays correctly
-- [x] "Create Variation" duplicates parent + allows editing
-- [x] Variation dropdown on plan production
-- [x] "Clone Recipe" works on both parent and variations
+## 2. PLAN PRODUCTION FLOW
 
-**Batches**
-- [x] Shows batch status (in_progress, complete)
-- [x] Start/Finish buttons reflect batch state
-- [x] Timers block batch completion if active
+- [ ] Scale selection shown first
+- [ ] Container selection follows scale input
+- [ ] Strict Mode (Auto Fill) default ON
+- [ ] Recipe yield predictions accurate
+- [ ] Flexible Mode container selection working
+- [ ] Auto-fill container logic verified
+- [ ] Container type filtering working
+- [ ] Progress bar shows containment %
+- [ ] Remaining volume display accurate
+- [ ] Manual container adjustments possible
+- [ ] Containment error handling working
+- [ ] Yield predictions visible in Flex Mode
 
-**Inventory**
-- [x] Category filtering implemented
-- [x] "Ingredient" renamed to "Inventory"
+## 3. CONTAINER MANAGEMENT
 
-## 2. BATCH START FLOW
+- [ ] Container model complete (Name/Amount/Unit)
+- [ ] Volume vs Count logic working
+- [ ] Count-based multiplication correct
+- [ ] Volume-based capacity correct
+- [ ] Quick Add Modal in Recipe Edit
+- [ ] Container validation complete
 
-**Modal Components**
-- [x] Recipe parent selection
-- [x] Variation dropdown when applicable
-- [x] Scale input
-- [x] Container selector
-- [x] Stock check functionality
+## 4. RECIPE MANAGEMENT
 
-**Container Logic** 
-- [x] Deducts from inventory on batch start
-- [ ] Unit type handling needs verification
+- [ ] Predicted Yield field required
+- [ ] Yield Unit type enforced
+- [ ] Container eligibility working
+- [ ] Quick Add Container attachment working
 
-## 3. TIMERS
+## 5. BATCH COMPLETION
 
-- [x] Multiple timer support
-- [x] Timer display
-- [x] Blocks batch completion
-- [ ] Override for "Cure" timers needed
+- [ ] Actual Yield recording
+- [ ] Yield comparison working
+- [ ] Recipe update option available
+- [ ] Variation creation option working
 
-## 4. DATABASE
+## PRIORITY ORDER
 
-- [x] batch.status column implemented
-- [x] product_variation table linked
-- [x] inventory_item types supported
-- [x] timer storage implemented
-
-## 5. MODAL + DYNAMIC LOGIC
-
-- [x] Quick Add features working
-- [ ] Mobile UX optimization needed
-- [ ] ND-friendly flow verification needed
-
-## 6. SETTINGS PAGE
-
-- [ ] Route needs implementation
-- [ ] Unit definition management
-- [ ] Category management
-
-## 7. PERFORMANCE + UI
-
-- [ ] Mobile display testing needed
-- [ ] Console error check needed
-- [ ] Modal transition review
-- [ ] Input persistence verification
+1. 🔴 Universal Stock Check Service
+2. 🟡 Plan Production Setup
+3. 🟢 Container Quick Add Modal
+4. 🟢 Container System Revamp
+5. 🟢 Batch Completion Flow
 
 ## Current Issues
 
-1. Dashboard route appears to be using 'home.homepage' instead of '/dashboard'
-2. Settings page functionality is not implemented
-3. Mobile optimization needs review
-4. Timer override for "Cure" type not implemented
-5. Unit type edge cases need verification
+1. Stock check endpoint needs centralization
+2. Container validation incomplete
+3. Yield calculations need verification
+4. Mobile optimization needed
+5. Error message standardization required
