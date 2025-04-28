@@ -53,6 +53,42 @@
         <label>Ingredients:</label>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal">Quick Add Container</button>
+
+        <!-- Quick Add Container Modal -->
+        <div class="modal fade" id="quickAddContainerModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Quick Add Container</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="quickAddContainerForm">
+                  <div class="mb-3">
+                    <label for="containerName" class="form-label">Container Name</label>
+                    <input type="text" class="form-control" id="containerName" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="storageAmount" class="form-label">Storage Amount</label>
+                    <input type="number" class="form-control" id="storageAmount" step="0.01" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="storageUnit" class="form-label">Storage Unit</label>
+                    <select id="storageUnit" class="form-select" required>
+                      <option value="">Select Unit</option>
+                      <option value="oz">Ounces (oz)</option>
+                      <option value="ml">Milliliters (ml)</option>
+                      <option value="g">Grams (g)</option>
+                      <option value="count">Count (pieces)</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Add Container</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="ingredients-container">
             {% if recipe and recipe.recipe_ingredients %}
                 {% for assoc in recipe.recipe_ingredients %}
@@ -236,6 +272,35 @@ function addIngredient(preselectId = null) {
 }
 
 // Event Listeners
+// Quick Add Container Handler
+document.getElementById('quickAddContainerForm')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const button = this.querySelector('button[type="submit"]');
+  button.disabled = true;
+  
+  fetch('/inventory/quick-add-container', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: document.getElementById('containerName').value,
+      storage_amount: document.getElementById('storageAmount').value,
+      storage_unit: document.getElementById('storageUnit').value,
+      type: 'container'
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) throw new Error(data.error);
+    window.location.reload();
+  })
+  .catch(error => {
+    alert('Error adding container: ' + error.message);
+  })
+  .finally(() => {
+    button.disabled = false;
+  });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   // Handle initial ingredient line if needed
   if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
