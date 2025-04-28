@@ -1,0 +1,46 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+
+<h2>{{ recipe.name }} - Batch In Progress</h2>
+
+<div class="mb-4">
+  <strong>Batch ID:</strong> {{ batch.id }} <br>
+  <strong>Start Time:</strong> {{ batch.start_time.strftime('%Y-%m-%d %H:%M:%S') }} <br>
+  <strong>Scale Planned:</strong> {{ batch.scale }}
+</div>
+
+{% if batch.containers %}
+<div class="mt-4">
+  <h4>Containers Planned:</h4>
+  <ul class="list-group">
+    {% for container in batch.containers %}
+    <li class="list-group-item">
+      Container ID: {{ container.id }} | Quantity: {{ container.quantity }}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="mt-4">
+  <h4>Recipe Instructions:</h4>
+  {{ recipe.instructions | safe }}
+</div>
+
+<div class="mt-4">
+  <h4>Batch Notes:</h4>
+  <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
+    <textarea name="notes" class="form-control" rows="4">{{ batch.notes or '' }}</textarea>
+    <button type="submit" class="btn btn-secondary mt-2">Update Notes</button>
+  </form>
+</div>
+
+<div class="mt-4">
+  <form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">
+    <button type="submit" name="action" value="finish" class="btn btn-success">Complete Batch</button>
+    <button type="submit" name="action" value="fail" class="btn btn-danger">Mark as Failed</button>
+  </form>
+</div>
+
+{% endblock %}
