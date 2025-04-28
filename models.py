@@ -82,7 +82,7 @@ class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
     scale = db.Column(db.Float, default=1.0)
-    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     status = db.Column(db.String(50), default='in_progress')
     containers = db.Column(db.PickleType, default=list)
     recipe_name = db.Column(db.String(128))
