@@ -1,3 +1,13 @@
+
+$(document).ready(function() {
+    $('.container-select').select2({
+        placeholder: 'Select containers',
+        allowClear: true,
+        multiple: true,
+        width: '100%'
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit cancel handler
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
