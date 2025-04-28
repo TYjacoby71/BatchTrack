@@ -80,15 +80,18 @@ class Recipe(db.Model):
 
 class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    scale = db.Column(db.Float, default=1.0)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50), default='in_progress')
+    containers = db.Column(db.PickleType, default=list)
     recipe_name = db.Column(db.String(128))
-    status = db.Column(db.String(32), default='in_progress')
     label_code = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    scale = db.Column(db.Float)
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
+
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
