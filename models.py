@@ -136,6 +136,8 @@ class InventoryItem(db.Model):
     perishable = db.Column(db.Boolean, default=False)
     low_stock_threshold = db.Column(db.Float, default=0)
     is_perishable = db.Column(db.Boolean, default=False)
+    storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
+    storage_unit = db.Column(db.String(50), default="")  # e.g., oz, ml, count
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 
@@ -158,9 +160,3 @@ class BatchTimer(db.Model):
     completed = db.Column(db.Boolean, default=False)
 
     batch = db.relationship('Batch', backref='timers')
-
-class Container(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    storage_amount = db.Column(db.Float, nullable=True)
-    storage_unit = db.Column(db.String(20), nullable=True)
