@@ -123,9 +123,14 @@ async function checkProductionStock() {
   const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
   const variationId = document.querySelector('select[name="variation_id"]')?.value;
   const recipeId = '{{ recipe.id }}';
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
-    .filter(c => c.id);
+  const containerIds = document.getElementById('containerSelection')?.style.display !== 'none' 
+    ? Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+        .map(s => ({ 
+          id: s.value, 
+          quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
+        }))
+        .filter(c => c.id && c.quantity > 0)
+    : [];
 
 
   if (isNaN(scale) || scale <= 0) {
@@ -191,9 +196,14 @@ async function checkProductionStock() {
 async function startBatch() {
   const recipeId = document.getElementById('recipe_id').value;
   const scale = document.getElementById('scale').value;
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
-    .filter(c => c.id);
+  const containerIds = document.getElementById('containerSelection')?.style.display !== 'none' 
+    ? Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+        .map(s => ({ 
+          id: s.value, 
+          quantity: parseInt(s.closest('.container-entry')?.querySelector('input[name="container_quantities[]"]')?.value, 10) || 0 
+        }))
+        .filter(c => c.id && c.quantity > 0)
+    : [];
 
   try {
     const response = await fetch('/batches/start_batch', {
