@@ -1,0 +1,137 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+{% set preselect_ingredient_id = session.pop('preselect_ingredient_id', None) %}
+{% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
+
+<h2>
+    {% if recipe %}
+        {% if recipe.parent_id %}Edit Variation{% else %}Edit Recipe{% endif %}
+    {% else %}
+        {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+    {% endif %}
+</h2>
+
+{% if recipe and recipe.parent %}
+<div class="alert alert-info mb-3">
+    <strong>Variation of:</strong> {{ recipe.parent.name }}
+</div>
+{% elif is_variation and parent_recipe %}
+<div class="alert alert-info mb-3">
+    <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
+</div>
+{% elif is_clone and recipe %}
+<div class="alert alert-info mb-3">
+    <strong>Creating a copy of:</strong> {{ recipe.name }}
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('recipes.create_variation' if is_variation else ('recipes.edit_recipe' if recipe else 'recipes.new_recipe'), recipe_id=recipe.parent_id if is_variation else recipe.id if recipe else None) }}" id="recipeForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
+
+    <div class="form-group">
+        <label for="name">{% if recipe and recipe.parent_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}:</label>
+        <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="instructions">Instructions:</label>
+        <textarea name="instructions" rows="4">{{ recipe.instructions if recipe else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="label_prefix">Label Prefix:</label>
+        <input type="text" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8">
+    </div>
+
+    <div class="form-group">
+        <label for="predicted_yield">Projected Yield Amount:</label>
+        <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
+    </div>
+
+    <div class="form-group">
+        <label for="predicted_yield_unit">Projected Yield Unit:</label>
+        <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
+            <option value="">Select Unit</option>
+            <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
+            <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
+            <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
+            <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
+        </select>
+    </div>
+
+    <hr>
+
+    <div class="form-group">
+        <label>Does this recipe require containers?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
+            <label class="form-check-label" for="requiresContainers">
+              Yes, this recipe needs containers.
+            </label>
+        </div>
+    </div>
+
+    <div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
+        <label for="allowed_containers">Select Allowed Containers:</label>
+        <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+            {% for container in containers %}
+            <option value="{{ container.id }}" {% if recipe and container.id in recipe.allowed_containers %}selected{% endif %}>
+                {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <hr>
+
+    <div class="form-group">
+        <label>Ingredients:</label>
+        <button type="button" onclick="addIngredient()">Add Ingredient</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">Quick Add Container</button>
+        <div id="ingredients-container">
+            {% if recipe and recipe.recipe_ingredients %}
+                {% for assoc in recipe.recipe_ingredients %}
+                <div class="ingredient-entry">
+                    <select name="ingredient_ids[]" required>
+                        <option value="">Select an ingredient</option>
+                        {% for available_ing in all_ingredients if available_ing.type != 'container' %}
+                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>{{ available_ing.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" step="0.01" name="amounts[]" value="{{ assoc.amount }}" required>
+                    <select name="units[]" required>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group mt-3 d-flex justify-content-between">
+        <div>
+            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+            {% if recipe and not is_clone and not is_variation and not parent_recipe %}
+            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
+                {% if recipe.parent_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
+            </button>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">{% if recipe and recipe.parent_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}</button>
+    </div>
+</form>
+
+{% include 'quick_add_ingredient_modal.html' %}
+
+<!-- Quick Add Container Modal -->
+<div class="modal fade" id="quickAddContainerModal" tabindex="-1">[...]</div>
+
+{% endblock %}
