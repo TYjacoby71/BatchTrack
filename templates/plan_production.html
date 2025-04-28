@@ -65,4 +65,36 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
+<script>
+function addContainerRow() {
+  const row = document.createElement('div');
+  row.className = 'container-row d-flex align-items-center gap-2 mb-2';
+  row.innerHTML = `
+    <select class="form-select container-select" required>
+      <option value="">Select Container</option>
+      {% for container in containers %}
+      <option value="{{ container.id }}" 
+              data-capacity="{{ container.storage_amount }}"
+              data-unit="{{ container.storage_unit }}">
+        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+      </option>
+      {% endfor %}
+    </select>
+    <input type="number" class="form-control container-quantity" 
+           min="1" value="1" required>
+    <button type="button" class="btn btn-danger btn-sm remove-container">×</button>
+  `;
+
+  row.querySelector('.remove-container').addEventListener('click', () => {
+    row.remove();
+    updateContainmentProgress();
+  });
+
+  row.querySelector('.container-quantity').addEventListener('change', updateContainmentProgress);
+  row.querySelector('.container-select').addEventListener('change', updateContainmentProgress);
+
+  containerArea.appendChild(row);
+  updateContainmentProgress();
+}
+</script>
 {% endblock %}
