@@ -16,7 +16,11 @@ def new_recipe():
             recipe = Recipe(
                 name=request.form.get('name'),
                 instructions=request.form.get('instructions'),
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=request.form.get('label_prefix'),
+                predicted_yield=float(request.form.get('predicted_yield') or 0.0),
+                predicted_yield_unit=request.form.get('predicted_yield_unit') or "",
+                requires_containers=True if request.form.get('requires_containers') else False,
+                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers')] if request.form.get('requires_containers') else []
             )
             db.session.add(recipe)
             db.session.flush()  # Get recipe.id before committing
@@ -297,6 +301,10 @@ def edit_recipe(recipe_id):
             recipe.name = request.form['name']
             recipe.instructions = request.form.get('instructions', '')
             recipe.label_prefix = request.form.get('label_prefix', '')
+            recipe.predicted_yield = float(request.form.get('predicted_yield') or 0.0)
+            recipe.predicted_yield_unit = request.form.get('predicted_yield_unit') or ""
+            recipe.requires_containers = True if request.form.get('requires_containers') else False
+            recipe.allowed_containers = [int(id) for id in request.form.getlist('allowed_containers')] if request.form.get('requires_containers') else []
 
             # Clear existing ingredient links
             RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
