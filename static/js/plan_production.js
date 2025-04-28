@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const overrideButton = document.getElementById('overrideButton');
 
   // Event Listeners
-  flexModeToggle.addEventListener('change', handleFlexModeToggle);
-  addContainerBtn.addEventListener('click', addContainerRow);
-  form.addEventListener('submit', handleFormSubmit);
+  if (form) form.addEventListener('submit', handleFormSubmit);
+  if (flexModeToggle) flexModeToggle.addEventListener('change', handleFlexModeToggle);
+  if (addContainerBtn) addContainerBtn.addEventListener('click', addContainerRow);
   
   // Initial setup
   updateContainmentProgress();
@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateContainmentProgress() {
-    // This is a placeholder - actual calculation will depend on your unit system
+    if (!progressBar) return;
+    
     const totalNeeded = 100; // Example
     let totalContained = 0;
 
@@ -76,21 +77,20 @@ document.addEventListener('DOMContentLoaded', function() {
     progressBar.style.width = `${percentage}%`;
     progressBar.textContent = `${Math.round(percentage)}%`;
     
-    remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0)} units`;
+    if (remainingDisplay) {
+      remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0)} units`;
+    }
     
     // Show error if can't contain fully in strict mode
-    if (!flexModeToggle.checked && totalContained < totalNeeded) {
-      containmentError.style.display = 'block';
-    } else {
-      containmentError.style.display = 'none';
+    if (containmentError && flexModeToggle) {
+      containmentError.style.display = !flexModeToggle.checked && totalContained < totalNeeded ? 'block' : 'none';
     }
   }
 
   function handleFormSubmit(e) {
     e.preventDefault();
-    // Collect form data and send to stock check endpoint
+
     const formData = new FormData(form);
-    // Add container data
     const containers = [];
     document.querySelectorAll('.container-row').forEach(row => {
       const select = row.querySelector('.container-select');
@@ -102,9 +102,90 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
     });
-    formData.append('containers', JSON.stringify(containers));
+
+    const payload = {
+      recipe_id: formData.get('recipe_id'),
+      scale: formData.get('scale'),
+      flex_mode: formData.get('flex_mode') ? true : false,
+      containers: containers
+    };
+
+    fetch('/api/check-stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert('Stock Check Error: ' + data.error);
+        return;
+      }
+
+      renderStockCheckResults(data.stock_check, data.all_ok);
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Failed to check stock.');
+    });
+  }
+
+  function renderStockCheckResults(results, allOk) {
+    const resultsContainer = document.getElementById('stockCheckResults');
+    if (!resultsContainer) return;
     
-    // Submit to your stock check endpoint
-    // Implementation depends on your backend API
+    resultsContainer.innerHTML = '';
+
+    let lowOrNeededItems = [];
+
+    results.forEach(item => {
+      const statusColor = (item.status === 'OK') ? 'text-success' :
+                          (item.status === 'LOW') ? 'text-warning' : 'text-danger';
+      const row = document.createElement('div');
+      row.innerHTML = `
+        <div class="d-flex justify-content-between">
+          <div>${item.type.toUpperCase()}: ${item.name}</div>
+          <div class="${statusColor}">${item.status}</div>
+        </div>
+      `;
+      resultsContainer.appendChild(row);
+
+      if (item.status !== 'OK') {
+        lowOrNeededItems.push(item);
+      }
+    });
+
+    const startBatchButton = document.getElementById('startBatchButton');
+    const exportListButton = document.getElementById('exportShoppingListButton');
+
+    if (allOk) {
+      if (startBatchButton) startBatchButton.style.display = 'block';
+      if (exportListButton) exportListButton.style.display = 'none';
+    } else {
+      if (startBatchButton) startBatchButton.style.display = 'none';
+      if (exportListButton) {
+        exportListButton.style.display = 'block';
+        exportListButton.onclick = function() {
+          exportShoppingList(lowOrNeededItems);
+        };
+      }
+    }
+  }
+
+  function exportShoppingList(items) {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Item Type,Item Name,Needed Quantity,Available Quantity,Status\n";
+
+    items.forEach(item => {
+      csvContent += `${item.type},${item.name},${item.needed},${item.available},${item.status}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "shopping_list.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 });
