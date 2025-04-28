@@ -1,4 +1,4 @@
-2025-04-25 03:24:59,209 ERROR: Exception on /recipes/7/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-23 22:33:12,000 ERROR: Exception on /recipes/7/plan [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,95 +15,103 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 96, in plan_production
-    return render_template('plan_production.html', recipe=recipe, base_recipe=base_recipe, hide_variations=True)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
-    template = app.jinja_env.get_or_select_template(template_name_or_list)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
-    return self.get_template(template_name_or_list, parent, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
-    return self._load_template(name, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
-    template = self.loader.load(self, name, self.make_globals(globals))
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 138, in load
-    code = environment.compile(source, name, filename)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 771, in compile
-    self.handle_exception(source=source_hint)
+  File "/home/runner/workspace/blueprints/recipes/routes.py", line 91, in plan_production
+    return render_template('plan_production.html', recipe=recipe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/plan_production.html", line 81, in template
-    {% endfor %}
-jinja2.exceptions.TemplateSyntaxError: Unexpected end of template. Jinja was looking for the following tags: 'elif' or 'else' or 'endif'. The innermost block that needs to be closed is 'if'.
-2025-04-25 03:35:19,453 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 03:42:39,829 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 03:46:56,758 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:06:46,054 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:08:12,943 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:15:11,231 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:16:55,506 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:23:21,819 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:23:49,764 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:28:02,690 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:29:55,252 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:33:29,015 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:35:25,257 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:37:04,611 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:37:43,058 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:41:05,341 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:43:39,900 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:44:57,647 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:48:58,255 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:51:42,962 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:52:25,342 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:53:45,152 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 04:59:32,215 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:00:26,470 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:00:34,599 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:01:22,801 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:05:43,010 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:06:12,765 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:08:07,388 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:09:00,317 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:10:23,480 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:16:03,854 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:17:25,901 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:18:14,676 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:21:08,391 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:22:01,636 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:23:36,902 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:24:27,823 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:25:47,325 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:26:18,276 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:30:17,828 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:32:42,481 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:34:06,159 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:37:49,845 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:45:52,452 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:45:59,450 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:46:57,135 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:48:27,268 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:50:45,817 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:51:11,870 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:54:39,827 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:55:41,940 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:56:37,406 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:57:38,702 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 05:59:56,005 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:03:09,372 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:05:02,140 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:06:39,436 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:07:50,569 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:08:53,999 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:12:03,893 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:13:42,135 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:15:06,830 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:17:08,032 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:19:48,850 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:22:16,740 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-04-25 06:24:39,878 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+  File "/home/runner/workspace/templates/plan_production.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 97, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/plan_production.html", line 3, in block 'content'
+    <h2>Plan Production: {{ base_recipe.name }}</h2>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'base_recipe' is undefined
+2025-04-23 22:34:11,367 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:34:50,247 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:36:27,365 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:38:28,136 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:42:15,904 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:45:23,442 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:47:25,048 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:48:03,426 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:48:57,536 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:49:46,506 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:50:47,283 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:51:20,517 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:53:29,665 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:54:12,552 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:54:56,391 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 22:59:17,266 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:00:03,593 ERROR: Exception on /stock/check [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/app_routes.py", line 60, in check_stock_endpoint
+    stock_check, all_ok = check_stock_for_recipe(recipe, float(data['scale']))
+                                                         ^^^^^^^^^^^^^^^^^^^^
+TypeError: float() argument must be a string or a real number, not 'NoneType'
+2025-04-23 23:02:50,152 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:04:27,566 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:04:47,264 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:08:02,331 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:10:26,051 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:12:37,206 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:14:31,074 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:16:52,522 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:18:51,712 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:20:20,491 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:20:29,563 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:52:10,739 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:55:01,043 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:56:15,314 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-23 23:57:11,178 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-24 18:51:19,162 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:08:45,495 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:18:11,456 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:20:00,024 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:21:30,424 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:27:19,627 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:49:59,839 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 01:50:37,129 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:03:39,741 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:19:36,267 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:19:48,791 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:44:59,404 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:45:09,344 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:45:16,578 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:45:52,720 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:45:58,723 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 02:46:43,525 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 03:04:11,529 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 03:04:32,657 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 03:06:55,982 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 03:18:58,679 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-25 03:24:49,188 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
