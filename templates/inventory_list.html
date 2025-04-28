@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
@@ -17,7 +18,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for item in items %}
+        {% for item in items if item.type != 'container' %}
         <tr>
           <td>{{ item.name }}</td>
           <td>{{ item.unit }}</td>
@@ -40,8 +41,9 @@
       <thead>
         <tr>
           <th>Name</th>
-          <th>Quantity</th>
-          <th>Unit</th>
+          <th>Storage Amount</th>
+          <th>Storage Unit</th>
+          <th>Quantity in Inventory</th>
           <th>Cost/Unit</th>
           <th>Actions</th>
         </tr>
@@ -50,8 +52,9 @@
         {% for item in items if item.type == 'container' %}
         <tr>
           <td>{{ item.name }}</td>
+          <td>{{ item.storage_amount or 'N/A' }}</td>
+          <td>{{ item.storage_unit or 'N/A' }}</td>
           <td>{{ item.quantity }}</td>
-          <td>{{ item.unit }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
