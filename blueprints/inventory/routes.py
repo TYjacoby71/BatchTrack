@@ -48,8 +48,6 @@ def edit_inventory(id):
         item.unit = request.form.get('unit')
         item.type = request.form.get('type')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
-        item.storage_amount = float(request.form.get('storage_amount', 0))
-        item.storage_unit = request.form.get('storage_unit', '')
         db.session.commit()
         flash('Inventory item updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
