@@ -1,237 +1,61 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Plan Production: {{ base_recipe.name }}</h2>
+<h2>Plan Production: {{ recipe.name }}</h2>
 
-<form method="post" class="production-plan-form">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="recipe_id" id="recipe_id" value="{{ recipe.id }}">
+<form id="planProductionForm">
+  <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
 
-  {% if recipe.variations and not hide_variations %}
+  <!-- Scale Selection -->
   <div class="form-group">
-    <label for="variation_id">Variation:</label>
-    <select id="variation_id" name="variation_id" class="form-select" onchange="location.href='?variation_id=' + this.value">
-      <option value="">None</option>
-      {% for variant in recipe.variations %}
-      <option value="{{ variant.id }}" {% if selected_variation_id == variant.id %}selected{% endif %}>{{ variant.name }}</option>
-      {% endfor %}
-    </select>
+    <label for="scale">Scale:</label>
+    <input type="number" class="form-control" name="scale" id="scale" value="1" min="0.1" step="0.1" required>
   </div>
-  {% endif %}
 
-  <div class="form-group mt-3">
-    <button type="button" class="btn btn-secondary" id="showContainerSelection">Add container(s) for this batch?</button>
+  <!-- Flex/Strict Toggle -->
+  <div class="form-group">
+    <label for="flexMode">Flexible Mode?</label>
+    <input type="checkbox" id="flexMode" name="flex_mode">
+    <small class="form-text text-muted">If off, strict container rules will apply.</small>
+  </div>
 
-    <div id="containerSelection" class="mt-3" style="display: none;">
-      <div id="container-rows">
-        {% if containers is defined and containers %}
-        <div class="container-entry d-flex align-items-center gap-2 mb-2">
-          <select name="container_ids[]" class="form-select" required>
-            <option value="">Select a container</option>
-            {% for container in containers %}
-            <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} available)</option>
-            {% endfor %}
-          </select>
-          <input type="number" step="1" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
-          <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
-        </div>
-        {% endif %}
-      </div>
-      <button type="button" id="addAnotherContainerBtn" class="btn btn-outline-secondary mt-2">Add another container</button>
+  <!-- Auto-fill Toggle (only if strict mode is on) -->
+  <div class="form-group" id="autoFillSection" style="display:none;">
+    <label for="autoFill">Auto-Fill Containers?</label>
+    <input type="checkbox" id="autoFill" name="auto_fill" checked>
+    <small class="form-text text-muted">Automatically pick best matching containers if available.</small>
+  </div>
+
+  <!-- Vertical Fill Bar and Remaining Display -->
+  <div class="form-group">
+    <label>Batch Containment Progress:</label>
+    <div class="progress" style="height: 20px;">
+      <div id="fillProgressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
     </div>
+    <p id="remainingToContain">Remaining to contain: 0 units</p>
   </div>
 
-  <div class="form-group mt-3">
-    <label for="scale">Batch Scale:</label>
-    <input type="number" name="scale" id="scale" class="form-control" value="{{ scale }}" min="0.1" step="0.1" required>
+  <!-- Container Picker Area -->
+  <div class="form-group">
+    <label>Add Containers:</label>
+    <div id="containerSelectionArea">
+      <!-- JS will inject container rows here -->
+    </div>
+    <button type="button" class="btn btn-secondary mt-2" id="addContainerBtn">Add Container</button>
   </div>
 
-  <button type="button" class="btn btn-primary mt-3" onclick="checkProductionStock()">Check Stock</button>
-
-  <div class="stock-check-results mt-4" style="display: none;">
-    <h3>Stock Check Results</h3>
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Name</th>
-          <th>Needed</th>
-          <th>Available</th>
-          <th>Unit</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="stockCheckTableBody"></tbody>
-    </table>
-
-    <button id="startBatchBtn" style="display: none;" class="btn btn-success mt-3" onclick="startBatch()">
-      Start Batch
+  <!-- Error Message Area -->
+  <div id="containmentError" style="display:none;" class="alert alert-danger">
+    ⚠ Cannot fully contain batch at this scale.
+    <br>
+    <button type="button" id="overrideButton" class="btn btn-danger mt-2">
+      Continue anyway — I'll put it in a Ziplock if I have to
     </button>
-
-    <div id="container_inputs" style="display: none;">
-      <!-- Container inputs will be dynamically added here -->
-    </div>
   </div>
+
+  <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
 </form>
+{% endblock %}
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const btnAddInitial = document.getElementById('showContainerSelection');
-  const containerSection = document.getElementById('containerSelection');
-  const containerRows = document.getElementById('container-rows');
-  const btnAddMore = document.getElementById('addAnotherContainerBtn');
-
-  btnAddInitial?.addEventListener('click', () => {
-    btnAddInitial.style.display = 'none';
-    containerSection.style.display = 'block';
-    addContainerRow();
-  });
-
-  btnAddMore?.addEventListener('click', addContainerRow);
-
-  containerRows?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-container')) {
-      e.target.closest('.container-entry').remove();
-      handleContainerVisibility();
-    }
-  });
-
-  function handleContainerVisibility() {
-    const hasRows = !!containerRows.querySelector('.container-entry');
-    containerSection.style.display = hasRows ? 'block' : 'none';
-    btnAddInitial.style.display = hasRows ? 'none' : 'inline-block';
-  }
-
-  function addContainerRow() {
-    const containerRow = document.createElement('div');
-    containerRow.className = 'container-entry d-flex align-items-center gap-2 mb-2';
-    containerRow.innerHTML = `
-      <select name="container_ids[]" class="form-select" required>
-        <option value="">Select a container</option>
-        {% for container in containers %}
-          <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }} in stock)</option>
-        {% endfor %}
-      </select>
-      <input type="number" name="container_quantities[]" class="form-control w-25" placeholder="Qty" min="1" required>
-      <button type="button" class="btn btn-danger btn-sm remove-container">✕</button>
-    `;
-    containerRows.appendChild(containerRow);
-  }
-});
-
-async function checkProductionStock() {
-  const scaleInput = document.getElementById('scale').value;
-  const scale = scaleInput ? parseFloat(scaleInput) : 1.0;
-  const variationId = document.querySelector('select[name="variation_id"]')?.value;
-  const recipeId = '{{ recipe.id }}';
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
-    .filter(c => c.id);
-
-
-  if (isNaN(scale) || scale <= 0) {
-    alert('Please enter a valid scale greater than 0');
-    return;
-  }
-
-  try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
-      },
-      body: JSON.stringify({
-        recipe_id: variationId || recipeId,
-        scale: scale,
-        containers: containerIds
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
-      return;
-    }
-
-    const data = await response.json();
-    console.log("Stock check response:", data);
-    
-    const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) {
-      console.log("Results div not found");
-      return;
-    }
-
-    resultsDiv.style.display = 'block';
-    const tableBody = document.getElementById('stockCheckTableBody');
-    const startBatchBtn = document.getElementById('startBatchBtn');
-    
-    if (!tableBody) return;
-
-    tableBody.innerHTML = data.stock_check.map(item => {
-      const showUnit = item.type !== 'container';
-      return `
-        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-          <td>${item.type || 'ingredient'}</td>
-          <td>${item.name}</td>
-          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${showUnit ? item.unit : '-'}</td>
-          <td>${item.status}</td>
-        </tr>
-      `;
-    }).join('');
-
-    if (startBatchBtn) {
-      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-    }
-
-    //Display containers used (assuming data structure returned from server)
-    const containerInputsDiv = document.getElementById('container_inputs');
-    containerInputsDiv.style.display = 'block';
-    containerInputsDiv.innerHTML = data.containers.map(container => `
-        <input type="hidden" name="container_ids[]" value="${container.id}">
-        <p>Using container: ${container.name} (Qty: ${container.quantity})</p>
-    `).join('');
-
-  } catch (error) {
-    alert('Error checking stock: ' + error.message);
-  }
-}
-
-async function startBatch() {
-  const recipeId = document.getElementById('recipe_id').value;
-  const scale = document.getElementById('scale').value;
-  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
-    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
-    .filter(c => c.id);
-
-  try {
-    const response = await fetch('/batches/start_batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
-      },
-      body: JSON.stringify({
-        recipe_id: recipeId,
-        scale: parseFloat(scale),
-        containers: containerIds
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to start batch');
-    }
-
-    const data = await response.json();
-    if (data.batch_id) {
-      window.location.href = `/batches/in-progress/${data.batch_id}`;
-    }
-  } catch (error) {
-    alert('Error starting batch: ' + error.message);
-  }
-}
-</script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
 {% endblock %}
