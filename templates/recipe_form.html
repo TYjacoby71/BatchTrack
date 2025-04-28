@@ -22,17 +22,15 @@
 </div>
 {% endif %}
 
-{% if recipe and not is_clone %}
-  <form method="post" action="{{ url_for('recipes.create_variation' if is_variation else 'recipes.edit_recipe', recipe_id=recipe.parent_id if is_variation else recipe.id) }}" id="recipeForm">
+<form method="post" action="
+    {%- if recipe and not is_clone -%}
+        {{ url_for('recipes.create_variation' if is_variation else 'recipes.edit_recipe', recipe_id=recipe.parent_id if is_variation else recipe.id) }}
+    {%- else -%}
+        {{ url_for('recipes.new_recipe') }}
+    {%- endif -%}" id="recipeForm">
+
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-{% elif is_clone %}
-  <form method="post" action="{{ url_for('recipes.new_recipe') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="is_clone" value="true">
-{% else %}
-  <form method="post" action="{{ url_for('recipes.new_recipe') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-{% endif %}
+    {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
     <div class="form-group">
         <label for="name">{% if recipe and recipe.parent_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}:</label>
@@ -49,21 +47,20 @@
         <input type="text" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8">
     </div>
 
-    <!-- Projected Yield Section -->
     <div class="form-group">
-      <label for="predicted_yield">Projected Yield Amount:</label>
-      <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
+        <label for="predicted_yield">Projected Yield Amount:</label>
+        <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
     </div>
 
     <div class="form-group">
-      <label for="predicted_yield_unit">Projected Yield Unit:</label>
-      <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
-        <option value="">Select Unit</option>
-        <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
-        <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
-        <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
-        <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
-      </select>
+        <label for="predicted_yield_unit">Projected Yield Unit:</label>
+        <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
+            <option value="">Select Unit</option>
+            <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
+            <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
+            <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
+            <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
+        </select>
     </div>
 
     <hr>
