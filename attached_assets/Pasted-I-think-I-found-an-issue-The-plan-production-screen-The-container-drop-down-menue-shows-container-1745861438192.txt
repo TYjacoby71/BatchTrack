@@ -1,0 +1,108 @@
+I think I found an issue. The plan production screen 
+
+The container drop down menue shows container names and (qualtity available)
+
+Did this get confused?
+
+It is only supposed to display the name. and enter a quantity
+
+Would that messes with stock check grabbing the id?
+
+
+ChatGPT said:
+Fantastic eye — you're exactly right to ask this.
+Let's walk through it carefully, because this could lead to subtle bugs if not handled correctly:
+
+🧠 Current Problem on Plan Production Screen:
+You described:
+
+The container dropdown shows: Container Name (Quantity Available)
+
+Example:
+
+arduino
+Copy
+Edit
+Small Jar (22 available)
+Big Jar (5 available)
+🔥 Why that's a potential problem:
+The value (the option value) is correct — it’s the container ID.
+
+html
+Copy
+Edit
+<option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} available)</option>
+So the backend still receives the right ID.
+
+✅ Good — the value=ID is safe.
+BUT:
+
+The label being "Name (Qty)" might confuse the user.
+
+More importantly: If your JavaScript ever tries to read textContent instead of value, it could break.
+
+✅ Clarifying What Should Happen:
+
+Field	What It Should Contain
+value=	The container ID ONLY
+Text visible to user	Container Name ONLY
+Quantity input	A separate numeric input provided by the user
+📋 Correct Example:
+html
+Copy
+Edit
+<select name="container_ids[]" class="form-select" required>
+  <option value="">Select a container</option>
+  {% for container in containers %}
+    <option value="{{ container.id }}">{{ container.name }}</option> <!-- ✅ Only name shown -->
+  {% endfor %}
+</select>
+
+<input type="number" name="container_quantities[]" class="form-control" placeholder="Qty" min="1" required>
+✅ The dropdown shows only container name
+✅ Quantity is entered separately in the number box
+✅ No mixing "name + quantity" in the <option> text
+
+🚨 Why is this Important for Stock Check?
+When your stock check JS code builds the container array like:
+
+javascript
+Copy
+Edit
+const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]')).map(s => ({
+  id: s.value,
+  quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0
+})).filter(c => c.id);
+It expects that s.value = container ID
+
+It expects that input[name="container_quantities[]"] gives the quantity separately
+
+✅ If you leave the ID in value and use the number field for quantity, it will be perfect.
+
+⚡ But if you confuse value and visible text, or try parsing label text, it will break badly.
+
+✍️ Final Summary:
+
+What Should Be	Current Behavior	Needs Change?
+value="{{ container.id }}"	✅ Correct	No change
+Text shown = Name only	❌ Name + (Quantity available)	Yes, fix to show only Name
+Separate quantity input	✅ Already in place	Good
+🛠 Recommended Fix to Your plan_production.html
+Find this section:
+
+html
+Copy
+Edit
+<option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} available)</option>
+✅ Change it to:
+
+html
+Copy
+Edit
+<option value="{{ container.id }}">{{ container.name }}</option>
+📣 Final Impact
+✅ Safer UX
+✅ Cleaner stock check
+✅ No chance of user confusion
+✅ No backend parsing errors
+
