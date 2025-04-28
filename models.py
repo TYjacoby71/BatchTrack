@@ -71,6 +71,10 @@ class Recipe(db.Model):
     qr_image = db.Column(db.String(128))
     parent_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     is_locked = db.Column(db.Boolean, default=False)
+    predicted_yield = db.Column(db.Float, default=0.0)
+    predicted_yield_unit = db.Column(db.String(50), default="oz")
+    requires_containers = db.Column(db.Boolean, default=False)
+    allowed_containers = db.Column(db.PickleType, default=list)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
