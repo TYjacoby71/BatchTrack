@@ -1,0 +1,117 @@
+📣 The Real Problem You Just Identified:
+The Containers Table is still showing the same columns as Ingredients,
+but Containers need different fields!
+
+You are exactly correct.
+The HTML needs to be split cleanly — Containers must have a different table layout than Ingredients.
+
+📦 Correct Packet:
+Here’s the exact corrected inventory_list.html structure you now need:
+
+📂 /templates/inventory/inventory_list.html (Corrected)
+html
+Copy
+Edit
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Inventory Management</h2>
+
+<div class="inventory-sections">
+  <div class="section">
+    <h3>Ingredients</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Unit</th>
+          <th>Quantity</th>
+          <th>Type</th>
+          <th>Cost/Unit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items if item.type != 'container' %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.unit }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.type|capitalize }}</td>
+          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+          <td>
+            <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Containers</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Storage Amount</th>
+          <th>Storage Unit</th>
+          <th>Quantity in Inventory</th>
+          <th>Cost/Unit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items if item.type == 'container' %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.storage_amount or 'N/A' }}</td>
+          <td>{{ item.storage_unit or 'N/A' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+          <td>
+            <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Rest of Add New Item Form... (unchanged) -->
+
+{% endblock %}
+🛠 Changes Compared to Your Current HTML:
+
+Section	Old Behavior	New Correct Behavior
+Ingredients Table	Looping all items	Now loops only item.type != 'container'
+Containers Table	Same fields as Ingredients	✅ Now shows Storage Amount, Storage Unit, Quantity
+Table Columns	Wrong fields shown	✅ Properly different for containers
+Add Form	Same (for now — later you’ll split add form fields too if needed)	✅ Ok for now
+📣 Summary:
+✅ Containers now show:
+
+Name ("Glass Jar")
+
+Storage Amount (12)
+
+Storage Unit (oz)
+
+Quantity in Inventory (20)
+
+Cost/Unit
+
+✅ Ingredients still show original 5 columns only — no weird container data.
+
+✅ Mirror problem fixed.
+
+⚡ Short Instructions for Replit:
+Replace /templates/inventory/inventory_list.html with this corrected file.
+
+Make sure ingredients and containers have properly separate tables.
+
+Verify that containers now show Storage Amount and Storage Unit.
+
+🚀 NEXT:
