@@ -1,10 +1,30 @@
 
 $(document).ready(function() {
+    // Initialize Select2 for container dropdown
     $('.container-select').select2({
         placeholder: 'Select containers',
         allowClear: true,
         multiple: true,
         width: '100%'
+    }).on('select2:select select2:unselect', function (e) {
+        // Ensure the underlying select element's values are updated
+        $(this).trigger('change');
+    });
+
+    // Ensure form submission includes Select2 values
+    $('form').on('submit', function() {
+        $('.container-select').each(function() {
+            var select = $(this);
+            var selectedValues = select.val();
+            if (selectedValues) {
+                selectedValues.forEach(function(value) {
+                    if (!select.find('option[value="' + value + '"]').prop('selected')) {
+                        select.find('option[value="' + value + '"]').prop('selected', true);
+                    }
+                });
+            }
+        });
+        return true;
     });
 });
 
