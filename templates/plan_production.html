@@ -62,7 +62,7 @@
       </thead>
       <tbody id="stockCheckTableBody"></tbody>
     </table>
-    
+
     <button id="startBatchBtn" style="display: none;" class="btn btn-success mt-3" onclick="startBatch()">
       Start Batch
     </button>
@@ -154,22 +154,37 @@ async function checkProductionStock() {
     }
 
     const data = await response.json();
+    console.log("Stock check response:", data);
+    
     const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) return;
+    if (!resultsDiv) {
+      console.log("Results div not found");
+      return;
+    }
 
     resultsDiv.style.display = 'block';
     const tableBody = document.getElementById('stockCheckTableBody');
+    const startBatchBtn = document.getElementById('startBatchBtn');
+    
     if (!tableBody) return;
 
-    tableBody.innerHTML = data.stock_check.map(item => `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed} ${item.unit}</td>
-        <td>${item.available} ${item.unit}</td>
-        <td>${item.status}</td>
-      </tr>
-    `).join('');
+    tableBody.innerHTML = data.stock_check.map(item => {
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>${item.status}</td>
+        </tr>
+      `;
+    }).join('');
+
+    if (startBatchBtn) {
+      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+    }
 
     //Display containers used (assuming data structure returned from server)
     const containerInputsDiv = document.getElementById('container_inputs');
@@ -179,9 +194,43 @@ async function checkProductionStock() {
         <p>Using container: ${container.name} (Qty: ${container.quantity})</p>
     `).join('');
 
-
   } catch (error) {
     alert('Error checking stock: ' + error.message);
+  }
+}
+
+async function startBatch() {
+  const recipeId = document.getElementById('recipe_id').value;
+  const scale = document.getElementById('scale').value;
+  const containerIds = Array.from(document.querySelectorAll('select[name="container_ids[]"]'))
+    .map(s => ({ id: s.value, quantity: parseInt(s.closest('.container-entry').querySelector('input[name="container_quantities[]"]').value, 10) || 0 }))
+    .filter(c => c.id);
+
+  try {
+    const response = await fetch('/batches/start_batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        scale: parseFloat(scale),
+        containers: containerIds
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to start batch');
+    }
+
+    const data = await response.json();
+    if (data.batch_id) {
+      window.location.href = `/batches/in-progress/${data.batch_id}`;
+    }
+  } catch (error) {
+    alert('Error starting batch: ' + error.message);
   }
 }
 </script>
