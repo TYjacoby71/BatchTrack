@@ -57,8 +57,18 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
+    storage_amount = request.form.get('storage_amount')
+    storage_unit = request.form.get('storage_unit')
     
-    item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
+    item = InventoryItem(
+        name=name,
+        quantity=quantity,
+        unit=unit,
+        type=type,
+        cost_per_unit=cost_per_unit,
+        storage_amount=float(storage_amount) if storage_amount else None,
+        storage_unit=storage_unit
+    )
     db.session.add(item)
     db.session.commit()
     flash('Inventory item added successfully.')

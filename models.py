@@ -126,12 +126,13 @@ class ProductEvent(db.Model):
 class InventoryItem(db.Model):
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    quantity = db.Column(db.Float, default=0)
-    unit = db.Column(db.String(32))
-    type = db.Column(db.String(32), default="ingredient")
-    cost_per_unit = db.Column(db.Float, default=0.0)
-    intermediate = db.Column(db.Boolean, default=False)
+    name = db.Column(db.String(100), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    type = db.Column(db.String(20), nullable=False)  # 'ingredient' or 'container'
+    cost_per_unit = db.Column(db.Float)
+    storage_amount = db.Column(db.Float)
+    storage_unit = db.Column(db.String(20))
     expiration_date = db.Column(db.Date, nullable=True)
     perishable = db.Column(db.Boolean, default=False)
     low_stock_threshold = db.Column(db.Float, default=0)
