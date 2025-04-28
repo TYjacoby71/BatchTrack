@@ -6,6 +6,7 @@ from models import db, InventoryItem, Unit, Container
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/containers')
+@inventory_bp.route('/containers/list')
 @login_required
 def list_containers():
     containers = Container.query.all()
