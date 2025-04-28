@@ -160,8 +160,3 @@ class BatchTimer(db.Model):
 
     batch = db.relationship('Batch', backref='timers')
 
-class Container(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    storage_amount = db.Column(db.Float, nullable=True)
-    storage_unit = db.Column(db.String(20), nullable=True)

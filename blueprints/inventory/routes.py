@@ -5,49 +5,7 @@ from models import db, InventoryItem, Unit, Container
 
 inventory_bp = Blueprint('inventory', __name__)
 
-@inventory_bp.route('/containers')
-@inventory_bp.route('/containers/list')
-@login_required
-def list_containers():
-    containers = Container.query.all()
-    return render_template('containers/list.html', containers=containers)
 
-@inventory_bp.route('/containers/add', methods=['GET', 'POST'])
-@login_required
-def add_container():
-    if request.method == 'POST':
-        container = Container(
-            name=request.form.get('name'),
-            storage_amount=float(request.form.get('storage_amount') or 0),
-            storage_unit=request.form.get('storage_unit')
-        )
-        db.session.add(container)
-        db.session.commit()
-        flash('Container added successfully.')
-        return redirect(url_for('inventory.list_containers'))
-    return render_template('containers/edit.html')
-
-@inventory_bp.route('/containers/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
-def edit_container(id):
-    container = Container.query.get_or_404(id)
-    if request.method == 'POST':
-        container.name = request.form.get('name')
-        container.storage_amount = float(request.form.get('storage_amount') or 0)
-        container.storage_unit = request.form.get('storage_unit')
-        db.session.commit()
-        flash('Container updated successfully.')
-        return redirect(url_for('inventory.list_containers'))
-    return render_template('containers/edit.html', container=container)
-
-@inventory_bp.route('/containers/delete/<int:id>')
-@login_required
-def delete_container(id):
-    container = Container.query.get_or_404(id)
-    db.session.delete(container)
-    db.session.commit()
-    flash('Container deleted successfully.')
-    return redirect(url_for('inventory.list_containers'))
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
