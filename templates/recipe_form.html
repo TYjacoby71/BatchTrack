@@ -49,11 +49,52 @@
         <input type="text" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8">
     </div>
 
+    <!-- Projected Yield Section -->
+    <div class="form-group">
+      <label for="predicted_yield">Projected Yield Amount:</label>
+      <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
+    </div>
+
+    <div class="form-group">
+      <label for="predicted_yield_unit">Projected Yield Unit:</label>
+      <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
+        <option value="">Select Unit</option>
+        <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
+        <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
+        <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
+        <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
+      </select>
+    </div>
+
+    <hr>
+
+    <!-- Container Logic Section -->
+    <div class="form-group">
+      <label>Does this recipe require containers?</label>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
+        <label class="form-check-label" for="requiresContainers">
+          Yes, this recipe needs containers.
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
+      <label for="allowed_containers">Select Allowed Containers:</label>
+      <select id="allowed_containers" name="allowed_containers" class="form-select" multiple>
+        {% for container in containers %}
+        <option value="{{ container.id }}" {% if container.id in allowed_container_ids %}selected{% endif %}>
+          {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="form-group">
         <label>Ingredients:</label>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal">Quick Add Container</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">Quick Add Container</button>
 
         <!-- Quick Add Container Modal -->
         <div class="modal fade" id="quickAddContainerModal" tabindex="-1">
@@ -145,17 +186,17 @@ function confirmDelete(recipeId, isVariation, variationCount) {
     } else {
         msg = 'Are you sure you want to delete this recipe?';
     }
-        
+
     if (confirm(msg)) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/recipes/${recipeId}/delete`;
-        
+
         const csrf = document.createElement('input');
         csrf.type = 'hidden';
         csrf.name = 'csrf_token';
         csrf.value = '{{ csrf_token() }}';
-        
+
         form.appendChild(csrf);
         document.body.appendChild(form);
         form.submit();
@@ -209,99 +250,21 @@ let ingredientReturnContext = 'main';
 let lastIngredientDropdown = null;
 let unitReturnContext = 'main';
 
-function addIngredient(preselectId = null) {
-  const container = document.getElementById('ingredients-container');
-  const entry = document.createElement('div');
-  entry.classList.add('ingredient-entry');
-  entry.innerHTML = `
-    <select name="ingredient_ids[]" required>
-      <option value="">Select an ingredient</option>
-      {% for ing in all_ingredients %}
-      <option value="{{ ing.id }}" ${preselectId == {{ ing.id }} ? 'selected' : ''}>{{ ing.name }}</option>
-      {% endfor %}
-    </select>
-    <input type="number" step="0.01" name="amounts[]" required>
-    <select name="units[]" required>
-      {% for unit in inventory_units %}
-      <option value="{{ unit.name }}">{{ unit.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="button" onclick="this.parentElement.remove()">Remove</button>
-  `;
-  container.appendChild(entry);
-  if (preselectId) {
-    const select = entry.querySelector('select[name="ingredient_ids[]"]');
-    if (select) select.value = preselectId;
-  }
-  entry.scrollIntoView({ behavior: 'smooth' });
-  return entry;
-}
-
-// Functions
-function setIngredientReturnContext(source, dropdown = null) {
-  ingredientReturnContext = source;
-  lastIngredientDropdown = dropdown;
-}
-
-function addIngredient(preselectId = null) {
-  const container = document.getElementById('ingredients-container');
-  const entry = document.createElement('div');
-  entry.classList.add('ingredient-entry');
-  entry.innerHTML = `
-    <select name="ingredient_ids[]" required>
-      <option value="">Select an ingredient</option>
-      {% for ing in all_ingredients %}
-      <option value="{{ ing.id }}">{{ ing.name }}</option>
-      {% endfor %}
-    </select>
-    <input type="number" step="0.01" name="amounts[]" required>
-    <select name="units[]" required>
-      {% for unit in inventory_units %}
-      <option value="{{ unit.name }}">{{ unit.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="button" onclick="this.parentElement.remove()">Remove</button>
-  `;
-  container.appendChild(entry);
-  if (preselectId) {
-    const select = entry.querySelector('select[name="ingredient_ids[]"]');
-    if (select) select.value = preselectId;
-  }
-  entry.scrollIntoView({ behavior: 'smooth' });
-  return entry;
-}
-
-// Event Listeners
-// Quick Add Container Handler
-document.getElementById('quickAddContainerForm')?.addEventListener('submit', function(e) {
-  e.preventDefault();
-  const button = this.querySelector('button[type="submit"]');
-  button.disabled = true;
-  
-  fetch('/inventory/quick-add-container', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: document.getElementById('containerName').value,
-      storage_amount: document.getElementById('storageAmount').value,
-      storage_unit: document.getElementById('storageUnit').value,
-      type: 'container'
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) throw new Error(data.error);
-    window.location.reload();
-  })
-  .catch(error => {
-    alert('Error adding container: ' + error.message);
-  })
-  .finally(() => {
-    button.disabled = false;
-  });
-});
-
+// Show/hide allowed containers dynamically
 document.addEventListener('DOMContentLoaded', function() {
+  const requiresContainersCheckbox = document.getElementById('requiresContainers');
+  const allowedContainersSection = document.getElementById('allowedContainersSection');
+
+  if (requiresContainersCheckbox) {
+    requiresContainersCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        allowedContainersSection.style.display = 'block';
+      } else {
+        allowedContainersSection.style.display = 'none';
+      }
+    });
+  }
+
   // Handle initial ingredient line if needed
   if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
     addIngredient(PRESELECT_INGREDIENT_ID);
@@ -431,5 +394,40 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+function addIngredient(preselectId = null) {
+  const container = document.getElementById('ingredients-container');
+  const entry = document.createElement('div');
+  entry.classList.add('ingredient-entry');
+  entry.innerHTML = `
+    <select name="ingredient_ids[]" required>
+      <option value="">Select an ingredient</option>
+      {% for ing in all_ingredients %}
+      <option value="{{ ing.id }}">{{ ing.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="amounts[]" required>
+    <select name="units[]" required>
+      {% for unit in inventory_units %}
+      <option value="{{ unit.name }}">{{ unit.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  container.appendChild(entry);
+  if (preselectId) {
+    const select = entry.querySelector('select[name="ingredient_ids[]"]');
+    if (select) select.value = preselectId;
+  }
+  entry.scrollIntoView({ behavior: 'smooth' });
+  return entry;
+}
+
+// Functions
+function setIngredientReturnContext(source, dropdown = null) {
+  ingredientReturnContext = source;
+  lastIngredientDropdown = dropdown;
+}
+
 </script>
 {% endblock %}
