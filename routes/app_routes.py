@@ -65,23 +65,17 @@ def check_stock():
         except (TypeError, ValueError):
             return jsonify({"error": "Invalid scale value"}), 400
 
-        recipe = Recipe.query.get_or_404(recipe_id)
-        
-        # Use stock check utils for both recipe and containers
-        stock_check, all_ok = check_stock_for_recipe(recipe, scale)
-        
-        # Handle container validation
-        container_ids = data.get('container_ids', [])
-        if container_ids and isinstance(container_ids, list):
-            container_check, containers_ok = check_container_availability(container_ids, scale)
-            stock_check.extend(container_check)
-            all_ok = all_ok and containers_ok
+        containers = data.get('containers', [])
+        stock_results = check_stock(recipe_id, scale, containers)
+        all_ok = all(item['status'] == 'OK' for item in stock_results)
 
-        status = "ok" if all_ok else "bad"
-        for item in stock_check:
-            if item["status"] == "LOW" and status != "bad":
-                status = "low"
-                break
+        return jsonify({
+            'stock_check': stock_results,
+            'all_ok': all_ok
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
         # Format the response to match template expectations
         results = [{

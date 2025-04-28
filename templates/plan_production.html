@@ -134,65 +134,54 @@ async function checkProductionStock() {
   }
 
   try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
-      },
-      body: JSON.stringify({
-        recipe_id: variationId || recipeId,
-        scale: scale,
-        containers: containerIds
-      })
-    });
+        const response = await fetch('/stock/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({
+            recipe_id: variationId || recipeId,
+            scale: scale,
+            containers: containerIds
+          })
+        });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
-      return;
-    }
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert(`Error checking stock: ${response.status} - ${errorData.message || 'Unknown error'}`);
+          return;
+        }
 
-    const data = await response.json();
-    console.log("Stock check response:", data);
-    
-    const resultsDiv = document.querySelector('.stock-check-results');
-    if (!resultsDiv) {
-      console.log("Results div not found");
-      return;
-    }
+        const data = await response.json();
+        console.log("Stock check response:", data);
 
-    resultsDiv.style.display = 'block';
-    const tableBody = document.getElementById('stockCheckTableBody');
-    const startBatchBtn = document.getElementById('startBatchBtn');
-    
-    if (!tableBody) return;
+        const resultsDiv = document.querySelector('.stock-check-results');
+        if (!resultsDiv) {
+          console.log("Results div not found");
+          return;
+        }
 
-    tableBody.innerHTML = data.stock_check.map(item => {
-      const showUnit = item.type !== 'container';
-      return `
-        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-          <td>${item.type || 'ingredient'}</td>
-          <td>${item.name}</td>
-          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-          <td>${showUnit ? item.unit : '-'}</td>
-          <td>${item.status}</td>
-        </tr>
-      `;
-    }).join('');
+        resultsDiv.style.display = 'block';
+        const tableBody = document.getElementById('stockCheckTableBody');
+        const startBatchBtn = document.getElementById('startBatchBtn');
 
-    if (startBatchBtn) {
-      startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-    }
+        if (!tableBody) return;
 
-    //Display containers used (assuming data structure returned from server)
-    const containerInputsDiv = document.getElementById('container_inputs');
-    containerInputsDiv.style.display = 'block';
-    containerInputsDiv.innerHTML = data.containers.map(container => `
-        <input type="hidden" name="container_ids[]" value="${container.id}">
-        <p>Using container: ${container.name} (Qty: ${container.quantity})</p>
-    `).join('');
+        tableBody.innerHTML = data.stock_check.map(item => `
+          <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+            <td>${item.type || 'ingredient'}</td>
+            <td>${item.name}</td>
+            <td>${item.needed}${item.unit ? ' ' + item.unit : ''}</td>
+            <td>${item.available}${item.unit ? ' ' + item.unit : ''}</td>
+            <td>${item.unit || '-'}</td>
+            <td>${item.status}</td>
+          </tr>
+        `).join('');
+
+        if (startBatchBtn) {
+          startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+        }
 
   } catch (error) {
     alert('Error checking stock: ' + error.message);
