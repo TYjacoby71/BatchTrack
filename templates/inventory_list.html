@@ -42,8 +42,6 @@
           <th>Name</th>
           <th>Quantity</th>
           <th>Unit</th>
-          <th>Storage Amount</th>
-          <th>Storage Unit</th>
           <th>Cost/Unit</th>
           <th>Actions</th>
         </tr>
@@ -54,8 +52,6 @@
           <td>{{ item.name }}</td>
           <td>{{ item.quantity }}</td>
           <td>{{ item.unit }}</td>
-          <td>{{ item.storage_amount or '-' }}</td>
-          <td>{{ item.storage_unit or '-' }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
@@ -75,19 +71,6 @@
     <div class="col">
       <label class="form-label">Name</label>
       <input type="text" name="name" class="form-control" required>
-    </div>
-    <div class="col">
-      <label class="form-label">Storage Amount</label>
-      <input type="number" step="0.01" name="storage_amount" class="form-control">
-    </div>
-    <div class="col">
-      <label class="form-label">Storage Unit</label>
-      <select name="storage_unit" class="form-select">
-        <option value="">None</option>
-        {% for unit in units if unit.type == 'volume' %}
-        <option value="{{ unit.name }}">{{ unit.name }}</option>
-        {% endfor %}
-      </select>
     </div>
     <div class="col">
       <label class="form-label">Type</label>

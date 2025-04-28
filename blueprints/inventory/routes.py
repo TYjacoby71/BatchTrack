@@ -1,11 +1,9 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, InventoryItem, Unit, Container
+from models import db, InventoryItem, Unit
 
 inventory_bp = Blueprint('inventory', __name__)
-
-
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -15,18 +13,8 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    storage_amount = request.form.get('storage_amount')
-    storage_unit = request.form.get('storage_unit')
     
-    item = InventoryItem(
-        name=name,
-        quantity=quantity,
-        unit=unit,
-        type=type,
-        cost_per_unit=cost_per_unit,
-        storage_amount=float(storage_amount) if storage_amount else None,
-        storage_unit=storage_unit
-    )
+    item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
     db.session.add(item)
     db.session.commit()
     flash('Inventory item added successfully.')
