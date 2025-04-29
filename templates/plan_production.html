@@ -39,13 +39,17 @@
 
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model.number="container.id" @change="updateContainer(index)">
+          <select class="form-select" x-model.number="container.id" @change="updateContainer(index)" :disabled="autoFill && !flexMode">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
+            <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
               </option>
             </template>
           </select>
+          <input type="number" class="form-control" min="1" x-model.number="container.quantity" :disabled="autoFill && !flexMode" @input="updateProgress">
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill && !flexMode">×</button>
+        </div>
+      </template>
           <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateProgress">
           <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)">×</button>
         </div>
@@ -80,7 +84,7 @@
   <div class="mb-4">
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
-      <a href="{{ url_for('recipes.recipe_list') }}" class="btn btn-secondary">Cancel</a>
+      <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
     <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
       Some ingredients are low or missing. Adjust inventory before proceeding.
