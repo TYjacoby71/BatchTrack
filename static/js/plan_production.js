@@ -1,6 +1,24 @@
 
 // Plan Production Page JavaScript
 
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize form elements
+  const form = document.getElementById('planProductionForm');
+  const scale = document.getElementById('scale');
+  const flexModeToggle = document.getElementById('flexMode');
+  const autoFillToggle = document.getElementById('autoFill');
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  
+  // Initialize event listeners
+  if (scale) scale.addEventListener('change', updateProjectedYield);
+  if (flexModeToggle) flexModeToggle.addEventListener('change', handleFlexModeToggle);
+  if (autoFillToggle) autoFillToggle.addEventListener('change', handleAutoFillToggle);
+  if (addContainerBtn) addContainerBtn.addEventListener('click', addContainerRow);
+  
+  // Initial projected yield calculation
+  updateProjectedYield();
+});
+
 function updateProjectedYield() {
   const scale = parseFloat(document.getElementById('scale').value) || 1;
   const projectedYieldElement = document.getElementById('projectedYield');
