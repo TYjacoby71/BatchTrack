@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -33,15 +32,15 @@
     </div>
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
-        <div x-data="containerRow(container, index, $parent)" class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" @change="updateContainer()">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <select class="form-select" x-model="container.id" @change="updateContainer(index); fetchContainerPlan()">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
-          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer()">
-          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer()">×</button>
+          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="fetchContainerPlan()">
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)">×</button>
         </div>
       </template>
 
