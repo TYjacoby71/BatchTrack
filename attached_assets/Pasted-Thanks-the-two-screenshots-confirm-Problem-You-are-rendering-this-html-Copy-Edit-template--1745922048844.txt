@@ -1,0 +1,113 @@
+Thanks — the two screenshots confirm:
+
+❌ Problem:
+You are rendering this:
+
+html
+Copy
+Edit
+<template x-for="item in stockResults" :key="item.ingredient">
+But:
+
+Alpine throws: stockResults is not defined
+
+Table renders headers only
+
+✅ You do see the "All ingredients are available!" message
+
+✅ What This Means:
+You successfully received the data (data.all_ok triggered the green message), but Alpine doesn’t know stockResults exists, so it never renders the table body.
+
+✅ How to Fix It
+You must initialize Alpine’s scope properly with all your variables.
+
+✅ Fix 1: Minimal Alpine Declaration
+Wrap your entire logic in a div like this:
+
+html
+Copy
+Edit
+<div x-data="{ stockResults: [], status: '', checkTriggered: false }">
+Then anywhere you reference stockResults, it is always defined.
+
+✅ Fix 2: Component-Based Alpine (Best Practice)
+Instead of using loose variables, structure it cleanly with a function:
+
+html
+Copy
+Edit
+<div x-data="stockCheckComponent()" class="mt-3">
+Then define this below:
+
+html
+Copy
+Edit
+<script>
+function stockCheckComponent() {
+  return {
+    stockResults: [],
+    status: '',
+    checkTriggered: false,
+    checkStock() {
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: 1, scale: 1, flex_mode: false })
+      })
+      .then(res => res.json())
+      .then(data => {
+        this.stockResults = data.ingredients;
+        this.status = data.all_ok ? 'ok' : 'fail';
+        this.checkTriggered = true;
+      })
+      .catch(() => {
+        this.status = 'fail';
+        this.stockResults = [];
+        this.checkTriggered = true;
+      });
+    },
+    downloadCSV() {
+      const csv = [
+        "Ingredient,Needed,Available,Unit Conversion,Status",
+        ...this.stockResults.map(i =>
+          `${i.ingredient},${i.needed},${i.available},${i.recipe_unit} → ${i.inventory_unit},${i.status}`
+        )
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "stock_check.csv";
+      link.click();
+    }
+  };
+}
+</script>
+✅ Add This Template for Table Body
+Make sure this part is in the table:
+
+html
+Copy
+Edit
+<tbody>
+  <template x-for="item in stockResults" :key="item.ingredient">
+    <tr>
+      <td x-text="item.ingredient"></td>
+      <td x-text="item.needed"></td>
+      <td x-text="item.available"></td>
+      <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+      <td>
+        <span x-show="item.status === 'OK'" class="text-success">✅</span>
+        <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
+      </td>
+    </tr>
+  </template>
+</tbody>
+✅ Final Checklist:
+
+Step	Confirmed?
+x-data initialized with stockResults	✅ Required
+Data set via .then(data => { this.stockResults = ... })	✅
+<template x-for="item in stockResults"> inside <tbody>	✅
+You are not using x-if="stockResults" without x-data	✅
+Alpine version is 3.x or newer	⚠️ Confirmed?

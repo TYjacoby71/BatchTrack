@@ -72,40 +72,37 @@
         </div>
       </template>
       <template x-if="!stockCheckPassed">
-        <div>
-          <div class="alert alert-warning mt-2">
-            ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
-          </div>
-          <template x-if="stockResults.length > 0">
-            <table class="table table-bordered table-sm mt-2">
-              <thead>
-                <tr>
-                  <th>Ingredient</th>
-                  <th>Required (Recipe Unit)</th>
-                  <th>Available (Stock Unit)</th>
-                  <th>Units</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="item in stockResults" :key="item.ingredient">
-                  <tr>
-                    <td x-text="item.ingredient"></td>
-                    <td x-text="item.needed"></td>
-                    <td x-text="item.available"></td>
-                    <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
-                    <td>
-                      <span x-show="item.status === 'OK'" class="text-success">✅</span>
-                      <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </template>
-          <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+        <div class="alert alert-warning mt-2">
+          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
         </div>
       </template>
+
+      <table class="table table-bordered table-sm mt-2">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Required (Recipe Unit)</th>
+            <th>Available (Stock Unit)</th>
+            <th>Units</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="item in stockResults" :key="item.ingredient">
+            <tr>
+              <td x-text="item.ingredient"></td>
+              <td x-text="item.needed"></td>
+              <td x-text="item.available"></td>
+              <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+              <td>
+                <span x-show="item.status === 'OK'" class="text-success">✅</span>
+                <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
     </div>
   </div>
 
