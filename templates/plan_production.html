@@ -205,13 +205,17 @@ function planProduction() {
     updateContainer(index) {
       const selectedId = this.containersSelected[index].id;
       const match = this.allowedContainers.find(c => c.id == selectedId);
+      const previousQuantity = this.containersSelected[index].quantity;
+      
       if (match) {
         this.containersSelected[index].capacity = match.storage_amount;
         this.containersSelected[index].unit = match.storage_unit;
         this.containersSelected[index].name = match.name;
+        
         if (this.containersSelected[index].quantity > match.stock_qty) {
-          this.containersSelected[index].quantity = match.stock_qty;
-          alert('Cannot allocate more than available container stock.');
+          alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
+          this.containersSelected[index].quantity = previousQuantity;
+          return;
         }
       }
       this.updateProgress();
