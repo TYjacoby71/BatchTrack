@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from models import Recipe, InventoryItem
-from services.unit_conversion import ConversionEngine
+from services.unit_conversion import convert_units
 
 api_bp = Blueprint('api', __name__)
 
@@ -24,7 +24,7 @@ def available_containers(recipe_id):
                 continue
 
             try:
-                converted_capacity = ConversionEngine.convert_units(
+                converted_capacity = convert_units(
                     container.storage_amount, 
                     container.storage_unit, 
                     required_unit
