@@ -121,15 +121,14 @@ function planProduction() {
         .then(data => {
           this.allowedContainers = data.available || [];
           if (this.autoFill) {
-            // Ensure each container is fully hydrated with all properties
             this.containersSelected = (data.plan || []).map(container => {
-              const match = this.allowedContainers.find(c => c.id === container.id);
-              if (!match) return container;
+              const match = data.available.find(c => c.id === container.id);
               return {
-                ...container,
-                name: match.name,
-                capacity: match.storage_amount,
-                unit: match.storage_unit
+                id: container.id,
+                quantity: container.quantity,
+                name: match?.name || 'Select Container',
+                capacity: match?.storage_amount || 0,
+                unit: match?.storage_unit || ''
               };
             });
 
