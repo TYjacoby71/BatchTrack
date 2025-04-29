@@ -38,11 +38,12 @@
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ') - ' + getRemainingStock(allowed.id, index) + ' available'"></option>
+                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
               </template>
             </template>
           </select>
-          <input type="number" min="1" class="form-control" x-model.number="container.quantity" :disabled="autoFill" @input="updateProgress">
+          <input type="number" min="1" class="form-control" x-model.number="container.quantity" :disabled="autoFill || getRemainingStock(container.id, index) <= 0" @input="updateProgress">
+          <div class="small text-muted px-2" x-text="'Available: ' + getRemainingStock(container.id, index)"></div>
           <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">&times;</button>
         </div>
       </template>
@@ -229,7 +230,10 @@ function planProduction() {
         this.containersSelected[index].unit = match.storage_unit;
         this.containersSelected[index].name = match.name;
         const remainingStock = this.getRemainingStock(selectedId, index);
-        if (this.containersSelected[index].quantity > remainingStock) {
+        
+        if (remainingStock <= 0) {
+          this.containersSelected[index].quantity = 0;
+        } else if (this.containersSelected[index].quantity > remainingStock) {
           this.containersSelected[index].quantity = remainingStock;
         }
       }
