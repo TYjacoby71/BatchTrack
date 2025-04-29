@@ -232,10 +232,18 @@ def quick_add_unit():
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        # Allow cloning regardless of lock status
-        original.name = f"Copy of {original.name}"
+        # Create new recipe object with copied attributes
+        new_recipe = Recipe(
+            name=f"Copy of {original.name}",
+            instructions=original.instructions,
+            label_prefix=original.label_prefix,
+            predicted_yield=original.predicted_yield,
+            predicted_yield_unit=original.predicted_yield_unit,
+            requires_containers=original.requires_containers,
+            allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
+        )
         return render_template('recipe_form.html',
-                            recipe=original,
+                            recipe=new_recipe,
                             is_clone=True,
                             all_ingredients=InventoryItem.query.all(),
                             inventory_units=get_global_unit_list())
