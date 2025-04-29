@@ -53,9 +53,23 @@ def check_stock(recipe_id, scale, container_plan, flex_mode):
         })
 
     # Containers check
+    if not recipe.requires_containers:
+        return {"stock_check": results, "all_ok": all_ok}
+        
     for container_selection in container_plan:
-        container_id = int(container_selection['id'])
-        container_quantity_needed = int(container_selection['quantity'])
+        try:
+            container_id = int(container_selection['id'])
+            container_quantity_needed = int(container_selection['quantity'])
+        except (ValueError, KeyError, TypeError):
+            results.append({
+                "type": "container",
+                "name": "Invalid container data",
+                "needed": 0,
+                "available": 0,
+                "status": "NEEDED"
+            })
+            all_ok = False
+            continue
 
         inventory_container = InventoryItem.query.get(container_id)
 
