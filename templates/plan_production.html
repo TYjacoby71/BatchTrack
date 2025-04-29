@@ -6,7 +6,7 @@
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="debouncedRefresh">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -138,6 +138,15 @@ function planProduction() {
       this.updateProgress();
     },
 
+    debounceTimer: null,
+
+    debouncedRefresh() {
+      if (this.debounceTimer) clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(() => {
+        this.fetchContainerPlan();
+      }, 200);
+    },
+
     updateContainer(index) {
       const container = this.containersSelected[index];
       const match = this.allowedContainers.find(c => c.id === container.id);
@@ -150,6 +159,7 @@ function planProduction() {
         }
       }
       this.updateProgress();
+      this.debouncedRefresh();
     },
 
     async fetchContainerPlan() {
