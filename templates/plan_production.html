@@ -206,31 +206,28 @@ function planProduction() {
       const selectedId = this.containersSelected[index].id;
       const match = this.allowedContainers.find(c => c.id == selectedId);
       
-      // Store current state before any changes
-      const previousState = {
-        id: this.containersSelected[index].id,
-        quantity: this.containersSelected[index].quantity,
-        capacity: this.containersSelected[index].capacity,
-        unit: this.containersSelected[index].unit,
-        name: this.containersSelected[index].name
-      };
-      
-      if (match) {
-        // Validate before allowing any updates
-        if (this.containersSelected[index].quantity > match.stock_qty) {
-          alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
-          // Completely restore previous state
-          Object.assign(this.containersSelected[index], previousState);
-          return; // Exit without updating anything
+      if (!match) return;
+
+      // Validate quantity first
+      if (this.containersSelected[index].quantity > match.stock_qty) {
+        alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
+        // Reset container to previous valid state
+        const savedContainer = this.allowedContainers.find(c => c.id == this.containersSelected[index].id);
+        if (savedContainer) {
+          this.containersSelected[index].quantity = 1;
+          this.containersSelected[index].capacity = savedContainer.storage_amount;
+          this.containersSelected[index].unit = savedContainer.storage_unit;
+          this.containersSelected[index].name = savedContainer.name;
         }
-        
-        // Only proceed with update if validation passed
-        this.containersSelected[index].capacity = match.storage_amount;
-        this.containersSelected[index].unit = match.storage_unit;
-        this.containersSelected[index].name = match.name;
-        this.updateProgress();
-        this.evaluateContainment();
+        return;
       }
+      
+      // Only update if validation passed
+      this.containersSelected[index].capacity = match.storage_amount;
+      this.containersSelected[index].unit = match.storage_unit;
+      this.containersSelected[index].name = match.name;
+      this.updateProgress();
+      this.evaluateContainment();
     },
 
     removeContainer(index) {
