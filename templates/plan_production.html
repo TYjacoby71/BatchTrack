@@ -162,19 +162,24 @@ function planProduction() {
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
         .then(data => {
+          // Update allowedContainers first
           this.allowedContainers = data.available || [];
+          
+          // Update containersSelected in autoFill mode
           if (this.autoFill) {
-            this.containersSelected = (data.plan || []).map(container => {
-              const match = this.allowedContainers.find(c => c.id === container.id);
-              return {
-                id: container.id,
-                quantity: container.quantity,
-                name: match?.name || '',
-                capacity: match?.storage_amount || 0,
-                unit: match?.storage_unit || ''
-              };
+            this.containersSelected = (data.plan || []).map(container => ({
+              id: container.id,
+              quantity: container.quantity,
+              name: '',
+              capacity: 0,
+              unit: ''
+            }));
+            // Sync names and details for all containers
+            this.containersSelected.forEach((container, index) => {
+              this.updateContainer(index);
             });
           }
+          
           this.updateProgress();
           this.evaluateContainment();
         });
