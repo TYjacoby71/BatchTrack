@@ -26,7 +26,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('recipes.create_variation' if is_variation else ('recipes.edit_recipe' if recipe else 'recipes.new_recipe'), recipe_id=recipe.parent_id if is_variation else recipe.id if recipe else None) }}" id="recipeForm">
+<form method="post" action="{{ url_for('recipes.new_recipe' if is_clone else ('recipes.create_variation' if is_variation else ('recipes.edit_recipe' if recipe and not is_clone else 'recipes.new_recipe')), recipe_id=recipe.parent_id if is_variation else (recipe.id if recipe and not is_clone else None)) }}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
