@@ -81,9 +81,9 @@
               <thead>
                 <tr>
                   <th>Ingredient</th>
-                  <th>Required</th>
-                  <th>Available</th>
-                  <th>Unit</th>
+                  <th>Required (Recipe Unit)</th>
+                  <th>Available (Stock Unit)</th>
+                  <th>Units</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -91,10 +91,13 @@
                 <template x-for="item in stockResults" :key="item.ingredient">
                   <tr>
                     <td x-text="item.ingredient"></td>
-                    <td x-text="item.required"></td>
+                    <td x-text="item.needed"></td>
                     <td x-text="item.available"></td>
-                    <td x-text="item.unit"></td>
-                    <td x-text="item.status"></td>
+                    <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+                    <td>
+                      <span x-show="item.status === 'OK'" class="text-success">✅</span>
+                      <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
+                    </td>
                   </tr>
                 </template>
               </tbody>
