@@ -184,7 +184,6 @@ function planProduction() {
         console.log('Checking stock with:', {
           recipe_id: this.recipeId,
           scale: this.scale,
-          containers: this.containersSelected,
           flex_mode: this.flexMode
         });
 
@@ -194,10 +193,6 @@ function planProduction() {
           body: JSON.stringify({
             recipe_id: this.recipeId,
             scale: this.scale,
-            containers: this.containersSelected.map(c => ({
-              id: parseInt(c.id),
-              quantity: parseInt(c.quantity)
-            })),
             flex_mode: this.flexMode
           })
         });
