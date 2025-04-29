@@ -115,6 +115,36 @@ function planProduction() {
     containersSelected: [],
     stockResults: [],
 
+    autoFillContainers() {
+      if (!this.autoFill) return;
+      
+      this.containersSelected = [];
+      let remainingYield = this.baseYield * this.scale;
+      
+      // Sort containers by capacity (largest first)
+      const sortedContainers = [...this.allowedContainers]
+        .sort((a, b) => b.storage_amount - a.storage_amount);
+      
+      for (const container of sortedContainers) {
+        if (remainingYield <= 0) break;
+        
+        const quantity = Math.floor(remainingYield / container.storage_amount);
+        if (quantity > 0) {
+          this.containersSelected.push({
+            id: container.id,
+            quantity: quantity
+          });
+          remainingYield -= container.storage_amount * quantity;
+        }
+      }
+
+      // Handle strict mode requirements
+      if (!this.flexMode && remainingYield > 0.01) {
+        alert('Cannot fully contain batch with available containers in strict mode');
+        this.containersSelected = [];
+      }
+    },
+
     get totalContained() {
       return this.containersSelected.reduce((sum, container) => {
         const found = this.allowedContainers.find(c => c.id == container.id);
@@ -123,7 +153,22 @@ function planProduction() {
     },
 
     addContainer() {
-      this.containersSelected.push({ id: '', quantity: 1 });
+      if (this.autoFill) {
+        this.autoFillContainers();
+      } else {
+        this.containersSelected.push({ id: '', quantity: 1 });
+      }
+    },
+
+    // Watch for changes that should trigger autofill
+    init() {
+      this.$watch('scale', () => {
+        if (this.autoFill) this.autoFillContainers();
+      });
+      
+      this.$watch('autoFill', (newValue) => {
+        if (newValue) this.autoFillContainers();
+      });
     },
 
     removeContainer(index) {

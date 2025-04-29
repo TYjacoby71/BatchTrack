@@ -1,0 +1,132 @@
+<!-- Step 1: Updated templates/plan_production.html -->
+{% extends 'layout.html' %}
+{% block content %}
+<div x-data="planProduction()" class="container">
+  <!-- Scale and Projected Yield -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <label for="scale">Scale:</label>
+      <input type="number" id="scale" min="0.1" step="0.1" x-model.number="scale" @input="fetchContainerPlan" class="form-control">
+    </div>
+    <div class="col-md-6">
+      <label>Projected Yield:</label>
+      <div class="form-control-plaintext" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+    </div>
+  </div>
+
+  <!-- Mode Toggles -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <label><input type="checkbox" x-model="flexMode"> Flexible Mode</label>
+      <small class="form-text text-muted">Allow proceeding without full containment.</small>
+    </div>
+    <div class="col-md-6">
+      <label><input type="checkbox" x-model="autoFill" @change="fetchContainerPlan"> Auto-Fill Containers</label>
+      <small class="form-text text-muted">Auto select best-fit containers in stock.</small>
+    </div>
+  </div>
+
+  <!-- Container Selection -->
+  <template x-for="(container, index) in containersSelected" :key="index">
+    <div class="container-row d-flex align-items-center gap-2 mb-2">
+      <select class="form-select" x-model="container.id" @change="updateContainer(index, 'id', $event.target.value)">
+        <option value="">Select Container</option>
+        <template x-for="allowed in allowedContainers" :key="allowed.id">
+          <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
+          </option>
+        </template>
+      </select>
+      <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer(index, 'quantity', $event.target.value)">
+      <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)">×</button>
+    </div>
+  </template>
+
+  <!-- Containment Progress -->
+  <label class="mt-3">Containment Progress:</label>
+  <div class="progress" style="height: 20px;">
+    <div class="progress-bar" role="progressbar"
+      :style="'width: ' + Math.min((totalContained / (baseYield * scale)) * 100, 100) + '%'"
+      x-text="Math.min((totalContained / (baseYield * scale)) * 100, 100).toFixed(0) + '%'">
+    </div>
+  </div>
+  <small class="form-text text-muted mt-1" x-text="'Remaining to contain: ' + Math.max((baseYield * scale) - totalContained, 0).toFixed(2) + ' ' + unit"></small>
+
+  <!-- Flex Mode Containment Error -->
+  <div class="alert alert-danger mt-3" x-show="!flexMode && totalContained < (baseYield * scale)">
+    You must fully contain this batch to proceed.
+  </div>
+
+  <!-- Ingredient Stock Check & Batch Start -->
+  <div class="d-flex justify-content-between mt-4">
+    <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
+    <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">Start Batch</button>
+  </div>
+</div>
+
+<script>
+function planProduction() {
+  return {
+    recipeId: {{ recipe.id }},
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+    unit: '{{ recipe.predicted_yield_unit }}',
+    allowedContainers: [],
+    containersSelected: [],
+    flexMode: false,
+    autoFill: true,
+    scale: 1.0,
+    stockCheckPassed: false,
+
+    get totalContained() {
+      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
+    },
+
+    get canStartBatch() {
+      const fullContain = this.flexMode || this.totalContained >= this.baseYield * this.scale;
+      return fullContain && this.stockCheckPassed;
+    },
+
+    fetchContainerPlan() {
+      if (!this.autoFill) return;
+      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
+        .then(res => res.json())
+        .then(data => {
+          this.allowedContainers = data.available;
+          this.containersSelected = data.plan;
+        });
+    },
+
+    updateContainer(index, field, value) {
+      if (field === 'id') {
+        const match = this.allowedContainers.find(c => c.id == value);
+        if (match) {
+          this.containersSelected[index] = { ...match, quantity: this.containersSelected[index].quantity || 1 };
+        }
+      } else if (field === 'quantity') {
+        this.containersSelected[index].quantity = parseInt(value);
+      }
+    },
+
+    removeContainer(index) {
+      this.containersSelected.splice(index, 1);
+    },
+
+    checkStock() {
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: this.recipeId, scale: this.scale })
+      })
+        .then(res => res.json())
+        .then(data => {
+          this.stockCheckPassed = data.all_ok;
+          if (!data.all_ok) alert('Some ingredients are low or missing.');
+        });
+    },
+
+    startBatch() {
+      alert('Batch would be started now. Hook into real route.');
+    }
+  };
+}
+</script>
+{% endblock %}
