@@ -1,7 +1,34 @@
 from flask import Blueprint, request, jsonify
 from models import db, InventoryItem, Unit
 
-quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
+quick_add_bp = Blueprint('quick_add', __name__)
+
+@quick_add_bp.route('/container', methods=['POST'])
+def quick_add_container():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        container = InventoryItem(
+            name=data['name'],
+            type='container',
+            storage_amount=float(data['storage_amount']),
+            storage_unit=data['storage_unit']
+        )
+
+        db.session.add(container)
+        db.session.commit()
+
+        return jsonify({
+            'id': container.id,
+            'name': container.name,
+            'storage_amount': container.storage_amount,
+            'storage_unit': container.storage_unit
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 @quick_add_bp.route('/unit', methods=['POST'])
 def quick_add_unit():
