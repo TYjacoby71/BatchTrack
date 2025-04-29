@@ -1,0 +1,97 @@
+Perfect — here’s the changes I suggest next, exactly aligned with everything we just confirmed about containers, ingredients, and flex mode:
+
+📋 Suggested Changes (to fix your architecture fully)
+
+File	Change	Why
+/routes/stock_check.py or /api/check-stock	Patch to accept {recipe_id, scale, flex_mode} only — ignore containers	✅ Containers are Alpine's job
+/services/stock_check_utils.py (check_recipe_stock)	Modify to allow ingredients marked LOW to still pass if flex_mode=True	✅ Flex forgiveness
+/templates/plan_production.html	Minor: Confirm flex toggle stays on after warning; no real Alpine changes needed otherwise	✅ Alpine already sending flex_mode properly
+/services/conversion_engine.py (optional audit)	Confirm that conversion math is consistent on ingredients scaling (g, oz, count)	✅ No scale surprises when batches grow
+🛠️ Detailed Patch List
+1. /api/check-stock
+python
+Copy
+Edit
+@stock_api_bp.route('/api/check-stock', methods=['POST'])
+def api_check_stock():
+    try:
+        data = request.get_json()
+        recipe_id = data.get('recipe_id')
+        scale = float(data.get('scale', 1))
+        flex_mode = data.get('flex_mode', False)
+
+        if not recipe_id:
+            return jsonify({'error': 'Missing recipe_id'}), 400
+
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        stock_results = check_recipe_stock(recipe, scale, flex_mode=flex_mode)
+
+        # ✅ Only error if 'MISSING' ingredients, NOT LOW (if flex_mode)
+        all_ok = all(item['status'] == 'OK' or (flex_mode and item['status'] == 'LOW') for item in stock_results)
+
+        return jsonify({
+            'stock_check': stock_results,
+            'all_ok': all_ok,
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+✅ Clean
+✅ Accepts flex mode
+✅ Ignores containers completely
+
+2. /services/stock_check_utils.py (inside check_recipe_stock)
+If ingredient stock is LOW:
+
+If flex_mode = True, treat as pass ✅
+
+If flex_mode = False, treat as fail ❌
+
+Example logic:
+
+python
+Copy
+Edit
+def check_recipe_stock(recipe, scale, flex_mode=False):
+    stock_results = []
+    # loop over ingredients
+    for ingredient in recipe.ingredients:
+        required_amount = ingredient.amount * scale
+        available_amount = ingredient.inventory.quantity if ingredient.inventory else 0
+
+        if available_amount >= required_amount:
+            status = 'OK'
+        elif available_amount > 0:
+            status = 'LOW'
+        else:
+            status = 'MISSING'
+
+        stock_results.append({
+            'ingredient_id': ingredient.id,
+            'name': ingredient.name,
+            'needed': required_amount,
+            'available': available_amount,
+            'status': status
+        })
+
+    return stock_results
+✅ Clean
+✅ Universal
+✅ Ingredient math only
+
+3. Alpine (Plan Production Page)
+Alpine is already sending flex_mode correctly
+
+Alpine already allows containers to pass or fail separately
+
+Only thing you might want later is a tiny flexMode toggle lock (like when stock check warning appears).
+
+✅ No patch needed now unless you want extra UX polish.
+
+🚀 Summary
+✅ Containers: managed only in Alpine
+✅ Ingredients: managed only in /check-stock
+✅ Flex Mode: universal forgiveness setting ✅ USCS remains clean (no container weirdness)
