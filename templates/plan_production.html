@@ -36,9 +36,8 @@
         <div x-data="containerRow(container, index, $parent)" class="d-flex align-items-center gap-2 mb-2">
           <select class="form-select" x-model="container.id" @change="updateContainer()">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
-              </option>
+            <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
+              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
           <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer()">
