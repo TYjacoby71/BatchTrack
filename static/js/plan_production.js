@@ -1,8 +1,8 @@
 // Plan Production Page JavaScript
 
 function updateProjectedYield() {
-  const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
+  const scaleInput = document.getElementById('scale');
 
   if (!scaleInput || !projectedYieldElement) return;
 
@@ -70,6 +70,16 @@ document.addEventListener('DOMContentLoaded', function() {
   const checkStockBtn = document.getElementById('checkStockBtn');
   if (checkStockBtn) {
     checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  if (addContainerBtn) {
+    addContainerBtn.addEventListener('click', addContainerRow);
+  }
+
+  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
+  if (exportShoppingListBtn) {
+    exportShoppingListBtn.addEventListener('click', exportShoppingList);
   }
 
   // Initial calculation
@@ -160,7 +170,3 @@ function addContainerRow() {
       startBatchButton.style.display = 'inline-block';
     }
   }
-  if (document.getElementById('addContainerBtn')) document.getElementById('addContainerBtn').addEventListener('click', addContainerRow);
-  if (document.getElementById('exportShoppingListBtn')) document.getElementById('exportShoppingListBtn').addEventListener('click', exportShoppingList);
-
-});
