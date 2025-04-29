@@ -1,6 +1,38 @@
 $(document).ready(function() {
-    // Initialize Select2 for container selects that aren't in plan production
-    $('.container-select:not([data-plan-production])').select2({
+  // Initialize all global Select2 dropdowns (ingredients page, recipes page, etc.)
+  $('select[data-unit-select]').select2({
+    placeholder: 'Select a unit',
+    allowClear: true,
+    width: '100%'
+  });
+
+  $('.ingredient-select').select2({
+    placeholder: 'Select ingredients',
+    allowClear: true,
+    width: '100%'
+  });
+
+  // Bootstrap tooltips site-wide
+  $('[data-bs-toggle="tooltip"]').tooltip();
+
+  // Quick add modal transitions (for ingredients and units)
+  document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
+    const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+    if (unitModal) unitModal.hide();
+
+    setTimeout(() => {
+      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+      ingredientModal.show();
+      document.getElementById('ingredientName')?.focus();
+    }, 300);
+  });
+
+  document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+    if (modal) modal.hide();
+  });
+  // Initialize Select2 for container selects that aren't in plan production
+  $('.container-select:not([data-plan-production])').select2({
         placeholder: 'Select containers',
         allowClear: true,
         multiple: true,
@@ -34,25 +66,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Quick Add Unit cancel handler
-  document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
-    const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-    if (unitModal) unitModal.hide();
 
-    setTimeout(() => {
-      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-      ingredientModal.show();
-      document.getElementById('ingredientName')?.focus();
-    }, 300);
-  });
-
-  // Quick Add Ingredient cancel handler
-  document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-    if (modal) modal.hide();
-  });
 });
-
 
 // Initialize unit loading when unit converter modal opens
 const unitConverterModal = document.getElementById('unitConverterModal');
@@ -261,32 +276,6 @@ function convertUnits() {
 
 // Stock check functionality is now handled in plan_production.html template
 // Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
-function updateStockCheckTable(data) {
-  const tableBody = document.getElementById('stockCheckTableBody');
-  const startBatchBtn = document.getElementById('startBatchBtn');
-
-  if (!tableBody) return;
-
-  tableBody.innerHTML = data.stock_check.map(item => {
-    const showUnit = item.type !== 'container';
-    return `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${showUnit ? item.unit : '-'}</td>
-        <td>${item.status}</td>
-      </tr>
-    `;
-  }).join('');
-
-  if (startBatchBtn) {
-    startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
-  }
-}
-
-// Remove the direct data reference, updateStockCheckTable is now called from plan_production.html
 function updateStockCheckTable(data) {
   const tableBody = document.getElementById('stockCheckTableBody');
   const startBatchBtn = document.getElementById('startBatchBtn');

@@ -1,10 +1,10 @@
 
 {% extends 'layout.html' %}
+{% from 'macros/forms.html' import csrf_form %}
 {% block content %}
 <h2>Edit Ingredient</h2>
 
-<form method="post">
-  {{ csrf_token() }}
+{% call csrf_form() %}
   <div class="mb-3">
     <label class="form-label">Name</label>
     <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
@@ -29,5 +29,5 @@
 
   <button type="submit" class="btn btn-primary">Save Changes</button>
   <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-secondary">Cancel</a>
-</form>
+{% endcall %}
 {% endblock %}
