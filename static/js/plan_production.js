@@ -1,7 +1,6 @@
+
 // Plan Production Page JavaScript
-
 document.addEventListener('DOMContentLoaded', function() {
-
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
   const stockCheckSection = document.getElementById('ingredientStockSection');
@@ -20,12 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let stockCheckData = [];
   let missingItems = [];
+  let containers = [];
 
   function updateProjectedYield() {
     const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
     const scale = parseFloat(scaleInput.value) || 1;
     const unit = projectedYieldElement.dataset.baseUnit || '';
-
     const newYield = (baseYield * scale).toFixed(2);
     projectedYieldElement.innerText = `${newYield} ${unit}`;
   }
@@ -33,21 +32,42 @@ document.addEventListener('DOMContentLoaded', function() {
   function checkStock() {
     const recipeId = document.querySelector('input[name="recipe_id"]').value;
     const scale = parseFloat(scaleInput.value) || 1;
+    const flexMode = flexModeToggle.checked;
+    
+    const containerPlan = Array.from(document.querySelectorAll('.container-row')).map(row => {
+      const select = row.querySelector('.container-select');
+      const quantity = row.querySelector('.container-quantity');
+      return {
+        id: select.value,
+        quantity: parseInt(quantity.value) || 0
+      };
+    });
 
     fetch('/api/check-stock', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipe_id: recipeId, scale: scale })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+      },
+      body: JSON.stringify({ 
+        recipe_id: recipeId, 
+        scale: scale,
+        containers: containerPlan,
+        flex_mode: flexMode
+      })
     })
     .then(response => response.json())
     .then(data => {
       renderStockResults(data.stock_check);
       stockCheckData = data.stock_check;
       missingItems = stockCheckData.filter(item => item.status !== 'OK');
+      
       stockCheckSection.style.display = 'block';
       modeTogglesSection.style.display = 'block';
-      containerPlanningSection.style.display = 'block';
+      containerPlanningSection.style.display = recipe.requires_containers ? 'block' : 'none';
+      
       updateButtons();
+      updateContainmentProgress();
     })
     .catch(error => {
       console.error('Error checking stock:', error);
@@ -56,17 +76,30 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function renderStockResults(results) {
-    ingredientResultsContainer.innerHTML = '';
-    results.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'd-flex justify-content-between mb-2';
-      const colorClass = item.status === 'OK' ? 'text-success' : (item.status === 'LOW' ? 'text-warning' : 'text-danger');
-      row.innerHTML = `
-        <div>${item.type.toUpperCase()}: ${item.name}</div>
-        <div class="${colorClass}">${item.status}</div>
-      `;
-      ingredientResultsContainer.appendChild(row);
-    });
+    ingredientResultsContainer.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Needed</th>
+            <th>Available</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${results.map(item => `
+            <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+              <td>${item.type}</td>
+              <td>${item.name}</td>
+              <td>${item.needed}</td>
+              <td>${item.available}</td>
+              <td>${item.status}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
   function updateButtons() {
@@ -85,11 +118,11 @@ document.addEventListener('DOMContentLoaded', function() {
     row.innerHTML = `
       <select class="form-select container-select" required>
         <option value="">Select Container</option>
-        {% for container in containers %}
-        <option value="{{ container.id }}" data-capacity="{{ container.storage_amount }}" data-unit="{{ container.storage_unit }}">
-          {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
-        </option>
-        {% endfor %}
+        ${containers.map(container => `
+          <option value="${container.id}" data-capacity="${container.storage_amount}" data-unit="${container.storage_unit}">
+            ${container.name} (${container.storage_amount} ${container.storage_unit})
+          </option>
+        `).join('')}
       </select>
       <input type="number" class="form-control container-quantity" min="1" value="1" required>
       <button type="button" class="btn btn-danger btn-sm remove-container">×</button>
@@ -108,10 +141,11 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateContainmentProgress() {
+    if (!recipe.requires_containers) return;
+
     const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
     const scale = parseFloat(scaleInput.value) || 1;
     const totalNeeded = baseYield * scale;
-
     let totalContained = 0;
 
     document.querySelectorAll('.container-row').forEach(row => {
@@ -126,7 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const percent = Math.min((totalContained / totalNeeded) * 100, 100);
     fillProgressBar.style.width = `${percent}%`;
     fillProgressBar.textContent = `${Math.round(percent)}%`;
-
     remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0).toFixed(2)}`;
 
     if (!flexModeToggle.checked && totalContained < totalNeeded) {
@@ -158,20 +191,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (scaleInput) scaleInput.addEventListener('change', updateProjectedYield);
   if (addContainerBtn) addContainerBtn.addEventListener('click', addContainerRow);
   if (exportButton) exportButton.addEventListener('click', exportShoppingList);
-  if (flexModeToggle) flexModeToggle.addEventListener('change', () => {
-    const isFlexMode = flexModeToggle.checked;
-    autoFillSection.style.display = isFlexMode ? 'none' : 'block';
-    containmentError.style.display = isFlexMode ? 'none' : 'block';
-    if (!isFlexMode && autoFillToggle.checked) {
-      autoFillContainers();
-    }
-    updateContainmentProgress();
-  });
+  if (flexModeToggle) flexModeToggle.addEventListener('change', updateContainmentProgress);
+  if (autoFillToggle) autoFillToggle.addEventListener('change', updateContainmentProgress);
 
-  // Make functions globally available
-  window.checkStock = checkStock;
-  window.updateProjectedYield = updateProjectedYield;
-
-  // Initial projected yield calculation
+  // Initialize
   updateProjectedYield();
 });

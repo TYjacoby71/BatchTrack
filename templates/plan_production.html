@@ -85,5 +85,11 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+  const recipe = {
+    requires_containers: {{ recipe.requires_containers|tojson }},
+    allowed_containers: {{ recipe.allowed_containers|tojson if recipe.allowed_containers else '[]' }}
+  };
+</script>
 <script src="{{ url_for('static', filename='js/plan_production.js') }}" defer></script>
 {% endblock %}
