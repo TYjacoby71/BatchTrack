@@ -92,14 +92,20 @@ def view_recipe(recipe_id):
 @login_required
 def plan_production(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    # If it's a variation, use that directly
     if recipe.parent_id:
         base_recipe = recipe.parent
     else:
         base_recipe = recipe
-    containers = InventoryItem.query.filter_by(type='container').all()
-    containers = containers or []  # Ensure containers is never None
-    return render_template('plan_production.html', recipe=recipe, base_recipe=base_recipe, hide_variations=True, containers=containers)
+
+    containers = InventoryItem.query.filter_by(type='container').all() or []
+    inventory_units = get_global_unit_list()
+    
+    return render_template('plan_production.html', 
+                         recipe=recipe,
+                         base_recipe=base_recipe,
+                         hide_variations=True,
+                         containers=containers,
+                         inventory_units=inventory_units)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
