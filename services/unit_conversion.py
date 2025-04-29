@@ -20,6 +20,10 @@ class ConversionEngine:
             result = amount * custom_mapping.multiplier
         elif from_unit == to_unit:
             result = amount
+        elif from_u.type == to_u.type == 'volume':
+            # Direct volume to volume conversion through ml
+            base_amount = amount * from_u.multiplier_to_base  # Convert to ml
+            result = base_amount / to_u.multiplier_to_base    # Convert from ml
         elif from_u.type == to_u.type:
             base_amount = amount * from_u.multiplier_to_base
             result = base_amount / to_u.multiplier_to_base
