@@ -87,14 +87,15 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="item in stockResults" :key="item.ingredient">
+          <template x-for="item in stockResults" :key="item.name">
             <tr>
-              <td x-text="item.ingredient"></td>
-              <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
+              <td x-text="item.name"></td>
+              <td x-text="`${item.needed} ${item.unit}`"></td>
               <td x-text="`${item.available} ${item.unit}`"></td>
               <td>
                 <span x-show="item.status === 'OK'" class="text-success">✅</span>
-                <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
+                <span x-show="item.status === 'LOW'" class="text-warning">⚠️</span>
+                <span x-show="item.status === 'NEEDED'" class="text-danger">❌</span>
               </td>
             </tr>
           </template>
