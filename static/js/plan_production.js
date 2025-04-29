@@ -1,11 +1,14 @@
 // 📦 Clean and Correct plan_production.js for Plan Production Page
 
-// ✅ Make updateProjectedYield available globally
+// Global function for updating projected yield
 function updateProjectedYield() {
   const projectedYieldElement = document.getElementById('projectedYield');
   const scaleInput = document.getElementById('scale');
 
-  if (!projectedYieldElement || !scaleInput) return;
+  if (!projectedYieldElement || !scaleInput) {
+    console.error('Required elements not found');
+    return;
+  }
 
   const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
   const scale = parseFloat(scaleInput.value) || 1;
@@ -15,32 +18,28 @@ function updateProjectedYield() {
   projectedYieldElement.textContent = `${newYield} ${unit}`;
 }
 
-// ✅ Safe DOM Ready Loader
-function onReady(callback) {
-  if (document.readyState !== 'loading') callback();
-  else document.addEventListener('DOMContentLoaded', callback);
-}
-
-onReady(() => {
+// DOM Ready handler
+document.addEventListener('DOMContentLoaded', function() {
   const scaleInput = document.getElementById('scale');
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  const addContainerBtn = document.getElementById('addContainerBtn');
-  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
 
   if (scaleInput) {
     scaleInput.addEventListener('input', updateProjectedYield);
     scaleInput.addEventListener('change', updateProjectedYield);
-    updateProjectedYield(); // Initial calculation
+    // Initial calculation
+    updateProjectedYield();
   }
 
+  const checkStockBtn = document.getElementById('checkStockBtn');
   if (checkStockBtn) {
     checkStockBtn.addEventListener('click', checkStock);
   }
 
+  const addContainerBtn = document.getElementById('addContainerBtn');
   if (addContainerBtn) {
     addContainerBtn.addEventListener('click', addContainerRow);
   }
 
+  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
   if (exportShoppingListBtn) {
     exportShoppingListBtn.addEventListener('click', exportShoppingList);
   }

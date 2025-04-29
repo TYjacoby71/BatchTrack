@@ -88,7 +88,7 @@
 {% block scripts %}
 <script>
 // Make containers available to JavaScript
-const containers = {{ allowed_containers|tojson|safe }};
+window.containers = {{ allowed_containers|tojson|safe }};
 </script>
-<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plan_production.js') }}" defer></script>
 {% endblock %}
