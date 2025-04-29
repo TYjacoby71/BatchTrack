@@ -1,0 +1,83 @@
+Thanks for your patience. Here's a full diagnosis of the errors and fixes based on your most recent file upload:
+
+✅ Key Problems Found in Your Console & Code
+1. Alpine x-for Key Error
+Console says:
+
+x-for="allowed in recipe.allowed_containers" → key is undefined or invalid
+
+✅ Problem: You are using recipe.allowed_containers in the dropdown template, but in your Alpine data() object, the allowedContainers are fetched dynamically and populated via fetchContainerPlan().
+
+❌ recipe.allowed_containers may not be defined at runtime in the Alpine scope. ✅ You're also using .allowed.id instead of just .id inside the template.
+
+2. Duplicate & Invalid x-for Keys
+html
+Copy
+Edit
+<template x-for="allowed in recipe.allowed_containers" :key="allowed.id">
+✅ Fix: Change this to pull from allowedContainers only, which is correctly bound inside Alpine:
+
+html
+Copy
+Edit
+<template x-for="allowed in allowedContainers" :key="allowed.id">
+3. JS Error in Check Stock
+Console says:
+
+Error checking stock: SyntaxError {}
+
+✅ Problem: This usually means the response from /api/check-stock isn't JSON (often an HTML error or traceback).
+
+Likely culprit: The backend route /api/check-stock is not parsing your JSON or the frontend sent malformed JSON.
+
+✅ Fix Suggestion: Make sure this backend route contains:
+
+python
+Copy
+Edit
+data = request.get_json(force=True)
+And that your fetch call has the correct structure.
+
+✅ Recommended Patches
+✅ Patch 1: Fix the x-for binding in HTML
+Replace:
+
+html
+Copy
+Edit
+<template x-for="allowed in recipe.allowed_containers" :key="allowed.id">
+With:
+
+html
+Copy
+Edit
+<template x-for="allowed in allowedContainers" :key="allowed.id">
+✅ Patch 2: Fix API call or route handler for stock check
+If your current route is:
+
+python
+Copy
+Edit
+@app.route('/api/check-stock', methods=['POST'])
+def check_stock():
+    data = request.get_json()  # 🔁 possibly None
+    ...
+Change it to:
+
+python
+Copy
+Edit
+data = request.get_json(force=True)
+Also make sure the frontend fetch includes Content-Type: application/json.
+
+✅ Bonus: Alpine UI Quality Suggestions
+While reviewing your plan_production.html, everything else looks solid:
+
+Reactive UI
+
+Containment math logic
+
+Error handling
+
+Manual/auto-fill logic split
+
