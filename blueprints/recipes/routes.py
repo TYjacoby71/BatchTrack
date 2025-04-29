@@ -97,14 +97,23 @@ def plan_production(recipe_id):
     else:
         base_recipe = recipe
 
-    containers = InventoryItem.query.filter_by(type='container').all() or []
+    allowed_containers = [
+        {
+            'id': c.id,
+            'name': c.name,
+            'storage_amount': c.storage_amount,
+            'storage_unit': c.storage_unit
+        }
+        for c in InventoryItem.query.filter_by(type='container').all()
+    ] if recipe.requires_containers else []
+    
     inventory_units = get_global_unit_list()
     
     return render_template('plan_production.html', 
                          recipe=recipe,
                          base_recipe=base_recipe,
                          hide_variations=True,
-                         containers=containers,
+                         allowed_containers=allowed_containers,
                          inventory_units=inventory_units)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
