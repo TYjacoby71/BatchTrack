@@ -26,7 +26,7 @@ def api_check_stock():
         formatted_report = []
         for r in report:
             formatted_report.append({
-                "ingredient": getattr(r["ingredient"], "name", str(r["ingredient"])),
+                "ingredient": r.get("name", ""),
                 "needed": round(r.get("needed", 0), 2),
                 "available": round(r.get("available", 0), 2), 
                 "recipe_unit": r.get("unit", ""),
