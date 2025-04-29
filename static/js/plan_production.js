@@ -1,6 +1,7 @@
 
 // Plan Production Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
+  // Get all required DOM elements
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
   const stockCheckSection = document.getElementById('ingredientStockSection');
@@ -19,8 +20,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let stockCheckData = [];
   let missingItems = [];
-  let containers = [];
+  let containers = recipe.allowed_containers || [];
 
+  // Scale change handler
   function updateProjectedYield() {
     const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
     const scale = parseFloat(scaleInput.value) || 1;
@@ -29,10 +31,11 @@ document.addEventListener('DOMContentLoaded', function() {
     projectedYieldElement.innerText = `${newYield} ${unit}`;
   }
 
+  // Stock check handler
   function checkStock() {
     const recipeId = document.querySelector('input[name="recipe_id"]').value;
     const scale = parseFloat(scaleInput.value) || 1;
-    const flexMode = flexModeToggle.checked;
+    const flexMode = flexModeToggle ? flexModeToggle.checked : false;
     
     const containerPlan = Array.from(document.querySelectorAll('.container-row')).map(row => {
       const select = row.querySelector('.container-select');
@@ -62,9 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
       stockCheckData = data.stock_check;
       missingItems = stockCheckData.filter(item => item.status !== 'OK');
       
-      stockCheckSection.style.display = 'block';
-      modeTogglesSection.style.display = 'block';
-      containerPlanningSection.style.display = recipe.requires_containers ? 'block' : 'none';
+      if (stockCheckSection) stockCheckSection.style.display = 'block';
+      if (modeTogglesSection) modeTogglesSection.style.display = 'block';
+      if (containerPlanningSection && recipe.requires_containers) {
+        containerPlanningSection.style.display = 'block';
+      }
       
       updateButtons();
       updateContainmentProgress();
@@ -76,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function renderStockResults(results) {
+    if (!ingredientResultsContainer) return;
     ingredientResultsContainer.innerHTML = `
       <table class="table">
         <thead>
@@ -103,6 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateButtons() {
+    if (!exportButton || !startBatchButton) return;
     if (missingItems.length > 0) {
       exportButton.style.display = 'inline-block';
       startBatchButton.style.display = 'none';
@@ -113,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function addContainerRow() {
+    if (!containerArea) return;
     const row = document.createElement('div');
     row.className = 'container-row d-flex align-items-center gap-2 mb-2';
     row.innerHTML = `
@@ -157,18 +165,25 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    const percent = Math.min((totalContained / totalNeeded) * 100, 100);
-    fillProgressBar.style.width = `${percent}%`;
-    fillProgressBar.textContent = `${Math.round(percent)}%`;
-    remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0).toFixed(2)}`;
+    if (fillProgressBar) {
+      const percent = Math.min((totalContained / totalNeeded) * 100, 100);
+      fillProgressBar.style.width = `${percent}%`;
+      fillProgressBar.textContent = `${Math.round(percent)}%`;
+    }
 
-    if (!flexModeToggle.checked && totalContained < totalNeeded) {
-      containmentError.style.display = 'block';
-      containmentError.innerText = 'You must fully contain this batch to proceed.';
-      startBatchButton.disabled = true;
-    } else {
-      containmentError.style.display = 'none';
-      startBatchButton.disabled = false;
+    if (remainingDisplay) {
+      remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0).toFixed(2)}`;
+    }
+
+    if (containmentError && startBatchButton) {
+      if (!flexModeToggle?.checked && totalContained < totalNeeded) {
+        containmentError.style.display = 'block';
+        containmentError.innerText = 'You must fully contain this batch to proceed.';
+        startBatchButton.disabled = true;
+      } else {
+        containmentError.style.display = 'none';
+        startBatchButton.disabled = false;
+      }
     }
   }
 
