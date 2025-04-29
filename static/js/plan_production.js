@@ -59,14 +59,20 @@ function renderStockResults(stockCheck) {
   container.innerHTML = html;
 }
 
-// Initialize when DOM is loaded
+// Initialize after DOM load
 document.addEventListener('DOMContentLoaded', function() {
+  // Set up event listeners
   const scaleInput = document.getElementById('scale');
   if (scaleInput) {
     scaleInput.addEventListener('input', updateProjectedYield);
   }
 
-  // Initial calculation
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  // Initial yield calculation
   updateProjectedYield();
 });
 
