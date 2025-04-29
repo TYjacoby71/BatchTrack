@@ -223,18 +223,20 @@ function planProduction() {
     },
 
     updateContainer(index) {
-      const selectedId = this.containersSelected[index].id;
-      const match = this.allowedContainers.find(c => c.id == selectedId);
+      const container = this.containersSelected[index];
+      if (!container || !container.id) return;
+      
+      const match = this.allowedContainers.find(c => c.id == container.id);
       if (match) {
-        this.containersSelected[index].capacity = match.storage_amount;
-        this.containersSelected[index].unit = match.storage_unit;
-        this.containersSelected[index].name = match.name;
-        const remainingStock = this.getRemainingStock(selectedId, index);
+        container.capacity = match.storage_amount;
+        container.unit = match.storage_unit;
+        container.name = match.name;
+        const remainingStock = this.getRemainingStock(container.id, index);
         
         if (remainingStock <= 0) {
-          this.containersSelected[index].quantity = 0;
-        } else if (this.containersSelected[index].quantity > remainingStock) {
-          this.containersSelected[index].quantity = remainingStock;
+          container.quantity = 0;
+        } else if (container.quantity > remainingStock) {
+          container.quantity = remainingStock;
         }
       }
       this.updateProgress();
