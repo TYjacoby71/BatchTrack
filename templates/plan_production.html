@@ -81,9 +81,8 @@
         <thead>
           <tr>
             <th>Ingredient</th>
-            <th>Required (Recipe Unit)</th>
-            <th>Available (Stock Unit)</th>
-            <th>Units</th>
+            <th>Required</th>
+            <th>Available</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -91,9 +90,8 @@
           <template x-for="item in stockResults" :key="item.ingredient">
             <tr>
               <td x-text="item.ingredient"></td>
-              <td x-text="item.needed"></td>
-              <td x-text="item.available"></td>
-              <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+              <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
+              <td x-text="`${item.available} ${item.unit}`"></td>
               <td>
                 <span x-show="item.status === 'OK'" class="text-success">✅</span>
                 <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
@@ -266,10 +264,13 @@ function planProduction() {
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
+          this.stockResults = data.stock_check || [];
+          console.log('Stock check results:', this.stockResults);
         })
         .catch(err => {
           console.log('Error checking stock:', err);
           this.stockChecked = false;
+          this.stockResults = [];
         });
     },
 
