@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -29,13 +30,13 @@
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model.number="container.id" :disabled="autoFill" @click="blockIfAutoFill" @change="updateContainer(index)">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" @click="blockIfAutoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
-          <input type="number" class="form-control" min="1" x-model.number="container.quantity" :disabled="autoFill" @click="blockIfAutoFill" @input="updateProgress">
+          <input type="number" class="form-control" min="1" x-model="container.quantity" :disabled="autoFill" @click="blockIfAutoFill" @input="updateProgress">
           <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">×</button>
         </div>
       </template>
@@ -48,7 +49,7 @@
         <small class="form-text text-muted" x-text="liveContainmentMessage"></small>
       </div>
 
-      <div class="alert alert-info mt-2" x-show="containmentIssue">
+      <div class="alert alert-warning mt-2" x-show="containmentIssue">
         <span x-text="containmentIssue"></span>
       </div>
 
@@ -99,7 +100,7 @@ function planProduction() {
     },
 
     get totalContained() {
-      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
+      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0) || 0;
     },
 
     get liveContainmentMessage() {
@@ -122,11 +123,11 @@ function planProduction() {
           this.allowedContainers = data.available || [];
           if (this.autoFill) {
             this.containersSelected = (data.plan || []).map(container => {
-              const match = data.available.find(c => c.id === container.id);
+              const match = this.allowedContainers.find(c => c.id === container.id);
               return {
                 id: container.id,
                 quantity: container.quantity,
-                name: match?.name || 'Select Container',
+                name: match?.name || '',
                 capacity: match?.storage_amount || 0,
                 unit: match?.storage_unit || ''
               };
@@ -139,17 +140,15 @@ function planProduction() {
               const projected = this.baseYield * this.scale;
               const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
               if (totalAvailable < projected) {
-                const smallestContainer = this.allowedContainers.reduce((min, c) => Math.min(min, c.storage_amount), Infinity) || 1;
+                const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
                 const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
                 this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
               }
             } else {
               this.containmentIssue = '';
             }
-
-          } else {
-            this.updateProgress();
           }
+          this.updateProgress();
         });
     },
 
@@ -162,7 +161,7 @@ function planProduction() {
 
     updateContainer(index) {
       const selectedId = this.containersSelected[index].id;
-      const match = this.allowedContainers.find(c => c.id == selectedId);
+      const match = this.allowedContainers.find(c => c.id === selectedId);
       if (match) {
         this.containersSelected[index].capacity = match.storage_amount;
         this.containersSelected[index].unit = match.storage_unit;
@@ -210,7 +209,11 @@ function planProduction() {
       fetch('/api/check-stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipe_id: this.recipeId, scale: this.scale, flex_mode: this.flexMode })
+        body: JSON.stringify({ 
+          recipe_id: this.recipeId, 
+          scale: this.scale,
+          flex_mode: this.flexMode 
+        })
       })
         .then(res => res.json())
         .then(data => {
@@ -223,7 +226,12 @@ function planProduction() {
       fetch('/api/start-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipe_id: this.recipeId, scale: this.scale, flex_mode: this.flexMode, containers: this.containersSelected })
+        body: JSON.stringify({
+          recipe_id: this.recipeId,
+          scale: this.scale,
+          flex_mode: this.flexMode,
+          containers: this.containersSelected
+        })
       })
         .then(res => res.json())
         .then(data => {
@@ -233,7 +241,7 @@ function planProduction() {
           alert('Error starting batch. Please try again.');
         });
     }
-  }
+  };
 }
 </script>
 {% endblock %}
