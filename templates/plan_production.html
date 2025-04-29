@@ -90,5 +90,5 @@
 // Make containers available to JavaScript
 window.containers = {{ allowed_containers|tojson|safe }};
 </script>
-<script src="{{ url_for('static', filename='js/plan_production.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
 {% endblock %}

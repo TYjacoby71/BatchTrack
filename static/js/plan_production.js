@@ -1,6 +1,30 @@
-// 📦 Clean and Correct plan_production.js for Plan Production Page
+// Plan Production Page JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+  // Scale input handling
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('input', updateProjectedYield);
+    scaleInput.addEventListener('change', updateProjectedYield);
+    updateProjectedYield(); // Initial calculation
+  }
 
-// Global function for updating projected yield
+  // Button handlers
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  if (addContainerBtn) {
+    addContainerBtn.addEventListener('click', addContainerRow);
+  }
+
+  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
+  if (exportShoppingListBtn) {
+    exportShoppingListBtn.addEventListener('click', exportShoppingList);
+  }
+});
+
 function updateProjectedYield() {
   const projectedYieldElement = document.getElementById('projectedYield');
   const scaleInput = document.getElementById('scale');
@@ -18,33 +42,6 @@ function updateProjectedYield() {
   projectedYieldElement.textContent = `${newYield} ${unit}`;
 }
 
-// DOM Ready handler
-document.addEventListener('DOMContentLoaded', function() {
-  const scaleInput = document.getElementById('scale');
-
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-    scaleInput.addEventListener('change', updateProjectedYield);
-    // Initial calculation
-    updateProjectedYield();
-  }
-
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  if (checkStockBtn) {
-    checkStockBtn.addEventListener('click', checkStock);
-  }
-
-  const addContainerBtn = document.getElementById('addContainerBtn');
-  if (addContainerBtn) {
-    addContainerBtn.addEventListener('click', addContainerRow);
-  }
-
-  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
-  if (exportShoppingListBtn) {
-    exportShoppingListBtn.addEventListener('click', exportShoppingList);
-  }
-});
-
 function checkStock() {
   const recipeId = document.querySelector('input[name="recipe_id"]').value;
   const scale = parseFloat(document.getElementById('scale').value) || 1.0;
@@ -57,16 +54,16 @@ function checkStock() {
     },
     body: JSON.stringify({ recipe_id: recipeId, scale: scale })
   })
-    .then(response => response.json())
-    .then(data => {
-      renderStockResults(data.stock_check);
-      document.getElementById('ingredientStockSection').style.display = 'block';
-      document.getElementById('startBatchButton').style.display = data.all_ok ? 'block' : 'none';
-    })
-    .catch(error => {
-      console.error('Error checking stock:', error);
-      alert('Failed to check stock.');
-    });
+  .then(response => response.json())
+  .then(data => {
+    renderStockResults(data.stock_check);
+    document.getElementById('ingredientStockSection').style.display = 'block';
+    document.getElementById('startBatchButton').style.display = data.all_ok ? 'block' : 'none';
+  })
+  .catch(error => {
+    console.error('Error checking stock:', error);
+    alert('Failed to check stock.');
+  });
 }
 
 function renderStockResults(stockCheck) {
@@ -77,7 +74,7 @@ function renderStockResults(stockCheck) {
 
   stockCheck.forEach(item => {
     const statusClass = item.status === 'OK' ? 'text-success' :
-                        item.status === 'LOW' ? 'text-warning' : 'text-danger';
+                       item.status === 'LOW' ? 'text-warning' : 'text-danger';
     html += `
       <tr>
         <td>${item.name}</td>
@@ -89,23 +86,6 @@ function renderStockResults(stockCheck) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
-}
-
-function exportShoppingList() {
-  let csv = 'Type,Name,Needed,Available,Status\n';
-  const data = window.stockCheckData || [];
-
-  data.forEach(item => {
-    if (item.status !== 'OK') {
-      csv += `${item.type},${item.name},${item.needed},${item.available},${item.status}\n`;
-    }
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'shopping_list.csv';
-  link.click();
 }
 
 function addContainerRow() {
@@ -185,4 +165,21 @@ function updateContainmentProgress() {
       startBatchButton.disabled = false;
     }
   }
+}
+
+function exportShoppingList() {
+  let csv = 'Type,Name,Needed,Available,Status\n';
+  const data = window.stockCheckData || [];
+
+  data.forEach(item => {
+    if (item.status !== 'OK') {
+      csv += `${item.type},${item.name},${item.needed},${item.available},${item.status}\n`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'shopping_list.csv';
+  link.click();
 }
