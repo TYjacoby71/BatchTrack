@@ -108,7 +108,7 @@ function planProduction() {
   return {
     baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
     unit: '{{ recipe.predicted_yield_unit }}',
-    allowedContainers: {{ allowed_containers|tojson|safe }},
+    allowedContainers: {{ allowed_containers|tojson|safe if allowed_containers else '[]' }},
     scale: 1.0,
     flexMode: false,
     autoFill: true,
