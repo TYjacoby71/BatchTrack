@@ -36,19 +36,37 @@ def delete_inventory(id):
     flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
-@inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
+@inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
 @login_required
-def edit_inventory(id):
-    from utils.unit_utils import get_global_unit_list
+def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
-    units = get_global_unit_list()
+    if item.type != 'ingredient':
+        abort(404)
+    
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
         item.unit = request.form.get('unit')
-        item.type = request.form.get('type')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         db.session.commit()
-        flash('Inventory item updated successfully.')
+        flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('inventory/edit.html', item=item)
+    return render_template('edit_ingredient.html', item=item)
+
+@inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_container(id):
+    item = InventoryItem.query.get_or_404(id)
+    if item.type != 'container':
+        abort(404)
+    
+    if request.method == 'POST':
+        item.name = request.form.get('name')
+        item.storage_amount = float(request.form.get('storage_amount'))
+        item.storage_unit = request.form.get('storage_unit')
+        item.quantity = int(request.form.get('quantity'))
+        item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        db.session.commit()
+        flash('Container updated successfully.')
+        return redirect(url_for('inventory.list_inventory'))
+    return render_template('edit_container.html', item=item)
