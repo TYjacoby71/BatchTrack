@@ -12,14 +12,6 @@
         </tr>
       </thead>
       <tbody id="stockCheckTableBody">
-        <template x-for="item in stockResults" :key="item.ingredient">
-          <tr>
-            <td x-text="item.ingredient"></td>
-            <td x-text="`${item.needed} ${item.required_unit}`"></td>
-            <td x-text="`${item.available} ${item.inventory_unit}`"></td>
-            <td x-text="item.status"></td>
-          </tr>
-        </template>
       </tbody>
     </table>
   </div>
