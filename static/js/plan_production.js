@@ -1,12 +1,84 @@
-
 // Plan Production Page JavaScript
 
 function updateProjectedYield() {
-  const scale = parseFloat(document.getElementById('scale').value) || 1;
-  const projectedYieldElement = document.getElementById('projectedYield');
-  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
-  const unit = projectedYieldElement.textContent.split(' ').pop();
-  projectedYieldElement.textContent = `${(baseYield * scale).toFixed(2)} ${unit}`;
+  const scale = document.getElementById('scale').value;
+  const projectedYield = document.getElementById('projectedYield');
+  if (projectedYield && scale) {
+    const baseYield = projectedYield.dataset.baseYield;
+    const scaledYield = (parseFloat(baseYield) * parseFloat(scale)).toFixed(2);
+    projectedYield.textContent = `${scaledYield} ${projectedYield.textContent.split(' ').pop()}`;
+  }
+}
+
+function handleFormSubmit(event) {
+  event.preventDefault();
+  checkStock();
+}
+
+function checkStock() {
+  const recipeId = document.querySelector('input[name="recipe_id"]').value;
+  const scale = document.getElementById('scale').value;
+
+  fetch(`/api/check-stock/${recipeId}?scale=${scale}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    const stockCheckSection = document.getElementById('stockCheckSection');
+    if (stockCheckSection) {
+      stockCheckSection.style.display = 'block';
+    }
+    renderStockCheckResults(data.stock_check, data.all_ok);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to check stock');
+  });
+}
+
+function renderStockCheckResults(results, allOk) {
+  const resultsContainer = document.getElementById('stockCheckResults');
+  if (!resultsContainer) return;
+
+  resultsContainer.innerHTML = '';
+
+  let lowOrNeededItems = [];
+
+  results.forEach(item => {
+    const statusColor = (item.status === 'OK') ? 'text-success' :
+                       (item.status === 'LOW') ? 'text-warning' : 'text-danger';
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div class="d-flex justify-content-between">
+        <div>${item.type.toUpperCase()}: ${item.name}</div>
+        <div class="${statusColor}">${item.status}</div>
+      </div>
+    `;
+    resultsContainer.appendChild(row);
+
+    if (item.status !== 'OK') {
+      lowOrNeededItems.push(item);
+    }
+  });
+
+  const startBatchButton = document.getElementById('startBatchButton');
+  const exportListButton = document.getElementById('exportShoppingListBtn');
+
+  if (allOk) {
+    if (startBatchButton) startBatchButton.style.display = 'block';
+    if (exportListButton) exportListButton.style.display = 'none';
+  } else {
+    if (startBatchButton) startBatchButton.style.display = 'none';
+    if (exportListButton) {
+      exportListButton.style.display = 'block';
+      exportListButton.onclick = function() {
+        exportShoppingList(lowOrNeededItems);
+      };
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,24 +97,24 @@ document.addEventListener('DOMContentLoaded', function() {
   if (form) form.addEventListener('submit', handleFormSubmit);
   if (flexModeToggle) flexModeToggle.addEventListener('change', handleFlexModeToggle);
   if (addContainerBtn) addContainerBtn.addEventListener('click', addContainerRow);
-  
+
   // Initial setup
   updateContainmentProgress();
 
   function handleFlexModeToggle() {
     const isFlexMode = flexModeToggle.checked;
     autoFillSection.style.display = !isFlexMode ? 'block' : 'none';
-    
+
     // In flex mode, hide containment error
     if (containmentError) {
       containmentError.style.display = isFlexMode ? 'none' : 'block';
     }
-    
+
     // Auto-fill in strict mode if enabled
     if (!isFlexMode && document.getElementById('autoFill').checked) {
       autoFillContainers();
     }
-    
+
     updateContainmentProgress();
     validateContainment();
   }
@@ -50,16 +122,16 @@ document.addEventListener('DOMContentLoaded', function() {
   function validateContainment() {
     const isFlexMode = flexModeToggle.checked;
     if (isFlexMode) return true; // Skip validation in flex mode
-    
+
     const totalNeeded = getTotalNeededVolume();
     const totalContained = getTotalContainedVolume();
-    
+
     if (containmentError) {
-      containmentError.textContent = totalContained < totalNeeded ? 
+      containmentError.textContent = totalContained < totalNeeded ?
         'Error: Not enough container capacity for batch volume' : '';
       containmentError.style.display = totalContained < totalNeeded ? 'block' : 'none';
     }
-    
+
     return totalContained >= totalNeeded;
   }
 
@@ -85,14 +157,14 @@ document.addEventListener('DOMContentLoaded', function() {
   function autoFillContainers() {
     const containerArea = document.getElementById('containerSelectionArea');
     if (!containerArea) return;
-    
+
     containerArea.innerHTML = ''; // Clear existing containers
-    
+
     // Get projected yield
     const projectedYield = parseFloat(document.getElementById('projectedYield').textContent);
     const scale = parseFloat(document.getElementById('scale').value) || 1;
     const totalNeeded = projectedYield * scale;
-    
+
     // Get available containers
     const containerSelect = document.querySelector('.container-select');
     if (!containerSelect) {
@@ -110,16 +182,16 @@ document.addEventListener('DOMContentLoaded', function() {
       .sort((a, b) => b.capacity - a.capacity); // Sort by capacity, largest first
 
     let remainingVolume = totalNeeded;
-    
+
     // Fill containers optimally
     while (remainingVolume > 0 && containers.length > 0) {
       const bestContainer = containers[0];
       const count = Math.ceil(remainingVolume / bestContainer.capacity);
-      
+
       const row = addContainerRow();
       const select = row.querySelector('.container-select');
       const quantity = row.querySelector('.container-quantity');
-      
+
       if (select && quantity) {
         select.value = bestContainer.id;
         quantity.value = count;
@@ -141,14 +213,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updateContainmentProgress() {
     if (!progressBar) return;
-    
+
     const totalNeeded = 100; // Example
     let totalContained = 0;
 
     document.querySelectorAll('.container-row').forEach(row => {
       const select = row.querySelector('.container-select');
       const quantity = row.querySelector('.container-quantity');
-      
+
       if (select.value && quantity.value) {
         const option = select.selectedOptions[0];
         const capacity = parseFloat(option.dataset.capacity) || 0;
@@ -159,103 +231,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const percentage = Math.min((totalContained / totalNeeded) * 100, 100);
     progressBar.style.width = `${percentage}%`;
     progressBar.textContent = `${Math.round(percentage)}%`;
-    
+
     if (remainingDisplay) {
       remainingDisplay.textContent = `Remaining to contain: ${Math.max(totalNeeded - totalContained, 0)} units`;
     }
-    
+
     // Show error if can't contain fully in strict mode
     if (containmentError && flexModeToggle) {
       containmentError.style.display = !flexModeToggle.checked && totalContained < totalNeeded ? 'block' : 'none';
     }
   }
 
-  function handleFormSubmit(e) {
-    if (e) e.preventDefault();
-    
-    const stockCheckSection = document.getElementById('stockCheckSection');
-    const formData = new FormData(document.getElementById('planProductionForm'));
-    const containers = [];
-    document.querySelectorAll('.container-row').forEach(row => {
-      const select = row.querySelector('.container-select');
-      const quantity = row.querySelector('.container-quantity');
-      if (select.value && quantity.value) {
-        containers.push({
-          id: select.value,
-          quantity: quantity.value
-        });
-      }
-    });
-
-    const payload = {
-      recipe_id: formData.get('recipe_id'),
-      scale: formData.get('scale'),
-      flex_mode: formData.get('flex_mode') ? true : false,
-      containers: containers
-    };
-
-    fetch('/api/check-stock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        alert('Stock Check Error: ' + data.error);
-        return;
-      }
-
-      stockCheckSection.style.display = 'block';
-      renderStockCheckResults(data.stock_check, data.all_ok);
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Failed to check stock.');
-    });
-  }
-
-  function renderStockCheckResults(results, allOk) {
-    const resultsContainer = document.getElementById('stockCheckResults');
-    if (!resultsContainer) return;
-    
-    resultsContainer.innerHTML = '';
-
-    let lowOrNeededItems = [];
-
-    results.forEach(item => {
-      const statusColor = (item.status === 'OK') ? 'text-success' :
-                          (item.status === 'LOW') ? 'text-warning' : 'text-danger';
-      const row = document.createElement('div');
-      row.innerHTML = `
-        <div class="d-flex justify-content-between">
-          <div>${item.type.toUpperCase()}: ${item.name}</div>
-          <div class="${statusColor}">${item.status}</div>
-        </div>
-      `;
-      resultsContainer.appendChild(row);
-
-      if (item.status !== 'OK') {
-        lowOrNeededItems.push(item);
-      }
-    });
-
-    const startBatchButton = document.getElementById('startBatchButton');
-    const exportListButton = document.getElementById('exportShoppingListButton');
-
-    if (allOk) {
-      if (startBatchButton) startBatchButton.style.display = 'block';
-      if (exportListButton) exportListButton.style.display = 'none';
-    } else {
-      if (startBatchButton) startBatchButton.style.display = 'none';
-      if (exportListButton) {
-        exportListButton.style.display = 'block';
-        exportListButton.onclick = function() {
-          exportShoppingList(lowOrNeededItems);
-        };
-      }
-    }
-  }
 
   function exportShoppingList(items) {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -272,5 +258,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+});
+
+// Add event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('change', updateProjectedYield);
+    scaleInput.addEventListener('input', updateProjectedYield);
   }
 });
