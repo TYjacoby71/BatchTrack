@@ -158,7 +158,18 @@ function planProduction() {
         const data = await response.json();
         this.allowedContainers = data.available;
         if (this.autoFill) {
-          this.containersSelected = data.plan;
+          // Hydrate container data from allowedContainers
+          this.containersSelected = (data.plan || []).map(container => {
+            const match = this.allowedContainers.find(ac => ac.id === container.id);
+            return {
+              ...container,
+              name: match ? match.name : '',
+              capacity: match ? match.storage_amount : 0,
+              unit: match ? match.storage_unit : '',
+              id: container.id,
+              quantity: container.quantity
+            };
+          });
         }
         console.log('Allowed Containers:', this.allowedContainers);
         console.log('Auto Plan:', this.containersSelected);
