@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Plan Production: {{ recipe.name }}</h2>
@@ -5,102 +6,106 @@
 <form id="planProductionForm">
   <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
 
-  <!-- Scale Selection -->
-  <div class="form-group">
-    <label for="scale">Scale:</label>
-    <input type="number" class="form-control" name="scale" id="scale" value="1" min="0.1" step="0.1" required>
-  </div>
-
-  <!-- Flex/Strict Toggle -->
-  <div class="form-group">
-    <label for="flexMode">Flexible Mode?</label>
-    <div class="toggle-switch">
-      <input type="checkbox" id="flexMode" name="flex_mode">
-      <label class="toggle-label" for="flexMode"></label>
+  <!-- Scale and Projected Yield -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="scale">Scale:</label>
+        <input type="number" class="form-control" name="scale" id="scale" value="1" min="0.1" step="0.1" required>
+      </div>
     </div>
-    <small class="form-text text-muted">If off, strict container rules will apply.</small>
-  </div>
-
-  <!-- Auto-fill Toggle -->
-  <div class="form-group" id="autoFillSection">
-    <label for="autoFill">Auto-Fill Containers?</label>
-    <div class="toggle-switch">
-      <input type="checkbox" id="autoFill" name="auto_fill" checked>
-      <label class="toggle-label" for="autoFill"></label>
+    <div class="col-md-6">
+      <div class="form-group">
+        <label>Projected Yield:</label>
+        <div id="projectedYield" class="form-control-plaintext">
+          {{ recipe.predicted_yield if recipe else 0 }} {{ recipe.predicted_yield_unit if recipe else '' }}
+        </div>
+      </div>
     </div>
-    <small class="form-text text-muted">Automatically pick best matching containers if available.</small>
   </div>
 
-  <!-- Vertical Fill Bar and Remaining Display -->
-  <div class="form-group">
-    <label>Batch Containment Progress:</label>
-    <div class="progress" style="height: 20px;">
-      <div id="fillProgressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+  <!-- Mode Toggles -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="form-group">
+        <label for="flexMode">Flexible Mode</label>
+        <div class="toggle-switch">
+          <input type="checkbox" id="flexMode" name="flex_mode">
+          <label class="toggle-label" for="flexMode"></label>
+        </div>
+        <small class="form-text text-muted">If off, strict container rules will apply.</small>
+      </div>
     </div>
-    <p id="remainingToContain">Remaining to contain: 0 units</p>
-  </div>
-
-  <!-- Container Picker Area -->
-  <div class="form-group">
-    <label>Add Containers:</label>
-    <div id="containerSelectionArea">
-      <!-- JS will inject container rows here -->
+    <div class="col-md-6">
+      <div class="form-group" id="autoFillSection">
+        <label for="autoFill">Auto-Fill Containers</label>
+        <div class="toggle-switch">
+          <input type="checkbox" id="autoFill" name="auto_fill" checked>
+          <label class="toggle-label" for="autoFill"></label>
+        </div>
+        <small class="form-text text-muted">Automatically pick best matching containers.</small>
+      </div>
     </div>
-    <button type="button" class="btn btn-secondary mt-2" id="addContainerBtn">Add Container</button>
   </div>
 
-  <!-- Error Message Area -->
-  <div id="containmentError" style="display:none;" class="alert alert-danger">
-    ⚠ Cannot fully contain batch at this scale.
-    <br>
-    <button type="button" id="overrideButton" class="btn btn-danger mt-2">
-      Continue anyway — I'll put it in a Ziplock if I have to
-    </button>
+  <!-- Stock Check Results -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Stock Check Results</h5>
+    </div>
+    <div class="card-body">
+      <div id="stockCheckResults" class="table-responsive">
+        <!-- Stock check results will be inserted here -->
+      </div>
+    </div>
   </div>
 
-  <button type="submit" class="btn btn-primary mt-3">Check Stock</button>
+  <!-- Container Selection -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Container Selection</h5>
+      <button type="button" id="addContainerBtn" class="btn btn-sm btn-outline-primary">Add Container</button>
+    </div>
+    <div class="card-body">
+      <div id="containerSelectionArea">
+        <!-- Container rows will be inserted here -->
+      </div>
+      
+      <!-- Container Fill Progress -->
+      <div class="mt-3">
+        <label>Batch Containment Progress:</label>
+        <div class="progress" style="height: 20px;">
+          <div id="fillProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+        <small id="remainingToContain" class="form-text text-muted mt-1"></small>
+      </div>
+      <div id="containmentError" class="alert alert-danger mt-2" style="display: none;"></div>
+    </div>
+  </div>
 
-  <!-- Stock Check Results Area -->
-  <div id="stockCheckResults" class="my-4"></div>
+  <!-- Notes -->
+  <div class="form-group mb-4">
+    <label for="notes">Batch Notes:</label>
+    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional notes for this batch..."></textarea>
+  </div>
 
   <!-- Action Buttons -->
-  <button id="startBatchButton" class="btn btn-success" style="display:none;">Start Batch</button>
-  <button id="exportShoppingListButton" class="btn btn-warning" style="display:none;">Export Shopping List</button>
+  <div class="d-flex justify-content-between">
+    <div>
+      <button type="button" id="exportShoppingListBtn" class="btn btn-warning" style="display: none;">
+        Export Shopping List
+      </button>
+    </div>
+    <div>
+      <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary me-2">Cancel</a>
+      <button type="submit" id="startBatchButton" class="btn btn-success" style="display: none;">
+        Start Batch
+      </button>
+    </div>
+  </div>
 </form>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
-<script>
-function addContainerRow() {
-  const row = document.createElement('div');
-  row.className = 'container-row d-flex align-items-center gap-2 mb-2';
-  row.innerHTML = `
-    <select class="form-select container-select" required>
-      <option value="">Select Container</option>
-      {% for container in containers %}
-      <option value="{{ container.id }}" 
-              data-capacity="{{ container.storage_amount }}"
-              data-unit="{{ container.storage_unit }}">
-        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
-      </option>
-      {% endfor %}
-    </select>
-    <input type="number" class="form-control container-quantity" 
-           min="1" value="1" required>
-    <button type="button" class="btn btn-danger btn-sm remove-container">×</button>
-  `;
-
-  row.querySelector('.remove-container').addEventListener('click', () => {
-    row.remove();
-    updateContainmentProgress();
-  });
-
-  row.querySelector('.container-quantity').addEventListener('change', updateContainmentProgress);
-  row.querySelector('.container-select').addEventListener('change', updateContainmentProgress);
-
-  containerArea.appendChild(row);
-  updateContainmentProgress();
-}
-</script>
 {% endblock %}
