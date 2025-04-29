@@ -219,8 +219,7 @@ function planProduction() {
             });
           }
           
-          this.updateProgress();
-          this.evaluateContainment();
+          this.refreshContainmentStatus();
         });
     },
 
@@ -229,6 +228,11 @@ function planProduction() {
       const contained = this.totalContained;
       this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
       this.remainingToContain = Math.max(projected - contained, 0);
+    },
+
+    refreshContainmentStatus() {
+      this.updateProgress();
+      this.evaluateContainment();
     },
 
     evaluateContainment() {
@@ -240,7 +244,8 @@ function planProduction() {
       
       // First check if we have enough total containers
       if (totalAvailable < projected) {
-        const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
+        const sizes = this.allowedContainers.map(c => c.storage_amount);
+        const smallestContainer = sizes.length ? Math.min(...sizes) : 1;
         const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
         this.containmentIssue = `Error: You need ${missingUnits} more containers to make this batch.`;
         return;
@@ -253,10 +258,9 @@ function planProduction() {
         this.containmentIssue = 'Warning: Need one more container for partial fill';
       } else if (totalContained > projected) {
         // We have a container that will be partially filled
-        const smallestContainer = Math.min(...this.containersSelected.map(c => c.capacity));
         const remainingAmount = totalContained - projected;
-        if (remainingAmount < smallestContainer) {
-          this.containmentIssue = `Warning: Last container will be partially filled (${((projected % smallestContainer).toFixed(2))} ${this.unit})`;
+        if (remainingAmount > 0) {
+          this.containmentIssue = `Warning: Last container will be partially filled (${remainingAmount.toFixed(2)} ${this.unit})`;
         }
       }
     },
