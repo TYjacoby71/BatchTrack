@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -36,7 +37,9 @@
           <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
+              <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
+                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ') - ' + getRemainingStock(allowed.id, index) + ' available'"></option>
+              </template>
             </template>
           </select>
           <input type="number" min="1" class="form-control" x-model.number="container.quantity" :disabled="autoFill" @input="updateProgress">
@@ -142,6 +145,20 @@ function planProduction() {
       this.fetchContainerPlan();
     },
 
+    getRemainingStock(containerId, currentIndex) {
+      const match = this.allowedContainers.find(c => c.id == containerId);
+      if (!match) return 0;
+      
+      const allocated = this.containersSelected.reduce((sum, c, idx) => {
+        if (idx !== currentIndex && c.id == containerId) {
+          return sum + (c.quantity || 0);
+        }
+        return sum;
+      }, 0);
+      
+      return match.stock_qty - allocated;
+    },
+
     get totalContained() {
       return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
     },
@@ -162,10 +179,8 @@ function planProduction() {
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
         .then(data => {
-          // Update allowedContainers first
           this.allowedContainers = data.available || [];
           
-          // Update containersSelected in autoFill mode
           if (this.autoFill) {
             this.containersSelected = (data.plan || []).map(container => ({
               id: container.id,
@@ -174,7 +189,6 @@ function planProduction() {
               capacity: 0,
               unit: ''
             }));
-            // Sync names and details for all containers
             this.containersSelected.forEach((container, index) => {
               this.updateContainer(index);
             });
@@ -214,9 +228,9 @@ function planProduction() {
         this.containersSelected[index].capacity = match.storage_amount;
         this.containersSelected[index].unit = match.storage_unit;
         this.containersSelected[index].name = match.name;
-        if (this.containersSelected[index].quantity > match.stock_qty) {
-          this.containersSelected[index].quantity = match.stock_qty;
-          alert('Cannot allocate more than available container stock.');
+        const remainingStock = this.getRemainingStock(selectedId, index);
+        if (this.containersSelected[index].quantity > remainingStock) {
+          this.containersSelected[index].quantity = remainingStock;
         }
       }
       this.updateProgress();
@@ -251,12 +265,12 @@ function planProduction() {
     },
 
     checkStock() {
-      const csrfToken = document.querySelector('input[name=csrf_token]');
+      const csrfToken = document.querySelector('input[name=csrf_token]').value;
       fetch('/api/check-stock', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken.value
+          'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
