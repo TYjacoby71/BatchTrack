@@ -1,14 +1,41 @@
 // Plan Production Page JavaScript
+
 function updateProjectedYield() {
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
+
   if (!scaleInput || !projectedYieldElement) return;
 
   const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
-  const scale = parseFloat(scaleInput.value) || 1;
+  const scale = parseFloat(scaleInput.value) || 1.0;
   const unit = projectedYieldElement.dataset.baseUnit || '';
+
   const newYield = (baseYield * scale).toFixed(2);
   projectedYieldElement.innerText = `${newYield} ${unit}`;
+}
+
+function checkStock() {
+  const recipeId = document.querySelector('input[name="recipe_id"]').value;
+  const scale = parseFloat(document.getElementById('scale').value) || 1.0;
+
+  fetch('/api/check-stock', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+    },
+    body: JSON.stringify({ recipe_id: recipeId, scale: scale })
+  })
+  .then(response => response.json())
+  .then(data => {
+    renderStockResults(data.stock_check);
+    document.getElementById('ingredientStockSection').style.display = 'block';
+    document.getElementById('startBatchButton').style.display = 'block';
+  })
+  .catch(error => {
+    console.error('Error checking stock:', error);
+    alert('Failed to check stock.');
+  });
 }
 
 function renderStockResults(stockCheck) {
@@ -33,52 +60,23 @@ function renderStockResults(stockCheck) {
   container.innerHTML = html;
 }
 
-function checkStock() {
-  const recipeId = document.querySelector('input[name="recipe_id"]').value;
-  const scale = parseFloat(document.getElementById('scale').value) || 1;
-
-  fetch('/api/check-stock', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-    },
-    body: JSON.stringify({ recipe_id: recipeId, scale: scale })
-  })
-  .then(response => response.json())
-  .then(data => {
-    renderStockResults(data.stock_check);
-    document.getElementById('ingredientStockSection').style.display = 'block';
-    document.getElementById('modeTogglesSection').style.display = 'block';
-    document.getElementById('containerPlanningSection').style.display = 'block';
-    document.getElementById('startBatchButton').style.display = 'block';
-  })
-  .catch(error => {
-    console.error('Error checking stock:', error);
-    alert('Failed to check stock.');
-  });
-}
-
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   const scaleInput = document.getElementById('scale');
   if (scaleInput) {
-    scaleInput.addEventListener('change', updateProjectedYield);
+    scaleInput.addEventListener('input', updateProjectedYield);
   }
 
-  const checkStockBtn = document.querySelector('button[onclick="checkStock()"]');
+  const checkStockBtn = document.getElementById('checkStockBtn');
   if (checkStockBtn) {
     checkStockBtn.addEventListener('click', checkStock);
   }
 
-  // Initialize projected yield
+  // Initial calculation
   updateProjectedYield();
+});
 
-
-  let stockCheckData = [];
-  let missingItems = [];
-  let containers = recipe.allowed_containers || [];
-
-  function addContainerRow() {
+function addContainerRow() {
     const row = document.createElement('div');
     row.className = 'container-row d-flex align-items-center gap-2 mb-2';
     row.innerHTML = `

@@ -1,57 +1,49 @@
 
-from models import db, InventoryItem
-import logging
+from models import db, Recipe, InventoryItem
+from services.unit_conversion_service import convert_units
 
-logger = logging.getLogger(__name__)
-
-def check_ingredient_stock(recipe, scale):
+def universal_stock_check(recipe, scale=1.0):
+    """Universal Stock Check Service"""
     results = []
-    for ingredient in recipe.recipe_ingredients:
-        needed = ingredient.amount * scale
-        inventory_item = InventoryItem.query.get(ingredient.inventory_item_id)
-        if not inventory_item:
-            continue
-            
-        available = inventory_item.quantity or 0
-        if available >= needed:
-            status = "OK"
-        elif available > 0:
-            status = "LOW"
+    
+    # Check ingredients
+    for recipe_ingredient in recipe.recipe_ingredients:
+        ingredient = recipe_ingredient.inventory_item
+        needed_amount = recipe_ingredient.amount * scale
+        
+        # Get current stock level
+        available = ingredient.quantity or 0
+        
+        # Determine status
+        if available >= needed_amount:
+            status = 'OK'
+        elif available >= needed_amount * 0.5:
+            status = 'LOW'
         else:
-            status = "NEEDED"
+            status = 'NEEDED'
             
         results.append({
-            "type": "ingredient",
-            "name": inventory_item.name,
-            "needed": round(needed, 2),
-            "available": round(available, 2),
-            "unit": ingredient.unit,
-            "status": status
+            'type': 'ingredient',
+            'name': ingredient.name,
+            'needed': needed_amount,
+            'available': available,
+            'unit': recipe_ingredient.unit,
+            'status': status
         })
-    return results
 
-def check_container_stock(recipe, scale):
-    results = []
-    if not recipe.requires_containers or not recipe.allowed_containers:
-        return results
+    # Check containers if recipe requires them
+    if recipe.requires_containers and recipe.allowed_containers:
+        projected_yield = recipe.predicted_yield * scale
         
-    for container in recipe.allowed_containers:
-        needed = scale  # One container per scale unit
-        available = container.quantity or 0
-        
-        if available >= needed:
-            status = "OK"
-        elif available > 0:
-            status = "LOW"
-        else:
-            status = "NEEDED"
-            
-        results.append({
-            "type": "container",
-            "name": container.name,
-            "needed": int(needed),
-            "available": int(available),
-            "storage_unit": container.storage_unit,
-            "status": status
-        })
+        for container in recipe.allowed_containers:
+            status = 'OK' if container.quantity > 0 else 'NEEDED'
+            results.append({
+                'type': 'container',
+                'name': container.name,
+                'needed': 1,
+                'available': container.quantity or 0,
+                'unit': 'count',
+                'status': status
+            })
+
     return results
