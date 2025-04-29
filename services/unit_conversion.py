@@ -24,6 +24,8 @@ class ConversionEngine:
             # Direct volume to volume conversion through ml
             base_amount = amount * from_u.multiplier_to_base  # Convert to ml
             result = base_amount / to_u.multiplier_to_base    # Convert from ml
+            # Log volume conversion
+            print(f"Volume conversion: {amount} {from_unit} = {base_amount} ml = {result} {to_unit}")
         elif from_u.type == to_u.type:
             base_amount = amount * from_u.multiplier_to_base
             result = base_amount / to_u.multiplier_to_base
