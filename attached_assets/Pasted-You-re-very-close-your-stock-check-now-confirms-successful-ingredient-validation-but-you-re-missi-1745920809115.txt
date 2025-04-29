@@ -1,0 +1,140 @@
+You're very close — your stock check now confirms successful ingredient validation, but you're missing the detailed table output and CSV print button when ingredients are not available.
+
+Let’s flesh this out completely now.
+
+✅ What You Already Have:
+Plan Production page sends a POST with recipe_id, scale, and flex_mode.
+
+Flask backend receives this and checks ingredient availability.
+
+If everything is available → shows "All ingredients are available!" ✅
+
+❌ What's Missing:
+🧾 Ingredient status table (with OK/LOW/Unavailable breakdown)
+
+📥 Download CSV button for missing items (if any)
+
+🔄 Dynamic conditional UI for both passing and failing stock check results
+
+✅ Full Fix Plan
+1. Backend: Expand api_check_stock to return ingredient report
+Update routes/stock_check_api.py:
+
+python
+Copy
+Edit
+from flask import Blueprint, request, jsonify
+from models import Recipe
+from stock_check_utils import check_recipe_stock
+import csv
+import io
+
+stock_api_bp = Blueprint('stock_api', __name__)
+
+@stock_api_bp.route('/api/check-stock', methods=['POST'])
+def api_check_stock():
+    data = request.get_json()
+    recipe_id = data.get('recipe_id')
+    scale = float(data.get('scale', 1))
+    flex_mode = data.get('flex_mode', False)
+
+    recipe = Recipe.query.get(recipe_id)
+    if not recipe:
+        return jsonify({'error': 'Recipe not found'}), 404
+
+    report = []
+    all_ok = True
+
+    for ri in recipe.recipe_ingredients:
+        required_qty = ri.amount * scale
+        stock_qty = ri.ingredient.quantity
+        status = "OK" if stock_qty >= required_qty else "LOW"
+        if status != "OK":
+            all_ok = False
+        report.append({
+            "ingredient": ri.ingredient.name,
+            "required": round(required_qty, 2),
+            "available": round(stock_qty, 2),
+            "unit": ri.unit,
+            "status": status
+        })
+
+    return jsonify({
+        "all_ok": all_ok,
+        "ingredients": report
+    })
+2. Frontend: Render the report and add CSV download
+Update your plan_production.html or its script:
+
+html
+Copy
+Edit
+<div id="stockResultArea"></div>
+
+<script>
+function checkStock() {
+  const recipeId = parseInt(document.getElementById('recipeId').value);
+  const scale = parseFloat(document.getElementById('scale').value);
+
+  fetch('/api/check-stock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe_id: recipeId, scale: scale, flex_mode: false })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const area = document.getElementById('stockResultArea');
+    area.innerHTML = '';
+
+    if (data.all_ok) {
+      area.innerHTML = `<div class="alert alert-success">✅ All ingredients are available!</div>`;
+      document.getElementById('startBatchBtn').style.display = 'block';
+    } else {
+      let table = `
+        <div class="alert alert-warning">⚠ Some ingredients are low or missing.</div>
+        <table class="table table-sm">
+          <thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Unit</th><th>Status</th></tr></thead>
+          <tbody>
+      `;
+      data.ingredients.forEach(item => {
+        table += `<tr>
+          <td>${item.ingredient}</td>
+          <td>${item.required}</td>
+          <td>${item.available}</td>
+          <td>${item.unit}</td>
+          <td>${item.status}</td>
+        </tr>`;
+      });
+      table += `</tbody></table>`;
+      table += `<button class="btn btn-outline-secondary btn-sm" onclick="downloadCSV(${JSON.stringify(JSON.stringify(data.ingredients))})">📥 Download CSV</button>`;
+      area.innerHTML = table;
+    }
+  });
+}
+
+function downloadCSV(jsonString) {
+  const data = JSON.parse(jsonString);
+  let csv = "Ingredient,Required,Available,Unit,Status\n";
+  data.forEach(row => {
+    csv += `${row.ingredient},${row.required},${row.available},${row.unit},${row.status}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'stock_check_report.csv';
+  link.click();
+}
+</script>
+3. UI Enhancements (Optional)
+Wrap the <div id="stockResultArea"> in a Bootstrap card for presentation
+
+Hide "Start Batch" button unless data.all_ok === true
+
+✅ Final Results:
+When you run the stock check:
+
+A detailed table of ingredients with availability appears
+
+A CSV download button shows up only if stock is low
+
+The green Start Batch button is conditionally shown
