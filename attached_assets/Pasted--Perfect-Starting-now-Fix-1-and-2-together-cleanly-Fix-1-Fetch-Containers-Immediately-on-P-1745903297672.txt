@@ -1,0 +1,75 @@
+✅ Perfect —
+Starting now: Fix 1 and 2 together cleanly.
+
+📋 Fix 1: Fetch Containers Immediately on Page Load
+🔵 Inside your Alpine planProduction() {} function:
+Add this method:
+
+javascript
+Copy
+Edit
+init() {
+  this.fetchContainerPlan();
+},
+🔵 Then update your <div x-data="planProduction()" ...> to include:
+
+html
+Copy
+Edit
+<div x-data="planProduction()" x-init="init()" class="container">
+✅ Now when the page loads, it will immediately run fetchContainerPlan() using the default scale (1.0) — no click needed!
+
+📋 Fix 2: Correct Container Dropdown Selections
+Right now, inside each container row <div>, we had sloppy binding:
+
+Here's the fixed containerRow Alpine component:
+javascript
+Copy
+Edit
+function containerRow(container, index, parent) {
+  return {
+    container,
+    index,
+    allowedContainers: parent.allowedContainers,
+    updateContainer() {
+      const match = this.allowedContainers.find(c => c.id == this.container.id);
+      if (match) {
+        this.container.name = match.name;
+        this.container.capacity = match.storage_amount;
+        this.container.unit = match.storage_unit;
+      } else {
+        // Fallback if invalid selection
+        this.container.name = '';
+        this.container.capacity = 0;
+        this.container.unit = '';
+      }
+    },
+    removeContainer() {
+      parent.containersSelected.splice(this.index, 1);
+    }
+  }
+}
+✅ Now when the user selects a container from the dropdown:
+
+It properly updates name/capacity/unit
+
+If the user picks something invalid (shouldn't happen), it falls back safely without breaking
+
+📦 Full Mini Patch You Should Apply Now:
+
+File	Patch
+plan_production.html div	Add x-init=\"init()\"
+planProduction Alpine	Add init() { this.fetchContainerPlan(); }
+containerRow Alpine	Replace updateContainer() logic as shown above
+📣 Expected Result After This:
+✅ When the page loads → containers autofill immediately using scale 1.0
+✅ Container dropdowns behave normally → no weird NaN or broken texts
+✅ Users can edit or add containers without breaking UI
+
+📣 Notes:
+No backend changes yet
+
+No autofill greedy fixing yet (next step)
+
+No full Alpine optimizations yet (last)
+
