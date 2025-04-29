@@ -12,13 +12,14 @@ def available_containers(recipe_id):
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
-        # Get allowed container IDs from recipe
-        allowed_ids = [c.id for c in recipe.allowed_containers]
+        # Handle allowed containers
+        allowed_containers = recipe.allowed_containers or []
 
-        # Get available containers and convert units
+        # Get available containers and convert units 
         in_stock = []
         for container in InventoryItem.query.filter_by(type='container').all():
-            if container.quantity <= 0 or container.id not in allowed_ids:
+            # Skip if container not allowed for recipe
+            if allowed_containers and container.id not in allowed_containers:
                 continue
 
             try:
