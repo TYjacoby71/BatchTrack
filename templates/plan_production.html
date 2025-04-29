@@ -1,7 +1,7 @@
 
 {% extends 'layout.html' %}
 {% block content %}
-<div x-data="planProduction()" class="container">
+<div x-data="planProduction()" x-init="init()" class="container">
   <div class="mb-4">
     <h2>Plan Production: {{ recipe.name }}</h2>
   </div>
@@ -84,6 +84,29 @@
 </div>
 
 <script>
+function containerRow(container, index, parent) {
+  return {
+    container,
+    index,
+    allowedContainers: parent.allowedContainers,
+    updateContainer() {
+      const match = this.allowedContainers.find(c => c.id == this.container.id);
+      if (match) {
+        this.container.name = match.name;
+        this.container.capacity = match.storage_amount;
+        this.container.unit = match.storage_unit;
+      } else {
+        this.container.name = '';
+        this.container.capacity = 0;
+        this.container.unit = '';
+      }
+    },
+    removeContainer() {
+      parent.containersSelected.splice(this.index, 1);
+    }
+  }
+}
+
 function planProduction() {
   return {
     recipeId: {{ recipe.id }},
@@ -96,6 +119,9 @@ function planProduction() {
     scale: 1.0,
     stockChecked: false,
     stockCheckPassed: false,
+    init() {
+      this.fetchContainerPlan();
+    },
 
     get totalContained() {
       return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
