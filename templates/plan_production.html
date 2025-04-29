@@ -206,6 +206,12 @@ function planProduction() {
     },
 
     checkStock() {
+      const csrfToken = document.querySelector('input[name=csrf_token]');
+      if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+      }
+      
       console.log('Checking stock with:', {
         recipe_id: parseInt(this.recipeId),
         scale: parseFloat(this.scale),
@@ -215,7 +221,7 @@ function planProduction() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+          'X-CSRFToken': csrfToken.value
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
