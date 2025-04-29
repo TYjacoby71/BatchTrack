@@ -258,9 +258,13 @@ function planProduction() {
         this.containmentIssue = 'Warning: Need one more container for partial fill';
       } else if (totalContained > projected) {
         // We have a container that will be partially filled
-        const remainingAmount = totalContained - projected;
-        if (remainingAmount > 0) {
-          this.containmentIssue = `Warning: Last container will be partially filled (${remainingAmount.toFixed(2)} ${this.unit})`;
+        // Get last container
+        const lastContainer = this.containersSelected[this.containersSelected.length - 1];
+        if (lastContainer) {
+          const partialAmount = projected - (totalContained - lastContainer.capacity);
+          if (partialAmount < lastContainer.capacity) {
+            this.containmentIssue = `Warning: Last container will be partially filled (${partialAmount.toFixed(2)} ${this.unit})`;
+          }
         }
       }
     },
