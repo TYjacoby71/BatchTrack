@@ -162,24 +162,19 @@ function planProduction() {
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
         .then(data => {
-          // Update allowedContainers first
           this.allowedContainers = data.available || [];
-
-          // Update containersSelected in autoFill mode
           if (this.autoFill) {
-            this.containersSelected = (data.plan || []).map(container => ({
-              id: container.id,
-              quantity: container.quantity,
-              name: '',
-              capacity: 0,
-              unit: ''
-            }));
-            // Sync names and details for all containers
-            this.containersSelected.forEach((container, index) => {
-              this.updateContainer(index);
+            this.containersSelected = (data.plan || []).map(container => {
+              const match = this.allowedContainers.find(c => c.id === container.id);
+              return {
+                id: container.id,
+                quantity: container.quantity,
+                name: match?.name || '',
+                capacity: match?.storage_amount || 0,
+                unit: match?.storage_unit || ''
+              };
             });
           }
-
           this.updateProgress();
           this.evaluateContainment();
         });
@@ -208,28 +203,37 @@ function planProduction() {
     },
 
     updateContainer(index) {
-      const container = this.containersSelected[index];
-      const selectedId = container.id;
-      const match = this.allowedContainers.find(c => c.id == selectedId);
+      const previousId = this.containersSelected[index].id;
+      const newMatch = this.allowedContainers.find(c => c.id == selectedId);
+      
+      if (!newMatch) return;
 
-      if (!match) return;
+      // Store the complete previous state
+      const previousState = {
+        id: previousId,
+        quantity: this.containersSelected[index].quantity,
+        capacity: this.containersSelected[index].capacity,
+        unit: this.containersSelected[index].unit,
+        name: this.containersSelected[index].name
+      };
 
-      // Calculate remaining stock after accounting for existing selections
-      const usedQuantity = this.containersSelected.reduce((sum, c, i) => 
-        i !== index && c.id === selectedId ? sum + c.quantity : sum, 0);
-      const remainingStock = match.stock_qty - usedQuantity;
-
-      // If no stock remains, set quantity to 0
-      if (remainingStock <= 0) {
-        container.quantity = 0;
-        this.containmentIssue = `No more ${match.name}s available (all allocated)`;
+      // Validate quantity
+      if (this.containersSelected[index].quantity > newMatch.stock_qty) {
+        this.containmentIssue = `Cannot allocate more than ${newMatch.stock_qty} ${newMatch.name}s (available stock limit)`;
+        // Restore everything to previous state
+        Object.assign(this.containersSelected[index], previousState);
+        return;
       }
-
-      // Update container details
-      container.capacity = match.storage_amount;
-      container.unit = match.storage_unit;
-      container.name = match.name;
-
+      
+      // Only update if validation passes
+      this.containersSelected[index].capacity = newMatch.storage_amount;
+      this.containersSelected[index].unit = newMatch.storage_unit;
+      this.containersSelected[index].name = newMatch.name;
+      
+      // Only update if validation passed
+      this.containersSelected[index].capacity = match.storage_amount;
+      this.containersSelected[index].unit = match.storage_unit;
+      this.containersSelected[index].name = match.name;
       this.updateProgress();
       this.evaluateContainment();
     },
