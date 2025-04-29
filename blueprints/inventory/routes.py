@@ -64,7 +64,7 @@ def edit_container(id):
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
         item.storage_unit = request.form.get('storage_unit')
-        item.quantity = int(request.form.get('quantity'))
+        item.quantity = float(request.form.get('quantity'))
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         db.session.commit()
         flash('Container updated successfully.')
