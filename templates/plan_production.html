@@ -96,11 +96,14 @@ function planProduction() {
     containmentIssue: '',
 
     debounceTimer: null,
+    isLoading: false,
 
     debouncedRefresh() {
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => {
-        this.fetchContainerPlan();
+        if (!this.isLoading) {
+          this.fetchContainerPlan();
+        }
       }, 500);
     },
 
@@ -163,6 +166,8 @@ function planProduction() {
     },
 
     async fetchContainerPlan() {
+      if (this.isLoading) return;
+      this.isLoading = true;
       try {
         const response = await fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`);
         const data = await response.json();
@@ -175,6 +180,8 @@ function planProduction() {
         this.updateProgress();
       } catch (error) {
         console.error('Error fetching containers:', error);
+      } finally {
+        this.isLoading = false;
       }
     },
 
