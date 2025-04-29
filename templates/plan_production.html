@@ -85,5 +85,70 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
+<script>
+// Plan Production Page JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+  const scaleInput = document.getElementById('scale');
+  const projectedYieldElement = document.getElementById('projectedYield');
+  const stockCheckSection = document.getElementById('ingredientStockSection');
+  const ingredientResultsContainer = document.getElementById('ingredientStockResults');
+  const flexModeToggle = document.getElementById('flexMode');
+  const autoFillToggle = document.getElementById('autoFill');
+  const containerPlanningSection = document.getElementById('containerPlanningSection');
+  const containerArea = document.getElementById('containerSelectionArea');
+  const fillProgressBar = document.getElementById('fillProgressBar');
+  const remainingDisplay = document.getElementById('remainingToContain');
+  const containmentError = document.getElementById('containmentError');
+  const modeTogglesSection = document.getElementById('modeTogglesSection');
+  const exportButton = document.getElementById('exportShoppingListBtn');
+  const startBatchButton = document.getElementById('startBatchButton');
+  const addContainerBtn = document.getElementById('addContainerBtn');
+
+  function updateProjectedYield() {
+    const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+    const scale = parseFloat(scaleInput.value) || 1;
+    const unit = projectedYieldElement.dataset.baseUnit || '';
+    const newYield = (baseYield * scale).toFixed(2);
+    projectedYieldElement.innerText = `${newYield} ${unit}`;
+  }
+
+  function checkStock() {
+    const recipeId = document.querySelector('input[name="recipe_id"]').value;
+    const scale = parseFloat(scaleInput.value) || 1;
+
+    fetch('/api/check-stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe_id: recipeId, scale: scale })
+    })
+    .then(response => response.json())
+    .then(data => {
+      renderStockResults(data.stock_check);
+      stockCheckData = data.stock_check;
+      missingItems = stockCheckData.filter(item => item.status !== 'OK');
+      stockCheckSection.style.display = 'block';
+      modeTogglesSection.style.display = 'block';
+      containerPlanningSection.style.display = 'block';
+      updateButtons();
+    })
+    .catch(error => {
+      console.error('Error checking stock:', error);
+      alert('Failed to check stock.');
+    });
+  }
+
+  // Add event listeners
+  if (scaleInput) {
+    scaleInput.addEventListener('change', updateProjectedYield);
+  }
+  
+  const checkStockBtn = document.querySelector('button[onclick="checkStock()"]');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  // Initialize
+  updateProjectedYield();
+});
+</script>
 {% endblock %}
