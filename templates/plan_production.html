@@ -65,48 +65,44 @@
       <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
-    <div x-data="{ stockResults: [], stockChecked: false, stockCheckPassed: false, status: '' }" class="mt-3">
-      <template x-if="stockChecked">
-        <div>
-          <template x-if="stockCheckPassed">
-            <div class="alert alert-success mt-2">
-              ✅ All ingredients are available!
-            </div>
-          </template>
-          <template x-if="!stockCheckPassed">
-            <div class="alert alert-warning mt-2">
-              ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
-            </div>
-          </template>
-
-          <table class="table table-bordered table-sm mt-2">
-            <thead>
-              <tr>
-                <th>Ingredient</th>
-                <th>Required (Recipe Unit)</th>
-                <th>Available (Stock Unit)</th>
-                <th>Units</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="item in stockResults" :key="item.ingredient">
-                <tr>
-                  <td x-text="item.ingredient"></td>
-                  <td x-text="item.needed"></td>
-                  <td x-text="item.available"></td>
-                  <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
-                  <td>
-                    <span x-show="item.status === 'OK'" class="text-success">✅</span>
-                    <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+    <div x-show="stockChecked" class="mt-3">
+      <template x-if="stockCheckPassed">
+        <div class="alert alert-success mt-2">
+          ✅ All ingredients are available!
         </div>
       </template>
+      <template x-if="!stockCheckPassed">
+        <div class="alert alert-warning mt-2">
+          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
+        </div>
+      </template>
+
+      <table class="table table-bordered table-sm mt-2">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Required (Recipe Unit)</th>
+            <th>Available (Stock Unit)</th>
+            <th>Units</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="item in stockResults" :key="item.ingredient">
+            <tr>
+              <td x-text="item.ingredient"></td>
+              <td x-text="item.needed"></td>
+              <td x-text="item.available"></td>
+              <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+              <td>
+                <span x-show="item.status === 'OK'" class="text-success">✅</span>
+                <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
     </div>
   </div>
 
@@ -270,13 +266,10 @@ function planProduction() {
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
-          this.stockResults = data.stock_check || [];
-          this.status = data.all_ok ? 'ok' : 'fail';
         })
         .catch(err => {
           console.log('Error checking stock:', err);
           this.stockChecked = false;
-          this.stockResults = [];
         });
     },
 
