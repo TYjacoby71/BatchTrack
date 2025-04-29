@@ -1,14 +1,17 @@
 
+<!-- Final Corrected Plan Production Page (Single Alpine Scope) -->
+
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
 
-  <!-- Section: Container Planning -->
-  <h4 class="mt-4">1. Plan Containers</h4>
+  <!-- Section: Batch Planning -->
+  <h2>Plan Production: {{ recipe.name }}</h2>
+
   <div class="row mb-4">
     <div class="col-md-6">
-      <label for="scale">Batch Scale:</label>
-      <input type="number" id="scale" min="0.1" step="0.1" x-model.number="scale" @input="fetchContainerPlan" class="form-control">
+      <label>Batch Scale:</label>
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -18,75 +21,77 @@
 
   <div class="row mb-4">
     <div class="col-md-6">
-      <label><input type="checkbox" x-model="flexMode"> Flexible Mode (Allow incomplete containment)</label>
+      <input type="checkbox" id="flexMode" x-model="flexMode">
+      <label for="flexMode">Flexible Mode (Allow incomplete containment)</label>
     </div>
     <div class="col-md-6">
-      <label><input type="checkbox" x-model="autoFill"> Auto-Fill Containers</label>
+      <input type="checkbox" id="autoFill" x-model="autoFill">
+      <label for="autoFill">Auto-Fill Containers</label>
     </div>
   </div>
 
+  <!-- Selected Containers Section -->
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between">
       <h5>Selected Containers</h5>
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
     </div>
     <div class="card-body">
+
       <template x-for="(container, index) in containersSelected" :key="index">
-        <div x-data="containerRow(container, index, $parent)" class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" @change="updateContainer()">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <select class="form-select" x-model.number="container.id" @change="updateContainer(index)">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
               </option>
             </template>
           </select>
-          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer()">
-          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer()">×</button>
+          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateProgress">
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)">×</button>
         </div>
       </template>
 
+      <!-- Containment Progress -->
       <div class="mt-3">
         <label>Containment Progress:</label>
         <div class="progress" style="height: 20px;">
-          <div class="progress-bar" role="progressbar"
-            :style="'width: ' + containmentPercent + '%'"
-            x-text="containmentPercent + '%'">
+          <div class="progress-bar" role="progressbar" :style="'width: ' + containmentPercent + '%'" x-text="containmentPercent + '%'">
           </div>
         </div>
-        <small class="form-text text-muted mt-1" x-text="'Remaining: ' + remainingToContain.toFixed(2) + ' ' + unit"></small>
+        <small class="form-text text-muted" x-text="'Remaining: ' + remainingToContain.toFixed(2) + ' ' + unit"></small>
       </div>
 
+      <!-- Warnings -->
       <div class="alert alert-warning mt-2" x-show="!flexMode && containmentPercent < 100">
-        You must fully contain the batch in strict mode.
+        Warning: You must fully contain the batch in strict mode.
       </div>
-
       <div class="alert alert-info mt-2" x-show="flexMode && containmentPercent < 100">
         Partial containment allowed due to Flexible Mode.
       </div>
-
       <div class="alert alert-danger mt-2" x-show="containersSelected.length === 0">
         No containers selected. Please autofill or add manually.
       </div>
+
     </div>
   </div>
 
-  <!-- Section: Check Stock -->
-  <h4 class="mt-4">2. Check Ingredients</h4>
+  <!-- Check Stock Section -->
+  <h4>Check Ingredients</h4>
   <div class="mb-4">
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
       <a href="{{ url_for('recipes.recipe_list') }}" class="btn btn-secondary">Cancel</a>
     </div>
     <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
-      Some ingredients are low or missing. Please adjust inventory.
+      Some ingredients are low or missing. Adjust inventory before proceeding.
     </div>
     <div class="alert alert-success mt-2" x-show="stockChecked && stockCheckPassed">
       All ingredients are available!
     </div>
   </div>
 
-  <!-- Section: Start Batch -->
-  <h4 class="mt-4">3. Start Batch</h4>
+  <!-- Start Batch Section -->
   <div class="d-flex justify-content-end">
     <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">Start Batch</button>
   </div>
@@ -118,7 +123,7 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      const fullyContained = this.flexMode || this.containmentPercent === 100;
+      const fullyContained = this.flexMode || this.containmentPercent == 100;
       return fullyContained && this.stockChecked && this.stockCheckPassed;
     },
 
@@ -128,7 +133,7 @@ function planProduction() {
         .then(data => {
           this.allowedContainers = data.available;
           if (this.autoFill) {
-            this.containersSelected = data.plan;
+            this.containersSelected = data.plan || [];
           }
           this.updateProgress();
         });
@@ -139,6 +144,26 @@ function planProduction() {
       const contained = this.totalContained;
       this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
       this.remainingToContain = Math.max(projected - contained, 0);
+    },
+
+    updateContainer(index) {
+      const selectedId = this.containersSelected[index].id;
+      const match = this.allowedContainers.find(c => c.id == selectedId);
+      if (match) {
+        this.containersSelected[index].capacity = match.storage_amount;
+        this.containersSelected[index].unit = match.storage_unit;
+        this.containersSelected[index].name = match.name;
+        if (this.containersSelected[index].quantity > match.stock_qty) {
+          this.containersSelected[index].quantity = match.stock_qty;
+          alert('Cannot allocate more than available container stock.');
+        }
+      }
+      this.updateProgress();
+    },
+
+    removeContainer(index) {
+      this.containersSelected.splice(index, 1);
+      this.updateProgress();
     },
 
     manualAddContainer() {
@@ -164,34 +189,7 @@ function planProduction() {
     },
 
     startBatch() {
-      alert('Batch started (connect to real backend).');
-    }
-  };
-}
-
-function containerRow(container, index, parent) {
-  return {
-    container,
-    index,
-    allowedContainers: parent.allowedContainers,
-    updateContainer() {
-      const match = this.allowedContainers.find(c => c.id == this.container.id);
-      if (match) {
-        this.container.capacity = match.storage_amount;
-        this.container.unit = match.storage_unit;
-        this.container.name = match.name;
-
-        if (this.container.quantity > match.stock_qty) {
-          this.container.quantity = match.stock_qty;
-          alert('Cannot allocate more than available container stock.');
-        }
-      }
-      parent.updateProgress();
-    },
-
-    removeContainer() {
-      parent.containersSelected.splice(this.index, 1);
-      parent.updateProgress();
+      alert('Batch started (connect backend saving here).');
     }
   }
 }
