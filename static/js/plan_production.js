@@ -1,13 +1,5 @@
 // Plan Production Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
-  // Scale input handling
-  const scaleInput = document.getElementById('scale');
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-    scaleInput.addEventListener('change', updateProjectedYield);
-    updateProjectedYield(); // Initial calculation
-  }
-
   // Button handlers
   const checkStockBtn = document.getElementById('checkStockBtn');
   if (checkStockBtn) {
@@ -25,26 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-function updateProjectedYield() {
-  const projectedYieldElement = document.getElementById('projectedYield');
-  const scaleInput = document.getElementById('scale');
-
-  if (!projectedYieldElement || !scaleInput) {
-    console.error('Required elements not found');
-    return;
-  }
-
-  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
-  const scale = parseFloat(scaleInput.value) || 1;
-  const unit = projectedYieldElement.dataset.baseUnit || '';
-
-  const newYield = (baseYield * scale).toFixed(2);
-  projectedYieldElement.textContent = `${newYield} ${unit}`;
-}
-
 function checkStock() {
   const recipeId = document.querySelector('input[name="recipe_id"]').value;
-  const scale = parseFloat(document.getElementById('scale').value) || 1.0;
+  const scale = document.querySelector('input[name="scale"]').value || 1.0;
 
   fetch('/api/check-stock', {
     method: 'POST',
@@ -120,17 +95,8 @@ function addContainerRow() {
 }
 
 function updateContainmentProgress() {
-  const projectedYieldElement = document.getElementById('projectedYield');
-  const scaleInput = document.getElementById('scale');
-  const fillProgressBar = document.getElementById('fillProgressBar');
-  const remainingDisplay = document.getElementById('remainingToContain');
-  const flexModeToggle = document.getElementById('flexMode');
-  const containmentError = document.getElementById('containmentError');
-  const startBatchButton = document.getElementById('startBatchButton');
-
-  if (!projectedYieldElement || !scaleInput) return;
-
-  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+  const scaleInput = document.querySelector('input[name="scale"]');
+  const baseYield = parseFloat(scaleInput.closest('[x-data]').getAttribute('x-data').match(/baseYield:\s*([\d.]+)/)[1]);
   const scale = parseFloat(scaleInput.value) || 1;
   const totalNeeded = baseYield * scale;
 
@@ -146,6 +112,12 @@ function updateContainmentProgress() {
   });
 
   const percent = Math.min((totalContained / totalNeeded) * 100, 100);
+  const fillProgressBar = document.getElementById('fillProgressBar');
+  const remainingDisplay = document.getElementById('remainingToContain');
+  const flexModeToggle = document.getElementById('flexMode');
+  const containmentError = document.getElementById('containmentError');
+  const startBatchButton = document.getElementById('startBatchButton');
+
   if (fillProgressBar) {
     fillProgressBar.style.width = `${percent}%`;
     fillProgressBar.textContent = `${Math.round(percent)}%`;

@@ -9,28 +9,36 @@
   <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
 
   <!-- Scale and Projected Yield -->
-  <div x-data="{ scale: 1.0, baseYield: {{ '%.2f'|format(recipe.predicted_yield) }}, unit: '{{ recipe.predicted_yield_unit }}' }" class="row mb-4">
-    <div class="col-md-6">
-      <label for="scale">Scale:</label>
-      <input type="number" class="form-control" name="scale" id="scale" x-model="scale" min="0.1" step="0.1" required>
+  <div x-data="{ 
+    scale: 1.0, 
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }}, 
+    unit: '{{ recipe.predicted_yield_unit }}',
+    flexMode: false,
+    autoFill: true
+  }" class="mb-4">
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <label for="scale">Scale:</label>
+        <input type="number" class="form-control" name="scale" id="scale" x-model="scale" min="0.1" step="0.1" required>
+      </div>
+      <div class="col-md-6">
+        <label>Projected Yield:</label>
+        <div class="form-control-plaintext" x-text="(scale * baseYield).toFixed(2) + ' ' + unit"></div>
+      </div>
     </div>
-    <div class="col-md-6">
-      <label>Projected Yield:</label>
-      <div class="form-control-plaintext" x-text="(scale * baseYield).toFixed(2) + ' ' + unit"></div>
-    </div>
-  </div>
 
-  <!-- Mode Toggles -->
-  <div id="modeTogglesSection" class="row my-4">
-    <div class="col-md-6">
-      <label for="flexMode">Flexible Mode</label>
-      <input type="checkbox" id="flexMode" name="flex_mode">
-      <small class="form-text text-muted">Allows proceeding without full containment.</small>
-    </div>
-    <div class="col-md-6">
-      <label for="autoFill">Auto-Fill Containers</label>
-      <input type="checkbox" id="autoFill" name="auto_fill" checked>
-      <small class="form-text text-muted">Auto select best-fit containers to match batch.</small>
+    <!-- Mode Toggles -->
+    <div class="row my-4">
+      <div class="col-md-6">
+        <label for="flexMode">Flexible Mode</label>
+        <input type="checkbox" id="flexMode" name="flex_mode" x-model="flexMode">
+        <small class="form-text text-muted">Allows proceeding without full containment.</small>
+      </div>
+      <div class="col-md-6">
+        <label for="autoFill">Auto-Fill Containers</label>
+        <input type="checkbox" id="autoFill" name="auto_fill" x-model="autoFill">
+        <small class="form-text text-muted">Auto select best-fit containers to match batch.</small>
+      </div>
     </div>
   </div>
 
