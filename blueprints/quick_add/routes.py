@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models import db, InventoryItem, Unit
 
-quick_add_bp = Blueprint('quick_add', __name__)
+quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 
 @quick_add_bp.route('/container', methods=['POST'])
 def quick_add_container():
@@ -14,7 +14,8 @@ def quick_add_container():
             name=data['name'],
             type='container',
             storage_amount=float(data['storage_amount']),
-            storage_unit=data['storage_unit']
+            storage_unit=data['storage_unit'],
+            quantity=0
         )
 
         db.session.add(container)

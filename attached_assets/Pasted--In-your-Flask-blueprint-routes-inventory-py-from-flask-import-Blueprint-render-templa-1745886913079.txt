@@ -1,0 +1,132 @@
+# --- In your Flask blueprint: routes/inventory.py ---
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from models import db, InventoryItem
+
+inventory_bp = Blueprint('inventory', __name__)
+
+# --- Edit Ingredient ---
+@inventory_bp.route('/inventory/edit-ingredient/<int:id>', methods=['GET', 'POST'])
+def edit_ingredient(id):
+    item = InventoryItem.query.get_or_404(id)
+
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.quantity = float(request.form['quantity'])
+        item.unit = request.form['unit']
+        item.cost_per_unit = float(request.form['cost_per_unit'])
+        db.session.commit()
+        flash('Ingredient updated successfully!', 'success')
+        return redirect(url_for('inventory.manage_inventory'))
+
+    return render_template('edit_ingredient.html', item=item)
+
+# --- Edit Container ---
+@inventory_bp.route('/inventory/edit-container/<int:id>', methods=['GET', 'POST'])
+def edit_container(id):
+    item = InventoryItem.query.get_or_404(id)
+
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.storage_amount = float(request.form['storage_amount'])
+        item.storage_unit = request.form['storage_unit']
+        item.quantity = int(request.form['quantity'])
+        item.cost_per_unit = float(request.form['cost_per_unit'])
+        db.session.commit()
+        flash('Container updated successfully!', 'success')
+        return redirect(url_for('inventory.manage_inventory'))
+
+    return render_template('edit_container.html', item=item)
+
+# --- Inventory Management Route ---
+@inventory_bp.route('/inventory')
+def manage_inventory():
+    items = InventoryItem.query.all()
+    units = []  # Assume you have a unit model or list to pass
+    return render_template('inventory.html', items=items, units=units)
+
+
+# --- Updated Buttons on Inventory Page ---
+# For ingredients:
+# <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+
+# For containers:
+# <a href="{{ url_for('inventory.edit_container', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+
+
+# --- edit_ingredient.html Template ---
+
+"""
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Edit Ingredient</h2>
+
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Name</label>
+    <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Quantity</label>
+    <input type="number" step="0.01" name="quantity" class="form-control" value="{{ item.quantity }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Unit</label>
+    <input type="text" name="unit" class="form-control" value="{{ item.unit }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Cost/Unit</label>
+    <input type="number" step="0.01" name="cost_per_unit" class="form-control" value="{{ item.cost_per_unit }}" required>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+{% endblock %}
+"""
+
+
+# --- edit_container.html Template ---
+
+"""
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Edit Container</h2>
+
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Name</label>
+    <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Storage Amount</label>
+    <input type="number" step="0.01" name="storage_amount" class="form-control" value="{{ item.storage_amount }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Storage Unit</label>
+    <select name="storage_unit" class="form-select" required>
+      <option value="oz" {% if item.storage_unit == 'oz' %}selected{% endif %}>oz</option>
+      <option value="ml" {% if item.storage_unit == 'ml' %}selected{% endif %}>ml</option>
+      <option value="g" {% if item.storage_unit == 'g' %}selected{% endif %}>g</option>
+      <option value="count" {% if item.storage_unit == 'count' %}selected{% endif %}>count</option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Quantity in Stock</label>
+    <input type="number" step="1" name="quantity" class="form-control" value="{{ item.quantity }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Cost/Unit</label>
+    <input type="number" step="0.01" name="cost_per_unit" class="form-control" value="{{ item.cost_per_unit }}" required>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+{% endblock %}
+"""
