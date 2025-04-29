@@ -1,13 +1,23 @@
+
 {# Batch Start Flow Component #}
-<div class="batch-start-flow">
+<div class="batch-start-flow" 
+     x-data="{ 
+       currentStep: 'recipe',
+       recipeId: '',
+       scale: 1.0,
+       stockResults: []
+     }">
   <div class="start-flow-header">
     <h3>Start New Batch</h3>
   </div>
   
-  <div class="step-container" id="recipeSelectStep">
+  <div class="step-container" x-show="currentStep === 'recipe'">
     <div class="form-group">
       <label>Select Recipe:</label>
-      <select class="form-select recipe-select" name="recipe_id" required>
+      <select class="form-select recipe-select" 
+              x-model="recipeId" 
+              @change="currentStep = 'scale'"
+              required>
         <option value="">Choose Recipe...</option>
         {% for recipe in recipes %}
         <option value="{{ recipe.id }}">{{ recipe.name }}</option>
@@ -16,14 +26,64 @@
     </div>
   </div>
 
-  <div class="step-container d-none" id="scaleStep">
+  <div class="step-container" x-show="currentStep === 'scale'">
     <div class="form-group">
       <label>Batch Scale:</label>
-      <input type="number" class="form-control" name="scale" value="1" min="0.1" step="0.1">
+      <input type="number" 
+             class="form-control" 
+             x-model.number="scale" 
+             min="0.1" 
+             step="0.1">
+      <button class="btn btn-primary mt-2" 
+              @click="currentStep = 'stock'; 
+                     $dispatch('check-stock', {recipeId, scale})">
+        Check Stock
+      </button>
     </div>
   </div>
 
-  <div class="step-container d-none" id="stockCheckStep">
-    {% include "components/batch/stock_check_results.html" %}
+  <div class="step-container" x-show="currentStep === 'stock'">
+    <div id="stockCheckResults" class="mt-4">
+      <template x-if="stockResults.length > 0">
+        <div>
+          <h4>Stock Check Results</h4>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Needed</th>
+                <th>Available</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in stockResults" :key="item.name">
+                <tr>
+                  <td x-text="item.name"></td>
+                  <td x-text="item.needed + ' ' + item.unit"></td>
+                  <td x-text="item.available + ' ' + item.unit"></td>
+                  <td :class="{
+                    'text-success': item.status === 'OK',
+                    'text-warning': item.status === 'LOW',
+                    'text-danger': item.status === 'NEEDED'
+                  }" x-text="item.status"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          
+          <form method="post" action="{{ url_for('batches.start_batch') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="recipe_id" :value="recipeId">
+            <input type="hidden" name="scale" :value="scale">
+            <button type="submit" 
+                    class="btn btn-success"
+                    x-show="stockResults.every(item => item.status === 'OK')">
+              Start Batch
+            </button>
+          </form>
+        </div>
+      </template>
+    </div>
   </div>
 </div>
