@@ -1,0 +1,313 @@
+  <div class="card-body">
+      <template x-for="(container, index) in containersSelected" :key="index">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" @click="blockIfAutoFill" @change="updateContainer(index)">
+            <option value="">Select Container</option>
+            <template x-for="allowed in allowedContainers" :key="allowed.id">
+              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
+            </template>
+          </select>
+          <input type="number" class="form-control" min="1" x-model="container.quantity" :disabled="autoFill" @click="blockIfAutoFill" @input="updateProgress">
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">×</button>
+        </div>
+      </template>
+
+      <div class="mt-3">
+        <label>Containment Progress:</label>
+        <div class="progress" style="height: 20px;">
+          <div class="progress-bar" role="progressbar" :style="'width: ' + containmentPercent + '%'" x-text="containmentPercent + '%'"></div>
+        </div>
+        <small class="form-text text-muted" x-text="liveContainmentMessage"></small>
+      </div>
+
+      <div class="alert alert-warning mt-2" x-show="containmentIssue">
+        <span x-text="containmentIssue"></span>
+      </div>
+
+      <div class="alert alert-danger mt-2" x-show="containersSelected.length === 0">
+        No containers selected. Please add containers or enable Auto-Fill.
+      </div>
+    </div>
+  </div>
+
+  <h4>Check Ingredients</h4>
+  <div class="mb-4">
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
+      <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+    <div x-show="stockChecked" class="mt-3">
+      <template x-if="stockCheckPassed">
+        <div class="alert alert-success mt-2">
+          ✅ All ingredients are available!
+        </div>
+      </template>
+      <template x-if="!stockCheckPassed">
+        <div class="alert alert-warning mt-2">
+          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
+        </div>
+      </template>
+
+      <table class="table table-bordered table-sm mt-2">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Required</th>
+            <th>Available</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="item in stockResults" :key="item.ingredient">
+            <tr>
+              <td x-text="item.ingredient"></td>
+              <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
+              <td x-text="`${item.available} ${item.inventory_unit}`"></td>
+              <td>
+                <span x-show="item.status === 'OK'" class="text-success">✅</span>
+                <span x-show="item.status === 'LOW'" class="text-warning">⚠️</span>
+                <span x-show="item.status === 'NEEDED'" class="text-danger">❌</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+      <button class="btn btn-outline-secondary btn-sm" @click="downloadShoppingList">📝 Download Shopping List</button>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end">
+    <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">Start Batch</button>
+  </div>
+</div>
+
+<script>
+function planProduction() {
+  return {
+    recipeId: {{ recipe.id }},
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+    unit: '{{ recipe.predicted_yield_unit }}',
+    allowedContainers: [],
+    containersSelected: [],
+    autoFill: true,
+    scale: 1.0,
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockResults: [],
+    containmentPercent: 0,
+    remainingToContain: 0,
+    flexMode: false,
+    containmentIssue: '',
+
+    init() {
+      this.fetchContainerPlan();
+    },
+
+    get totalContained() {
+      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0) || 0;
+    },
+
+    get liveContainmentMessage() {
+      if (this.containersSelected.length === 0) return '';
+      if (this.containmentPercent < 100) {
+        return `There will be ${this.remainingToContain.toFixed(2)} ${this.unit} left uncontained.`;
+      }
+      return 'Full containment achieved.';
+    },
+
+    get canStartBatch() {
+      const contained = this.flexMode || this.containmentPercent >= 100;
+      return contained && this.stockChecked && this.stockCheckPassed;
+    },
+
+    fetchContainerPlan() {
+      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
+        .then(res => res.json())
+        .then(data => {
+          this.allowedContainers = data.available || [];
+          if (this.autoFill) {
+            this.containersSelected = (data.plan || []).map(container => {
+              const match = this.allowedContainers.find(c => c.id === container.id);
+              return {
+                id: container.id,
+                quantity: container.quantity,
+                name: match?.name || '',
+                capacity: match?.storage_amount || 0,
+                unit: match?.storage_unit || ''
+              };
+            });
+
+            this.updateProgress();
+
+            if (this.containmentPercent < 100) {
+              this.containmentIssue = 'Warning: Some containers will be partially filled.';
+              const projected = this.baseYield * this.scale;
+              const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
+              if (totalAvailable < projected) {
+                const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
+                const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
+                this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
+              }
+            } else {
+              this.containmentIssue = '';
+            }
+          }
+          this.updateProgress();
+        });
+    },
+
+    updateProgress() {
+      const projected = this.baseYield * this.scale;
+      const contained = this.totalContained;
+      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
+      this.remainingToContain = Math.max(projected - contained, 0);
+    },
+
+    updateContainer(index) {
+      const selectedId = this.containersSelected[index].id;
+      const match = this.allowedContainers.find(c => c.id === selectedId);
+      if (match) {
+        this.containersSelected[index].capacity = match.storage_amount;
+        this.containersSelected[index].unit = match.storage_unit;
+        this.containersSelected[index].name = match.name;
+        if (this.containersSelected[index].quantity > match.stock_qty) {
+          this.containersSelected[index].quantity = match.stock_qty;
+          alert('Cannot allocate more than available container stock.');
+        }
+      }
+      this.updateProgress();
+    },
+
+    removeContainer(index) {
+      this.containersSelected.splice(index, 1);
+      this.updateProgress();
+    },
+
+    manualAddContainer() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to add containers manually.');
+        return;
+      }
+      this.containersSelected.push({ id: '', name: '', capacity: 0, quantity: 1, unit: '' });
+      this.updateProgress();
+    },
+
+    blockIfAutoFill() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to edit containers manually.');
+      }
+    },
+
+    checkStockOrWarn() {
+      if (!this.flexMode && this.containmentPercent < 100 && this.containersSelected.length > 0) {
+        if (confirm(`You do not have enough containers selected, or there will be ${this.remainingToContain.toFixed(2)} ${this.unit} left over. Would you like to continue anyway?`)) {
+          this.flexMode = true;
+          this.checkStock();
+        }
+      } else {
+        this.checkStock();
+      }
+    },
+
+    checkStock() {
+      const csrfToken = document.querySelector('input[name=csrf_token]');
+      if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+      }
+
+      console.log('Checking stock with:', {
+        recipe_id: parseInt(this.recipeId),
+        scale: parseFloat(this.scale),
+        flex_mode: this.flexMode
+      });
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken.value
+        },
+        body: JSON.stringify({ 
+          recipe_id: parseInt(this.recipeId), 
+          scale: parseFloat(this.scale),
+          flex_mode: this.flexMode
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          this.stockChecked = true;
+          this.stockCheckPassed = data.all_ok;
+          this.stockResults = data.ingredients || [];
+          console.log('Stock check results:', this.stockResults);
+          if (this.stockResults.length === 0) {
+            console.log('Full API response:', data);
+          }
+        })
+        .catch(err => {
+          console.log('Error checking stock:', err);
+          this.stockChecked = false;
+          this.stockResults = [];
+        });
+    },
+
+    startBatch() {
+      fetch('/api/start-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe_id: this.recipeId,
+          scale: this.scale,
+          flex_mode: this.flexMode,
+          containers: this.containersSelected
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          alert('Batch started successfully.');
+        })
+        .catch(err => {
+          alert('Error starting batch. Please try again.');
+        });
+    },
+    downloadCSV() {
+      if (!this.stockResults?.length) return;
+
+      let csv = "Ingredient,Required,Available,Unit,Status\n";
+      this.stockResults.forEach(row => {
+        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'stock_check_report.csv';
+      link.click();
+    },
+
+    downloadShoppingList() {
+      if (!this.stockResults?.length) return;
+
+      const lowOrNeededItems = this.stockResults.filter(item => 
+        item.status === 'LOW' || item.status === 'NEEDED'
+      );
+
+      if (!lowOrNeededItems.length) {
+        alert('No items need restocking!');
+        return;
+      }
+
+      let text = "Shopping List\n";
+      text += "=============\n\n";
+      lowOrNeededItems.forEach(item => {
+        const needed = item.needed - item.available;
+        text += `${item.ingredient}: ${needed.toFixed(2)} ${item.unit}\n`;
+      });
+
+      const blob = new Blob([text], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'shopping_list.txt';
+      link.click();
+    }
+  };
