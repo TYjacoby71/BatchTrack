@@ -181,26 +181,36 @@ function planProduction() {
 
     async checkStock() {
       try {
-        console.log('Checking stock with:', {
+        const payload = {
           recipe_id: this.recipeId,
           scale: this.scale,
           flex_mode: this.flexMode
-        });
+        };
+
+        console.log('Checking stock with:', payload);
 
         const response = await fetch('/api/check-stock', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipe_id: this.recipeId,
-            scale: this.scale,
-            flex_mode: this.flexMode
-          })
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+        if (!data) {
+          throw new Error('Empty response from server');
+        }
         this.stockChecked = true;
         this.stockCheckPassed = data.all_ok;
       } catch (error) {
         console.error('Error checking stock:', error);
+        alert('Error checking stock. Please try again.');
       }
     },
 

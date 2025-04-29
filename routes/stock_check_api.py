@@ -14,12 +14,20 @@ def api_check_stock():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        recipe_id = data.get('recipe_id')
-        scale = float(data.get('scale', 1.0))
-        flex_mode = data.get('flex_mode', False)
+        logger.debug(f"Stock check request data: {data}")
 
+        recipe_id = data.get('recipe_id')
         if not recipe_id:
             return jsonify({'error': 'Recipe ID required'}), 400
+
+        try:
+            scale = float(data.get('scale', 1.0))
+            if scale <= 0:
+                return jsonify({'error': 'Scale must be greater than 0'}), 400
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid scale value'}), 400
+
+        flex_mode = data.get('flex_mode', False)
 
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
