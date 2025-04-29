@@ -12,29 +12,28 @@ def available_containers(recipe_id):
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
-
-        # Calculate required volume from recipe
-        required_volume = recipe.predicted_yield * scale
-        required_unit = recipe.predicted_yield_unit
-
+            
+        # Get allowed container IDs from recipe
+        allowed_ids = [c.id for c in recipe.allowed_containers]
+        
         # Get available containers and convert units
         in_stock = []
         for container in InventoryItem.query.filter_by(type='container').all():
-            if container.quantity <= 0:
+            if container.quantity <= 0 or container.id not in allowed_ids:
                 continue
 
             try:
                 converted_capacity = convert_units(
-                    container.storage_amount, 
-                    container.storage_unit, 
-                    required_unit
+                    container.storage_amount,
+                    container.storage_unit,
+                    recipe.predicted_yield_unit
                 )
                 if converted_capacity:
                     in_stock.append({
                         "id": container.id,
                         "name": container.name,
                         "storage_amount": converted_capacity,
-                        "storage_unit": required_unit,
+                        "storage_unit": recipe.predicted_yield_unit,
                         "stock_qty": container.quantity
                     })
             except Exception:
