@@ -25,10 +25,14 @@ def api_check_stock():
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
+        from services.stock_check_utils import check_stock
         results = check_stock(recipe_id, scale, containers)
+        if not isinstance(results, dict):
+            return jsonify({'error': 'Invalid stock check results'}), 400
+            
         return jsonify({
-            'stock_check': results.get('stock_check', []),
-            'all_ok': results.get('all_ok', False)
+            'stock_check': results['stock_check'],
+            'all_ok': results['all_ok']
         })
 
     except Exception as e:
