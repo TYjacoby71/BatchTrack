@@ -102,6 +102,7 @@
         </tbody>
       </table>
       <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+      <button class="btn btn-outline-secondary btn-sm" @click="downloadShoppingList">📝 Download Shopping List</button>
     </div>
   </div>
 
@@ -244,7 +245,7 @@ function planProduction() {
         console.error('CSRF token not found');
         return;
       }
-      
+
       console.log('Checking stock with:', {
         recipe_id: parseInt(this.recipeId),
         scale: parseFloat(this.scale),
@@ -297,6 +298,46 @@ function planProduction() {
         .catch(err => {
           alert('Error starting batch. Please try again.');
         });
+    },
+    downloadCSV() {
+      if (!this.stockResults?.length) return;
+
+      let csv = "Ingredient,Required,Available,Unit,Status\n";
+      this.stockResults.forEach(row => {
+        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'stock_check_report.csv';
+      link.click();
+    },
+
+    downloadShoppingList() {
+      if (!this.stockResults?.length) return;
+
+      const lowOrNeededItems = this.stockResults.filter(item => 
+        item.status === 'LOW' || item.status === 'NEEDED'
+      );
+
+      if (!lowOrNeededItems.length) {
+        alert('No items need restocking!');
+        return;
+      }
+
+      let text = "Shopping List\n";
+      text += "=============\n\n";
+      lowOrNeededItems.forEach(item => {
+        const needed = item.needed - item.available;
+        text += `${item.ingredient}: ${needed.toFixed(2)} ${item.unit}\n`;
+      });
+
+      const blob = new Blob([text], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'shopping_list.txt';
+      link.click();
     }
   };
 }
