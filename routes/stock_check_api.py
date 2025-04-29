@@ -29,12 +29,27 @@ def api_check_stock():
         all_ok = True
         
         for ri in recipe.recipe_ingredients:
+            # Get recipe amounts in recipe units
             required_amount = ri.amount * scale
+            
+            # Get inventory amount in its stored unit
             available = ri.inventory_item.quantity if ri.inventory_item else 0
             
-            if available >= required_amount:
+            # Convert available amount to recipe units for comparison
+            try:
+                available_converted = ConversionEngine.convert_units(
+                    available,
+                    ri.inventory_item.unit,
+                    ri.unit,
+                    ingredient_id=ri.inventory_item.id
+                )
+            except Exception as e:
+                available_converted = 0
+                print(f"Conversion error: {str(e)}")
+
+            if available_converted >= required_amount:
                 status = "OK"
-            elif available > 0:
+            elif available_converted > 0:
                 status = "LOW"
                 all_ok = False
             else:
@@ -43,9 +58,10 @@ def api_check_stock():
                 
             check_results.append({
                 "name": ri.inventory_item.name,
-                "needed": required_amount,
-                "available": available,
-                "unit": ri.unit,
+                "needed": round(required_amount, 2),
+                "needed_unit": ri.unit,
+                "available": round(available, 2),
+                "available_unit": ri.inventory_item.unit,
                 "status": status
             })
 

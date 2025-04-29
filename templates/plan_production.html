@@ -65,11 +65,39 @@
       <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
-    <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
-      Some ingredients are low or missing. Adjust inventory before proceeding.
-    </div>
-    <div class="alert alert-success mt-2" x-show="stockChecked && stockCheckPassed">
-      All ingredients are available!
+    <div class="mt-3" x-show="stockChecked">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Needed</th>
+            <th>Available</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="item in stockCheckResults" :key="item.name">
+            <tr>
+              <td x-text="item.name"></td>
+              <td x-text="item.needed + ' ' + item.needed_unit"></td>
+              <td x-text="item.available + ' ' + item.available_unit"></td>
+              <td>
+                <span :class="{
+                  'badge bg-success': item.status === 'OK',
+                  'badge bg-warning': item.status === 'LOW',
+                  'badge bg-danger': item.status === 'NEEDED'
+                }" x-text="item.status"></span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="alert alert-danger mt-2" x-show="!stockCheckPassed">
+        Some ingredients are low or missing. Adjust inventory before proceeding.
+      </div>
+      <div class="alert alert-success mt-2" x-show="stockCheckPassed">
+        All ingredients are available!
+      </div>
     </div>
   </div>
 
