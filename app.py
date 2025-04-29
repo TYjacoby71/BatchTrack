@@ -48,7 +48,7 @@ from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
-#from routes.products import products_bp # Removed import
+from routes.products import products_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
@@ -77,6 +77,7 @@ app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
+app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 
 @app.context_processor
