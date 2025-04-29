@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -21,21 +22,8 @@
     </div>
   </div>
 
-  <!-- Stock Check Button -->
-  <button type="button" class="btn btn-primary mb-4" onclick="checkStock()">Check Stock</button>
-
-  <!-- Ingredient Stock Check Results -->
-  <div id="ingredientStockSection" style="display: none;">
-    <div class="card mb-4">
-      <div class="card-header"><h5>Ingredient Stock Check</h5></div>
-      <div class="card-body">
-        <div id="ingredientStockResults" class="table-responsive"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Mode Toggles (Shown only after Stock OK) -->
-  <div id="modeTogglesSection" class="row my-4" style="display: none;">
+  <!-- Mode Toggles -->
+  <div id="modeTogglesSection" class="row my-4">
     <div class="col-md-6">
       <label for="flexMode">Flexible Mode</label>
       <input type="checkbox" id="flexMode" name="flex_mode">
@@ -49,7 +37,7 @@
   </div>
 
   <!-- Container Planning Section -->
-  <div id="containerPlanningSection" style="display: none;">
+  <div id="containerPlanningSection">
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between">
         <h5>Select Containers</h5>
@@ -65,6 +53,19 @@
         <small id="remainingToContain" class="form-text text-muted"></small>
 
         <div id="containmentError" class="alert alert-danger mt-3" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Check Button -->
+  <button type="button" class="btn btn-primary mb-4" onclick="checkStock()">Check Stock</button>
+
+  <!-- Ingredient Stock Check Results -->
+  <div id="ingredientStockSection" style="display: none;">
+    <div class="card mb-4">
+      <div class="card-header"><h5>Ingredient Stock Check</h5></div>
+      <div class="card-body">
+        <div id="ingredientStockResults" class="table-responsive"></div>
       </div>
     </div>
   </div>
