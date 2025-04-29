@@ -87,4 +87,10 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Initial calculation
+  updateProjectedYield();
+});
+</script>
 {% endblock %}
