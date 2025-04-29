@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from models import Recipe, InventoryItem
-from services.unit_conversion import convert_units
+from services.unit_conversion_service import convert_units
 
 container_api_bp = Blueprint('container_api', __name__)
 
