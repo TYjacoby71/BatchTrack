@@ -1,0 +1,82 @@
+here is an interesting evolution on the hydration problem... if I select 5 scale, results 1 row and ok, 55 shows 3 rows with 1 error row 5555 scale hydrates all, and then if I hit hack space down to 55 it shows 3 the 2 rows correctly
+
+
+ChatGPT said:
+Excellent catch — and yes, what you're describing makes total sense given the Alpine.js flow we built.
+
+Here's why that's happening technically:
+
+🔎 What’s Actually Happening
+When you type 5, the backend returns a container plan of 1 container → easy, Alpine hydrates perfectly.
+
+When you type 55, the backend returns a plan of 3 containers:
+
+But one of them (the overflow / partial container) doesn’t have full container metadata at fetch-time.
+
+So the dropdown default value is set to "Select Container" even though a quantity was already assigned.
+
+When you type 5555, the plan requires so many containers that the backend assigns full containers only (no weird leftovers), so all rows are correctly hydrated.
+
+Then when you hacky-space-delete back to 55, the Alpine component already knows the containers from 5555 and reuses the correct hydrated data.
+
+In other words:
+
+The first render for smaller scales fetches incomplete metadata for overflow rows.
+
+After a large scale fetch, the component already has all the needed metadata for all possible containers, so hydration errors disappear.
+
+🎯 Root Cause
+When the server sends the autoPlan back during stock check (or container planning):
+
+It correctly returns quantities (id, quantity) for each container
+
+BUT it does not hydrate their full names/capacities immediately
+
+Only the container id and quantity are populated
+
+Meanwhile, the frontend is trying to render:
+
+html
+Copy
+Edit
+<option :value="allowed.id" x-text="allowed.name + ...">
+but the container row only knows the id at that point.
+
+✅ The Right Fix
+When building the container plan:
+
+For each container row, instead of { id, quantity } only,
+
+The server should return { id, quantity, storage_amount, storage_unit, name } fully populated.
+
+Or…
+
+Patch the frontend to re-lookup the container name dynamically after loading, if missing.
+
+⚡ Quick Example: Frontend Rehydration Fix
+Inside fetchContainerPlan() after loading the plan:
+
+javascript
+Copy
+Edit
+this.containersSelected = (data.plan || []).map(c => {
+  const match = this.allowedContainers.find(ac => ac.id === c.id);
+  return {
+    ...c,
+    name: match ? match.name : '',
+    capacity: match ? match.storage_amount : 0,
+    unit: match ? match.storage_unit : ''
+  };
+});
+Why this works:
+
+It backfills missing fields immediately after the API call using allowedContainers.
+
+No need to manually pick from the dropdown again.
+
+It keeps hydration clean even if API returns minimal data.
+
+⚙ Summary
+
+Problem	Solution
+Missing metadata (name/unit) on partial containers	After loading plan, map containersSelected to backfill names from allowedContainers
