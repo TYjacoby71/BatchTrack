@@ -15,6 +15,8 @@ def api_check_stock():
 
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
+        containers = data.get('containers', [])
+        flex_mode = data.get('flex_mode', False)
 
         if not recipe_id:
             return jsonify({'error': 'Invalid recipe ID'}), 400
@@ -23,11 +25,10 @@ def api_check_stock():
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
-        # Use the Universal Stock Check Service
-        full_check_results = universal_stock_check(recipe, scale)
-
+        results = check_stock(recipe_id, scale, containers)
         return jsonify({
-            'stock_check': full_check_results
+            'stock_check': results.get('stock_check', []),
+            'all_ok': results.get('all_ok', False)
         })
 
     except Exception as e:

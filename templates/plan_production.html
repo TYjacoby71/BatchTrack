@@ -192,6 +192,7 @@ function planProduction() {
           body: JSON.stringify({
             recipe_id: this.recipeId,
             scale: this.scale,
+            containers: this.containersSelected,
             flex_mode: this.flexMode
           })
         });
