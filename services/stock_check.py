@@ -1,6 +1,6 @@
 
 from models import db, Recipe, InventoryItem
-from services.unit_conversion_service import convert_units
+from services.unit_conversion import ConversionEngine
 
 def universal_stock_check(recipe, scale=1.0):
     """Universal Stock Check Service"""
