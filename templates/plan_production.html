@@ -206,19 +206,26 @@ function planProduction() {
     },
 
     checkStock() {
+      console.log('Checking stock with:', {
+        recipe_id: this.recipeId,
+        scale: this.scale
+      });
       fetch('/api/check-stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           recipe_id: this.recipeId, 
-          scale: this.scale,
-          flex_mode: this.flexMode 
+          scale: this.scale
         })
       })
         .then(res => res.json())
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
+        })
+        .catch(err => {
+          console.log('Error checking stock:', err);
+          this.stockChecked = false;
         });
     },
 
