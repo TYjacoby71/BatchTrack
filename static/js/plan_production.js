@@ -1,31 +1,6 @@
+// 📦 Clean and Correct plan_production.js for Plan Production Page
 
-// Plan Production Page JavaScript
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize all event listeners
-  initializeEventListeners();
-  
-  // Calculate initial projected yield
-  updateProjectedYield();
-});
-
-function initializeEventListeners() {
-  const scaleInput = document.getElementById('scale');
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-  }
-
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  if (checkStockBtn) {
-    checkStockBtn.addEventListener('click', checkStock);
-  }
-
-  const addContainerBtn = document.getElementById('addContainerBtn');
-  if (addContainerBtn) {
-    addContainerBtn.addEventListener('click', addContainerRow);
-  }
-}
-
+// ✅ Make updateProjectedYield available globally
 function updateProjectedYield() {
   const projectedYieldElement = document.getElementById('projectedYield');
   const scaleInput = document.getElementById('scale');
@@ -40,28 +15,59 @@ function updateProjectedYield() {
   projectedYieldElement.textContent = `${newYield} ${unit}`;
 }
 
+// ✅ Safe DOM Ready Loader
+function onReady(callback) {
+  if (document.readyState !== 'loading') callback();
+  else document.addEventListener('DOMContentLoaded', callback);
+}
+
+onReady(() => {
+  const scaleInput = document.getElementById('scale');
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
+
+  if (scaleInput) {
+    scaleInput.addEventListener('input', updateProjectedYield);
+    scaleInput.addEventListener('change', updateProjectedYield);
+    updateProjectedYield(); // Initial calculation
+  }
+
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  if (addContainerBtn) {
+    addContainerBtn.addEventListener('click', addContainerRow);
+  }
+
+  if (exportShoppingListBtn) {
+    exportShoppingListBtn.addEventListener('click', exportShoppingList);
+  }
+});
+
 function checkStock() {
   const recipeId = document.querySelector('input[name="recipe_id"]').value;
   const scale = parseFloat(document.getElementById('scale').value) || 1.0;
 
   fetch('/api/check-stock', {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
     },
     body: JSON.stringify({ recipe_id: recipeId, scale: scale })
   })
-  .then(response => response.json())
-  .then(data => {
-    renderStockResults(data.stock_check);
-    document.getElementById('ingredientStockSection').style.display = 'block';
-    document.getElementById('startBatchButton').style.display = data.all_ok ? 'block' : 'none';
-  })
-  .catch(error => {
-    console.error('Error checking stock:', error);
-    alert('Failed to check stock.');
-  });
+    .then(response => response.json())
+    .then(data => {
+      renderStockResults(data.stock_check);
+      document.getElementById('ingredientStockSection').style.display = 'block';
+      document.getElementById('startBatchButton').style.display = data.all_ok ? 'block' : 'none';
+    })
+    .catch(error => {
+      console.error('Error checking stock:', error);
+      alert('Failed to check stock.');
+    });
 }
 
 function renderStockResults(stockCheck) {
@@ -71,8 +77,8 @@ function renderStockResults(stockCheck) {
   let html = '<table class="table"><thead><tr><th>Item</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
 
   stockCheck.forEach(item => {
-    const statusClass = item.status === 'OK' ? 'text-success' : 
-                       item.status === 'LOW' ? 'text-warning' : 'text-danger';
+    const statusClass = item.status === 'OK' ? 'text-success' :
+                        item.status === 'LOW' ? 'text-warning' : 'text-danger';
     html += `
       <tr>
         <td>${item.name}</td>
@@ -84,6 +90,23 @@ function renderStockResults(stockCheck) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+function exportShoppingList() {
+  let csv = 'Type,Name,Needed,Available,Status\n';
+  const data = window.stockCheckData || [];
+
+  data.forEach(item => {
+    if (item.status !== 'OK') {
+      csv += `${item.type},${item.name},${item.needed},${item.available},${item.status}\n`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'shopping_list.csv';
+  link.click();
 }
 
 function addContainerRow() {
