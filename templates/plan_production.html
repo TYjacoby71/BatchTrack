@@ -54,10 +54,17 @@
         <small class="form-text text-muted" x-text="liveContainmentMessage"></small>
       </div>
 
-      <!-- Warnings -->
-      <div class="alert alert-warning mt-2" x-show="containmentIssue">
-        <span x-text="containmentIssue"></span>
+      <!-- Show leftover units -->
+      <div class="alert alert-info mt-2" x-show="leftoverMessage">
+        <span x-text="leftoverMessage"></span>
       </div>
+
+      <!-- Show serious container shortage -->
+      <div class="alert alert-warning mt-2" x-show="containerShortageWarning">
+        <span x-text="containerShortageWarning"></span>
+      </div>
+
+      <!-- Show if no containers selected -->
       <div class="alert alert-danger mt-2" x-show="containersSelected.length === 0">
         No containers selected. Please add containers or enable Auto-Fill.
       </div>
@@ -102,7 +109,8 @@ function planProduction() {
     containmentPercent: 0,
     remainingToContain: 0,
     flexMode: false,
-    containmentIssue: '',
+    leftoverMessage: '',
+    containerShortageWarning: '',
 
     init() {
       this.fetchContainerPlan();
@@ -133,17 +141,22 @@ function planProduction() {
           if (this.autoFill) {
             this.containersSelected = data.plan || [];
             this.updateProgress();
-            if (this.containmentPercent < 100) {
-              this.containmentIssue = 'Warning: Some containers will be partially filled.';
-              const projected = this.baseYield * this.scale;
-              const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
-              if (totalAvailable < projected) {
-                const smallestContainer = this.allowedContainers.reduce((min, c) => Math.min(min, c.storage_amount), Infinity) || 1;
-                const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
-                this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
-              }
+
+            const projected = this.baseYield * this.scale;
+            const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
+
+            if (totalAvailable < projected) {
+              const smallestContainer = this.allowedContainers.reduce((min, c) => Math.min(min, c.storage_amount), Infinity) || 1;
+              const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
+              this.containerShortageWarning = `You need ${missingUnits} more containers to make this batch.`;
             } else {
-              this.containmentIssue = '';
+              this.containerShortageWarning = '';
+            }
+
+            if (this.containmentPercent < 100) {
+              this.leftoverMessage = `There will be ${this.remainingToContain.toFixed(2)} ${this.unit} left uncontained.`;
+            } else {
+              this.leftoverMessage = '';
             }
           } else {
             this.updateProgress();
