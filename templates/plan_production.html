@@ -81,9 +81,8 @@
         <thead>
           <tr>
             <th>Ingredient</th>
-            <th>Required (Recipe Unit)</th>
-            <th>Available (Stock Unit)</th>
-            <th>Conversion</th>
+            <th>Required</th>
+            <th>Available</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -92,8 +91,7 @@
             <tr>
               <td x-text="item.ingredient"></td>
               <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
-              <td x-text="`${item.available} ${item.inventory_unit}`"></td>
-              <td x-text="`${item.recipe_unit} ➝ ${item.inventory_unit}`"></td>
+              <td x-text="`${item.available} ${item.unit}`"></td>
               <td>
                 <span x-show="item.status === 'OK'" class="text-success">✅</span>
                 <span x-show="item.status !== 'OK'" class="text-danger">❌</span>
