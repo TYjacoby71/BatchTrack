@@ -11,14 +11,30 @@
     <div class="col-md-6">
       <div class="form-group">
         <label for="scale">Scale:</label>
-        <input type="number" class="form-control" name="scale" id="scale" value="1" min="0.1" step="0.1" required>
+        <input type="number" class="form-control" name="scale" id="scale" value="1" min="0.1" step="0.1" required onchange="updateProjectedYield()">
       </div>
     </div>
     <div class="col-md-6">
       <div class="form-group">
         <label>Projected Yield:</label>
-        <div id="projectedYield" class="form-control-plaintext">
+        <div id="projectedYield" class="form-control-plaintext" data-base-yield="{{ recipe.predicted_yield if recipe else 0 }}">
           {{ recipe.predicted_yield if recipe else 0 }} {{ recipe.predicted_yield_unit if recipe else '' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="btn btn-primary mb-4" onclick="handleFormSubmit(event)">Check Stock</button>
+
+  <!-- Stock Check Results (Initially Hidden) -->
+  <div id="stockCheckSection" style="display: none;">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Stock Check Results</h5>
+      </div>
+      <div class="card-body">
+        <div id="stockCheckResults" class="table-responsive">
+          <!-- Stock check results will be inserted here -->
         </div>
       </div>
     </div>
@@ -83,11 +99,7 @@
     </div>
   </div>
 
-  <!-- Notes -->
-  <div class="form-group mb-4">
-    <label for="notes">Batch Notes:</label>
-    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional notes for this batch..."></textarea>
-  </div>
+  
 
   <!-- Action Buttons -->
   <div class="d-flex justify-content-between">

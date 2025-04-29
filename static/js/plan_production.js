@@ -1,8 +1,17 @@
 
 // Plan Production Page JavaScript
 
+function updateProjectedYield() {
+  const scale = parseFloat(document.getElementById('scale').value) || 1;
+  const projectedYieldElement = document.getElementById('projectedYield');
+  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+  const unit = projectedYieldElement.textContent.split(' ').pop();
+  projectedYieldElement.textContent = `${(baseYield * scale).toFixed(2)} ${unit}`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('planProductionForm');
+  updateProjectedYield(); // Initialize projected yield
   const flexModeToggle = document.getElementById('flexMode');
   const autoFillSection = document.getElementById('autoFillSection');
   const containerArea = document.getElementById('containerSelectionArea');
@@ -162,9 +171,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function handleFormSubmit(e) {
-    e.preventDefault();
-
-    const formData = new FormData(form);
+    if (e) e.preventDefault();
+    
+    const stockCheckSection = document.getElementById('stockCheckSection');
+    const formData = new FormData(document.getElementById('planProductionForm'));
     const containers = [];
     document.querySelectorAll('.container-row').forEach(row => {
       const select = row.querySelector('.container-select');
@@ -196,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
+      stockCheckSection.style.display = 'block';
       renderStockCheckResults(data.stock_check, data.all_ok);
     })
     .catch(err => {
