@@ -1,0 +1,160 @@
+<script>
+function planProduction() {
+  return {
+    recipeId: {{ recipe.id }},
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+    unit: '{{ recipe.predicted_yield_unit }}',
+    allowedContainers: [],
+    containersSelected: [],
+    autoFill: true,
+    scale: 1.0,
+    stockChecked: false,
+    stockCheckPassed: false,
+    containmentPercent: 0,
+    remainingToContain: 0,
+    flexMode: false,
+    containmentIssue: '',
+
+    init() {
+      this.fetchContainerPlan();
+    },
+
+    get totalContained() {
+      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
+    },
+
+    get liveContainmentMessage() {
+      if (this.containersSelected.length === 0) return '';
+      if (this.containmentPercent < 100) {
+        return `There will be ${this.remainingToContain.toFixed(2)} ${this.unit} left uncontained.`;
+      }
+      return 'Full containment achieved.';
+    },
+
+    get canStartBatch() {
+      const contained = this.flexMode || this.containmentPercent >= 100;
+      return contained && this.stockChecked && this.stockCheckPassed;
+    },
+
+    fetchContainerPlan() {
+      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
+        .then(res => res.json())
+        .then(data => {
+          this.allowedContainers = data.available || [];
+
+          if (this.autoFill) {
+            this.containersSelected = (data.plan || []).map(container => {
+              const match = data.available.find(c => c.id === container.id);
+              return {
+                ...container,
+                name: match?.name || 'Unknown Container',
+                capacity: match?.storage_amount || 0,
+                unit: match?.storage_unit || '',
+              };
+            });
+
+            this.updateProgress();
+
+            if (this.containmentPercent < 100) {
+              this.containmentIssue = 'Warning: Some containers will be partially filled.';
+              const projected = this.baseYield * this.scale;
+              const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
+              if (totalAvailable < projected) {
+                const smallestContainer = this.allowedContainers.reduce((min, c) => Math.min(min, c.storage_amount), Infinity) || 1;
+                const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
+                this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
+              }
+            } else {
+              this.containmentIssue = '';
+            }
+
+          } else {
+            this.updateProgress();
+          }
+        });
+    },
+
+    updateProgress() {
+      const projected = this.baseYield * this.scale;
+      const contained = this.totalContained;
+      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
+      this.remainingToContain = Math.max(projected - contained, 0);
+    },
+
+    updateContainer(index) {
+      const selectedId = this.containersSelected[index].id;
+      const match = this.allowedContainers.find(c => c.id == selectedId);
+      if (match) {
+        this.containersSelected[index].capacity = match.storage_amount;
+        this.containersSelected[index].unit = match.storage_unit;
+        this.containersSelected[index].name = match.name;
+        if (this.containersSelected[index].quantity > match.stock_qty) {
+          this.containersSelected[index].quantity = match.stock_qty;
+          alert('Cannot allocate more than available container stock.');
+        }
+      }
+      this.updateProgress();
+    },
+
+    removeContainer(index) {
+      this.containersSelected.splice(index, 1);
+      this.updateProgress();
+    },
+
+    manualAddContainer() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to add containers manually.');
+        return;
+      }
+      this.containersSelected.push({ id: '', name: '', capacity: 0, quantity: 1, unit: '' });
+      this.updateProgress();
+    },
+
+    blockIfAutoFill() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to edit containers manually.');
+      }
+    },
+
+    checkStockOrWarn() {
+      if (!this.flexMode && this.containmentPercent < 100) {
+        if (confirm(`You do not have enough containers selected, or there will be ${this.remainingToContain.toFixed(2)} ${this.unit} left over. Would you like to continue anyway?`)) {
+          this.flexMode = true;
+          this.checkStock();
+        }
+      } else {
+        this.checkStock();
+      }
+    },
+
+    checkStock() {
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: this.recipeId, scale: this.scale, flex_mode: this.flexMode })
+      })
+        .then(res => res.json())
+        .then(data => {
+          this.stockChecked = true;
+          this.stockCheckPassed = data.all_ok;
+        });
+    },
+
+    startBatch() {
+      fetch('/api/start-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: this.recipeId, scale: this.scale, flex_mode: this.flexMode, containers: this.containersSelected })
+      })
+        .then(res => res.json())
+        .then(data => {
+          alert('Batch started successfully.');
+        })
+        .catch(err => {
+          alert('Error starting batch. Please try again.');
+        });
+    }
+  }
+}
+</script>
+{% endblock %}
