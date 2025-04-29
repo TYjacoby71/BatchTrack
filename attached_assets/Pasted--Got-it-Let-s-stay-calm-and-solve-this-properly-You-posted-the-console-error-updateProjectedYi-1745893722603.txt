@@ -1,0 +1,97 @@
+✅ Got it.
+Let’s stay calm and solve this properly.
+
+You posted the console error:
+
+updateProjectedYield is not defined
+at HTMLInputElement.onchange...
+
+📋 Here’s Exactly What This Means:
+Your HTML <input id="scale" onchange="updateProjectedYield()"> expects a JavaScript function named updateProjectedYield().
+
+But the browser cannot find that function loaded globally at the time of the page rendering.
+
+Therefore it throws: updateProjectedYield is not defined.
+
+🔥 WHY It Happens:
+
+Cause	Reality
+Plan Production JS is loaded in <script>	✅ Good
+But function updateProjectedYield() is inside DOMContentLoaded event listener	❌ Bad for direct HTML inline onchange="" attributes
+So updateProjectedYield() is trapped inside the event listener, not visible to HTML.	❌
+✅ Inside JavaScript,
+functions inside document.addEventListener('DOMContentLoaded', function() { ... }) are NOT visible globally unless you manually export them.
+
+📣 In Simple Words:
+The browser loads your page
+
+Sees onchange="updateProjectedYield()" attached to input
+
+Looks around in global JS context
+
+Doesn't find updateProjectedYield because it's locked inside DOMContentLoaded
+
+Throws error ❌
+
+🛠 How to FIX it properly:
+✅ You MUST move updateProjectedYield() function OUTSIDE the DOMContentLoaded event block.
+
+✅ It must be a standalone function, like this:
+
+Correct (at the top of your plan_production.js):
+javascript
+Copy
+Edit
+function updateProjectedYield() {
+  const projectedYieldElement = document.getElementById('projectedYield');
+  const scaleInput = document.getElementById('scale');
+
+  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+  const scale = parseFloat(scaleInput.value) || 1;
+  const unit = projectedYieldElement.dataset.baseUnit || '';
+
+  const newYield = (baseYield * scale).toFixed(2);
+  projectedYieldElement.innerText = `${newYield} ${unit}`;
+}
+
+// Then below, inside your DOMContentLoaded:
+document.addEventListener('DOMContentLoaded', function() {
+  // Other logic here (add event listeners, etc)
+});
+✅ This way the HTML can find updateProjectedYield() at the time it renders.
+✅ No more console error.
+
+📋 Your Immediate Copy-Paste Fix:
+
+Step	What to Do
+1	Open your /static/js/plan_production.js.
+2	Move the updateProjectedYield() function OUTSIDE of DOMContentLoaded.
+3	Make sure updateProjectedYield() is declared BEFORE the DOMContentLoaded block starts.
+4	Save and Reload your page.
+✅ After you do that:
+
+Expected Behavior	Status
+No more updateProjectedYield not defined error	✅
+Changing Scale input live-updates Projected Yield	✅
+Stock check, container fill, flex mode logic still works	✅
+🧠 Why Moving It Works:
+Because now the function is in the global scope at the time the HTML <input onchange="updateProjectedYield()"> is parsed by the browser.
+
+🎯 SUPER SHORT FINAL ANSWER:
+✅ Move function updateProjectedYield() outside your DOMContentLoaded.
+✅ Problem fixed instantly.
+
+📣 Would you like me next to:
+✅ Generate the full corrected plan_production.js for you already patched clean? (easy to paste)
+✅ (Optional) Show how to avoid using inline onchange="" at all and wire events purely from JS? (even cleaner!)
+
+👉
+Just say:
+
+"Give me corrected JS clean"
+
+or
+
+"Show full JS event binding"
+
+🚀 You're very close now! Standing by. 🔥
