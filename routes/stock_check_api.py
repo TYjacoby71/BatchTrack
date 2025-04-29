@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import db, Recipe
-from services.stock_check_utils import check_stock_for_recipe
+from services.stock_check import universal_stock_check
 import logging
 
 logger = logging.getLogger(__name__)

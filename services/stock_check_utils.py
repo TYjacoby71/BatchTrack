@@ -1,5 +1,5 @@
-from app.models import InventoryItem, Container
-from app.utils import convert_units
+from models import InventoryItem, Recipe
+from services.unit_conversion import ConversionEngine
 
 
 def get_available_containers(recipe_yield, recipe_unit, scale=1.0):
