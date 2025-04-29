@@ -12,7 +12,7 @@ function updateProjectedYield() {
   const unit = projectedYieldElement.dataset.baseUnit || '';
 
   const newYield = (baseYield * scale).toFixed(2);
-  projectedYieldElement.innerText = `${newYield} ${unit}`;
+  projectedYieldElement.textContent = `${newYield} ${unit}`;
 }
 
 function checkStock() {
@@ -39,6 +39,24 @@ function checkStock() {
   });
 }
 
+// Event Listeners 
+document.addEventListener('DOMContentLoaded', function() {
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('input', updateProjectedYield);
+    scaleInput.addEventListener('change', updateProjectedYield);
+  }
+
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  // Initial calculation
+  updateProjectedYield();
+});
+
+// Rest of your existing functions...
 function renderStockResults(stockCheck) {
   const container = document.getElementById('ingredientStockResults');
   if (!container) return;
@@ -139,31 +157,3 @@ function updateContainmentProgress() {
     }
   }
 }
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  // Set up event listeners
-  const scaleInput = document.getElementById('scale');
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  const addContainerBtn = document.getElementById('addContainerBtn');
-  const flexModeToggle = document.getElementById('flexMode');
-
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-  }
-
-  if (checkStockBtn) {
-    checkStockBtn.addEventListener('click', checkStock);
-  }
-
-  if (addContainerBtn) {
-    addContainerBtn.addEventListener('click', addContainerRow);
-  }
-
-  if (flexModeToggle) {
-    flexModeToggle.addEventListener('change', updateContainmentProgress);
-  }
-
-  // Initial calculation
-  updateProjectedYield();
-});
