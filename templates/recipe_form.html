@@ -224,13 +224,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const containerSelect = document.getElementById('allowed_containers');
                 if (containerSelect) {
+                    // Get currently selected values
+                    const selectedValues = Array.from(containerSelect.selectedOptions).map(opt => opt.value);
+                    
+                    // Add new option
                     const option = new Option(
                         `${data.name} (${data.storage_amount} ${data.storage_unit})`,
                         data.id,
                         false,
-                        true
+                        false
                     );
                     containerSelect.add(option);
+                    
+                    // Restore previous selections and select new option
+                    selectedValues.push(data.id.toString());
+                    selectedValues.forEach(value => {
+                        const opt = containerSelect.querySelector(`option[value="${value}"]`);
+                        if (opt) opt.selected = true;
+                    });
                 }
 
                 const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
