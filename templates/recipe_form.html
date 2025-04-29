@@ -54,10 +54,9 @@
         <label for="predicted_yield_unit">Projected Yield Unit:</label>
         <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
             <option value="">Select Unit</option>
-            <option value="oz" {% if recipe and recipe.predicted_yield_unit == 'oz' %}selected{% endif %}>Ounces (oz)</option>
-            <option value="ml" {% if recipe and recipe.predicted_yield_unit == 'ml' %}selected{% endif %}>Milliliters (ml)</option>
-            <option value="g" {% if recipe and recipe.predicted_yield_unit == 'g' %}selected{% endif %}>Grams (g)</option>
-            <option value="count" {% if recipe and recipe.predicted_yield_unit == 'count' %}selected{% endif %}>Count (units)</option>
+            {% for unit in inventory_units %}
+            <option value="{{ unit.name }}" {% if recipe and recipe.predicted_yield_unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+            {% endfor %}
         </select>
     </div>
 
