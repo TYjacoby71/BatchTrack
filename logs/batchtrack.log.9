@@ -1,10 +1,10 @@
-2025-04-28 21:01:27,960 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-28 19:51:18,751 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: recipe.predicted_yield
+sqlite3.OperationalError: no such column: inventory_item.storage_amount
 
 The above exception was the direct cause of the following exception:
 
@@ -24,9 +24,12 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/app_routes.py", line 14, in dashboard
-    recipes = Recipe.query.all()
-              ^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/app_routes.py", line 16, in dashboard
+    low_stock_items = get_low_stock_ingredients()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/services/inventory_alerts.py", line 11, in get_low_stock_ingredients
+    ).all()
+      ^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
     return self._iter().all()  # type: ignore
            ^^^^^^^^^^^^
@@ -62,8 +65,22 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: recipe.predicted_yield
-[SQL: SELECT recipe.id AS recipe_id, recipe.name AS recipe_name, recipe.instructions AS recipe_instructions, recipe.label_prefix AS recipe_label_prefix, recipe.qr_image AS recipe_qr_image, recipe.parent_id AS recipe_parent_id, recipe.is_locked AS recipe_is_locked, recipe.predicted_yield AS recipe_predicted_yield, recipe.predicted_yield_unit AS recipe_predicted_yield_unit, recipe.requires_containers AS recipe_requires_containers, recipe.allowed_containers AS recipe_allowed_containers 
-FROM recipe]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_item.storage_amount
+[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.type AS inventory_item_type, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.perishable AS inventory_item_perishable, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.storage_amount AS inventory_item_storage_amount, inventory_item.storage_unit AS inventory_item_storage_unit, inventory_item.category_id AS inventory_item_category_id 
+FROM inventory_item 
+WHERE inventory_item.low_stock_threshold > ? AND inventory_item.quantity <= inventory_item.low_stock_threshold]
+[parameters: (0,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-04-28 21:02:13,814 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:53:45,492 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:53:49,125 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:53:57,694 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:54:02,600 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:54:04,743 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:54:06,835 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:54:12,491 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 19:55:35,801 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 20:09:28,485 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 20:13:45,674 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 20:43:43,461 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 20:54:30,821 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 21:01:27,322 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
