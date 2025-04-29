@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -30,14 +29,14 @@
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" :disabled="autoFill" @change="() => updateContainer(index)">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
           <input type="number" class="form-control" min="1" x-model.number="container.quantity" :disabled="autoFill" @input="updateProgress">
-          <button type="button" class="btn btn-danger btn-sm" @click="() => removeContainer(index)" :disabled="autoFill">×</button>
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">×</button>
         </div>
       </template>
 
@@ -84,7 +83,7 @@ function planProduction() {
     recipeId: {{ recipe.id }},
     baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
     unit: '{{ recipe.predicted_yield_unit }}',
-    recipe: {{ recipe|tojson }},
+    recipe: {{ recipe.to_dict()|tojson }}, // Assuming Recipe has a to_dict method
     allowedContainers: [],
     containersSelected: [],
     autoFill: true,
