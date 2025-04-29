@@ -1,0 +1,129 @@
+✅ Perfect —
+Now let's finish Step 3: Correct /api/check-stock backend route.
+
+🛠 Step 3: /routes/stock_api.py
+(this is your Flask API that the Plan Production page calls when you click "Check Stock")
+
+Here’s the fully corrected, clean version:
+
+python
+Copy
+Edit
+from flask import Blueprint, request, jsonify
+from models import db, Recipe
+from services.stock_check import check_ingredient_stock, check_container_stock
+import logging
+
+logger = logging.getLogger(__name__)
+stock_api_bp = Blueprint('stock_api', __name__)
+
+@stock_api_bp.route('/api/check-stock', methods=['POST'])
+def api_check_stock():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        recipe_id = data.get('recipe_id')
+        if not recipe_id or not isinstance(recipe_id, int):
+            return jsonify({'error': 'Invalid or missing recipe ID'}), 400
+
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        scale = float(data.get('scale', 1.0))
+        if scale <= 0:
+            return jsonify({'error': 'Invalid scale value'}), 400
+
+        # Perform Stock Check Logic
+        ingredient_results = check_ingredient_stock(recipe, scale)
+        container_results = check_container_stock(recipe, scale)
+
+        full_check = ingredient_results + container_results
+
+        return jsonify({
+            'stock_check': full_check
+        })
+
+    except Exception as e:
+        logger.exception("Error in /api/check-stock")
+        return jsonify({'error': 'Internal Server Error'}), 500
+📋 Quick Explanation of This Corrected API:
+
+What It Does	How It Works
+Verifies POSTed data has recipe_id and scale	✅
+Grabs the recipe from the database	✅
+Scales the ingredients and containers	✅
+Calls helper functions to check ingredients and containers separately	✅
+Combines results into one list: [{type, name, needed, available, status (OK/LOW/NEEDED)}]	✅
+Returns results cleanly to frontend	✅
+Handles missing data or bad requests properly	✅
+Logs unexpected errors	✅
+📦 You Also Need:
+✅ Supporting helper functions in /services/stock_check.py
+
+Example very simple helper template:
+
+python
+Copy
+Edit
+def check_ingredient_stock(recipe, scale):
+    results = []
+    for ingredient in recipe.ingredients:
+        needed = ingredient.amount * scale
+        available = ingredient.inventory_quantity
+        if available >= needed:
+            status = "OK"
+        elif available > 0:
+            status = "LOW"
+        else:
+            status = "NEEDED"
+        results.append({
+            "type": "ingredient",
+            "name": ingredient.name,
+            "needed": round(needed, 2),
+            "available": round(available, 2),
+            "status": status
+        })
+    return results
+
+def check_container_stock(recipe, scale):
+    results = []
+    if not recipe.allowed_containers:
+        return results
+    for container in recipe.allowed_containers:
+        needed = scale  # Simplified — or match container fill if per yield
+        available = container.stock_quantity
+        if available >= needed:
+            status = "OK"
+        elif available > 0:
+            status = "LOW"
+        else:
+            status = "NEEDED"
+        results.append({
+            "type": "container",
+            "name": container.name,
+            "needed": int(needed),
+            "available": int(available),
+            "status": status
+        })
+    return results
+✅ Full Step 3 Copy-Paste Instructions:
+Create or update /routes/stock_api.py with the route I posted above.
+
+Make sure you have a /services/stock_check.py file with helper functions.
+
+Link blueprint properly in your app.py:
+
+python
+Copy
+Edit
+from routes.stock_api import stock_api_bp
+app.register_blueprint(stock_api_bp)
+✅ Summary So Far:
+
+Step	Status
+Step 1: Correct plan_production.html (page)	✅
+Step 2: Correct plan_production.js (frontend logic)	✅
+Step 3: Correct stock_api.py (backend logic)	_
