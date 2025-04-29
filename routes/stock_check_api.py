@@ -25,9 +25,10 @@ def api_check_stock():
 
         formatted_report = []
         for r in report:
+            # Use original recipe amount * scale for needed
             formatted_report.append({
                 "ingredient": getattr(r["ingredient"], "name", str(r["ingredient"])),
-                "needed": round(r.get("needed", 0), 2),
+                "needed": round(r.get("original_amount", 0) * scale, 2),
                 "recipe_unit": r.get("recipe_unit") or "",
                 "available": round(r.get("available", 0), 2),
                 "inventory_unit": r.get("unit", ""),
