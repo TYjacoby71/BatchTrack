@@ -14,14 +14,20 @@
   <!-- Flex/Strict Toggle -->
   <div class="form-group">
     <label for="flexMode">Flexible Mode?</label>
-    <input type="checkbox" id="flexMode" name="flex_mode">
+    <div class="toggle-switch">
+      <input type="checkbox" id="flexMode" name="flex_mode">
+      <label class="toggle-label" for="flexMode"></label>
+    </div>
     <small class="form-text text-muted">If off, strict container rules will apply.</small>
   </div>
 
-  <!-- Auto-fill Toggle (only if strict mode is on) -->
-  <div class="form-group" id="autoFillSection" style="display:none;">
+  <!-- Auto-fill Toggle -->
+  <div class="form-group" id="autoFillSection">
     <label for="autoFill">Auto-Fill Containers?</label>
-    <input type="checkbox" id="autoFill" name="auto_fill" checked>
+    <div class="toggle-switch">
+      <input type="checkbox" id="autoFill" name="auto_fill" checked>
+      <label class="toggle-label" for="autoFill"></label>
+    </div>
     <small class="form-text text-muted">Automatically pick best matching containers if available.</small>
   </div>
 

@@ -22,8 +22,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function handleFlexModeToggle() {
     autoFillSection.style.display = !flexModeToggle.checked ? 'block' : 'none';
+    if (!flexModeToggle.checked && document.getElementById('autoFill').checked) {
+      autoFillContainers();
+    }
     updateContainmentProgress();
   }
+
+  function autoFillContainers() {
+    const containerArea = document.getElementById('containerSelectionArea');
+    if (!containerArea) return;
+    
+    containerArea.innerHTML = ''; // Clear existing containers
+    
+    // Get available containers
+    const containerSelect = document.querySelector('.container-select');
+    if (!containerSelect) {
+      addContainerRow(); // Add first row if none exists
+      return;
+    }
+
+    const options = Array.from(containerSelect.options);
+    if (options.length > 1) { // Skip the first "Select Container" option
+      addContainerRow();
+      const firstRow = document.querySelector('.container-row');
+      if (firstRow) {
+        const select = firstRow.querySelector('.container-select');
+        const quantity = firstRow.querySelector('.container-quantity');
+        if (select && quantity) {
+          select.selectedIndex = 1; // Select first real container
+          quantity.value = 1;
+        }
+      }
+    }
+    updateContainmentProgress();
+  }
+
+  // Call autoFill on page load if enabled
+  document.addEventListener('DOMContentLoaded', function() {
+    const autoFill = document.getElementById('autoFill');
+    const flexMode = document.getElementById('flexMode');
+    if (autoFill && autoFill.checked && !flexMode.checked) {
+      autoFillContainers();
+    }
+  });
 
   function updateContainmentProgress() {
     if (!progressBar) return;
