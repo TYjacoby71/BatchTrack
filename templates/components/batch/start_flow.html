@@ -5,7 +5,29 @@
        currentStep: 'recipe',
        recipeId: '',
        scale: 1.0,
-       stockResults: []
+       stockResults: null,
+       
+       async checkStock() {
+         try {
+           const response = await fetch('/api/check-stock', {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+             },
+             body: JSON.stringify({
+               recipe_id: this.recipeId,
+               scale: this.scale
+             })
+           });
+           const data = await response.json();
+           if (data.error) throw new Error(data.error);
+           this.stockResults = data.stock_check;
+           this.currentStep = 'stock';
+         } catch (error) {
+           alert('Error checking stock: ' + error.message);
+         }
+       }
      }">
   <div class="start-flow-header">
     <h3>Start New Batch</h3>
@@ -35,8 +57,7 @@
              min="0.1" 
              step="0.1">
       <button class="btn btn-primary mt-2" 
-              @click="currentStep = 'stock'; 
-                     $dispatch('check-stock', {recipeId, scale})">
+              @click="checkStock()">
         Check Stock
       </button>
     </div>
@@ -44,7 +65,7 @@
 
   <div class="step-container" x-show="currentStep === 'stock'">
     <div id="stockCheckResults" class="mt-4">
-      <template x-if="stockResults.length > 0">
+      <template x-if="stockResults">
         <div>
           <h4>Stock Check Results</h4>
           <table class="table">
