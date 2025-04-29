@@ -1,0 +1,76 @@
+Thanks for the screenshot — the error here confirms a critical Alpine.js issue:
+
+⚠️ Root Error:
+javascript
+Copy
+Edit
+Alpine Expression Error: Cannot read properties of null (reading 'value')
+This means Alpine.js is trying to bind or read from an element (likely an input or select) that no longer exists at the time it's evaluating the expression.
+
+🔍 Immediate Culprit:
+html
+Copy
+Edit
+<button type="button" class="btn btn-warning" @click="checkStockOrWarn" :fdprocessid="...">
+The @click="checkStockOrWarn" is Alpine-driven, but something in checkStockOrWarn() (probably grabbing a .value) is accessing a DOM node that doesn't exist or isn’t yet rendered.
+
+💣 Likely Cause:
+You're calling something like:
+
+js
+Copy
+Edit
+document.getElementById("scale").value
+But Alpine rendered the component before the #scale input finished mounting (or it's in a conditional block and wasn’t present in the DOM yet).
+
+✅ Fix Strategy:
+You must add guard clauses in your Alpine expression or JS function to prevent null access:
+
+js
+Copy
+Edit
+function checkStockOrWarn() {
+  const scaleInput = document.getElementById('scale');
+  if (!scaleInput) {
+    console.error('Scale input not found');
+    return;
+  }
+  const scale = parseFloat(scaleInput.value);
+  ...
+}
+🔄 Alternative: Fully Replace Alpine in This Flow
+If Alpine is only used in this part for simple conditionals or input grabbing, you're better off switching to vanilla JS and directly attaching onclick="checkStockOrWarn()" to the button. Alpine introduces race conditions here that aren’t helpful.
+
+✅ Confirmed Again:
+As seen in the logs:
+
+js
+Copy
+Edit
+Checking stock with:  Object { recipe_id: 1, scale: 1, flex_mode: false }
+You're still not sending any container data, which confirms the earlier point — container info is not in the stock check call.
+
+🧠 Suggestion if You Want Containers Included:
+Extend your fetch like this:
+
+js
+Copy
+Edit
+const containers = [...document.querySelectorAll('.container-row')].map(row => {
+  const id = row.querySelector('.container-id')?.value;
+  const quantity = parseFloat(row.querySelector('.container-quantity')?.value);
+  return { id, quantity };
+});
+
+fetch('/check-stock', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    recipe_id: selectedRecipeId,
+    scale: scaleValue,
+    containers,
+    flex_mode: false
+  })
+})
+…and modify your Python route to read and optionally validate that container stock too.
+

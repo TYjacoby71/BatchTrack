@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% block content %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div x-data="planProduction()" x-init="init()" class="container">
   <h2>Plan Production: {{ recipe.name }}</h2>
 
@@ -194,7 +195,7 @@ function planProduction() {
     },
 
     checkStockOrWarn() {
-      if (!this.flexMode && this.containmentPercent < 100) {
+      if (!this.flexMode && this.containmentPercent < 100 && this.containersSelected.length > 0) {
         if (confirm(`You do not have enough containers selected, or there will be ${this.remainingToContain.toFixed(2)} ${this.unit} left over. Would you like to continue anyway?`)) {
           this.flexMode = true;
           this.checkStock();
