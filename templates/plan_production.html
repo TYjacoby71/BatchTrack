@@ -164,7 +164,7 @@ function planProduction() {
         .then(data => {
           // Update allowedContainers first
           this.allowedContainers = data.available || [];
-          
+
           // Update containersSelected in autoFill mode
           if (this.autoFill) {
             this.containersSelected = (data.plan || []).map(container => ({
@@ -179,7 +179,7 @@ function planProduction() {
               this.updateContainer(index);
             });
           }
-          
+
           this.updateProgress();
           this.evaluateContainment();
         });
@@ -208,17 +208,28 @@ function planProduction() {
     },
 
     updateContainer(index) {
-      const selectedId = this.containersSelected[index].id;
+      const container = this.containersSelected[index];
+      const selectedId = container.id;
       const match = this.allowedContainers.find(c => c.id == selectedId);
-      if (match) {
-        this.containersSelected[index].capacity = match.storage_amount;
-        this.containersSelected[index].unit = match.storage_unit;
-        this.containersSelected[index].name = match.name;
-        if (this.containersSelected[index].quantity > match.stock_qty) {
-          this.containersSelected[index].quantity = match.stock_qty;
-          alert('Cannot allocate more than available container stock.');
-        }
+
+      if (!match) return;
+
+      // Calculate remaining stock after accounting for existing selections
+      const usedQuantity = this.containersSelected.reduce((sum, c, i) => 
+        i !== index && c.id === selectedId ? sum + c.quantity : sum, 0);
+      const remainingStock = match.stock_qty - usedQuantity;
+
+      // If no stock remains, set quantity to 0
+      if (remainingStock <= 0) {
+        container.quantity = 0;
+        this.containmentIssue = `No more ${match.name}s available (all allocated)`;
       }
+
+      // Update container details
+      container.capacity = match.storage_amount;
+      container.unit = match.storage_unit;
+      container.name = match.name;
+
       this.updateProgress();
       this.evaluateContainment();
     },
