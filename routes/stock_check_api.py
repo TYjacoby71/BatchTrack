@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from models import db, Recipe
 from services.stock_check import universal_stock_check
@@ -10,39 +9,48 @@ stock_api_bp = Blueprint('stock_api', __name__)
 @stock_api_bp.route('/api/check-stock', methods=['POST'])
 def api_check_stock():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        logger.debug(f"Stock check request data: {data}")
-
         recipe_id = data.get('recipe_id')
+        scale = float(data.get('scale', 1.0))
+
         if not recipe_id:
-            return jsonify({'error': 'Recipe ID required'}), 400
-
-        try:
-            scale = float(data.get('scale', 1.0))
-            if scale <= 0:
-                return jsonify({'error': 'Scale must be greater than 0'}), 400
-        except (TypeError, ValueError):
-            return jsonify({'error': 'Invalid scale value'}), 400
-
-        flex_mode = data.get('flex_mode', False)
+            return jsonify({'error': 'Invalid recipe ID'}), 400
 
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
-        from services.stock_check_utils import check_stock
-        results = check_stock(recipe_id, scale, [])
+        # Only check ingredients, skip container validation
+        check_results = []
+        all_ok = True
         
-        if not isinstance(results, dict):
-            logger.error(f"Invalid stock check results format: {results}")
-            return jsonify({'error': 'Invalid stock check results'}), 500
+        for ingredient in recipe.ingredients:
+            required_amount = ingredient.amount * scale
+            available = ingredient.inventory_item.quantity if ingredient.inventory_item else 0
+            
+            if available >= required_amount:
+                status = "OK"
+            elif available > 0:
+                status = "LOW"
+                all_ok = False
+            else:
+                status = "NEEDED"
+                all_ok = False
+                
+            check_results.append({
+                "name": ingredient.name,
+                "needed": required_amount,
+                "available": available,
+                "unit": ingredient.unit,
+                "status": status
+            })
 
         return jsonify({
-            'stock_check': results['stock_check'],
-            'all_ok': results['all_ok']
+            'stock_check': check_results,
+            'all_ok': all_ok
         })
 
     except Exception as e:

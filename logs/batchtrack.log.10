@@ -1,4 +1,4 @@
-2025-04-28 21:45:33,483 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-04-28 21:36:01,700 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -66,4 +66,4 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: reci
 [SQL: SELECT recipe.id AS recipe_id, recipe.name AS recipe_name, recipe.instructions AS recipe_instructions, recipe.label_prefix AS recipe_label_prefix, recipe.qr_image AS recipe_qr_image, recipe.parent_id AS recipe_parent_id, recipe.is_locked AS recipe_is_locked, recipe.predicted_yield AS recipe_predicted_yield, recipe.predicted_yield_unit AS recipe_predicted_yield_unit, recipe.requires_containers AS recipe_requires_containers, recipe.allowed_containers AS recipe_allowed_containers 
 FROM recipe]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-04-28 21:50:39,316 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-04-28 21:45:32,535 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]

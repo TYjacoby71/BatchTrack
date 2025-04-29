@@ -64,18 +64,6 @@ class RecipeIngredient(db.Model):
 
 class Recipe(db.Model):
     __tablename__ = 'recipe'
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'instructions': self.instructions,
-            'label_prefix': self.label_prefix,
-            'predicted_yield': self.predicted_yield,
-            'predicted_yield_unit': self.predicted_yield_unit,
-            'requires_containers': self.requires_containers,
-            'allowed_containers': self.allowed_containers
-        }
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     instructions = db.Column(db.Text)

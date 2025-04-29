@@ -1,0 +1,91 @@
+Alright — I diagnosed the situation based on everything you uploaded and the 400 error you're getting on the Plan Production stock check button. Here's the clear analysis:
+
+📋 Diagnosis of 400 Error in Plan Production Stock Check:
+Root Problem:
+The Plan Production page's "Check Stock" button is submitting a fetch/post without properly including the required recipe_id in the request body.
+
+The API expects recipe_id (and usually also scale) in a JSON payload.
+
+If recipe_id is missing or not an integer, the backend immediately returns 400 Bad Request.
+
+In your current file:
+
+The HTML/JS side is building the stock check request but it doesn't correctly grab the selected recipe's ID.
+
+Instead, it's probably trying to send either:
+
+An undefined recipe_id
+
+An empty string
+
+A value in the wrong place (e.g., just URL parameter, not JSON body)
+
+The server-side endpoint is strict:
+
+python
+Copy
+Edit
+recipe_id = data.get('recipe_id')
+if not recipe_id or not isinstance(recipe_id, int):
+    return jsonify({'error': 'Invalid or missing recipe ID'}), 400
+✅ Correct Plan Production Check Stock Flow (Summary):
+When user clicks "Check Stock":
+
+Collect:
+
+Selected recipe_id
+
+Inputted scale
+
+Send a POST to /check-stock with JSON:
+
+json
+Copy
+Edit
+{
+  "recipe_id": 1,
+  "scale": 2
+}
+🛠️ Exact Fix Needed:
+In your plan production page JavaScript, you need something like:
+
+javascript
+Copy
+Edit
+function checkStock() {
+  const recipeId = document.getElementById('recipe').value;
+  const scale = document.getElementById('scale').value || 1;
+
+  fetch('/check-stock', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      recipe_id: parseInt(recipeId),
+      scale: parseFloat(scale)
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(data);
+    // Update UI based on stock check result
+  })
+  .catch(error => {
+    console.error('Error checking stock:', error);
+  });
+}
+Notes:
+
+recipe_id must be an integer.
+
+scale should be a float (even if you default it to 1.0).
+
+The fetch body must be JSON-encoded properly.
+
+The /check-stock route expects a POST, not GET.
+
+📢 WHY IT'S HAPPENING NOW:
+You upgraded the architecture so that stock checking moved away from simple URL-based params (/check-stock/recipe_name) into JSON body posts to /check-stock.
+But the frontend (Plan Production page) is still acting like it’s using the old method — it’s missing the body payload.
+That's why you're getting a 400 immediately — because the API requires the ID now.

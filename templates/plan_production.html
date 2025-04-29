@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -6,7 +7,7 @@
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="debouncedRefresh">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -24,18 +25,18 @@
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between">
       <h5>Selected Containers</h5>
-      <button type="button" class="btn btn-outline-primary btn-sm" @click="addContainer" :disabled="autoFill">Add Container</button>
+      <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
     </div>
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" @click="blockIfAutoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
-          <input type="number" class="form-control" min="1" x-model.number="container.quantity" :disabled="autoFill" @input="updateProgress">
+          <input type="number" class="form-control" min="1" x-model="container.quantity" :disabled="autoFill" @click="blockIfAutoFill" @input="updateProgress">
           <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">×</button>
         </div>
       </template>
@@ -43,14 +44,14 @@
       <div class="mt-3">
         <label>Containment Progress:</label>
         <div class="progress" style="height: 20px;">
-          <div class="progress-bar" role="progressbar" 
-               :style="'width: ' + containmentPercent + '%'" 
-               x-text="containmentPercent + '%'"></div>
+          <div class="progress-bar" role="progressbar" :style="'width: ' + containmentPercent + '%'" x-text="containmentPercent + '%'"></div>
         </div>
         <small class="form-text text-muted" x-text="liveContainmentMessage"></small>
       </div>
 
-      <div class="alert alert-warning mt-2" x-show="containmentIssue" x-text="containmentIssue"></div>
+      <div class="alert alert-warning mt-2" x-show="containmentIssue">
+        <span x-text="containmentIssue"></span>
+      </div>
 
       <div class="alert alert-danger mt-2" x-show="containersSelected.length === 0">
         No containers selected. Please add containers or enable Auto-Fill.
@@ -83,7 +84,6 @@ function planProduction() {
     recipeId: {{ recipe.id }},
     baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
     unit: '{{ recipe.predicted_yield_unit }}',
-    recipe: {{ recipe.to_dict()|tojson }},
     allowedContainers: [],
     containersSelected: [],
     autoFill: true,
@@ -95,37 +95,12 @@ function planProduction() {
     flexMode: false,
     containmentIssue: '',
 
-    debounceTimer: null,
-    isLoading: false,
-    currentRequest: null,
-    lastValue: null,
-
-    async debouncedRefresh() {
-      const currentValue = this.scale;
-      this.lastValue = currentValue;
-
-      if (this.debounceTimer) clearTimeout(this.debounceTimer);
-
-      this.debounceTimer = setTimeout(async () => {
-        if (this.lastValue === currentValue) {
-          if (this.currentRequest) {
-            this.currentRequest.abort();
-          }
-          await this.fetchContainerPlan();
-        }
-      }, 100);
-    },
-
     init() {
       this.fetchContainerPlan();
     },
 
-    updateProgress() {
-      const projected = this.baseYield * this.scale;
-      const contained = this.containersSelected.reduce((sum, c) => 
-        sum + (Number(c.capacity || 0) * Number(c.quantity || 0)), 0);
-      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
-      this.remainingToContain = Math.max(projected - contained, 0);
+    get totalContained() {
+      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0) || 0;
     },
 
     get liveContainmentMessage() {
@@ -137,135 +112,141 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      return (this.flexMode || this.containmentPercent >= 100) && 
-             this.stockChecked && this.stockCheckPassed;
+      const contained = this.flexMode || this.containmentPercent >= 100;
+      return contained && this.stockChecked && this.stockCheckPassed;
     },
 
-    addContainer() {
-      if (this.autoFill) return;
-      this.containersSelected.push({
-        id: '',
-        name: '',
-        capacity: 0,
-        quantity: 1,
-        unit: ''
-      });
+    fetchContainerPlan() {
+      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
+        .then(res => res.json())
+        .then(data => {
+          this.allowedContainers = data.available || [];
+          if (this.autoFill) {
+            this.containersSelected = (data.plan || []).map(container => {
+              const match = this.allowedContainers.find(c => c.id === container.id);
+              return {
+                id: container.id,
+                quantity: container.quantity,
+                name: match?.name || '',
+                capacity: match?.storage_amount || 0,
+                unit: match?.storage_unit || ''
+              };
+            });
+
+            this.updateProgress();
+
+            if (this.containmentPercent < 100) {
+              this.containmentIssue = 'Warning: Some containers will be partially filled.';
+              const projected = this.baseYield * this.scale;
+              const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
+              if (totalAvailable < projected) {
+                const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
+                const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
+                this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
+              }
+            } else {
+              this.containmentIssue = '';
+            }
+          }
+          this.updateProgress();
+        });
+    },
+
+    updateProgress() {
+      const projected = this.baseYield * this.scale;
+      const contained = this.totalContained;
+      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
+      this.remainingToContain = Math.max(projected - contained, 0);
+    },
+
+    updateContainer(index) {
+      const selectedId = this.containersSelected[index].id;
+      const match = this.allowedContainers.find(c => c.id === selectedId);
+      if (match) {
+        this.containersSelected[index].capacity = match.storage_amount;
+        this.containersSelected[index].unit = match.storage_unit;
+        this.containersSelected[index].name = match.name;
+        if (this.containersSelected[index].quantity > match.stock_qty) {
+          this.containersSelected[index].quantity = match.stock_qty;
+          alert('Cannot allocate more than available container stock.');
+        }
+      }
       this.updateProgress();
     },
 
     removeContainer(index) {
-      if (this.autoFill) return;
       this.containersSelected.splice(index, 1);
       this.updateProgress();
     },
 
-    updateContainer(index) {
-      const container = this.containersSelected[index];
-      const match = this.allowedContainers.find(c => c.id === container.id);
-      if (match) {
-        container.capacity = match.storage_amount;
-        container.unit = match.storage_unit;
-        container.name = match.name;
-        if (container.quantity > match.stock_qty) {
-          container.quantity = match.stock_qty;
-        }
+    manualAddContainer() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to add containers manually.');
+        return;
       }
+      this.containersSelected.push({ id: '', name: '', capacity: 0, quantity: 1, unit: '' });
       this.updateProgress();
-      this.debouncedRefresh();
     },
 
-    async fetchContainerPlan() {
-      this.currentRequest = new AbortController();
-      if (this.isLoading) return;
-      this.isLoading = true;
-      try {
-        const response = await fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`, { signal: this.currentRequest.signal });
-        const data = await response.json();
-        this.allowedContainers = data.available;
-        if (this.autoFill) {
-          this.containersSelected = data.plan;
-        }
-        console.log('Allowed Containers:', this.allowedContainers);
-        console.log('Auto Plan:', this.containersSelected);
-        this.updateProgress();
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Error fetching containers:', error);
-        }
-      } finally {
-        this.isLoading = false;
-        this.currentRequest = null;
+    blockIfAutoFill() {
+      if (this.autoFill) {
+        alert('Please uncheck Auto-Fill to edit containers manually.');
       }
     },
 
-    async checkStockOrWarn() {
+    checkStockOrWarn() {
       if (!this.flexMode && this.containmentPercent < 100) {
         if (confirm(`You do not have enough containers selected, or there will be ${this.remainingToContain.toFixed(2)} ${this.unit} left over. Would you like to continue anyway?`)) {
           this.flexMode = true;
-          await this.checkStock();
+          this.checkStock();
         }
       } else {
-        await this.checkStock();
+        this.checkStock();
       }
     },
 
-    async checkStock() {
-      try {
-        const payload = {
+    checkStock() {
+      console.log('Checking stock with:', {
+        recipe_id: this.recipeId,
+        scale: this.scale
+      });
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          recipe_id: this.recipeId, 
+          scale: this.scale
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          this.stockChecked = true;
+          this.stockCheckPassed = data.all_ok;
+        })
+        .catch(err => {
+          console.log('Error checking stock:', err);
+          this.stockChecked = false;
+        });
+    },
+
+    startBatch() {
+      fetch('/api/start-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           recipe_id: this.recipeId,
           scale: this.scale,
-          flex_mode: this.flexMode
-        };
-
-        console.log('Checking stock with:', payload);
-
-        const response = await fetch('/api/check-stock', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (!data) {
-          throw new Error('Empty response from server');
-        }
-        this.stockChecked = true;
-        this.stockCheckPassed = data.all_ok;
-      } catch (error) {
-        console.error('Error checking stock:', error);
-        alert('Error checking stock. Please try again.');
-      }
-    },
-
-    async startBatch() {
-      try {
-        const response = await fetch('/api/start-batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipe_id: this.recipeId,
-            scale: this.scale,
-            flex_mode: this.flexMode,
-            containers: this.containersSelected
-          })
-        });
-        if (response.ok) {
+          flex_mode: this.flexMode,
+          containers: this.containersSelected
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
           alert('Batch started successfully.');
-          window.location.href = '/dashboard';
-        } else {
+        })
+        .catch(err => {
           alert('Error starting batch. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error starting batch:', error);
-        alert('Error starting batch. Please try again.');
-      }
+        });
     }
   };
 }

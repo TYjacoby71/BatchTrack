@@ -57,7 +57,7 @@ from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
-from routes.stock_check_api import stock_api_bp # Added import for stock check API
+from routes.stock_check_api import stock_api_bp
 from blueprints.api.routes import container_api_bp #Import container API blueprint
 
 
