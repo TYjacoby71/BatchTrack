@@ -182,13 +182,23 @@ function planProduction() {
 
     async checkStock() {
       try {
+        console.log('Checking stock with:', {
+          recipe_id: this.recipeId,
+          scale: this.scale,
+          containers: this.containersSelected,
+          flex_mode: this.flexMode
+        });
+        
         const response = await fetch('/api/check-stock', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             recipe_id: this.recipeId,
             scale: this.scale,
-            containers: this.containersSelected,
+            containers: this.containersSelected.map(c => ({
+              id: parseInt(c.id),
+              quantity: parseInt(c.quantity)
+            })),
             flex_mode: this.flexMode
           })
         });
