@@ -9,7 +9,7 @@ stock_api_bp = Blueprint('stock_api', __name__)
 @stock_api_bp.route('/api/check-stock', methods=['POST'])
 def api_check_stock():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
