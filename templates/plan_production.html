@@ -63,7 +63,117 @@
 
   {% include 'partials/plan_production_stock_check.html' %}
 
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5>Actions</h5>
+    </div>
+    <div class="card-body">
+      <button class="btn btn-primary me-2" @click="checkStock()">Check Stock</button>
+      <button class="btn btn-success" 
+              x-show="canStartBatch"
+              @click="startBatch()">
+        Start Batch
+      </button>
+      <button class="btn btn-outline-secondary" 
+              x-show="stockChecked"
+              @click="downloadCSV()">
+        Export Stock List
+      </button>
+    </div>
+  </div>
+
 </div>
+
+<script>
+function planProduction() {
+  return {
+    recipeId: {{ recipe.id }},
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+    unit: '{{ recipe.predicted_yield_unit }}',
+    allowedContainers: [],
+    containersSelected: [],
+    autoFill: true,
+    scale: 1.0,
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockResults: [],
+    containmentPercent: 0,
+    remainingToContain: 0,
+    flexMode: false,
+    containmentIssue: '',
+
+    init() {
+      this.fetchContainerPlan();
+    },
+
+    get canStartBatch() {
+      return (this.flexMode || this.containmentPercent >= 100) && this.stockChecked && this.stockCheckPassed;
+    },
+
+    startBatch() {
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = `/batches/start/${this.recipeId}`;
+      
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = document.querySelector('input[name=csrf_token]').value;
+      form.appendChild(csrfInput);
+
+      const scaleInput = document.createElement('input');
+      scaleInput.type = 'hidden';
+      scaleInput.name = 'scale';
+      scaleInput.value = this.scale;
+      form.appendChild(scaleInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    },
+
+    checkStock() {
+      const csrfToken = document.querySelector('input[name=csrf_token]').value;
+      fetch('/api/check-stock', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ 
+          recipe_id: parseInt(this.recipeId), 
+          scale: parseFloat(this.scale),
+          flex_mode: this.flexMode
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          this.stockChecked = true;
+          this.stockCheckPassed = data.all_ok;
+          this.stockResults = data.ingredients || [];
+        })
+        .catch(err => {
+          console.log('Error checking stock:', err);
+          this.stockChecked = false;
+        });
+    },
+
+    downloadCSV() {
+      if (!this.stockResults?.length) return;
+
+      let csv = "Ingredient,Required,Available,Unit,Status\n";
+      this.stockResults.forEach(row => {
+        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'stock_check_report.csv';
+      link.click();
+    }
+  }
+}
+</script>
 
 <script>
 function planProduction() {
