@@ -22,7 +22,7 @@ def api_check_stock():
 
     for ri in recipe.recipe_ingredients:
         required_qty = ri.amount * scale
-        stock_qty = ri.ingredient.quantity
+        stock_qty = ri.inventory_item.quantity
         status = "OK" if stock_qty >= required_qty else "LOW"
         if status != "OK":
             all_ok = False
