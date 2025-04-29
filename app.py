@@ -48,7 +48,7 @@ from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
-from routes.products import products_bp
+#from routes.products import products_bp # Removed import
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
