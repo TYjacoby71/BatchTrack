@@ -1,82 +1,82 @@
 // Plan Production Page JavaScript
-document.addEventListener('DOMContentLoaded', function() {
+function updateProjectedYield() {
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
-  const stockCheckSection = document.getElementById('ingredientStockSection');
-  const ingredientResultsContainer = document.getElementById('ingredientStockResults');
-  const flexModeToggle = document.getElementById('flexMode');
-  const autoFillToggle = document.getElementById('autoFill');
-  const containerPlanningSection = document.getElementById('containerPlanningSection');
-  const containerArea = document.getElementById('containerSelectionArea');
-  const fillProgressBar = document.getElementById('fillProgressBar');
-  const remainingDisplay = document.getElementById('remainingToContain');
-  const containmentError = document.getElementById('containmentError');
-  const modeTogglesSection = document.getElementById('modeTogglesSection');
-  const exportButton = document.getElementById('exportShoppingListBtn');
-  const startBatchButton = document.getElementById('startBatchButton');
-  const addContainerBtn = document.getElementById('addContainerBtn');
+  if (!scaleInput || !projectedYieldElement) return;
+
+  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+  const scale = parseFloat(scaleInput.value) || 1;
+  const unit = projectedYieldElement.dataset.baseUnit || '';
+  const newYield = (baseYield * scale).toFixed(2);
+  projectedYieldElement.innerText = `${newYield} ${unit}`;
+}
+
+function renderStockResults(stockCheck) {
+  const container = document.getElementById('ingredientStockResults');
+  if (!container) return;
+
+  let html = '<table class="table"><thead><tr><th>Item</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+
+  stockCheck.forEach(item => {
+    const statusClass = item.status === 'OK' ? 'text-success' : 
+                       item.status === 'LOW' ? 'text-warning' : 'text-danger';
+    html += `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.needed} ${item.unit}</td>
+        <td>${item.available} ${item.unit}</td>
+        <td class="${statusClass}">${item.status}</td>
+      </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function checkStock() {
+  const recipeId = document.querySelector('input[name="recipe_id"]').value;
+  const scale = parseFloat(document.getElementById('scale').value) || 1;
+
+  fetch('/api/check-stock', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+    },
+    body: JSON.stringify({ recipe_id: recipeId, scale: scale })
+  })
+  .then(response => response.json())
+  .then(data => {
+    renderStockResults(data.stock_check);
+    document.getElementById('ingredientStockSection').style.display = 'block';
+    document.getElementById('modeTogglesSection').style.display = 'block';
+    document.getElementById('containerPlanningSection').style.display = 'block';
+    document.getElementById('startBatchButton').style.display = 'block';
+  })
+  .catch(error => {
+    console.error('Error checking stock:', error);
+    alert('Failed to check stock.');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('change', updateProjectedYield);
+  }
+
+  const checkStockBtn = document.querySelector('button[onclick="checkStock()"]');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  // Initialize projected yield
+  updateProjectedYield();
+
 
   let stockCheckData = [];
   let missingItems = [];
   let containers = recipe.allowed_containers || [];
-
-  function updateProjectedYield() {
-    const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
-    const scale = parseFloat(scaleInput.value) || 1;
-    const unit = projectedYieldElement.dataset.baseUnit || '';
-
-    const newYield = (baseYield * scale).toFixed(2);
-    projectedYieldElement.innerText = `${newYield} ${unit}`;
-  }
-
-  function checkStock() {
-    const recipeId = document.querySelector('input[name="recipe_id"]').value;
-    const scale = parseFloat(scaleInput.value) || 1;
-
-    fetch('/api/check-stock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipe_id: recipeId, scale: scale })
-    })
-    .then(response => response.json())
-    .then(data => {
-      renderStockResults(data.stock_check);
-      stockCheckData = data.stock_check;
-      missingItems = stockCheckData.filter(item => item.status !== 'OK');
-      stockCheckSection.style.display = 'block';
-      modeTogglesSection.style.display = 'block';
-      containerPlanningSection.style.display = 'block';
-      updateButtons();
-    })
-    .catch(error => {
-      console.error('Error checking stock:', error);
-      alert('Failed to check stock.');
-    });
-  }
-
-  function renderStockResults(results) {
-    ingredientResultsContainer.innerHTML = '';
-    results.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'd-flex justify-content-between mb-2';
-      const colorClass = item.status === 'OK' ? 'text-success' : (item.status === 'LOW' ? 'text-warning' : 'text-danger');
-      row.innerHTML = `
-        <div>${item.type.toUpperCase()}: ${item.name}</div>
-        <div class="${colorClass}">${item.status}</div>
-      `;
-      ingredientResultsContainer.appendChild(row);
-    });
-  }
-
-  function updateButtons() {
-    if (missingItems.length > 0) {
-      exportButton.style.display = 'inline-block';
-      startBatchButton.style.display = 'none';
-    } else {
-      exportButton.style.display = 'none';
-      startBatchButton.style.display = 'inline-block';
-    }
-  }
 
   function addContainerRow() {
     const row = document.createElement('div');
@@ -153,10 +153,16 @@ document.addEventListener('DOMContentLoaded', function() {
     link.click();
   }
 
-  if (scaleInput) scaleInput.addEventListener('change', updateProjectedYield);
-  if (addContainerBtn) addContainerBtn.addEventListener('click', addContainerRow);
-  if (exportButton) exportButton.addEventListener('click', exportShoppingList);
-  if (checkStockBtn) checkStockBtn.addEventListener('click', checkStock);
+  function updateButtons() {
+    if (missingItems.length > 0) {
+      exportButton.style.display = 'inline-block';
+      startBatchButton.style.display = 'none';
+    } else {
+      exportButton.style.display = 'none';
+      startBatchButton.style.display = 'inline-block';
+    }
+  }
+  if (document.getElementById('addContainerBtn')) document.getElementById('addContainerBtn').addEventListener('click', addContainerRow);
+  if (document.getElementById('exportShoppingListBtn')) document.getElementById('exportShoppingListBtn').addEventListener('click', exportShoppingList);
 
-  updateProjectedYield();
 });
