@@ -264,10 +264,13 @@ function planProduction() {
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
+          this.stockResults = data.stock_check || [];
+          console.log('Stock check results:', this.stockResults);
         })
         .catch(err => {
           console.log('Error checking stock:', err);
           this.stockChecked = false;
+          this.stockResults = [];
         });
     },
 
