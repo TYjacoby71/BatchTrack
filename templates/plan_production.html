@@ -205,32 +205,32 @@ function planProduction() {
     updateContainer(index) {
       const selectedId = this.containersSelected[index].id;
       const match = this.allowedContainers.find(c => c.id == selectedId);
-      const previousQuantity = this.containersSelected[index].quantity;
+      
+      // Store current state before any changes
+      const previousState = {
+        id: this.containersSelected[index].id,
+        quantity: this.containersSelected[index].quantity,
+        capacity: this.containersSelected[index].capacity,
+        unit: this.containersSelected[index].unit,
+        name: this.containersSelected[index].name
+      };
       
       if (match) {
-        // Store original values
-        const originalCapacity = this.containersSelected[index].capacity;
-        const originalUnit = this.containersSelected[index].unit;
-        const originalName = this.containersSelected[index].name;
-        
-        // Try to update values
+        // Validate before allowing any updates
         if (this.containersSelected[index].quantity > match.stock_qty) {
           alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
-          // Revert everything to previous state
-          this.containersSelected[index].quantity = previousQuantity;
-          this.containersSelected[index].capacity = originalCapacity;
-          this.containersSelected[index].unit = originalUnit;
-          this.containersSelected[index].name = originalName;
-          return;
+          // Completely restore previous state
+          Object.assign(this.containersSelected[index], previousState);
+          return; // Exit without updating anything
         }
         
-        // Only update if validation passes
+        // Only proceed with update if validation passed
         this.containersSelected[index].capacity = match.storage_amount;
         this.containersSelected[index].unit = match.storage_unit;
         this.containersSelected[index].name = match.name;
+        this.updateProgress();
+        this.evaluateContainment();
       }
-      this.updateProgress();
-      this.evaluateContainment();
     },
 
     removeContainer(index) {
