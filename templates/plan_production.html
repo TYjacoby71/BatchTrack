@@ -219,7 +219,7 @@ function planProduction() {
 
       // Validate quantity
       if (this.containersSelected[index].quantity > newMatch.stock_qty) {
-        alert(`Cannot allocate more than available stock (${newMatch.stock_qty} ${newMatch.name}s available)`);
+        this.containmentIssue = `Cannot allocate more than ${newMatch.stock_qty} ${newMatch.name}s (available stock limit)`;
         // Restore everything to previous state
         Object.assign(this.containersSelected[index], previousState);
         return;
