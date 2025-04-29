@@ -32,7 +32,7 @@
         <div class="d-flex align-items-center gap-2 mb-2">
           <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
-            <template x-for="allowed in recipe.allowed_containers" :key="allowed.id">
+            <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
@@ -161,6 +161,8 @@ function planProduction() {
         if (this.autoFill) {
           this.containersSelected = data.plan;
         }
+        console.log('Allowed Containers:', this.allowedContainers);
+        console.log('Auto Plan:', this.containersSelected);
         this.updateProgress();
       } catch (error) {
         console.error('Error fetching containers:', error);
