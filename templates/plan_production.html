@@ -6,7 +6,7 @@
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="debouncedRefresh">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -138,15 +138,6 @@ function planProduction() {
       this.updateProgress();
     },
 
-    debounceTimer: null,
-
-    debouncedRefresh() {
-      if (this.debounceTimer) clearTimeout(this.debounceTimer);
-      this.debounceTimer = setTimeout(() => {
-        this.fetchContainerPlan();
-      }, 200);
-    },
-
     updateContainer(index) {
       const container = this.containersSelected[index];
       const match = this.allowedContainers.find(c => c.id === container.id);
@@ -159,7 +150,6 @@ function planProduction() {
         }
       }
       this.updateProgress();
-      this.debouncedRefresh();
     },
 
     async fetchContainerPlan() {
@@ -168,18 +158,7 @@ function planProduction() {
         const data = await response.json();
         this.allowedContainers = data.available;
         if (this.autoFill) {
-          // Hydrate container data from allowedContainers
-          this.containersSelected = (data.plan || []).map(container => {
-            const match = this.allowedContainers.find(ac => ac.id === container.id);
-            return {
-              ...container,
-              name: match ? match.name : '',
-              capacity: match ? match.storage_amount : 0,
-              unit: match ? match.storage_unit : '',
-              id: container.id,
-              quantity: container.quantity
-            };
-          });
+          this.containersSelected = data.plan;
         }
         console.log('Allowed Containers:', this.allowedContainers);
         console.log('Auto Plan:', this.containersSelected);
