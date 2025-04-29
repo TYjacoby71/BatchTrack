@@ -5,7 +5,7 @@ function updateProjectedYield() {
   if (!scaleInput || !projectedYieldElement) return;
 
   const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
-  const scale = parseFloat(scaleInput.value) || 1;
+  const scale = parseFloat(scaleInput.value) || 1.0;
   const unit = projectedYieldElement.dataset.baseUnit || '';
   const newYield = (baseYield * scale).toFixed(2);
   projectedYieldElement.innerText = `${newYield} ${unit}`;
@@ -35,7 +35,7 @@ function renderStockResults(stockCheck) {
 
 function checkStock() {
   const recipeId = document.querySelector('input[name="recipe_id"]').value;
-  const scale = parseFloat(document.getElementById('scale').value) || 1;
+  const scale = parseFloat(document.getElementById('scale').value) || 1.0;
 
   fetch('/api/check-stock', {
     method: 'POST',
@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const scaleInput = document.getElementById('scale');
   if (scaleInput) {
     scaleInput.addEventListener('change', updateProjectedYield);
+    scaleInput.addEventListener('input', updateProjectedYield);
   }
 
   const checkStockBtn = document.querySelector('button[onclick="checkStock()"]');
