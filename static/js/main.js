@@ -31,13 +31,7 @@ $(document).ready(function() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     if (modal) modal.hide();
   });
-  // Initialize Select2 for container selects that aren't in plan production
-  $('.container-select:not([data-plan-production])').select2({
-        placeholder: 'Select containers',
-        allowClear: true,
-        multiple: true,
-        width: '100%'
-    });
+  // Container selects are now handled by Alpine.js in plan production
 });
 
 document.addEventListener('DOMContentLoaded', function() {
