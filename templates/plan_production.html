@@ -140,6 +140,17 @@ function planProduction() {
           this.allowedContainers = data.available || [];
           if (this.autoFill) {
             this.containersSelected = data.plan || [];
+            
+            // Attach missing names and units after autofill
+            this.containersSelected.forEach(container => {
+              const match = this.allowedContainers.find(c => c.id === container.id);
+              if (match) {
+                container.name = match.name;
+                container.unit = match.storage_unit;
+                container.capacity = match.storage_amount;
+              }
+            });
+            
             this.updateProgress();
 
             const projected = this.baseYield * this.scale;
