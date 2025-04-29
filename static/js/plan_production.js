@@ -21,11 +21,56 @@ document.addEventListener('DOMContentLoaded', function() {
   updateContainmentProgress();
 
   function handleFlexModeToggle() {
-    autoFillSection.style.display = !flexModeToggle.checked ? 'block' : 'none';
-    if (!flexModeToggle.checked && document.getElementById('autoFill').checked) {
+    const isFlexMode = flexModeToggle.checked;
+    autoFillSection.style.display = !isFlexMode ? 'block' : 'none';
+    
+    // In flex mode, hide containment error
+    if (containmentError) {
+      containmentError.style.display = isFlexMode ? 'none' : 'block';
+    }
+    
+    // Auto-fill in strict mode if enabled
+    if (!isFlexMode && document.getElementById('autoFill').checked) {
       autoFillContainers();
     }
+    
     updateContainmentProgress();
+    validateContainment();
+  }
+
+  function validateContainment() {
+    const isFlexMode = flexModeToggle.checked;
+    if (isFlexMode) return true; // Skip validation in flex mode
+    
+    const totalNeeded = getTotalNeededVolume();
+    const totalContained = getTotalContainedVolume();
+    
+    if (containmentError) {
+      containmentError.textContent = totalContained < totalNeeded ? 
+        'Error: Not enough container capacity for batch volume' : '';
+      containmentError.style.display = totalContained < totalNeeded ? 'block' : 'none';
+    }
+    
+    return totalContained >= totalNeeded;
+  }
+
+  function getTotalNeededVolume() {
+    const projectedYield = parseFloat(document.getElementById('projectedYield').textContent);
+    const scale = parseFloat(document.getElementById('scale').value) || 1;
+    return projectedYield * scale;
+  }
+
+  function getTotalContainedVolume() {
+    let total = 0;
+    document.querySelectorAll('.container-row').forEach(row => {
+      const select = row.querySelector('.container-select');
+      const quantity = row.querySelector('.container-quantity');
+      if (select.value && quantity.value) {
+        const capacity = parseFloat(select.selectedOptions[0].dataset.capacity) || 0;
+        total += capacity * parseInt(quantity.value);
+      }
+    });
+    return total;
   }
 
   function autoFillContainers() {
@@ -34,26 +79,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     containerArea.innerHTML = ''; // Clear existing containers
     
+    // Get projected yield
+    const projectedYield = parseFloat(document.getElementById('projectedYield').textContent);
+    const scale = parseFloat(document.getElementById('scale').value) || 1;
+    const totalNeeded = projectedYield * scale;
+    
     // Get available containers
     const containerSelect = document.querySelector('.container-select');
     if (!containerSelect) {
-      addContainerRow(); // Add first row if none exists
+      addContainerRow();
       return;
     }
 
-    const options = Array.from(containerSelect.options);
-    if (options.length > 1) { // Skip the first "Select Container" option
-      addContainerRow();
-      const firstRow = document.querySelector('.container-row');
-      if (firstRow) {
-        const select = firstRow.querySelector('.container-select');
-        const quantity = firstRow.querySelector('.container-quantity');
-        if (select && quantity) {
-          select.selectedIndex = 1; // Select first real container
-          quantity.value = 1;
-        }
+    const containers = Array.from(containerSelect.options)
+      .slice(1) // Skip "Select Container" option
+      .map(opt => ({
+        id: opt.value,
+        capacity: parseFloat(opt.dataset.capacity),
+        name: opt.text
+      }))
+      .sort((a, b) => b.capacity - a.capacity); // Sort by capacity, largest first
+
+    let remainingVolume = totalNeeded;
+    
+    // Fill containers optimally
+    while (remainingVolume > 0 && containers.length > 0) {
+      const bestContainer = containers[0];
+      const count = Math.ceil(remainingVolume / bestContainer.capacity);
+      
+      const row = addContainerRow();
+      const select = row.querySelector('.container-select');
+      const quantity = row.querySelector('.container-quantity');
+      
+      if (select && quantity) {
+        select.value = bestContainer.id;
+        quantity.value = count;
+        remainingVolume -= (bestContainer.capacity * count);
       }
     }
+
     updateContainmentProgress();
   }
 
