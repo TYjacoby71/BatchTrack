@@ -65,7 +65,7 @@
       <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
-    <div x-data="{ stockResults: [], stockChecked: false, stockCheckPassed: false }" class="mt-3">
+    <div x-data="{ stockResults: [], stockChecked: false, stockCheckPassed: false, status: '' }" class="mt-3">
       <template x-if="stockChecked">
         <div>
           <template x-if="stockCheckPassed">
@@ -270,10 +270,13 @@ function planProduction() {
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
+          this.stockResults = data.stock_check || [];
+          this.status = data.all_ok ? 'ok' : 'fail';
         })
         .catch(err => {
           console.log('Error checking stock:', err);
           this.stockChecked = false;
+          this.stockResults = [];
         });
     },
 
