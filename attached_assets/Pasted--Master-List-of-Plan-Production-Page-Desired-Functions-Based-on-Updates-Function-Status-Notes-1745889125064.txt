@@ -1,0 +1,28 @@
+📋 Master List of Plan Production Page Desired Functions (Based on Updates)
+
+#	Function	Status/Notes
+1	Recipe Selection	✅ Select recipe to plan from (clear and simple).
+2	Scale Entry	✅ Enter intended batch scale (e.g., 1x, 2x, 5x).
+3	Optional Strict Mode Toggle	✅ Toggle between Strict Mode (projected yield matched) vs Flex Mode (looser fill).
+4	Projected Yield Display	✅ Show estimated yield after scaling (using predicted_yield * scale).
+5	Stock Check	✅ Automatically check if ingredients and containers are in stock.
+6	Simple Ingredient Stock Check Results	✅ Return OK, LOW, or NEEDED per ingredient (no confusing intermediate math shown).
+7	Simple Container Stock Check Results	✅ Return OK, LOW, or NEEDED per container separately.
+8	Combined Results Table	✅ All stock check results (ingredients + containers) shown together in one neat card.
+9	Dynamic Container Selection UI	✅ If containers needed: Select number and type of containers to fill yield (or manually customize).
+10	Container Fill Progress Bar	✅ Visual fill bar showing how much of batch yield is 'contained' as user selects containers.
+11	Strict Mode Container Enforcement	✅ In Strict Mode: Must 100% contain the projected yield or show error.
+12	Flex Mode Container Relaxation	✅ In Flex Mode: User can proceed even if not perfectly matched to yield.
+13	Auto Fill Containers Button	✅ Auto-select best fit containers if possible.
+14	Manual Add Containers Option	✅ User can override and add container selections manually.
+15	Error Handling: Not Enough Containers	✅ If selected containers can’t cover the yield, show error and allow override "Continue anyway, I’ll put it in ziplocks if I have to."
+16	Override Button for Stock or Container Warnings	✅ User can override stock or container errors with a "Proceed Anyway" option if needed.
+17	Shopping List Export Button	✅ If stock is LOW or NEEDED for ingredients/containers, allow export of CSV shopping list.
+18	Batch Start Button	✅ If stock check OK, start batch immediately into 'Batch In Progress'.
+19	Notes/Tags on Batch	✅ Allow optional notes or tags at time of planning production.
+20	Error if Scaling Too Large	✅ If intended scale needs more stock than feasible, warn early before selecting containers.
+21	Safe Database Update for Planned Batch	✅ All batch planning data safely passed to backend without JS race conditions.
+22	Smooth Visual UX	✅ Use minimal clicks, modal transitions, and fill bars to make neurodivergent-friendly UX (no cognitive overload).
+23	Abort Plan Option	✅ Ability to cancel/exit plan production cleanly without messy data saved.
+24	One Unified Flow	✅ Plan production, stock check, container fill, batch start — no jumping between multiple pages.
+25	Default Friendly Phrasing	✅ Example: "Would you like to add containers now?" or "Looks good! Ready to start?" instead of technical prompts.
