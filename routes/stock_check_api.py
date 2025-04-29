@@ -27,7 +27,7 @@ def api_check_stock():
         if status != "OK":
             all_ok = False
         report.append({
-            "ingredient": ri.ingredient.name,
+            "ingredient": ri.inventory_item.name,
             "required": round(required_qty, 2),
             "available": round(stock_qty, 2),
             "unit": ri.unit,
