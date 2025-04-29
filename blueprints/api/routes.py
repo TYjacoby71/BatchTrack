@@ -3,9 +3,9 @@ from flask import Blueprint, jsonify, request
 from models import Recipe, InventoryItem
 from services.unit_conversion import convert_units
 
-api_bp = Blueprint('api', __name__)
+container_api_bp = Blueprint('container_api', __name__)
 
-@api_bp.route('/api/available-containers/<int:recipe_id>')
+@container_api_bp.route('/api/available-containers/<int:recipe_id>')
 def available_containers(recipe_id):
     try:
         scale = float(request.args.get('scale', 1.0))
