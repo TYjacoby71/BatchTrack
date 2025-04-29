@@ -266,8 +266,11 @@ function planProduction() {
         .then(data => {
           this.stockChecked = true;
           this.stockCheckPassed = data.all_ok;
-          this.stockResults = data.stock_check || [];
+          this.stockResults = data.ingredients || [];
           console.log('Stock check results:', this.stockResults);
+          if (this.stockResults.length === 0) {
+            console.log('Full API response:', data);
+          }
         })
         .catch(err => {
           console.log('Error checking stock:', err);
