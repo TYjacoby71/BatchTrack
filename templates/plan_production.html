@@ -73,7 +73,10 @@
   <!-- Section: Check Stock -->
   <h4 class="mt-4">2. Check Ingredients</h4>
   <div class="mb-4">
-    <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
+      <a href="{{ url_for('recipes.recipe_list') }}" class="btn btn-secondary">Cancel</a>
+    </div>
     <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
       Some ingredients are low or missing. Please adjust inventory.
     </div>
