@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -207,15 +206,20 @@ function planProduction() {
 
     checkStock() {
       console.log('Checking stock with:', {
-        recipe_id: this.recipeId,
-        scale: this.scale
+        recipe_id: parseInt(this.recipeId),
+        scale: parseFloat(this.scale),
+        flex_mode: this.flexMode
       });
       fetch('/api/check-stock', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+        },
         body: JSON.stringify({ 
-          recipe_id: this.recipeId, 
-          scale: this.scale
+          recipe_id: parseInt(this.recipeId), 
+          scale: parseFloat(this.scale),
+          flex_mode: this.flexMode
         })
       })
         .then(res => res.json())
