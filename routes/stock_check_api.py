@@ -1,3 +1,4 @@
+
 from flask import Blueprint, request, jsonify
 from models import db, Recipe
 from services.stock_check import universal_stock_check
@@ -27,9 +28,9 @@ def api_check_stock():
         check_results = []
         all_ok = True
         
-        for ingredient in recipe.ingredients:
-            required_amount = ingredient.amount * scale
-            available = ingredient.inventory_item.quantity if ingredient.inventory_item else 0
+        for ri in recipe.recipe_ingredients:
+            required_amount = ri.amount * scale
+            available = ri.inventory_item.quantity if ri.inventory_item else 0
             
             if available >= required_amount:
                 status = "OK"
@@ -41,10 +42,10 @@ def api_check_stock():
                 all_ok = False
                 
             check_results.append({
-                "name": ingredient.name,
+                "name": ri.inventory_item.name,
                 "needed": required_amount,
                 "available": available,
-                "unit": ingredient.unit,
+                "unit": ri.unit,
                 "status": status
             })
 
