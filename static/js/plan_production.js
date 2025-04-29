@@ -64,14 +64,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const scaleInput = document.getElementById('scale');
   if (scaleInput) {
     scaleInput.addEventListener('input', updateProjectedYield);
-    scaleInput.addEventListener('change', updateProjectedYield);
   }
 
   // Initial calculation
   updateProjectedYield();
 });
-
-// The following functions and code are retained from the original file because they are not addressed in the edited snippet and are necessary for the application's functionality.
 
 function addContainerRow() {
     const row = document.createElement('div');
