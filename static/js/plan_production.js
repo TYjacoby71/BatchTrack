@@ -1,6 +1,6 @@
 
 // Plan Production Page JavaScript
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Get all required DOM elements
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
@@ -208,6 +208,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (exportButton) exportButton.addEventListener('click', exportShoppingList);
   if (flexModeToggle) flexModeToggle.addEventListener('change', updateContainmentProgress);
   if (autoFillToggle) autoFillToggle.addEventListener('change', updateContainmentProgress);
+  
+  // Add check stock button listener
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) checkStockBtn.addEventListener('click', checkStock);
 
   // Initialize
   updateProjectedYield();
