@@ -1,0 +1,36 @@
+
+<div class="mt-4">
+  <div class="card">
+    <div class="card-header">
+      <h5>Stock Check Results</h5>
+    </div>
+    <div class="card-body">
+      <div x-show="stockChecked">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Needed</th>
+              <th>Available</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="item in stockResults" :key="item.name">
+              <tr>
+                <td x-text="item.ingredient"></td>
+                <td x-text="item.needed + ' ' + item.recipe_unit"></td>
+                <td x-text="item.available + ' ' + item.inventory_unit"></td>
+                <td :class="{
+                  'text-success': item.status === 'OK',
+                  'text-warning': item.status === 'LOW',
+                  'text-danger': item.status === 'NEEDED'
+                }" x-text="item.status"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
