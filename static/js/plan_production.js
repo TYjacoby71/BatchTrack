@@ -1,6 +1,5 @@
 // Plan Production Page JavaScript
 
-// Global functions needed for HTML onclick handlers
 function updateProjectedYield() {
   const projectedYieldElement = document.getElementById('projectedYield');
   const scaleInput = document.getElementById('scale');
@@ -31,7 +30,7 @@ function checkStock() {
   .then(data => {
     renderStockResults(data.stock_check);
     document.getElementById('ingredientStockSection').style.display = 'block';
-    document.getElementById('startBatchButton').style.display = 'block';
+    document.getElementById('startBatchButton').style.display = data.all_ok ? 'block' : 'none';
   })
   .catch(error => {
     console.error('Error checking stock:', error);
@@ -39,24 +38,6 @@ function checkStock() {
   });
 }
 
-// Event Listeners 
-document.addEventListener('DOMContentLoaded', function() {
-  const scaleInput = document.getElementById('scale');
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-    scaleInput.addEventListener('change', updateProjectedYield);
-  }
-
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  if (checkStockBtn) {
-    checkStockBtn.addEventListener('click', checkStock);
-  }
-
-  // Initial calculation
-  updateProjectedYield();
-});
-
-// Rest of your existing functions...
 function renderStockResults(stockCheck) {
   const container = document.getElementById('ingredientStockResults');
   if (!container) return;
@@ -78,6 +59,23 @@ function renderStockResults(stockCheck) {
   html += '</tbody></table>';
   container.innerHTML = html;
 }
+
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Set up initial event listeners
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('input', updateProjectedYield);
+  }
+
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) {
+    checkStock.addEventListener('click', checkStock);
+  }
+
+  // Calculate initial projected yield
+  updateProjectedYield();
+});
 
 function addContainerRow() {
   const containerArea = document.getElementById('containerSelectionArea');
