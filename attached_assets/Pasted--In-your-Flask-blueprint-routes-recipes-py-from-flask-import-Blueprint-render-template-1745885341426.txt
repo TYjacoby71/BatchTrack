@@ -1,0 +1,109 @@
+# --- In your Flask blueprint: routes/recipes.py ---
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from models import db, Recipe, RecipeIngredient, Ingredient
+
+recipes_bp = Blueprint('recipes', __name__)
+
+# --- Duplicate a Recipe ---
+@recipes_bp.route('/recipes/duplicate/<int:recipe_id>', methods=['GET'])
+def duplicate_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    session['is_clone'] = True
+    session['clone_recipe_id'] = recipe.id
+    return redirect(url_for('recipes.edit_recipe'))
+
+# --- Add Variation of a Recipe ---
+@recipes_bp.route('/recipes/variation/<int:recipe_id>', methods=['GET'])
+def create_variation(recipe_id):
+    parent_recipe = Recipe.query.get_or_404(recipe_id)
+    session['is_variation'] = True
+    session['parent_recipe_id'] = parent_recipe.id
+    return redirect(url_for('recipes.edit_recipe'))
+
+# --- Edit or Create Recipe (with smart detection) ---
+@recipes_bp.route('/recipes/edit', methods=['GET', 'POST'])
+def edit_recipe():
+    is_clone = session.pop('is_clone', False)
+    is_variation = session.pop('is_variation', False)
+    clone_recipe_id = session.pop('clone_recipe_id', None)
+    parent_recipe_id = session.pop('parent_recipe_id', None)
+
+    recipe = None
+
+    if clone_recipe_id:
+        recipe = Recipe.query.get(clone_recipe_id)
+    elif parent_recipe_id:
+        recipe = Recipe.query.get(parent_recipe_id)
+    else:
+        recipe_id = request.args.get('recipe_id', type=int)
+        if recipe_id:
+            recipe = Recipe.query.get(recipe_id)
+
+    all_ingredients = Ingredient.query.all()
+
+    if request.method == 'POST':
+        name = request.form['name']
+        instructions = request.form.get('instructions', '')
+        label_prefix = request.form.get('label_prefix', '')
+
+        if is_clone or is_variation or not recipe:
+            new_recipe = Recipe(name=name, instructions=instructions, label_prefix=label_prefix)
+            if parent_recipe_id:
+                new_recipe.parent_id = parent_recipe_id
+            db.session.add(new_recipe)
+            db.session.commit()
+
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                db.session.add(RecipeIngredient(
+                    recipe_id=new_recipe.id,
+                    ingredient_id=int(ing_id),
+                    amount=float(amt),
+                    unit=unit
+                ))
+            db.session.commit()
+
+            flash('Recipe created successfully!', 'success')
+            return redirect(url_for('recipes.list_recipes'))
+
+        else:
+            recipe.name = name
+            recipe.instructions = instructions
+            recipe.label_prefix = label_prefix
+            db.session.commit()
+
+            # Clear and re-add ingredients
+            RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+            db.session.commit()
+
+            ingredient_ids = request.form.getlist('ingredient_ids[]')
+            amounts = request.form.getlist('amounts[]')
+            units = request.form.getlist('units[]')
+
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+                db.session.add(RecipeIngredient(
+                    recipe_id=recipe.id,
+                    ingredient_id=int(ing_id),
+                    amount=float(amt),
+                    unit=unit
+                ))
+            db.session.commit()
+
+            flash('Recipe updated successfully!', 'success')
+            return redirect(url_for('recipes.list_recipes'))
+
+    return render_template('edit_recipe.html',
+                           recipe=recipe,
+                           is_clone=is_clone,
+                           is_variation=is_variation,
+                           all_ingredients=all_ingredients)
+
+# --- Recipe list route just for completeness ---
+@recipes_bp.route('/recipes')
+def list_recipes():
+    recipes = Recipe.query.all()
+    return render_template('recipes.html', recipes=recipes)
