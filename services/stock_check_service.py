@@ -1,7 +1,6 @@
-
 from models import Recipe, InventoryItem
 from app import db
-from services.unit_conversion_service import convert_units
+from services.unit_conversion import ConversionEngine
 
 def check_stock(recipe_id, scale, container_plan, flex_mode):
     recipe = Recipe.query.get(recipe_id)
@@ -27,7 +26,7 @@ def check_stock(recipe_id, scale, container_plan, flex_mode):
             all_ok = False
             continue
 
-        needed_in_inventory_unit = convert_units(
+        needed_in_inventory_unit = ConversionEngine().convert(
             scaled_needed, 
             ingredient.unit, 
             inventory_item.unit
