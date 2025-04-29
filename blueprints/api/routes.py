@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, request
 from models import Recipe, InventoryItem
 from services.unit_conversion_service import convert_units
@@ -12,10 +11,10 @@ def available_containers(recipe_id):
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
-            
+
         # Get allowed container IDs from recipe
         allowed_ids = [c.id for c in recipe.allowed_containers]
-        
+
         # Get available containers and convert units
         in_stock = []
         for container in InventoryItem.query.filter_by(type='container').all():
@@ -44,17 +43,20 @@ def available_containers(recipe_id):
 
         # Calculate optimal container plan
         plan = []
+        required_volume = recipe.predicted_yield * scale # Assuming predicted_yield and required_unit are defined elsewhere
+        required_unit = recipe.predicted_yield_unit # Assuming this is defined elsewhere
+
         remaining = required_volume
 
         for container in sorted_containers:
             if remaining <= 0:
                 break
-                
+
             per_unit = container['storage_amount']
             max_needed = int(remaining // per_unit)
             if max_needed <= 0:
                 continue
-                
+
             use_qty = min(max_needed, container['stock_qty'])
             if use_qty > 0:
                 plan.append({
