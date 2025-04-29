@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from models import db, Recipe
 from services.stock_check import universal_stock_check
@@ -26,11 +25,11 @@ def api_check_stock():
         formatted_report = []
         for r in report:
             formatted_report.append({
-                "ingredient": r.get("name", ""),
+                "ingredient": getattr(r["ingredient"], "name", str(r["ingredient"])),
                 "needed": round(r.get("needed", 0), 2),
-                "available": round(r.get("available", 0), 2), 
-                "recipe_unit": r.get("unit", ""),
-                "inventory_unit": r.get("unit", ""),
+                "required_unit": r.get("recipe_unit") or r.get("unit", ""),
+                "available": round(r.get("available", 0), 2),
+                "unit": r.get("unit", ""),
                 "status": r.get("status", "UNKNOWN")
             })
 
