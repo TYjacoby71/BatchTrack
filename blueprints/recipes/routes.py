@@ -232,8 +232,9 @@ def quick_add_unit():
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
+        ingredients = [(ri.inventory_item_id, ri.amount, ri.unit) for ri in original.recipe_ingredients]
         
-        # Create new recipe instance with copied attributes
+        # Create new recipe without ingredients first
         new_recipe = Recipe(
             name=f"Copy of {original.name}",
             instructions=original.instructions,
@@ -243,22 +244,12 @@ def clone_recipe(recipe_id):
             requires_containers=original.requires_containers,
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
-        
-        # Pre-fill recipe ingredients
-        new_recipe.recipe_ingredients = []
-        for ri in original.recipe_ingredients:
-            new_assoc = RecipeIngredient(
-                recipe=new_recipe,
-                inventory_item_id=ri.inventory_item_id,
-                amount=ri.amount,
-                unit=ri.unit
-            )
-            new_recipe.recipe_ingredients.append(new_assoc)
             
         return render_template('recipe_form.html',
                             recipe=new_recipe,
-                            is_clone=True,
                             all_ingredients=InventoryItem.query.all(),
+                            is_clone=True,
+                            ingredient_prefill=ingredients,
                             inventory_units=get_global_unit_list())
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")

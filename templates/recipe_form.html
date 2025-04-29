@@ -110,6 +110,24 @@
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
                 </div>
                 {% endfor %}
+            {% elif ingredient_prefill %}
+                {% for ing_id, amount, unit in ingredient_prefill %}
+                <div class="ingredient-entry">
+                    <select name="ingredient_ids[]" required>
+                        <option value="">Select an ingredient</option>
+                        {% for available_ing in all_ingredients if available_ing.type != 'container' %}
+                        <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" step="0.01" name="amounts[]" value="{{ amount }}" required>
+                    <select name="units[]" required>
+                        {% for unit in inventory_units %}
+                        <option value="{{ unit.name }}" {% if unit.name == unit %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                </div>
+                {% endfor %}
             {% endif %}
         </div>
     </div>
