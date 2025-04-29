@@ -1,0 +1,98 @@
+✅ I’ve reviewed your plan_production.html template and based on your description, here’s the issue and fix:
+
+❌ Problem:
+The Projected Yield number is not updating when the user changes the scale.
+It always shows the original pre-scaled yield, even though onchange="updateProjectedYield()" is defined correctly.
+
+🔍 Root Cause:
+The issue is not in the HTML — your projectedYield element is well structured:
+
+html
+Copy
+Edit
+<div id="projectedYield"
+     class="form-control-plaintext"
+     data-base-yield="{{ '%.2f'|format(recipe.predicted_yield) }}"
+     data-base-unit="{{ recipe.predicted_yield_unit }}">
+  {{ '%.2f'|format(recipe.predicted_yield) }} {{ recipe.predicted_yield_unit }}
+</div>
+BUT your updateProjectedYield() function in plan_production.js must be globally accessible, executed, and referencing the right elements.
+
+Here’s the checklist of likely culprits:
+
+✅ 1. Is updateProjectedYield() defined outside DOMContentLoaded?
+It must be global so the onchange="updateProjectedYield()" can access it.
+
+javascript
+Copy
+Edit
+// At top of plan_production.js
+function updateProjectedYield() {
+  const projectedYieldElement = document.getElementById('projectedYield');
+  const scaleInput = document.getElementById('scale');
+
+  if (!projectedYieldElement || !scaleInput) return;
+
+  const baseYield = parseFloat(projectedYieldElement.dataset.baseYield) || 0;
+  const scale = parseFloat(scaleInput.value) || 1;
+  const unit = projectedYieldElement.dataset.baseUnit || '';
+
+  const newYield = (baseYield * scale).toFixed(2);
+  projectedYieldElement.innerText = `${newYield} ${unit}`;
+}
+✅ 2. Is plan_production.js definitely loaded and error-free?
+Check your browser console:
+
+Any ReferenceError: updateProjectedYield is not defined?
+
+Any Uncaught errors in plan_production.js?
+
+If so, fix any syntax problems or scope issues.
+
+✅ 3. Is projectedYieldElement.innerText being overwritten by backend logic?
+You wrote:
+
+html
+Copy
+Edit
+<div id="projectedYield" ...>
+  {{ '%.2f'|format(recipe.predicted_yield) }} {{ recipe.predicted_yield_unit }}
+</div>
+This renders fine on page load, but that static content never changes unless you explicitly update it via JavaScript.
+
+✅ Confirm This Is Fixed
+✅ Check:
+That you defined updateProjectedYield() before any event uses it.
+
+That projectedYieldElement.innerText = ... is running successfully.
+
+That the <div id="projectedYield"> has non-empty data-base-yield and data-base-unit values.
+
+🧪 Quick Test Script (Paste in browser console while on the page):
+javascript
+Copy
+Edit
+document.getElementById('scale').value = 2.0;
+updateProjectedYield();
+✅ If you see the number inside #projectedYield double — then it's working.
+
+❌ If not, check the console for an error like:
+
+updateProjectedYield is not defined
+
+Cannot read properties of null (reading 'dataset')
+
+These tell you that either:
+
+The function isn’t global
+
+The DOM isn’t ready yet
+
+Or you're referencing missing elements
+
+✅ Solution Recap:
+
+Fix	Status
+Define updateProjectedYield() outside DOMContentLoaded	✅ Required
+Confirm projectedYieldElement.dataset.baseYield and .baseUnit are non-null	✅ Required
+Avoid console errors or conflicts with main.js	✅ Strongly advised
