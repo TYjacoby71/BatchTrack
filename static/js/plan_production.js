@@ -1,8 +1,9 @@
 // Plan Production Page JavaScript
 
+// Global functions needed for HTML onclick
 function updateProjectedYield() {
-  const projectedYieldElement = document.getElementById('projectedYield');
-  const scaleInput = document.getElementById('scale');
+  const projectedYieldElement = window.projectedYieldElement;
+  const scaleInput = window.scaleInput;
 
   if (!scaleInput || !projectedYieldElement) return;
 
@@ -16,7 +17,7 @@ function updateProjectedYield() {
 
 function checkStock() {
   const recipeId = document.querySelector('input[name="recipe_id"]').value;
-  const scale = parseFloat(document.getElementById('scale').value) || 1.0;
+  const scale = parseFloat(window.scaleInput.value) || 1.0;
 
   fetch('/api/check-stock', {
     method: 'POST',
@@ -30,7 +31,7 @@ function checkStock() {
   .then(data => {
     renderStockResults(data.stock_check);
     document.getElementById('ingredientStockSection').style.display = 'block';
-    document.getElementById('startBatchButton').style.display = 'block';
+    window.startBatchButton.style.display = 'block';
   })
   .catch(error => {
     console.error('Error checking stock:', error);
@@ -60,24 +61,45 @@ function renderStockResults(stockCheck) {
   container.innerHTML = html;
 }
 
-// Initialize when DOM is loaded
+// Initialize elements when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+  // Get all required DOM elements
   const scaleInput = document.getElementById('scale');
+  const projectedYieldElement = document.getElementById('projectedYield');
+  const fillProgressBar = document.getElementById('fillProgressBar');
+  const remainingDisplay = document.getElementById('remainingToContain');
+  const flexModeToggle = document.getElementById('flexMode');
+  const containmentError = document.getElementById('containmentError');
+  const startBatchButton = document.getElementById('startBatchButton');
+  const containerArea = document.getElementById('containerSelectionArea');
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
+
+
+  // Store elements globally for other functions to access
+  window.projectedYieldElement = projectedYieldElement;
+  window.scaleInput = scaleInput;
+  window.fillProgressBar = fillProgressBar;
+  window.remainingDisplay = remainingDisplay;
+  window.flexModeToggle = flexModeToggle;
+  window.containmentError = containmentError;
+  window.startBatchButton = startBatchButton;
+  window.containerArea = containerArea;
+
+  // Set up event listeners
   if (scaleInput) {
     scaleInput.addEventListener('input', updateProjectedYield);
   }
 
-  const checkStockBtn = document.getElementById('checkStockBtn');
   if (checkStockBtn) {
     checkStockBtn.addEventListener('click', checkStock);
   }
 
-  const addContainerBtn = document.getElementById('addContainerBtn');
   if (addContainerBtn) {
     addContainerBtn.addEventListener('click', addContainerRow);
   }
 
-  const exportShoppingListBtn = document.getElementById('exportShoppingListBtn');
   if (exportShoppingListBtn) {
     exportShoppingListBtn.addEventListener('click', exportShoppingList);
   }

@@ -86,11 +86,9 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Initial calculation
-  updateProjectedYield();
-});
+// Make containers available to JavaScript
+const containers = {{ allowed_containers|tojson|safe }};
 </script>
+<script src="{{ url_for('static', filename='js/plan_production.js') }}"></script>
 {% endblock %}
