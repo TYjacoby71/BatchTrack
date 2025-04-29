@@ -50,7 +50,14 @@
           <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill && !flexMode">×</button>
         </div>
       </template>
-      </template>
+
+      <!-- Stock Check Results -->
+      <div class="mt-3" x-show="stockChecked">
+        <h4>Stock Check Results</h4>
+        <div class="alert" :class="{'alert-success': stockCheckPassed, 'alert-danger': !stockCheckPassed}">
+          <span x-text="stockCheckPassed ? 'All ingredients available!' : 'Some ingredients are unavailable'"></span>
+        </div>
+      </div>
 
       <!-- Containment Progress -->
       <div class="mt-3">
@@ -59,14 +66,7 @@
           <div class="progress-bar" role="progressbar" :style="'width: ' + containmentPercent + '%'" x-text="containmentPercent + '%'">
           </div>
         </div>
-        <div class="mt-2">
-          <small class="form-text text-muted" x-text="'Remaining: ' + remainingToContain.toFixed(2) + ' ' + unit"></small>
-          <template x-if="partialContainerUsage">
-            <small class="form-text text-info d-block">
-              Last container (<span x-text="lastContainer.name"></span>) will be filled to <span x-text="(lastContainerFillPercent).toFixed(1) + '%'"></span>
-            </small>
-          </template>
-        </div>
+        <small class="form-text text-muted" x-text="'Remaining: ' + remainingToContain.toFixed(2) + ' ' + unit"></small>
       </div>
 
       <!-- Warnings -->
@@ -113,9 +113,6 @@ function planProduction() {
     unit: '{{ recipe.predicted_yield_unit }}',
     allowedContainers: [],
     containersSelected: [],
-    lastContainer: null,
-    lastContainerFillPercent: 0,
-    partialContainerUsage: false,
     flexMode: false,
     autoFill: true,
     scale: 1.0,
@@ -154,15 +151,6 @@ function planProduction() {
       const contained = this.totalContained;
       this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
       this.remainingToContain = Math.max(projected - contained, 0);
-      
-      if (this.containersSelected.length > 0) {
-        this.lastContainer = this.containersSelected[this.containersSelected.length - 1];
-        const remainder = projected % this.lastContainer.capacity;
-        this.partialContainerUsage = remainder > 0;
-        if (this.partialContainerUsage) {
-          this.lastContainerFillPercent = (remainder / this.lastContainer.capacity) * 100;
-        }
-      }
     },
 
     updateContainer(index) {
