@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
@@ -6,7 +5,7 @@
 <div class="inventory-sections">
   <div class="section">
     <h3>Ingredients</h3>
-    
+
     <!-- Add New Ingredient Form -->
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -58,7 +57,11 @@
           <td>{{ item.type|capitalize }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
-            <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% if item.type == 'container' %}
+            <a href="{{ url_for('inventory.edit_container', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% else %}
+            <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% endif %}
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
           </td>
         </tr>
@@ -69,7 +72,7 @@
 
   <div class="section">
     <h3>Containers</h3>
-    
+
     <!-- Add New Container Form -->
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -127,7 +130,11 @@
           <td>{{ item.quantity }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
-            <a href="{{ url_for('inventory.edit_inventory', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% if item.type == 'container' %}
+            <a href="{{ url_for('inventory.edit_container', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% else %}
+            <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            {% endif %}
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
           </td>
         </tr>
