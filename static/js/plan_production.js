@@ -1,4 +1,5 @@
 // Plan Production Page JavaScript
+
 function updateProjectedYield() {
   const scaleInput = document.getElementById('scale');
   const projectedYieldElement = document.getElementById('projectedYield');
@@ -59,9 +60,8 @@ function renderStockResults(stockCheck) {
   container.innerHTML = html;
 }
 
-// Initialize after DOM load
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-  // Set up event listeners
   const scaleInput = document.getElementById('scale');
   if (scaleInput) {
     scaleInput.addEventListener('input', updateProjectedYield);
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
     checkStockBtn.addEventListener('click', checkStock);
   }
 
-  // Initial yield calculation
+  // Initial calculation
   updateProjectedYield();
 });
 
