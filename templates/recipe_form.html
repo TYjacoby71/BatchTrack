@@ -1,5 +1,9 @@
 {% extends 'layout.html' %}
 {% block content %}
+
+{% set preselect_ingredient_id = session.pop('preselect_ingredient_id', None) %}
+{% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
+
 <h2>
     {% if recipe %}
         {% if recipe.parent_id %}Edit Variation{% else %}Edit Recipe{% endif %}
@@ -22,13 +26,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="
-    {%- if recipe and not is_clone -%}
-        {{ url_for('recipes.create_variation' if is_variation else 'recipes.edit_recipe', recipe_id=recipe.parent_id if is_variation else recipe.id) }}
-    {%- else -%}
-        {{ url_for('recipes.new_recipe') }}
-    {%- endif -%}" id="recipeForm">
-
+<form method="post" action="{{ url_for('recipes.create_variation' if is_variation else ('recipes.edit_recipe' if recipe else 'recipes.new_recipe'), recipe_id=recipe.parent_id if is_variation else recipe.id if recipe else None) }}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
@@ -65,86 +63,48 @@
 
     <hr>
 
-    <!-- Container Logic Section -->
     <div class="form-group">
-      <label>Does this recipe require containers?</label>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
-        <label class="form-check-label" for="requiresContainers">
-          Yes, this recipe needs containers.
-        </label>
-      </div>
+        <label>Does this recipe require containers?</label>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
+            <label class="form-check-label" for="requiresContainers">
+              Yes, this recipe needs containers.
+            </label>
+        </div>
     </div>
 
     <div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
-      <label for="allowed_containers">Select Allowed Containers:</label>
-      <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-        {% for container in containers %}
-        <option value="{{ container.id }}" {% if container.id in recipe.allowed_containers %}selected{% endif %}>
-          {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
-        </option>
-        {% endfor %}
-      </select>
+        <label for="allowed_containers">Select Allowed Containers:</label>
+        <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+            {% for container in all_ingredients if container.type == 'container' %}
+            <option value="{{ container.id }}" {% if recipe and container.id in recipe.allowed_containers %}selected{% endif %}>
+                {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+            </option>
+            {% endfor %}
+        </select>
     </div>
+
+    <hr>
 
     <div class="form-group">
         <label>Ingredients:</label>
         <button type="button" onclick="addIngredient()">Add Ingredient</button>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">Quick Add Container</button>
-
-        <!-- Quick Add Container Modal -->
-        <div class="modal fade" id="quickAddContainerModal" tabindex="-1">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Quick Add Container</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <form id="quickAddContainerForm">
-                  <div class="mb-3">
-                    <label for="containerName" class="form-label">Container Name</label>
-                    <input type="text" class="form-control" id="containerName" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="storageAmount" class="form-label">Storage Amount</label>
-                    <input type="number" class="form-control" id="storageAmount" step="0.01" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="storageUnit" class="form-label">Storage Unit</label>
-                    <select id="storageUnit" class="form-select" required>
-                      <option value="">Select Unit</option>
-                      <option value="oz">Ounces (oz)</option>
-                      <option value="ml">Milliliters (ml)</option>
-                      <option value="g">Grams (g)</option>
-                      <option value="count">Count (pieces)</option>
-                    </select>
-                  </div>
-                  <button type="submit" class="btn btn-primary">Add Container</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
         <div id="ingredients-container">
             {% if recipe and recipe.recipe_ingredients %}
                 {% for assoc in recipe.recipe_ingredients %}
                 <div class="ingredient-entry">
                     <select name="ingredient_ids[]" required>
                         <option value="">Select an ingredient</option>
-                        {% for available_ing in all_ingredients %}
-                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>
-                            {{ available_ing.name }}
-                        </option>
+                        {% for available_ing in all_ingredients if available_ing.type != 'container' %}
+                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>{{ available_ing.name }}</option>
                         {% endfor %}
                     </select>
                     <input type="number" step="0.01" name="amounts[]" value="{{ assoc.amount }}" required>
                     <select name="units[]" required>
                         {% for unit in inventory_units %}
-                        <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>
-                            {{ unit.name }}
-                        </option>
+                        <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
                         {% endfor %}
                     </select>
                     <button type="button" onclick="this.parentElement.remove()">Remove</button>
@@ -154,18 +114,14 @@
         </div>
     </div>
 
+    <hr>
+
     <div class="form-group mt-3 d-flex justify-content-between">
         <div>
             <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
             {% if recipe and not is_clone and not is_variation and not parent_recipe %}
             <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
-                {% if recipe.parent_id %}
-                Delete Variation
-                {% elif recipe.variations %}
-                Delete Recipe & Variations
-                {% else %}
-                Delete Recipe
-                {% endif %}
+                {% if recipe.parent_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
             </button>
             {% endif %}
         </div>
@@ -173,7 +129,131 @@
     </div>
 </form>
 
+{% include 'quick_add_ingredient_modal.html' %}
+
+<!-- Quick Add Container Modal -->
+<div class="modal fade" id="quickAddContainerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Container</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickAddContainerForm">
+          <div class="mb-3">
+            <label for="containerName" class="form-label">Container Name</label>
+            <input type="text" class="form-control" id="containerName" required>
+          </div>
+          <div class="mb-3">
+            <label for="storageAmount" class="form-label">Storage Amount</label>
+            <input type="number" class="form-control" id="storageAmount" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label for="storageUnit" class="form-label">Storage Unit</label>
+            <select class="form-select" id="storageUnit" required>
+              <option value="">Select Unit</option>
+              {% for unit in inventory_units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Add Container</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
+let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
+let ingredientReturnContext = 'main';
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
+        addIngredient(PRESELECT_INGREDIENT_ID);
+    }
+
+    const requiresContainersCheckbox = document.getElementById('requiresContainers');
+    const allowedContainersSection = document.getElementById('allowedContainersSection');
+
+    if (requiresContainersCheckbox && allowedContainersSection) {
+        requiresContainersCheckbox.addEventListener('change', function() {
+            allowedContainersSection.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+
+    const quickAddContainerForm = document.getElementById('quickAddContainerForm');
+    if (quickAddContainerForm) {
+        quickAddContainerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('containerName').value;
+            const amount = document.getElementById('storageAmount').value;
+            const unit = document.getElementById('storageUnit').value;
+
+            fetch('/quick-add/container', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify({ name, storage_amount: amount, storage_unit: unit })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+
+                const containerSelect = document.getElementById('allowed_containers');
+                if (containerSelect) {
+                    const option = new Option(
+                        `${data.name} (${data.storage_amount} ${data.storage_unit})`,
+                        data.id,
+                        false,
+                        true
+                    );
+                    containerSelect.add(option);
+                }
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
+                if (modal) modal.hide();
+
+                // Reset form
+                quickAddContainerForm.reset();
+            })
+            .catch(err => alert('Failed to add container: ' + err.message));
+        });
+    }
+});
+
+function addIngredient(preselectId = null) {
+    const container = document.getElementById('ingredients-container');
+    const entry = document.createElement('div');
+    entry.classList.add('ingredient-entry');
+    entry.innerHTML = `
+        <select name="ingredient_ids[]" required>
+            <option value="">Select an ingredient</option>
+            {% for ing in all_ingredients if ing.type != 'container' %}
+            <option value="{{ ing.id }}">{{ ing.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" step="0.01" name="amounts[]" required>
+        <select name="units[]" required>
+            {% for unit in inventory_units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    container.appendChild(entry);
+    if (preselectId) {
+        const select = entry.querySelector('select[name="ingredient_ids[]"]');
+        if (select) select.value = preselectId;
+    }
+    entry.scrollIntoView({ behavior: 'smooth' });
+    return entry;
+}
+
 function confirmDelete(recipeId, isVariation, variationCount) {
     let msg;
     if (isVariation) {
@@ -199,232 +279,10 @@ function confirmDelete(recipeId, isVariation, variationCount) {
         form.submit();
     }
 }
+
+function setIngredientReturnContext(context) {
+    ingredientReturnContext = context;
+}
 </script>
 
-{% include 'quick_add_ingredient_modal.html' %}
-
-<!-- Quick Add Unit Modal -->
-<div class="modal fade" id="quickAddUnitModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Quick Add Unit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="quickAddUnitForm">
-          <div class="mb-3">
-            <label for="unitName" class="form-label">Unit Name</label>
-            <input type="text" class="form-control" id="unitName" required>
-          </div>
-          <div class="mb-3">
-            <label for="unitType" class="form-label">Type</label>
-            <select class="form-select" id="unitType">
-              <option value="count">Count</option>
-              <option value="volume">Volume</option>
-              <option value="weight">Weight</option>
-            </select>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="saveQuickUnit">Add Unit</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Bootstrap + Logic -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-// Global variables
-let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
-let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
-let ingredientReturnContext = 'main';
-let lastIngredientDropdown = null;
-let unitReturnContext = 'main';
-
-// Show/hide allowed containers dynamically
-document.addEventListener('DOMContentLoaded', function() {
-  const requiresContainersCheckbox = document.getElementById('requiresContainers');
-  const allowedContainersSection = document.getElementById('allowedContainersSection');
-
-  if (requiresContainersCheckbox) {
-    requiresContainersCheckbox.addEventListener('change', function() {
-      if (this.checked) {
-        allowedContainersSection.style.display = 'block';
-      } else {
-        allowedContainersSection.style.display = 'none';
-      }
-    });
-  }
-
-  // Handle initial ingredient line if needed
-  if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
-    addIngredient(PRESELECT_INGREDIENT_ID);
-  }
-
-  // Quick Add Unit Handler
-  document.getElementById('saveQuickUnit').addEventListener('click', function() {
-    const name = document.getElementById('unitName').value;
-    const type = document.getElementById('unitType').value;
-
-    if (!name) return alert('Unit name required.');
-
-    fetch('/recipes/units/quick-add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) return alert('Error: ' + data.error);
-
-      // Add to all unit dropdowns
-      document.querySelectorAll("select[name='units[]']").forEach(select => {
-        select.add(new Option(data.name, data.name, false, true));
-      });
-
-      // Add to quick ingredient unit dropdown
-      const quickUnit = document.getElementById('quickIngredientUnit');
-      quickUnit.add(new Option(data.name, data.name, false, true));
-      quickUnit.value = data.name;
-
-      // Handle modal transitions
-      const unitModalEl = document.getElementById('quickAddUnitModal');
-      const unitModal = bootstrap.Modal.getInstance(unitModalEl);
-      if (unitModal) {
-        unitModal.hide();
-
-        // Clean up modal artifacts
-        document.body.classList.remove('modal-open');
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-
-        if (unitReturnContext === 'ingredient') {
-          // Wait for unit modal to fully close
-          setTimeout(() => {
-            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-            ingredientModal.show();
-            unitReturnContext = 'main'; // Reset context
-          }, 300);
-        }
-      }
-
-      // Reset form
-      document.getElementById('unitName').value = '';
-      document.getElementById('unitType').selectedIndex = 0;
-    });
-  });
-
-  // Quick Add Ingredient Handler
-  document.getElementById('saveQuickIngredient').addEventListener('click', function() {
-    const name = document.getElementById('quickIngredientName').value.trim();
-    const unit = document.getElementById('quickIngredientUnit').value;
-
-    if (!name || !unit) {
-      alert('Both name and unit are required.');
-      return;
-    }
-
-    const button = this;
-    button.disabled = true;
-    button.innerText = 'Adding...';
-
-    fetch('/ingredients/quick-add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, unit })
-    })
-    .then(async response => {
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(err);
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.error) return alert('Error: ' + data.error);
-
-      // Close the modal
-      const modal = document.getElementById('quickAddIngredientModal');
-      const bsModal = bootstrap.Modal.getInstance(modal);
-      if (bsModal) bsModal.hide();
-
-      // Clean up UI artifacts
-      document.body.classList.remove('modal-open');
-      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-
-      // Let the server handle the row prefill
-      window.location.reload();
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Failed to add ingredient. Please try again.');
-
-      // Clean up modal state after error
-      document.body.classList.remove('modal-open');
-      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-
-      // Re-init modal for clean state
-      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-      ingredientModal.hide();
-    })
-    .finally(() => {
-      button.disabled = false;
-      button.innerText = 'Add Ingredient';
-
-      // Additional cleanup in finally block
-      document.body.classList.remove('modal-open');
-      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    });
-  });
-
-  // Added event listener for closing the unit modal
-  document.getElementById('quickAddUnitModal').addEventListener('hidden.bs.modal', function () {
-    if (unitReturnContext === 'ingredient') {
-      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-      setTimeout(() => ingredientModal.show(), 300);
-      unitReturnContext = 'main';
-    }
-  });
-});
-
-function addIngredient(preselectId = null) {
-  const container = document.getElementById('ingredients-container');
-  const entry = document.createElement('div');
-  entry.classList.add('ingredient-entry');
-  entry.innerHTML = `
-    <select name="ingredient_ids[]" required>
-      <option value="">Select an ingredient</option>
-      {% for ing in all_ingredients %}
-      <option value="{{ ing.id }}">{{ ing.name }}</option>
-      {% endfor %}
-    </select>
-    <input type="number" step="0.01" name="amounts[]" required>
-    <select name="units[]" required>
-      {% for unit in inventory_units %}
-      <option value="{{ unit.name }}">{{ unit.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="button" onclick="this.parentElement.remove()">Remove</button>
-  `;
-  container.appendChild(entry);
-  if (preselectId) {
-    const select = entry.querySelector('select[name="ingredient_ids[]"]');
-    if (select) select.value = preselectId;
-  }
-  entry.scrollIntoView({ behavior: 'smooth' });
-  return entry;
-}
-
-// Functions
-function setIngredientReturnContext(source, dropdown = null) {
-  ingredientReturnContext = source;
-  lastIngredientDropdown = dropdown;
-}
-
-</script>
 {% endblock %}
