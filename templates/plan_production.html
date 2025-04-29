@@ -1,9 +1,11 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" class="container">
-
-  <!-- Phase 1: Plan Containers -->
-  <h4 class="mt-4">1. Plan Containers</h4>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Plan Production: {{ recipe.name }}</h2>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+  </div>
 
   <div class="row mb-4">
     <div class="col-md-6">
@@ -32,16 +34,16 @@
     </div>
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" @change="updateContainer(index, 'id', $event.target.value)">
+        <div x-data="containerRow(container, index, $parent)" class="d-flex align-items-center gap-2 mb-2">
+          <select class="form-select" x-model="container.id" @change="updateContainer()">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
               </option>
             </template>
           </select>
-          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer(index, 'quantity', $event.target.value)">
-          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)">×</button>
+          <input type="number" class="form-control" min="1" x-model.number="container.quantity" @input="updateContainer()">
+          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer()">×</button>
         </div>
       </template>
 
@@ -62,11 +64,11 @@
     </div>
   </div>
 
-  <!-- Phase 2: Check Ingredients -->
-  <h4 class="mt-4">2. Check Ingredients</h4>
+  <div class="d-flex justify-content-end gap-2 mb-4">
+    <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
+  </div>
 
   <div class="mb-4">
-    <button type="button" class="btn btn-warning" @click="checkStock">Check Stock</button>
     <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
       Some ingredients are low or missing. Please adjust your inventory.
     </div>
@@ -74,9 +76,6 @@
       All ingredients are available!
     </div>
   </div>
-
-  <!-- Phase 3: Finalize Batch -->
-  <h4 class="mt-4">3. Start Batch</h4>
 
   <div class="d-flex justify-content-end">
     <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">Start Batch</button>
