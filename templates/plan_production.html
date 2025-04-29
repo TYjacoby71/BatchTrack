@@ -208,15 +208,26 @@ function planProduction() {
       const previousQuantity = this.containersSelected[index].quantity;
       
       if (match) {
+        // Store original values
+        const originalCapacity = this.containersSelected[index].capacity;
+        const originalUnit = this.containersSelected[index].unit;
+        const originalName = this.containersSelected[index].name;
+        
+        // Try to update values
+        if (this.containersSelected[index].quantity > match.stock_qty) {
+          alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
+          // Revert everything to previous state
+          this.containersSelected[index].quantity = previousQuantity;
+          this.containersSelected[index].capacity = originalCapacity;
+          this.containersSelected[index].unit = originalUnit;
+          this.containersSelected[index].name = originalName;
+          return;
+        }
+        
+        // Only update if validation passes
         this.containersSelected[index].capacity = match.storage_amount;
         this.containersSelected[index].unit = match.storage_unit;
         this.containersSelected[index].name = match.name;
-        
-        if (this.containersSelected[index].quantity > match.stock_qty) {
-          alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
-          this.containersSelected[index].quantity = previousQuantity;
-          return;
-        }
       }
       this.updateProgress();
       this.evaluateContainment();
