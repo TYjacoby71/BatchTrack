@@ -195,13 +195,25 @@ function planProduction() {
           this.allowedContainers = data.available || [];
           
           if (this.autoFill) {
-            this.containersSelected = (data.plan || []).map(container => ({
+            // Calculate needed containers with ceiling for partial fills
+            const projected = this.baseYield * this.scale;
+            const containers = data.plan || [];
+            
+            // Add extra container if needed for partial fill
+            let totalVolume = containers.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
+            if (totalVolume < projected && containers.length > 0) {
+              const lastContainer = containers[containers.length - 1];
+              lastContainer.quantity += 1;
+            }
+            
+            this.containersSelected = containers.map(container => ({
               id: container.id,
               quantity: container.quantity,
               name: '',
               capacity: 0,
               unit: ''
             }));
+            
             this.containersSelected.forEach((container, index) => {
               this.updateContainer(index);
             });
@@ -234,13 +246,17 @@ function planProduction() {
         return;
       }
       
-      // Then check for partial fills (if within 5% of container size)
-      if (this.containmentPercent >= 100) {
-        const totalContained = this.totalContained;
-        const remainingAmount = totalContained - projected;
+      // Check for partial fills
+      const totalContained = this.totalContained;
+      if (totalContained < projected) {
+        // We need one more container
+        this.containmentIssue = 'Warning: Need one more container for partial fill';
+      } else if (totalContained > projected) {
+        // We have a container that will be partially filled
         const smallestContainer = Math.min(...this.containersSelected.map(c => c.capacity));
-        if (remainingAmount > 0 && remainingAmount < (smallestContainer * 0.05)) {
-          this.containmentIssue = 'Warning: Some containers will be partially filled.';
+        const remainingAmount = totalContained - projected;
+        if (remainingAmount < smallestContainer) {
+          this.containmentIssue = `Warning: Last container will be partially filled (${((projected % smallestContainer).toFixed(2))} ${this.unit})`;
         }
       }
     },
