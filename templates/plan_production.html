@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -121,15 +120,15 @@ function planProduction() {
         .then(res => res.json())
         .then(data => {
           this.allowedContainers = data.available || [];
-
           if (this.autoFill) {
             this.containersSelected = (data.plan || []).map(container => {
               const match = data.available.find(c => c.id === container.id);
               return {
-                ...container,
-                name: match?.name || 'Unknown Container',
+                id: container.id,
+                quantity: container.quantity,
+                name: match?.name || 'Select Container',
                 capacity: match?.storage_amount || 0,
-                unit: match?.storage_unit || '',
+                unit: match?.storage_unit || ''
               };
             });
 
