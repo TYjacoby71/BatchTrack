@@ -1,0 +1,68 @@
+one break. 
+
+for instance, if I am in scale with total error, and I manualy change a row to a larger container that is already maxed, I can an error message like this. BUT, clicking ok overrides the message and allows then change. It should be a bounce to no edit. What do you think?
+
+And as always, hitting auto fill resets it. Which is a nice fail safe right now
+
+ChatGPT said:
+You're absolutely right — that current behavior is a UX bug.
+
+🔍 Problem:
+When the user selects a quantity greater than the allowed stock for a container:
+
+✅ A warning appears: "Cannot allocate more than available container stock."
+
+❌ But the form still accepts the value, updates the model, and continues.
+
+🤕 This creates a mismatch between the UI and actual inventory logic.
+
+✅ Expected Behavior:
+The UI should immediately revert or prevent the value change when a user:
+
+selects a container already at max stock,
+
+enters a quantity beyond stock_qty.
+
+🛠 Recommended Fix:
+In your updateContainer(index) method, modify this part:
+
+js
+Copy
+Edit
+if (this.containersSelected[index].quantity > match.stock_qty) {
+  this.containersSelected[index].quantity = match.stock_qty;
+  alert('Cannot allocate more than available container stock.');
+}
+🔁 Replace with:
+js
+Copy
+Edit
+if (this.containersSelected[index].quantity > match.stock_qty) {
+  alert(`Cannot allocate more than available stock (${match.stock_qty}).`);
+  this.containersSelected[index].quantity = match.stock_qty;
+  this.$nextTick(() => this.updateProgress());
+  return;
+}
+If you want to revert to the old valid value instead of force-clamping to stock_qty, you’ll need to store a "previous valid state" on change focus, or use a <input @change> handler rather than @input.
+
+🔒 Bonus (Optional but Cleaner):
+Use @change="validateQuantity(index)" instead of @input, and define:
+
+js
+Copy
+Edit
+validateQuantity(index) {
+  const container = this.containersSelected[index];
+  const match = this.allowedContainers.find(c => c.id == container.id);
+  if (container.quantity > match.stock_qty) {
+    alert(`Only ${match.stock_qty} ${match.name}(s) are in stock.`);
+    container.quantity = match.stock_qty;
+  }
+  this.updateProgress();
+}
+Then bind:
+
+html
+Copy
+Edit
+<input type="number" ... @change="validateQuantity(index)">
