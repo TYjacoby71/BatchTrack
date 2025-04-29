@@ -65,11 +65,42 @@
       <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
-    <div class="alert alert-danger mt-2" x-show="stockChecked && !stockCheckPassed">
-      Some ingredients are low or missing. Adjust inventory before proceeding.
-    </div>
-    <div class="alert alert-success mt-2" x-show="stockChecked && stockCheckPassed">
-      All ingredients are available!
+    <div x-show="stockChecked">
+      <template x-if="stockCheckPassed">
+        <div class="alert alert-success mt-2">
+          ✅ All ingredients are available!
+        </div>
+      </template>
+      <template x-if="!stockCheckPassed">
+        <div>
+          <div class="alert alert-warning mt-2">
+            ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
+          </div>
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th>Required</th>
+                <th>Available</th>
+                <th>Unit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in stockResults" :key="item.ingredient">
+                <tr>
+                  <td x-text="item.ingredient"></td>
+                  <td x-text="item.required"></td>
+                  <td x-text="item.available"></td>
+                  <td x-text="item.unit"></td>
+                  <td x-text="item.status"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+        </div>
+      </template>
     </div>
   </div>
 
