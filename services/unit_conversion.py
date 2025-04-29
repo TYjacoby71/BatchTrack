@@ -15,6 +15,9 @@ class ConversionEngine:
         if not from_u or not to_u:
             raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
 
+        if from_u.multiplier_to_base is None or to_u.multiplier_to_base is None:
+            raise ValueError(f"Multiplier missing for: {from_unit} or {to_unit}")
+
         custom_mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
         if custom_mapping:
             result = amount * custom_mapping.multiplier
@@ -23,16 +26,16 @@ class ConversionEngine:
         elif from_u.type == to_u.type:
             base_amount = amount * from_u.multiplier_to_base
             result = base_amount / to_u.multiplier_to_base
-        elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+        elif (from_u.type == 'volume' and to_u.type == 'weight') or (from_u.type == 'weight' and to_u.type == 'volume'):
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
                 if ingredient:
                     density = ingredient.density
                     if density is None and ingredient.category:
                         density = ingredient.category.default_density
-                    density = density or 1.0
+
             if density is None:
-                density = 1.0
+                raise ValueError(f"Density required for converting {from_unit} to {to_unit}")
             if from_u.type == 'volume':
                 grams = amount * from_u.multiplier_to_base * density
                 result = grams / to_u.multiplier_to_base
