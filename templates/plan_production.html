@@ -34,7 +34,9 @@
     <div class="card-body">
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" 
+            @change="updateContainer(index)"
+            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
               <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
@@ -42,9 +44,15 @@
               </template>
             </template>
           </select>
-          <input type="number" min="1" class="form-control" x-model.number="container.quantity" :disabled="autoFill || getRemainingStock(container.id, index) <= 0" @input="updateProgress">
+          <input type="number" min="1" class="form-control" 
+            x-model.number="container.quantity" 
+            :disabled="autoFill || getRemainingStock(container.id, index) <= 0" 
+            @input="updateProgress"
+            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
           <div class="small text-muted px-2" x-text="'Available: ' + getRemainingStock(container.id, index)"></div>
-          <button type="button" class="btn btn-danger btn-sm" @click="removeContainer(index)" :disabled="autoFill">&times;</button>
+          <button type="button" class="btn btn-danger btn-sm" 
+            @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(index)" 
+            :disabled="autoFill">&times;</button>
         </div>
       </template>
 
@@ -112,8 +120,12 @@
         </tbody>
       </table>
 
-      <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
-      <button class="btn btn-outline-secondary btn-sm" @click="downloadShoppingList">📝 Download Shopping List</button>
+      <template x-if="!stockCheckPassed">
+        <div class="mt-2">
+          <button class="btn btn-outline-secondary btn-sm" @click="downloadCSV">📥 Download CSV</button>
+          <button class="btn btn-outline-secondary btn-sm" @click="downloadShoppingList">📝 Download Shopping List</button>
+        </div>
+      </template>
     </div>
   </div>
 
@@ -208,17 +220,28 @@ function planProduction() {
     },
 
     evaluateContainment() {
-      if (this.autoFill && this.containmentPercent < 100) {
-        this.containmentIssue = 'Warning: Some containers will be partially filled.';
-        const projected = this.baseYield * this.scale;
-        const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
-        if (totalAvailable < projected) {
-          const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
-          const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
-          this.containmentIssue += ` You need ${missingUnits} more containers to make this batch.`;
+      const projected = this.baseYield * this.scale;
+      const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
+      
+      // Clear previous issue
+      this.containmentIssue = '';
+      
+      // First check if we have enough total containers
+      if (totalAvailable < projected) {
+        const smallestContainer = Math.min(...this.allowedContainers.map(c => c.storage_amount));
+        const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
+        this.containmentIssue = `Error: You need ${missingUnits} more containers to make this batch.`;
+        return;
+      }
+      
+      // Then check for partial fills (if within 5% of container size)
+      if (this.containmentPercent >= 100) {
+        const totalContained = this.totalContained;
+        const remainingAmount = totalContained - projected;
+        const smallestContainer = Math.min(...this.containersSelected.map(c => c.capacity));
+        if (remainingAmount > 0 && remainingAmount < (smallestContainer * 0.05)) {
+          this.containmentIssue = 'Warning: Some containers will be partially filled.';
         }
-      } else {
-        this.containmentIssue = '';
       }
     },
 
