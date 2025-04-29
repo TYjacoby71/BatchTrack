@@ -208,6 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (exportButton) exportButton.addEventListener('click', exportShoppingList);
   if (flexModeToggle) flexModeToggle.addEventListener('change', updateContainmentProgress);
   if (autoFillToggle) autoFillToggle.addEventListener('change', updateContainmentProgress);
+  
+  // Add check stock button listener
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) checkStockBtn.addEventListener('click', checkStock);
 
   // Initialize
   updateProjectedYield();
