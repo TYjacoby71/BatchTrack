@@ -1,4 +1,30 @@
+
 // Plan Production Page JavaScript
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize all event listeners
+  initializeEventListeners();
+  
+  // Calculate initial projected yield
+  updateProjectedYield();
+});
+
+function initializeEventListeners() {
+  const scaleInput = document.getElementById('scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('input', updateProjectedYield);
+  }
+
+  const checkStockBtn = document.getElementById('checkStockBtn');
+  if (checkStockBtn) {
+    checkStockBtn.addEventListener('click', checkStock);
+  }
+
+  const addContainerBtn = document.getElementById('addContainerBtn');
+  if (addContainerBtn) {
+    addContainerBtn.addEventListener('click', addContainerRow);
+  }
+}
 
 function updateProjectedYield() {
   const projectedYieldElement = document.getElementById('projectedYield');
@@ -59,23 +85,6 @@ function renderStockResults(stockCheck) {
   html += '</tbody></table>';
   container.innerHTML = html;
 }
-
-// Wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', function() {
-  // Set up initial event listeners
-  const scaleInput = document.getElementById('scale');
-  if (scaleInput) {
-    scaleInput.addEventListener('input', updateProjectedYield);
-  }
-
-  const checkStockBtn = document.getElementById('checkStockBtn');
-  if (checkStockBtn) {
-    checkStock.addEventListener('click', checkStock);
-  }
-
-  // Calculate initial projected yield
-  updateProjectedYield();
-});
 
 function addContainerRow() {
   const containerArea = document.getElementById('containerSelectionArea');
