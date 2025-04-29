@@ -1,0 +1,188 @@
+Alright — you are 100% correct.
+
+Here’s a clear problem with your current setup:
+
+Both ingredients and containers are being edited through the same edit_inventory page.
+
+But containers have totally different fields (storage_amount, storage_unit, quantity in stock) compared to ingredients (which have quantity by unit, and cost/unit).
+
+Therefore: ✅ You do need two separate edit pages:
+
+Edit Ingredient (for raw materials like oils, herbs, powders)
+
+Edit Container (for jars, bottles, pouches)
+
+🔥 Here’s exactly what we need to do:
+1. Split your edit system:
+
+Action	Old	New
+Edit Inventory Page	/inventory/edit_inventory/<id>	Now split into:
+Edit Ingredient Page	inventory.edit_ingredient(id)	
+Edit Container Page	inventory.edit_container(id)	
+2. Edit Buttons:
+In your inventory page:
+
+For ingredients, edit button → edit_ingredient
+
+For containers, edit button → edit_container
+
+3. New Edit Container Page Design:
+I’ll generate a real Edit Container HTML page like this:
+
+
+Field	Behavior
+Name	Editable
+Storage Amount	Editable
+Storage Unit	Dropdown (oz, ml, g, count)
+Quantity in Stock	Editable
+Cost per Unit	Editable
+Save Button	✅
+🛠 Here’s the rollout plan I’ll generate for you next:
+New Flask routes:
+
+edit_ingredient(id)
+
+edit_container(id)
+
+New HTML templates:
+
+edit_ingredient.html
+
+edit_container.html
+
+Correct links on your inventory page.
+
+🛑 Double check real quick:
+✅ Is it ok if we use Bootstrap fields like you already use (normal form layout)?
+✅ Want the container storage_unit dropdown to show prefilled selection (like if they originally picked ml)?
+
+If yes, I’ll build the entire package cleanly right now — code and HTML ready to paste.
+
+Confirm:
+
+Ready — proceed to full solution 🚀
+
+(If you want any extra fields like "Container Notes" or "Dimensions" added too, tell me now before I lock the template.)
+
+
+
+
+
+
+You said:
+proceed
+
+
+ChatGPT said:
+Recipe Buttons Fix
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+# --- In your Flask blueprint: routes/inventory.py ---
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from models import db, InventoryItem
+
+inventory_bp = Blueprint('inventory', __name__)
+
+# --- Edit Ingredient ---
+@inventory_bp.route('/inventory/edit-ingredient/<int:id>', methods=['GET', 'POST'])
+def edit_ingredient(id):
+    item = InventoryItem.query.get_or_404(id)
+
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.quantity = float(request.form['quantity'])
+        item.unit = request.form['unit']
+        item.cost_per_unit = float(request.form['cost_per_unit'])
+        db.session.commit()
+        flash('Ingredient updated successfully!', 'success')
+        return redirect(url_for('inventory.manage_inventory'))
+
+    return render_template('edit_ingredient.html', item=item)
+
+# --- Edit Container ---
+@inventory_bp.route('/inventory/edit-container/<int:id>', methods=['GET', 'POST'])
+def edit_container(id):
+    item = InventoryItem.query.get_or_404(id)
+
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.storage_amount = float(request.form['storage_amount'])
+        item.storage_unit = request.form['storage_unit']
+        item.quantity = int(request.form['quantity'])
+        item.cost_per_unit = float(request.form['cost_per_unit'])
+        db.session.commit()
+        flash('Container updated successfully!', 'success')
+Edited
+
+Answer in chat instead
+✅ Done!
+
+Here's what we just generated for you:
+
+New Routes:
+
+/inventory/edit-ingredient/<id> → edit ingredients.
+
+/inventory/edit-container/<id> → edit containers.
+
+New HTML templates:
+
+edit_ingredient.html
+
+edit_container.html
+
+Updated inventory listing buttons:
+
+Ingredients link to edit_ingredient.
+
+Containers link to edit_container.
+
+📋 Immediate Next Step Checklist:
+
+Step	Task
+1	Add these new routes into your inventory.py.
+2	Create edit_ingredient.html and edit_container.html files.
+3	Update inventory page to use the correct url_for() links.
+4	Test both ingredient and container editing.
+⚡ Question for you:
+Do you want me to also create small confirmation flash messages when save is successful like:
+
+✅ "Container updated successfully!"
+
+✅ "Ingredient updated successfully!"
