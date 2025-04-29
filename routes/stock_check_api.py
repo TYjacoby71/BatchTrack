@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import db, Recipe
-from services.stock_check import universal_stock_check
+from services.stock_check_utils import check_stock_for_recipe
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def api_check_stock():
             return jsonify({'error': 'Recipe not found'}), 404
 
         # Use the Universal Stock Check Service
-        full_check_results = universal_stock_check(recipe, scale)
+        full_check_results = check_stock_for_recipe(recipe, scale)
 
         return jsonify({
             'stock_check': full_check_results
