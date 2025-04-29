@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -121,15 +120,16 @@ function planProduction() {
         .then(res => res.json())
         .then(data => {
           this.allowedContainers = data.available || [];
-
           if (this.autoFill) {
+            // Ensure each container is fully hydrated with all properties
             this.containersSelected = (data.plan || []).map(container => {
-              const match = data.available.find(c => c.id === container.id);
+              const match = this.allowedContainers.find(c => c.id === container.id);
+              if (!match) return container;
               return {
                 ...container,
-                name: match?.name || 'Unknown Container',
-                capacity: match?.storage_amount || 0,
-                unit: match?.storage_unit || '',
+                name: match.name,
+                capacity: match.storage_amount,
+                unit: match.storage_unit
               };
             });
 
