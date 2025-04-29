@@ -203,13 +203,14 @@ function planProduction() {
     },
 
     updateContainer(index) {
-      const selectedId = this.containersSelected[index].id;
-      const match = this.allowedContainers.find(c => c.id == selectedId);
+      const previousId = this.containersSelected[index].id;
+      const newMatch = this.allowedContainers.find(c => c.id == selectedId);
       
-      if (!match) return;
+      if (!newMatch) return;
 
-      // Store current values before validation
+      // Store the complete previous state
       const previousState = {
+        id: previousId,
         quantity: this.containersSelected[index].quantity,
         capacity: this.containersSelected[index].capacity,
         unit: this.containersSelected[index].unit,
@@ -217,12 +218,17 @@ function planProduction() {
       };
 
       // Validate quantity
-      if (this.containersSelected[index].quantity > match.stock_qty) {
-        alert(`Cannot allocate more than available stock (${match.stock_qty} ${match.name}s available)`);
-        // Restore previous quantity but keep current selection
-        this.containersSelected[index].quantity = previousState.quantity;
+      if (this.containersSelected[index].quantity > newMatch.stock_qty) {
+        alert(`Cannot allocate more than available stock (${newMatch.stock_qty} ${newMatch.name}s available)`);
+        // Restore everything to previous state
+        Object.assign(this.containersSelected[index], previousState);
         return;
       }
+      
+      // Only update if validation passes
+      this.containersSelected[index].capacity = newMatch.storage_amount;
+      this.containersSelected[index].unit = newMatch.storage_unit;
+      this.containersSelected[index].name = newMatch.name;
       
       // Only update if validation passed
       this.containersSelected[index].capacity = match.storage_amount;
