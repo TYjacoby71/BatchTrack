@@ -77,7 +77,6 @@ app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
-app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 
 @app.context_processor
