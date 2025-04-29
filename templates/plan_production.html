@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div x-data="planProduction()" x-init="init()" class="container">
@@ -31,7 +32,7 @@
         <div class="d-flex align-items-center gap-2 mb-2">
           <select class="form-select" x-model="container.id" :disabled="autoFill" @change="updateContainer(index)">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers" :key="allowed.id">
+            <template x-for="allowed in recipe.allowed_containers" :key="allowed.id">
               <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
@@ -83,7 +84,7 @@ function planProduction() {
     recipeId: {{ recipe.id }},
     baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
     unit: '{{ recipe.predicted_yield_unit }}',
-    recipe: {{ recipe.to_dict()|tojson }}, // Assuming Recipe has a to_dict method
+    recipe: {{ recipe.to_dict()|tojson }},
     allowedContainers: [],
     containersSelected: [],
     autoFill: true,
@@ -99,10 +100,12 @@ function planProduction() {
       this.fetchContainerPlan();
     },
 
-    get totalContained() {
-      return this.containersSelected.reduce((sum, c) => {
-        return sum + (Number(c.capacity || 0) * Number(c.quantity || 0));
-      }, 0);
+    updateProgress() {
+      const projected = this.baseYield * this.scale;
+      const contained = this.containersSelected.reduce((sum, c) => 
+        sum + (Number(c.capacity || 0) * Number(c.quantity || 0)), 0);
+      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
+      this.remainingToContain = Math.max(projected - contained, 0);
     },
 
     get liveContainmentMessage() {
@@ -116,13 +119,6 @@ function planProduction() {
     get canStartBatch() {
       return (this.flexMode || this.containmentPercent >= 100) && 
              this.stockChecked && this.stockCheckPassed;
-    },
-
-    updateProgress() {
-      const projected = this.baseYield * this.scale;
-      const contained = this.totalContained;
-      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
-      this.remainingToContain = Math.max(projected - contained, 0);
     },
 
     addContainer() {
@@ -161,9 +157,7 @@ function planProduction() {
       try {
         const response = await fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`);
         const data = await response.json();
-        this.allowedContainers = data.available.filter(c => 
-          c.stock_qty > 0 && this.recipe.allowed_containers.includes(c.id)
-        );
+        this.allowedContainers = data.available;
         if (this.autoFill) {
           this.containersSelected = data.plan;
         }
