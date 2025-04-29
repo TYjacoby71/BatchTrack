@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% block content %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div x-data="planProduction()" x-init="init()" class="container">
   <h2>Plan Production: {{ recipe.name }}</h2>
 
