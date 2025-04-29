@@ -58,6 +58,7 @@ from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from routes.stock_check_api import stock_api_bp # Added import for stock check API
+from blueprints.api import api_bp #Added import for api blueprint
 
 
 # Register blueprints
@@ -79,6 +80,7 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(stock_api_bp) # Registered stock check API blueprint
+app.register_blueprint(api_bp) # Registered api blueprint
 
 
 @app.context_processor
