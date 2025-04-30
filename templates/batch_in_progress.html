@@ -71,8 +71,8 @@
     <div id="ingredientFields" class="form-group mt-4" style="display:none;">
         <label for="ingredient_unit" class="form-label mb-2">Unit Type:</label>
         <select name="ingredient_unit" class="form-select mb-3" required>
-            {% for unit in inventory_units %}
-            <option value="{{ unit.name }}" {% if unit.type == 'inventory' %}selected{% endif %}>{{ unit.name }}</option>
+            {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
         <label for="ingredient_quantity">Ingredient Yield:</label>
