@@ -74,7 +74,7 @@
     <div id="ingredientFields" class="form-group mt-4" style="display:none;">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <label for="ingredient_unit" class="form-label mb-0">Unit Type:</label>
-            <span class="text-muted">Projected yield: {{ batch.scale * recipe.base_yield }} {{ recipe.base_unit }}</span>
+            <span class="text-muted">Projected yield: {{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</span>
         </div>
         <select name="ingredient_unit" class="form-select mb-3" required>
             {% for unit in units %}
@@ -206,11 +206,32 @@ function addIngredientRow() {
     row.classList.add('row', 'mb-2', 'align-items-center');
     row.innerHTML = `
         <div class="col-md-4">
-            <select class="form-select ingredient-select" name="extra_ingredients[]" required>
-                <option value="">Select Ingredient</option>
-                {% for ing in all_ingredients %}
-                <option value="{{ ing.name }}">{{ ing.name }}</option>
+            <select class="form-select ingredient-select" name="extra_ingredients[]" data-placeholder="Search ingredients..." required>
+                <option value="">Search ingredients...</option>
+                {% if batch.recipe %}
+                    <optgroup label="⭐ INGREDIENTS FROM RECIPE" class="fw-bold">
+                    {% for ing in batch.recipe.recipe_ingredients %}
+                        <option value="{{ ing.inventory_item.name }}" class="recipe-ingredient fw-bold">
+                            {{ ing.inventory_item.name }} ({{ ing.inventory_item.quantity }} {{ ing.inventory_item.unit }} available)
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                {% endif %}
+                <optgroup label="📦 ADDITIONAL INGREDIENTS" class="fw-bold">
+                {% for item in inventory_items if item.type == 'ingredient' %}
+                    {% set is_recipe_ingredient = False %}
+                    {% if batch.recipe %}
+                        {% for recipe_ing in batch.recipe.recipe_ingredients %}
+                            {% if recipe_ing.inventory_item.id == item.id %}
+                                {% set is_recipe_ingredient = True %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if not is_recipe_ingredient %}
+                        <option value="{{ item.name }}">{{ item.name }} ({{ item.quantity }} {{ item.unit }} available)</option>
+                    {% endif %}
                 {% endfor %}
+                </optgroup>
             </select>
         </div>
         <div class="col-md-3">
@@ -218,8 +239,8 @@ function addIngredientRow() {
         </div>
         <div class="col-md-3">
             <select class="form-select unit-select" name="extra_units[]" required>
-                {% for unit in inventory_units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% for unit in get_global_unit_list() %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -251,8 +272,8 @@ function addContainerRow() {
         <div class="col-md-4">
             <select class="form-select container-select" name="extra_containers[]" required>
                 <option value="">Select Container</option>
-                {% for container in containers %}
-                <option value="{{ container.name }}">{{ container.name }}</option>
+                {% for container in all_ingredients if container.type == 'container' and (not recipe.requires_containers or container.id in recipe.allowed_containers) %}
+                <option value="{{ container.name }}">{{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})</option>
                 {% endfor %}
             </select>
         </div>
