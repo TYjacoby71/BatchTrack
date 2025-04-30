@@ -29,8 +29,8 @@
         <label for="output_type">Batch Type:</label>
         <div class="d-flex align-items-center gap-2">
             <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()">
-                <option value="product">Product</option>
-                <option value="ingredient">Ingredient</option>
+                <option value="product" {% if batch.output_type == 'product' %}selected{% endif %}>Product</option>
+                <option value="ingredient" {% if batch.output_type == 'ingredient' %}selected{% endif %}>Ingredient</option>
             </select>
             <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="What unit is this batch stored in? ex. 15 oz or 25 ml">?</button>
         </div>
@@ -44,7 +44,9 @@
             <label for="product_id" class="form-label">Link to Product</label>
             <select name="product_id" class="form-select">
                 {% for product in products %}
-                    <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
+                    <option value="{{ product.id }}" {% if product.id|string == batch.product_id|string %}selected{% endif %}>
+                        {{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}
+                    </option>
                 {% endfor %}
             </select>
             <a href="/products/new" class="btn btn-link">+ Add New Product</a>

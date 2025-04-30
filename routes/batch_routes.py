@@ -189,14 +189,26 @@ def finish_batch(batch_id, force=False):
             
             # Output type and details
             output_type = request.form.get("output_type")
+            batch.output_type = output_type
+
             if output_type == "product":
                 batch.product_id = request.form.get("product_id")
                 batch.variant_label = request.form.get("variant_label")
                 batch.output_unit = request.form.get("output_unit")
                 batch.final_quantity = request.form.get("final_quantity")
+                
+                # Clear ingredient fields
+                batch.ingredient_unit = None
+                batch.ingredient_quantity = None
             elif output_type == "ingredient":
                 batch.ingredient_unit = request.form.get("ingredient_unit")
                 batch.ingredient_quantity = request.form.get("ingredient_quantity")
+                
+                # Clear product fields
+                batch.product_id = None
+                batch.variant_label = None
+                batch.output_unit = None 
+                batch.final_quantity = None
             
             # Extra ingredients
             extra_ingredients = request.form.getlist('extra_ingredients[]')
