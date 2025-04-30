@@ -26,11 +26,14 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
     <!-- Output Type Selection -->
     <div class="form-group">
-        <label for="output_type">Output Type:</label>
-        <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()" required>
-            <option value="product">Product</option>
-            <option value="ingredient">Ingredient</option>
-        </select>
+        <label for="output_type">Batch Type:</label>
+        <div class="d-flex align-items-center gap-2">
+            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()" required>
+                <option value="product">Product</option>
+                <option value="ingredient">Ingredient</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="What unit is this batch stored in? ex. 15 oz or 25 ml">?</button>
+        </div>
     </div>
 
     <!-- Product Yield Section (Refined) -->
@@ -69,7 +72,10 @@
 
     <!-- Ingredient Yield Section -->
     <div id="ingredientFields" class="form-group mt-4" style="display:none;">
-        <label for="ingredient_unit" class="form-label mb-2">Unit Type:</label>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label for="ingredient_unit" class="form-label mb-0">Unit Type:</label>
+            <span class="text-muted">Projected yield: {{ batch.scale * recipe.base_yield }} {{ recipe.base_unit }}</span>
+        </div>
         <select name="ingredient_unit" class="form-select mb-3" required>
             {% for unit in units %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
@@ -79,13 +85,27 @@
         <input type="number" name="ingredient_quantity" value="1" min="1" class="form-control" required>
     </div>
 
+    <!-- Extra Ingredients Section -->
+    <div class="extra-ingredients mt-4">
+        <h4>Extra Ingredients Used</h4>
+        <button type="button" onclick="addIngredientRow()" class="btn btn-outline-secondary mb-3">+ Add Ingredient</button>
+        <div id="ingredientInputs"></div>
+    </div>
+
+    <!-- Extra Containers Section -->
+    <div class="extra-containers mt-4">
+        <h4>Extra Containers Used</h4>
+        <button type="button" onclick="addContainerRow()" class="btn btn-outline-secondary mb-3">+ Add Container</button>
+        <div id="containerInputs"></div>
+    </div>
+
     <!-- Batch Cost Summary -->
     <div class="batch-summary mt-4">
         <h4>Batch Summary</h4>
         <table class="table">
             <thead>
                 <tr>
-                    <th>Ingredient</th>
+                    <th>Item</th>
                     <th>Amount Used</th>
                     <th>Unit</th>
                     <th>Cost/Unit</th>
@@ -224,6 +244,32 @@ function addTimerRow() {
     container.appendChild(div);
 }
 
+function addContainerRow() {
+    const row = document.createElement('div');
+    row.classList.add('row', 'mb-2', 'align-items-center');
+    row.innerHTML = `
+        <div class="col-md-4">
+            <select class="form-select container-select" name="extra_containers[]" required>
+                <option value="">Select Container</option>
+                {% for container in containers %}
+                <option value="{{ container.name }}">{{ container.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" step="1" class="form-control" name="extra_container_amounts[]" placeholder="Amount" required>
+        </div>
+        <div class="col-md-3">
+            <input type="number" step="0.01" class="form-control" name="extra_container_costs[]" placeholder="Cost/Unit">
+        </div>
+        <div class="col-md-2 text-end">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.getElementById('containerInputs').appendChild(row);
+    initializeSelect2(row);
+}
+
 function initializeSelect2(container) {
     $(container).find('.ingredient-select').select2({
         placeholder: 'Search ingredients...',
@@ -232,6 +278,11 @@ function initializeSelect2(container) {
 
     $(container).find('.unit-select').select2({
         placeholder: 'Select unit',
+        width: '100%'
+    });
+
+    $(container).find('.container-select').select2({
+        placeholder: 'Select container',
         width: '100%'
     });
 }
