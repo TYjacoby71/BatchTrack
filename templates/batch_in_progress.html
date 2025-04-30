@@ -208,9 +208,18 @@ function addIngredientRow() {
         <div class="col-md-4">
             <select class="form-select ingredient-select" name="extra_ingredients[]" required>
                 <option value="">Select Ingredient</option>
-                {% for ing in all_ingredients %}
-                <option value="{{ ing.name }}">{{ ing.name }}</option>
+                {% if batch.recipe %}
+                    <optgroup label="Recipe Ingredients">
+                    {% for ing in batch.recipe.recipe_ingredients %}
+                        <option value="{{ ing.inventory_item.name }}">{{ ing.inventory_item.name }}</option>
+                    {% endfor %}
+                    </optgroup>
+                {% endif %}
+                <optgroup label="All Ingredients">
+                {% for ing in all_ingredients if ing.type != 'container' %}
+                    <option value="{{ ing.name }}">{{ ing.name }}</option>
                 {% endfor %}
+                </optgroup>
             </select>
         </div>
         <div class="col-md-3">
