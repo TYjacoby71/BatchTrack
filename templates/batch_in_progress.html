@@ -251,8 +251,8 @@ function addContainerRow() {
         <div class="col-md-4">
             <select class="form-select container-select" name="extra_containers[]" required>
                 <option value="">Select Container</option>
-                {% for container in containers %}
-                <option value="{{ container.name }}">{{ container.name }}</option>
+                {% for container in all_ingredients if container.type == 'container' and (not recipe.requires_containers or container.id in recipe.allowed_containers) %}
+                <option value="{{ container.name }}">{{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})</option>
                 {% endfor %}
             </select>
         </div>
