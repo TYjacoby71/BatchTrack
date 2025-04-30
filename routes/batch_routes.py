@@ -174,6 +174,57 @@ def view_batch_in_progress(batch_identifier):
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
+@batches_bp.route('/save_progress/<int:batch_id>', methods=['POST'])
+@login_required 
+def save_batch_progress(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    
+    # Save basic fields
+    batch.notes = request.form.get("notes", "")
+    batch.tags = request.form.get("tags", "")
+    batch.output_type = request.form.get("output_type")
+    batch.product_id = request.form.get("product_id")
+    batch.variant_label = request.form.get("variant_label")
+    batch.output_unit = request.form.get("output_unit")
+    batch.final_quantity = request.form.get("final_quantity")
+
+    # Save extra ingredients
+    extra_ingredients = request.form.getlist('extra_ingredients[]')
+    extra_amounts = request.form.getlist('extra_amounts[]')
+    extra_units = request.form.getlist('extra_units[]')
+    
+    ingredient_list = []
+    for name, amount, unit in zip(extra_ingredients, extra_amounts, extra_units):
+        if name and amount:
+            ingredient_list.append({
+                'name': name,
+                'amount': float(amount),
+                'unit': unit
+            })
+    batch.extra_ingredients = ingredient_list
+
+    # Save extra containers  
+    extra_containers = request.form.getlist('extra_containers[]')
+    extra_container_amounts = request.form.getlist('extra_container_amounts[]')
+    
+    container_list = []
+    for name, amount in zip(extra_containers, extra_container_amounts):
+        if name and amount:
+            container_list.append({
+                'name': name, 
+                'amount': float(amount)
+            })
+    batch.extra_containers = container_list
+
+    try:
+        db.session.commit()
+        flash("Progress saved successfully", "success") 
+        return redirect(url_for('batches.list_batches'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error saving progress: {str(e)}", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id, force=False):
