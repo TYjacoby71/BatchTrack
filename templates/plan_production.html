@@ -9,7 +9,7 @@
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="watchScale">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -135,19 +135,6 @@
   </div>
 </div>
 
-<!-- Autofill Notice Modal -->
-<div x-show="showAutofillMessage"
-     x-transition
-     class="fixed inset-0 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center"
-     style="z-index: 1050;"
-     @keydown.escape.window="acknowledgeAutofillMessage">
-  <div class="bg-white p-4 rounded shadow text-center" style="max-width: 400px; width: 90%;">
-    <h5 class="text-primary mb-3">Auto-Filled Containers</h5>
-    <p>System autofilled the biggest jars first. Change if you'd like.</p>
-    <button class="btn btn-primary mt-2" @click="acknowledgeAutofillMessage">OK</button>
-  </div>
-</div>
-
 <!-- Alpine Component -->
 <script>
 function planProduction() {
@@ -166,8 +153,6 @@ function planProduction() {
     remainingToContain: 0,
     flexMode: false,
     containmentIssue: '',
-    showAutofillMessage: false,
-    modalHasBeenShown: false,
 
     init() {
       this.fetchContainerPlan();
@@ -203,28 +188,6 @@ function planProduction() {
       return (this.flexMode || this.containmentPercent >= 100) && this.stockChecked && this.stockCheckPassed;
     },
 
-    watchScale() {
-      this.modalHasBeenShown = false;
-      this.fetchContainerPlan();
-    },
-
-    acknowledgeAutofillMessage() {
-      this.showAutofillMessage = false;
-      this.forceRebind();
-    },
-
-    forceRebind() {
-      this.containersSelected = this.containersSelected.map(c => ({ ...c, id: Number(c.id) }));
-    },
-
-    evaluateAutofillMessage() {
-      const shouldShow = this.autoFill && this.containersSelected.length > 1;
-      if (shouldShow && !this.modalHasBeenShown) {
-        this.showAutofillMessage = true;
-        this.modalHasBeenShown = true;
-      }
-    },
-
     fetchContainerPlan() {
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
@@ -257,7 +220,6 @@ function planProduction() {
           }
           
           this.refreshContainmentStatus();
-          this.evaluateAutofillMessage();
         });
     },
 
