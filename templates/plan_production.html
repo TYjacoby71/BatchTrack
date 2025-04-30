@@ -57,15 +57,14 @@
       </template>
 
       <!-- Autofill Notice Modal -->
-      <div x-show="showAutofillModal" 
+      <div x-cloak x-show="showAutofillModal" 
            x-transition
            class="fixed inset-0 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center" 
-           style="z-index: 1050;"
-           @keydown.escape.window="acknowledgeAutofillModal">
+           style="z-index: 1050;">
         <div class="bg-white p-4 rounded shadow text-center" style="max-width: 400px; width: 90%;">
           <h5 class="text-primary mb-3">Auto-Filled Containers</h5>
           <p>System autofilled the biggest jars first. Change if you'd like.</p>
-          <button class="btn btn-primary mt-2" @click="acknowledgeAutofillModal">OK</button>
+          <button type="button" class="btn btn-primary mt-2" @click="showAutofillModal = false">OK</button>
         </div>
       </div>
 
