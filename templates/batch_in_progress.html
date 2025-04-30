@@ -212,13 +212,13 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="submit" class="btn btn-success" formaction="{{ url_for('batches.save_batch_progress', batch_id=batch.id) }}">💾 Save & Exit</button>
+            <button type="submit" class="btn btn-success" formaction="{{ url_for('batches.save_batch_progress', batch_id=batch.id) }}">💾 Save Progress</button>
         </div>
         <div>
             {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
             {% if not has_active_timers %}
-                <button type="submit" name="action" value="finish" class="btn btn-primary me-2">✓ Complete Batch</button>
-                <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
+                <a href="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" class="btn btn-primary me-2">✓ Complete Batch</a>
+                <button type="submit" name="action" value="fail" class="btn btn-danger" formaction="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">✕ Mark as Failed</button>
             {% else %}
                 <div class="alert alert-warning">
                     <strong>Note:</strong> Complete all timers before finishing batch
