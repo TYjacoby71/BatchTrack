@@ -174,69 +174,15 @@ def view_batch_in_progress(batch_identifier):
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
-@batches_bp.route('/save_progress/<int:batch_id>', methods=['POST'])
-@login_required
-def save_batch_progress(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    
-    # Save basic batch info
-    batch.notes = request.form.get("notes", "")
-    batch.tags = request.form.get("tags", "")
-    batch.output_type = request.form.get("output_type")
-    
-    if batch.output_type == "product":
-        batch.product_id = request.form.get("product_id")
-        batch.variant_label = request.form.get("variant_label")
-        batch.output_unit = request.form.get("output_unit")
-        batch.final_quantity = request.form.get("final_quantity")
-    elif batch.output_type == "ingredient":
-        batch.ingredient_unit = request.form.get("ingredient_unit")
-        batch.ingredient_quantity = request.form.get("ingredient_quantity")
-
-    # Save extra ingredients
-    extra_ingredients = request.form.getlist('extra_ingredients[]')
-    extra_amounts = request.form.getlist('extra_amounts[]')
-    extra_units = request.form.getlist('extra_units[]')
-    
-    ingredient_list = []
-    for name, amount, unit in zip(extra_ingredients, extra_amounts, extra_units):
-        if name and amount:
-            ingredient_list.append({
-                'name': name,
-                'amount': float(amount),
-                'unit': unit
-            })
-    batch.extra_ingredients = ingredient_list
-
-    # Save extra containers
-    extra_containers = request.form.getlist('extra_containers[]')
-    extra_container_amounts = request.form.getlist('extra_container_amounts[]')
-    
-    container_list = []
-    for name, amount in zip(extra_containers, extra_container_amounts):
-        if name and amount:
-            container_list.append({
-                'name': name,
-                'amount': float(amount)
-            })
-    batch.extra_containers = container_list
-
-    try:
-        db.session.commit()
-        flash("Progress saved successfully", "success")
-        return redirect(url_for('batches.list_batches'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error saving progress: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id, force=False):
     batch = Batch.query.get_or_404(batch_id)
     action = request.form.get('action')
 
-    if action == "finish":
+    try:
+        # Handle save action
+        if action == "save":
             # Basic batch info
             batch.notes = request.form.get("notes", "")
             batch.tags = request.form.get("tags", "")
@@ -346,17 +292,17 @@ def finish_batch(batch_id, force=False):
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
         # Prevent redundant status changes
-            if batch.status == "completed" and action == "finish":
-                return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-            elif batch.status == "failed" and action == "fail":
-                return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        if batch.status == "completed" and action == "finish":
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        elif batch.status == "failed" and action == "fail":
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
-            # Timer check unless forced
-            if not force and action == "finish":
-        active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
-        if active_timers:
-            flash("This batch has active timers. Complete timers or confirm finish.", "warning")
-            return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
+        # Timer check unless forced
+        if not force and action == "finish":
+            active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
+            if active_timers:
+                flash("This batch has active timers. Complete timers or confirm finish.", "warning")
+                return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
         # Update batch data
         batch.notes = request.form.get("notes", "")
