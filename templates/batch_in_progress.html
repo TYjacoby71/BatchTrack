@@ -212,7 +212,7 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="submit" name="action" value="save" class="btn btn-success" formmethod="post" formaction="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">💾 Save & Exit</button>
+            <button type="submit" class="btn btn-success" formmethod="post" formaction="{{ url_for('batches.save_batch_progress', batch_id=batch.id) }}">💾 Save & Exit</button>
         </div>
         <div>
             {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
