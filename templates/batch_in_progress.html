@@ -74,7 +74,7 @@
     <div id="ingredientFields" class="form-group mt-4" style="display:none;">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <label for="ingredient_unit" class="form-label mb-0">Unit Type:</label>
-            <span class="text-muted">Projected yield: {{ batch.scale * recipe.base_yield }} {{ recipe.base_unit }}</span>
+            <span class="text-muted">Projected yield: {{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</span>
         </div>
         <select name="ingredient_unit" class="form-select mb-3" required>
             {% for unit in units %}
