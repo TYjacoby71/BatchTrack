@@ -28,7 +28,7 @@
     <div class="form-group">
         <label for="output_type">Batch Type:</label>
         <div class="d-flex align-items-center gap-2">
-            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()" required>
+            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()">
                 <option value="product">Product</option>
                 <option value="ingredient">Ingredient</option>
             </select>
@@ -42,7 +42,7 @@
 
         <div class="mb-3">
             <label for="product_id" class="form-label">Link to Product</label>
-            <select name="product_id" class="form-select" required>
+            <select name="product_id" class="form-select">
                 {% for product in products %}
                     <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
                 {% endfor %}
@@ -66,7 +66,7 @@
 
         <div class="mb-3">
             <label for="final_quantity" class="form-label">Final Quantity Produced</label>
-            <input type="number" step="1" class="form-control" name="final_quantity" required>
+            <input type="number" step="1" class="form-control" name="final_quantity">
         </div>
     </div>
 
