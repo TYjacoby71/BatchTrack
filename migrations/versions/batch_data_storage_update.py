@@ -17,7 +17,7 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Create new tables
+    # Create new tables with named constraints
     op.create_table('batch_ingredient',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('batch_id', sa.Integer(), nullable=False),
