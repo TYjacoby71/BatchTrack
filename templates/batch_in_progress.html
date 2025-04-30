@@ -22,8 +22,8 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
+<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Output Type Selection -->
     <div class="form-group">
         <label for="output_type">Batch Type:</label>
