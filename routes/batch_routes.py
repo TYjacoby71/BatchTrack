@@ -263,7 +263,67 @@ def mark_batch_failed(batch_id):
 def save_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     if batch.status != 'in_progress':
-        return jsonify({'error': 'Only in-progress batches can be saved.'}), 400
+        flash("Only in-progress batches can be saved.")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+    data = request.get_json()
+    
+    # Save basic metadata
+    batch.notes = data.get("notes")
+    batch.tags = data.get("tags")
+    batch.yield_amount = data.get("yield_amount")
+    batch.yield_unit = data.get("yield_unit")
+    batch.final_quantity = data.get("final_quantity")
+    batch.output_unit = data.get("output_unit")
+    batch.product_id = data.get("product_id")
+    batch.variant_id = data.get("variant_id")
+
+    # Track and adjust inventory deltas
+    adjust_inventory_deltas(
+        batch_id=batch_id,
+        new_ingredients=data.get('ingredients', []),
+        new_containers=data.get('containers', [])
+    )
+
+    # Handle ingredients
+    db.session.query(BatchIngredient).filter_by(batch_id=batch_id).delete()
+    for ing_data in data.get('ingredients', []):
+        ing_id = int(ing_data.get('id'))
+        amount = float(ing_data.get('amount', 0))
+        unit = ing_data.get('unit', 'count')
+        db.session.add(BatchIngredient(
+            batch_id=batch_id,
+            ingredient_id=ing_id,
+            amount_used=amount,
+            unit=unit
+        ))
+
+    # Handle containers
+    db.session.query(BatchContainer).filter_by(batch_id=batch_id).delete()
+    for cont_data in data.get('containers', []):
+        cont_id = int(cont_data.get('id'))
+        qty = int(cont_data.get('qty', 0))
+        cost = float(cont_data.get('cost_each', 0))
+        db.session.add(BatchContainer(
+            batch_id=batch_id,
+            container_id=cont_id,
+            quantity_used=qty,
+            cost_each=cost
+        ))
+
+    # Handle timers
+    db.session.query(BatchTimer).filter_by(batch_id=batch_id).delete()
+    for timer_data in data.get('timers', []):
+        name = timer_data.get('name')
+        duration = int(timer_data.get('duration_seconds', 0))
+        db.session.add(BatchTimer(
+            batch_id=batch_id,
+            name=name,
+            duration_seconds=duration
+        ))
+
+    db.session.commit()
+    return jsonify({"message": "Batch saved successfully"})
 
     data = request.get_json()
 

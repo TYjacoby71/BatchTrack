@@ -300,3 +300,68 @@ function updateStockCheckTable(data) {
     startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
   }
 }
+
+// Batch save handler
+function saveBatch(batchId) {
+    const form = document.getElementById('batchForm');
+    const formData = new FormData(form);
+
+    const data = {
+        notes: formData.get('notes'),
+        tags: formData.get('tags'),
+        yield_amount: formData.get('yield_amount'),
+        yield_unit: formData.get('yield_unit'),
+        final_quantity: formData.get('final_quantity'),
+        output_unit: formData.get('output_unit'),
+        product_id: formData.get('product_id'),
+        variant_id: formData.get('variant_id'),
+        ingredients: [],
+        containers: [],
+        timers: []
+    };
+
+    // Collect ingredients
+    document.querySelectorAll('.ingredient-row').forEach((row, index) => {
+        data.ingredients.push({
+            id: formData.get(`ingredients[${index}][id]`),
+            amount: formData.get(`ingredients[${index}][amount]`),
+            unit: formData.get(`ingredients[${index}][unit]`)
+        });
+    });
+
+    // Collect containers
+    document.querySelectorAll('.container-row').forEach((row, index) => {
+        data.containers.push({
+            id: formData.get(`containers[${index}][id]`),
+            qty: formData.get(`containers[${index}][qty]`),
+            cost_each: formData.get(`containers[${index}][cost_each]`)
+        });
+    });
+
+    // Collect timers
+    document.querySelectorAll('.timer-row').forEach((row, index) => {
+        data.timers.push({
+            name: formData.get(`timers[${index}][name]`),
+            duration_seconds: formData.get(`timers[${index}][duration_seconds]`)
+        });
+    });
+
+    fetch(`/batches/${batchId}/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert('Batch saved successfully');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving batch:', error);
+        alert('Error saving batch');
+    });
+}
