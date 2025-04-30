@@ -178,13 +178,12 @@ def view_batch_in_progress(batch_identifier):
 @login_required
 def finish_batch(batch_id, force=False):
     batch = Batch.query.get_or_404(batch_id)
-    action = request.form.get('action')
+    action = request.form.get('action', 'finish')
 
     try:
-        # Prevent redundant status changes
-        if batch.status == "completed" and action == "finish":
-            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-        elif batch.status == "failed" and action == "fail":
+        # Verify batch can be finished
+        if batch.status != 'in_progress':
+            flash("Only in-progress batches can be finished.")
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
         # Timer check unless forced
@@ -194,24 +193,21 @@ def finish_batch(batch_id, force=False):
                 flash("This batch has active timers. Complete timers or confirm finish.", "warning")
                 return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
-        # Update batch data
-        batch.notes = request.form.get("notes", "")
-        batch.tags = request.form.get("tags", "")
-        batch.total_cost = batch.total_cost or 0
+        # Save final batch data
+        batch.notes = request.form.get("notes", batch.notes)
+        batch.tags = request.form.get("tags", batch.tags)
+        batch.completed_at = datetime.utcnow()
 
         # Set status based on action
         if action == "finish":
             batch.status = "completed"
             flash("✅ Batch marked as completed.")
         elif action == "fail":
-            batch.status = "failed" 
+            batch.status = "failed"
             flash("⚠️ Batch marked as failed.")
-        else:
-            flash("Unknown action. Please try again.")
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
+        
         db.session.commit()
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        return redirect(url_for('batches.list_batches'))
 
     except Exception as e:
         db.session.rollback()
