@@ -267,7 +267,7 @@ def save_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
     data = request.get_json()
-
+    
     # Save basic metadata
     batch.notes = data.get("notes")
     batch.tags = data.get("tags")
@@ -277,6 +277,13 @@ def save_batch(batch_id):
     batch.output_unit = data.get("output_unit")
     batch.product_id = data.get("product_id")
     batch.variant_id = data.get("variant_id")
+
+    # Track and adjust inventory deltas
+    adjust_inventory_deltas(
+        batch_id=batch_id,
+        new_ingredients=data.get('ingredients', []),
+        new_containers=data.get('containers', [])
+    )
 
     # Handle ingredients
     db.session.query(BatchIngredient).filter_by(batch_id=batch_id).delete()
