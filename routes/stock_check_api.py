@@ -23,9 +23,21 @@ def api_check_stock():
         # Use the proper stock check function that handles unit conversion
         report, all_ok = check_stock_for_recipe(recipe, scale)
 
+        formatted_report = []
+        for r in report:
+            # Use original recipe amount * scale for needed
+            formatted_report.append({
+                "ingredient": getattr(r["ingredient"], "name", str(r["ingredient"])),
+                "needed": round(r.get("original_amount", 0) * scale, 2),
+                "recipe_unit": r.get("recipe_unit") or "",
+                "available": round(r.get("available", 0), 2),
+                "inventory_unit": r.get("unit", ""),
+                "status": r.get("status", "UNKNOWN")
+            })
+
         return jsonify({
             "all_ok": all_ok,
-            "ingredients": report
+            "ingredients": formatted_report
         })
     except Exception as e:
         logger.error(f"Stock check failed: {str(e)}")
