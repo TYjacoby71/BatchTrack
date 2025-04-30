@@ -20,12 +20,15 @@ def add_inventory():
     flash('Inventory item added successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
+from utils.unit_utils import get_global_unit_list
+
 @inventory_bp.route('/')
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
-    units = Unit.query.order_by(Unit.type, Unit.is_custom, Unit.name).all()
-    return render_template('inventory_list.html', items=items, units=units)
+    return render_template('inventory_list.html', 
+                         items=items,
+                         get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/delete/<int:id>')
 @login_required
