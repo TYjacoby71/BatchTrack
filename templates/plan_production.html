@@ -32,36 +32,27 @@
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
     </div>
     <div class="card-body">
-      <!-- Blind render up to 10 rows, only show if index < containersSelected.length -->
-      <template x-for="i in 10" :key="i">
-        <div class="d-flex align-items-center gap-2 mb-2" x-show="containersSelected && i <= containersSelected.length">
-          <select class="form-select"
-                  x-model="containersSelected[i - 1].id"
-                  :disabled="autoFill"
-                  @change="updateContainer(i - 1)"
-                  @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
+      <template x-for="(container, index) in containersSelected" :key="index">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <select class="form-select" x-model="container.id" :disabled="autoFill" 
+            @change="updateContainer(index)"
+            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
             <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <template x-if="getRemainingStock(allowed.id, i - 1) > 0 || containersSelected[i - 1].id == allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
-                </option>
+              <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
+                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
               </template>
             </template>
           </select>
-
-          <input type="number" min="1" class="form-control"
-                 x-model.number="containersSelected[i - 1].quantity"
-                 :disabled="autoFill || getRemainingStock(containersSelected[i - 1].id, i - 1) <= 0"
-                 @input="updateProgress"
-                 @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
-
-          <div class="small text-muted px-2"
-               x-text="'Available: ' + getRemainingStock(containersSelected[i - 1].id, i - 1)">
-          </div>
-
-          <button type="button" class="btn btn-danger btn-sm"
-                  @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(i - 1)"
-                  :disabled="autoFill">&times;</button>
+          <input type="number" min="1" class="form-control" 
+            x-model.number="container.quantity" 
+            :disabled="autoFill || getRemainingStock(container.id, index) <= 0" 
+            @input="updateProgress"
+            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
+          <div class="small text-muted px-2" x-text="'Available: ' + getRemainingStock(container.id, index)"></div>
+          <button type="button" class="btn btn-danger btn-sm" 
+            @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(index)" 
+            :disabled="autoFill">&times;</button>
         </div>
       </template>
 
