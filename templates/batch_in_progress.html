@@ -238,7 +238,8 @@ function addIngredientRow() {
             <input type="number" step="0.01" class="form-control" name="extra_amounts[]" placeholder="Amount" required>
         </div>
         <div class="col-md-3">
-            <select class="form-select unit-select" name="extra_units[]" required>
+            <select class="form-select unit-select" name="extra_units[]" data-placeholder="Select unit..." required>
+                <option value="">Select unit...</option>
                 {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
@@ -309,8 +310,16 @@ function initializeSelect2(container) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    $('.ingredient-select').select2({ placeholder: 'Search ingredients...', width: '100%' });
-    $('.unit-select').select2({ placeholder: 'Select unit', width: '100%' });
+    $('.ingredient-select').select2({ 
+        placeholder: 'Search ingredients...',
+        width: '100%',
+        allowClear: true
+    });
+    $('.unit-select').select2({ 
+        placeholder: 'Select unit...',
+        width: '100%',
+        allowClear: true
+    });
     toggleOutputFields();
 });
 </script>
