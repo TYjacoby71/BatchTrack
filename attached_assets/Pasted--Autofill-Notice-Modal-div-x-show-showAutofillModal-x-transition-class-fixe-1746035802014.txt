@@ -49,12 +49,14 @@ function planProduction() {
               this.updateContainer(index);
             });
 
-            // Evaluate if modal should be shown after autofill
-            const needsMultiple = this.containersSelected.length > 1;
-            if (this.autoFill && needsMultiple && !this.modalHasBeenShown) {
-              this.showAutofillModal = true;
-              this.modalHasBeenShown = true;
-            }
+            // 🔧 Add delay before showing modal
+            setTimeout(() => {
+              const needsMultiple = this.containersSelected.length > 1;
+              if (this.autoFill && needsMultiple && !this.modalHasBeenShown) {
+                this.showAutofillModal = true;
+                this.modalHasBeenShown = true;
+              }
+            }, 250);
           }
 
           this.refreshContainmentStatus();
