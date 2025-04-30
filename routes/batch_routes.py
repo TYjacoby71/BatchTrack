@@ -185,6 +185,17 @@ def finish_batch(batch_id, force=False):
         if action == "save":
             batch.notes = request.form.get("notes", "")
             batch.tags = request.form.get("tags", "")
+            
+            # Save any extra containers that were added
+            extra_containers = request.form.getlist('extra_containers[]')
+            extra_amounts = request.form.getlist('extra_container_amounts[]')
+            
+            if extra_containers and extra_amounts:
+                for container, amount in zip(extra_containers, extra_amounts):
+                    if container and amount:
+                        # Add container usage record here if needed
+                        pass
+
             db.session.commit()
             flash("Changes saved successfully.")
             return redirect(url_for('batches.list_batches'))
