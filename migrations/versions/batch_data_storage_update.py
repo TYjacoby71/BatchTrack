@@ -24,8 +24,8 @@ def upgrade():
         sa.Column('ingredient_id', sa.Integer(), nullable=False),
         sa.Column('amount_used', sa.Float(), nullable=False),
         sa.Column('unit', sa.String(32), nullable=False),
-        sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-        sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], name='fk_batch_ingredient_batch_id'),
+        sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], name='fk_batch_ingredient_ingredient_id'),
         sa.PrimaryKeyConstraint('id')
     )
 
@@ -35,8 +35,8 @@ def upgrade():
         sa.Column('container_id', sa.Integer(), nullable=False),
         sa.Column('quantity_used', sa.Integer(), nullable=False),
         sa.Column('cost_each', sa.Float()),
-        sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-        sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], name='fk_batch_container_batch_id'),
+        sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], name='fk_batch_container_container_id'),
         sa.PrimaryKeyConstraint('id')
     )
     
@@ -49,8 +49,8 @@ def upgrade():
     op.add_column('batch', sa.Column('completed_at', sa.DateTime(), nullable=True))
     
     # Add foreign key constraints
-    op.create_foreign_key(None, 'batch', 'product', ['product_id'], ['id'])
-    op.create_foreign_key(None, 'batch', 'product_variation', ['variant_id'], ['id'])
+    op.create_foreign_key('fk_batch_product_id', 'batch', 'product', ['product_id'], ['id'])
+    op.create_foreign_key('fk_batch_variant_id', 'batch', 'product_variation', ['variant_id'], ['id'])
     
     # Rename column for consistency
     op.alter_column('batch', 'start_time', new_column_name='started_at')
@@ -65,8 +65,8 @@ def downgrade():
     op.drop_table('batch_container')
     
     # Restore original batch table structure
-    op.drop_constraint(None, 'batch', type_='foreignkey')
-    op.drop_constraint(None, 'batch', type_='foreignkey')
+    op.drop_constraint('fk_batch_product_id', 'batch', type_='foreignkey')
+    op.drop_constraint('fk_batch_variant_id', 'batch', type_='foreignkey')
     op.add_column('batch', sa.Column('containers', sa.PickleType(), nullable=True))
     op.add_column('batch', sa.Column('timestamp', sa.DateTime(), nullable=True))
     op.alter_column('batch', 'started_at', new_column_name='start_time')
