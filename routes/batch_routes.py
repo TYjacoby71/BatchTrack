@@ -186,19 +186,23 @@ def finish_batch(batch_id, force=False):
             batch.notes = request.form.get("notes", "")
             batch.tags = request.form.get("tags", "")
             
-            # Save any extra containers that were added
-            extra_containers = request.form.getlist('extra_containers[]')
-            extra_amounts = request.form.getlist('extra_container_amounts[]')
+            # Save any extra ingredients
+            extra_ingredients = request.form.getlist('extra_ingredients[]')
+            extra_amounts = request.form.getlist('extra_amounts[]')
+            extra_units = request.form.getlist('extra_units[]')
             
-            if extra_containers and extra_amounts:
-                for container, amount in zip(extra_containers, extra_amounts):
-                    if container and amount:
-                        # Add container usage record here if needed
-                        pass
+            # Save any extra containers
+            extra_containers = request.form.getlist('extra_containers[]')
+            extra_container_amounts = request.form.getlist('extra_container_amounts[]')
 
-            db.session.commit()
-            flash("Changes saved successfully.")
-            return redirect(url_for('batches.list_batches'))
+            try:
+                db.session.commit()
+                flash("Changes saved successfully", "success")
+                return redirect(url_for('batches.list_batches'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error saving changes: {str(e)}", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
         # Prevent redundant status changes
         if batch.status == "completed" and action == "finish":
