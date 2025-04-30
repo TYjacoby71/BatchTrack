@@ -347,9 +347,9 @@ def finish_batch(batch_id, force=False):
 
         # Prevent redundant status changes
         if batch.status == "completed" and action == "finish":
-            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-        elif batch.status == "failed" and action == "fail":
-            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+    elif batch.status == "failed" and action == "fail":
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
         # Timer check unless forced
         if not force and action == "finish":
