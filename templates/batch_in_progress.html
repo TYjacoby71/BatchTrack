@@ -99,6 +99,34 @@
         <div id="containerInputs"></div>
     </div>
 
+    <script>
+    function addContainerRow() {
+        const row = document.createElement('div');
+        row.classList.add('row', 'mb-2', 'align-items-center');
+        row.innerHTML = `
+            <div class="col-md-6">
+                <select class="form-select container-select" name="extra_containers[]" required>
+                    <option value="">Select Container</option>
+                    {% for container in inventory_items if container.type == 'container' and (not batch.recipe or not batch.recipe.requires_containers or container.id in batch.recipe.allowed_containers) %}
+                        <option value="{{ container.name }}">{{ container.name }} ({{ container.storage_amount or 0 }} {{ container.storage_unit or 'units' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" step="1" class="form-control" name="extra_container_amounts[]" placeholder="Amount" required>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button>
+            </div>
+        `;
+        document.getElementById('containerInputs').appendChild(row);
+        $(row).find('.container-select').select2({
+            placeholder: 'Select container',
+            width: '100%'
+        });
+    }
+    </script>
+
     <!-- Batch Cost Summary -->
     <div class="batch-summary mt-4">
         <h4>Batch Summary</h4>
@@ -159,19 +187,24 @@
     </div>
 
     <!-- Submission Buttons -->
-    <div class="button-group mt-4">
-        {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
-        {% if not has_active_timers %}
-            <button type="submit" name="action" value="finish" class="btn btn-success">✓ Complete Batch</button>
-            <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
-        {% else %}
-            <div class="alert alert-warning">
-                <strong>Note:</strong> Complete all timers before finishing batch
-                <br>
-                <button type="submit" name="action" value="finish" class="btn btn-success mt-2" disabled>✓ Complete Batch</button>
-                <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger mt-2">Force Finish Anyway</a>
-            </div>
-        {% endif %}
+    <div class="button-group mt-4 d-flex justify-content-between">
+        <div>
+            <button type="submit" name="action" value="save" class="btn btn-secondary" formmethod="post" formaction="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">Save & Exit</button>
+        </div>
+        <div>
+            {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
+            {% if not has_active_timers %}
+                <button type="submit" name="action" value="finish" class="btn btn-success me-2">✓ Complete Batch</button>
+                <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
+            {% else %}
+                <div class="alert alert-warning">
+                    <strong>Note:</strong> Complete all timers before finishing batch
+                    <br>
+                    <button type="submit" name="action" value="finish" class="btn btn-success mt-2 me-2" disabled>✓ Complete Batch</button>
+                    <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger mt-2">Force Finish Anyway</a>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </form>
 
@@ -235,11 +268,12 @@ function addIngredientRow() {
             </select>
         </div>
         <div class="col-md-3">
-            <input type="number" step="0.01" class="form-control" name="extra_amounts[]" placeholder="Amount" required>
+            <input type="number" step="0.01" class="form-control form-select" name="extra_amounts[]" placeholder="Amount" style="height: 38px;" required>
         </div>
         <div class="col-md-3">
-            <select class="form-select unit-select" name="extra_units[]" required>
-                {% for unit in get_global_unit_list() %}
+            <select class="form-select unit-select" name="extra_units[]" data-placeholder="Select unit..." style="height: 38px;" required>
+                <option value="">Select unit...</option>
+                {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
@@ -265,32 +299,6 @@ function addTimerRow() {
     container.appendChild(div);
 }
 
-function addContainerRow() {
-    const row = document.createElement('div');
-    row.classList.add('row', 'mb-2', 'align-items-center');
-    row.innerHTML = `
-        <div class="col-md-4">
-            <select class="form-select container-select" name="extra_containers[]" required>
-                <option value="">Select Container</option>
-                {% for container in all_ingredients if container.type == 'container' and (not recipe.requires_containers or container.id in recipe.allowed_containers) %}
-                <option value="{{ container.name }}">{{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-3">
-            <input type="number" step="1" class="form-control" name="extra_container_amounts[]" placeholder="Amount" required>
-        </div>
-        <div class="col-md-3">
-            <input type="number" step="0.01" class="form-control" name="extra_container_costs[]" placeholder="Cost/Unit">
-        </div>
-        <div class="col-md-2 text-end">
-            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button>
-        </div>
-    `;
-    document.getElementById('containerInputs').appendChild(row);
-    initializeSelect2(row);
-}
-
 function initializeSelect2(container) {
     $(container).find('.ingredient-select').select2({
         placeholder: 'Search ingredients...',
@@ -309,8 +317,16 @@ function initializeSelect2(container) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    $('.ingredient-select').select2({ placeholder: 'Search ingredients...', width: '100%' });
-    $('.unit-select').select2({ placeholder: 'Select unit', width: '100%' });
+    $('.ingredient-select').select2({ 
+        placeholder: 'Search ingredients...',
+        width: '100%',
+        allowClear: true
+    });
+    $('.unit-select').select2({ 
+        placeholder: 'Select unit...',
+        width: '100%',
+        allowClear: true
+    });
     toggleOutputFields();
 });
 </script>

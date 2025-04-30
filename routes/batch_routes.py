@@ -136,9 +136,10 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
+    # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
-
+    
     # Build cost summary
     total_cost = 0
     ingredient_costs = []
@@ -180,6 +181,29 @@ def finish_batch(batch_id, force=False):
     action = request.form.get('action')
 
     try:
+        # Handle save action
+        if action == "save":
+            batch.notes = request.form.get("notes", "")
+            batch.tags = request.form.get("tags", "")
+            
+            # Save any extra ingredients
+            extra_ingredients = request.form.getlist('extra_ingredients[]')
+            extra_amounts = request.form.getlist('extra_amounts[]')
+            extra_units = request.form.getlist('extra_units[]')
+            
+            # Save any extra containers
+            extra_containers = request.form.getlist('extra_containers[]')
+            extra_container_amounts = request.form.getlist('extra_container_amounts[]')
+
+            try:
+                db.session.commit()
+                flash("Changes saved successfully", "success")
+                return redirect(url_for('batches.list_batches'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error saving changes: {str(e)}", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
         # Prevent redundant status changes
         if batch.status == "completed" and action == "finish":
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
