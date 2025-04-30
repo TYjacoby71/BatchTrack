@@ -31,21 +31,26 @@
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
     </div>
     <div class="card-body">
-      <!-- Container rows with proper existence checks -->
-      <template x-for="(container, index) in containersSelected" :key="index">
+      <!-- Show all allowed containers -->
+      <template x-for="(allowed, index) in allowedContainers" :key="allowed.id">
           <div class="d-flex align-items-center gap-2 mb-2">
             <select class="form-select"
-                    x-model="container.id"
+                    x-model="containersSelected[index] ? containersSelected[index].id : ''"
                     :disabled="autoFill"
                     @change="updateContainer(index)"
                     @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
-              </template>
-            </template>
+            <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
           </select>
+
+          <input type="number" min="0" class="form-control"
+                 x-model.number="containersSelected[index] ? containersSelected[index].quantity : 0"
+                 :disabled="autoFill || (containersSelected[index] && getRemainingStock(containersSelected[index].id, index) <= 0)"
+                 @input="updateProgress">
+
+          <div class="small text-muted px-2" 
+               x-text="'Available: ' + getRemainingStock(allowed.id, index)">
+          </div>
 
           <input type="number" min="1" class="form-control"
                  x-model.number="container.quantity"
