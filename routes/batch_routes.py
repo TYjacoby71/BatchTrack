@@ -253,23 +253,34 @@ def finish_batch(batch_id, force=False):
             batch.output_unit = request.form.get("output_unit")
             
             # Save extra ingredients
-            extra_ingredients = []
-            for i in range(len(request.form.getlist('extra_ingredients[]'))):
-                extra_ingredients.append({
-                    'name': request.form.getlist('extra_ingredients[]')[i],
-                    'amount': request.form.getlist('extra_amounts[]')[i],
-                    'unit': request.form.getlist('extra_units[]')[i]
-                })
-            batch.extra_ingredients = extra_ingredients
+            extra_ingredients = request.form.getlist('extra_ingredients[]')
+            extra_amounts = request.form.getlist('extra_amounts[]')
+            extra_units = request.form.getlist('extra_units[]')
+            
+            ingredient_list = []
+            for name, amount, unit in zip(extra_ingredients, extra_amounts, extra_units):
+                if name and amount:  # Only add if name and amount are provided
+                    ingredient_list.append({
+                        'name': name,
+                        'amount': float(amount),
+                        'unit': unit
+                    })
+            batch.extra_ingredients = ingredient_list
 
             # Save extra containers
-            extra_containers = []
-            for i in range(len(request.form.getlist('extra_containers[]'))):
-                extra_containers.append({
-                    'name': request.form.getlist('extra_containers[]')[i],
-                    'amount': request.form.getlist('extra_container_amounts[]')[i]
-                })
-            batch.extra_containers = extra_containers
+            extra_containers = request.form.getlist('extra_containers[]')
+            extra_container_amounts = request.form.getlist('extra_container_amounts[]')
+            
+            container_list = []
+            for name, amount in zip(extra_containers, extra_container_amounts):
+                if name and amount:  # Only add if name and amount are provided
+                    container_list.append({
+                        'name': name,
+                        'amount': float(amount)
+                    })
+            batch.extra_containers = container_list
+
+            db.session.add(batch)
 
             try:
                 db.session.commit()
