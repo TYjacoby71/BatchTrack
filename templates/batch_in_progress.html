@@ -107,10 +107,8 @@
             <div class="col-md-4">
                 <select class="form-select container-select" name="extra_containers[]" required>
                     <option value="">Select Container</option>
-                    {% for item in inventory_items %}
-                        {% if item.type == 'container' %}
-                            <option value="{{ item.name }}">{{ item.name }} ({{ item.storage_amount or 0 }} {{ item.storage_unit or 'units' }})</option>
-                        {% endif %}
+                    {% for item in inventory_items if item.type == 'container' %}
+                        <option value="{{ item.name }}">{{ item.name }} ({{ item.storage_amount or 0 }} {{ item.storage_unit or 'units' }})</option>
                     {% endfor %}
                 </select>
             </div>
