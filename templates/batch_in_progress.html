@@ -239,8 +239,8 @@ function addIngredientRow() {
         </div>
         <div class="col-md-3">
             <select class="form-select unit-select" name="extra_units[]" required>
-                {% for unit in inventory_units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% for unit in get_global_unit_list() %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
         </div>
