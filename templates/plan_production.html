@@ -42,12 +42,11 @@
                   @change="updateContainer(i - 1)"
                   @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <template x-if="getRemainingStock(allowed.id, i - 1) > 0 || containersSelected[i - 1].id == allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'">
-                </option>
-              </template>
+            {% for container in allowed_containers %}
+            <template x-if="getRemainingStock({{ container.id }}, i - 1) > 0 || containersSelected[i - 1].id == {{ container.id }}">
+              <option value="{{ container.id }}">{{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})</option>
             </template>
+            {% endfor %}
           </select>
 
           <input type="number" min="1" class="form-control"
