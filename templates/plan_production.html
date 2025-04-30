@@ -9,7 +9,7 @@
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="resetModalShown(); fetchContainerPlan()">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -20,7 +20,7 @@
   <!-- Auto-Fill Toggle -->
   <div class="row mb-4">
     <div class="col-md-6">
-      <input type="checkbox" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
+      <input type="checkbox" id="autoFill" x-model="autoFill" @change="resetModalShown(); fetchContainerPlan()">
       <label for="autoFill">Auto-Fill Containers</label>
     </div>
   </div>
@@ -55,6 +55,18 @@
             :disabled="autoFill">&times;</button>
         </div>
       </template>
+
+      <!-- Autofill Notice Modal -->
+      <div x-show="showAutofillModal"
+           x-transition
+           class="fixed inset-0 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center"
+           style="z-index: 1050;">
+        <div class="bg-white p-4 rounded shadow text-center" style="max-width: 400px; width: 90%;">
+          <h5 class="text-primary mb-3">Auto-Filled Containers</h5>
+          <p>System autofilled the biggest jars first. Change if you'd like.</p>
+          <button class="btn btn-primary mt-2" @click="showAutofillModal = false">OK</button>
+        </div>
+      </div>
 
       <!-- Containment Progress -->
       <div class="mt-3">
@@ -149,6 +161,8 @@ function planProduction() {
     stockChecked: false,
     stockCheckPassed: false,
     stockResults: [],
+    showAutofillModal: false,
+    modalHasBeenShown: false,
     containmentPercent: 0,
     remainingToContain: 0,
     flexMode: false,
@@ -217,10 +231,22 @@ function planProduction() {
             this.containersSelected.forEach((container, index) => {
               this.updateContainer(index);
             });
+
+            setTimeout(() => {
+              const needsMultiple = this.containersSelected.length > 1;
+              if (this.autoFill && needsMultiple && !this.modalHasBeenShown) {
+                this.showAutofillModal = true;
+                this.modalHasBeenShown = true;
+              }
+            }, 250);
           }
           
           this.refreshContainmentStatus();
         });
+    },
+
+    resetModalShown() {
+      this.modalHasBeenShown = false;
     },
 
     updateProgress() {
