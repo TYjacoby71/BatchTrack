@@ -121,7 +121,7 @@
                 {% endif %}
                 <td>{{ batch.status }}</td>
                 {% if 'total_cost' in visible_columns %}
-                <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else batch.ingredient_costs|sum(attribute='line_cost')|round(2) if batch.ingredient_costs else '—' }}</td>
+                <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
                 {% endif %}
                 {% if 'product_quantity' in visible_columns %}
                 <td>{{ batch.product_quantity if batch.product_quantity else '—' }}</td>
