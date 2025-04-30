@@ -183,17 +183,93 @@ def finish_batch(batch_id, force=False):
     try:
         # Handle save action
         if action == "save":
+            # Basic batch info
             batch.notes = request.form.get("notes", "")
             batch.tags = request.form.get("tags", "")
             
-            # Save any extra ingredients
+            # Output type and details
+            output_type = request.form.get("output_type")
+            batch.output_type = output_type
+
+            if output_type == "product":
+                batch.product_id = request.form.get("product_id")
+                batch.variant_label = request.form.get("variant_label")
+                batch.output_unit = request.form.get("output_unit")
+                batch.final_quantity = request.form.get("final_quantity")
+                
+                # Clear ingredient fields
+                batch.ingredient_unit = None
+                batch.ingredient_quantity = None
+            elif output_type == "ingredient":
+                batch.ingredient_unit = request.form.get("ingredient_unit")
+                batch.ingredient_quantity = request.form.get("ingredient_quantity")
+                
+                # Clear product fields
+                batch.product_id = None
+                batch.variant_label = None
+                batch.output_unit = None 
+                batch.final_quantity = None
+            
+            # Extra ingredients
             extra_ingredients = request.form.getlist('extra_ingredients[]')
             extra_amounts = request.form.getlist('extra_amounts[]')
             extra_units = request.form.getlist('extra_units[]')
             
-            # Save any extra containers
+            if extra_ingredients:
+                batch.extra_ingredients = [{
+                    'name': ing,
+                    'amount': amt,
+                    'unit': unit
+                } for ing, amt, unit in zip(extra_ingredients, extra_amounts, extra_units)]
+            
+            # Extra containers
             extra_containers = request.form.getlist('extra_containers[]')
             extra_container_amounts = request.form.getlist('extra_container_amounts[]')
+            
+            if extra_containers:
+                batch.extra_containers = [{
+                    'name': cont,
+                    'amount': amt
+                } for cont, amt in zip(extra_containers, extra_container_amounts)]
+
+            # Save timers
+            batch_timers = request.form.getlist('batch_timers[]')
+            if batch_timers:
+                from models import BatchTimer
+                for timer_str in batch_timers:
+                    if timer_str:
+                        timer = BatchTimer(
+                            batch_id=batch.id,
+                            target_time=datetime.strptime(timer_str, '%Y-%m-%dT%H:%M'),
+                            completed=False
+                        )
+                        db.session.add(timer)
+
+            # Preserve all selections
+            batch.output_type = request.form.get("output_type")
+            batch.product_id = request.form.get("product_id")
+            batch.variant_label = request.form.get("variant_label") 
+            batch.final_quantity = request.form.get("final_quantity")
+            batch.output_unit = request.form.get("output_unit")
+            
+            # Save extra ingredients
+            extra_ingredients = []
+            for i in range(len(request.form.getlist('extra_ingredients[]'))):
+                extra_ingredients.append({
+                    'name': request.form.getlist('extra_ingredients[]')[i],
+                    'amount': request.form.getlist('extra_amounts[]')[i],
+                    'unit': request.form.getlist('extra_units[]')[i]
+                })
+            batch.extra_ingredients = extra_ingredients
+
+            # Save extra containers
+            extra_containers = []
+            for i in range(len(request.form.getlist('extra_containers[]'))):
+                extra_containers.append({
+                    'name': request.form.getlist('extra_containers[]')[i],
+                    'amount': request.form.getlist('extra_container_amounts[]')[i]
+                })
+            batch.extra_containers = extra_containers
 
             try:
                 db.session.commit()
