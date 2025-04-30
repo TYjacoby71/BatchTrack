@@ -18,8 +18,8 @@
     </select>
 
     <label for="unit">Unit:</label>
-    <select name="unit">
-        {% for unit in units %}
+    <select name="unit" class="form-select select2" data-unit-select>
+        {% for unit in get_global_unit_list() %}
         <option value="{{ unit.name }}" {% if unit.name == ing.unit %}selected{% endif %}>{{ unit.name }}</option>
         {% endfor %}
     </select><br>
