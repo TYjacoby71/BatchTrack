@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import extract
 import uuid, os
 from werkzeug.utils import secure_filename
+from services.unit_conversion import ConversionEngine
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
@@ -139,7 +140,7 @@ def view_batch_in_progress(batch_identifier):
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
-    
+
     # Build cost summary
     total_cost = 0
     ingredient_costs = []
@@ -205,7 +206,7 @@ def finish_batch(batch_id, force=False):
         elif action == "fail":
             batch.status = "failed"
             flash("⚠️ Batch marked as failed.")
-        
+
         db.session.commit()
         return redirect(url_for('batches.list_batches'))
 
@@ -267,7 +268,7 @@ def save_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
     data = request.get_json()
-    
+
     # Save basic metadata
     batch.notes = data.get("notes")
     batch.tags = data.get("tags")
@@ -427,3 +428,43 @@ def view_batches_by_variant(product_id, variant, size, unit):
         size=size,
         unit=unit
     )
+
+def adjust_inventory_deltas(batch_id, new_ingredients, new_containers):
+    existing_ings = {bi.ingredient_id: bi for bi in BatchIngredient.query.filter_by(batch_id=batch_id)}
+    existing_conts = {bc.container_id: bc for bc in BatchContainer.query.filter_by(batch_id=batch_id)}
+
+    # Handle Ingredients
+    for item in new_ingredients:
+        ing_id = item['id']
+        new_amt = float(item['amount'])
+        unit_used = item['unit']
+
+        existing = existing_ings.get(ing_id)
+        old_amt = existing.amount_used if existing else 0
+        delta = new_amt - old_amt
+
+        inventory = InventoryItem.query.get(ing_id)
+        if inventory:
+            stock_unit = inventory.unit
+            try:
+                converted_delta = ConversionEngine.convert(abs(delta), unit_used, stock_unit, density=inventory.category.default_density)
+                if delta < 0:
+                    inventory.quantity += converted_delta
+                else:
+                    inventory.quantity -= converted_delta
+                db.session.add(inventory)
+            except Exception as e:
+                print(f"[Conversion Error] Ingredient {ing_id}: {e}")
+
+    # Handle Containers (assumes same unit - count)
+    for item in new_containers:
+        cid = item['id']
+        new_qty = int(item['qty'])
+        existing = existing_conts.get(cid)
+        old_qty = existing.quantity_used if existing else 0
+        delta = new_qty - old_qty
+
+        container = InventoryItem.query.get(cid)
+        if container:
+            container.quantity -= delta
+            db.session.add(container)
