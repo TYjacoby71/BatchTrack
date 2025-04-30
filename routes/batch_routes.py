@@ -136,6 +136,13 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
+    
+    # Load saved form data if it exists
+    if hasattr(batch, 'extra_ingredients'):
+        batch.extra_ingredients = batch.extra_ingredients or []
+    if hasattr(batch, 'extra_containers'):  
+        batch.extra_containers = batch.extra_containers or []
+    
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
