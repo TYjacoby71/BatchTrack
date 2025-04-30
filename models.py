@@ -79,21 +79,16 @@ class Recipe(db.Model):
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
 class Batch(db.Model):
+    __tablename__ = 'batch'
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
-
-    # For ingredient-type batches
     yield_amount = db.Column(db.Float)
     yield_unit = db.Column(db.String(50))
-
-    # For product-type batches
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'))
-    final_quantity = db.Column(db.Float)  # jars, bottles, etc.
-    output_unit = db.Column(db.String(50))  # e.g. "jar"
-
-    # Shared fields
+    final_quantity = db.Column(db.Float)
+    output_unit = db.Column(db.String(50))
     scale = db.Column(db.Float, default=1.0)
     status = db.Column(db.String(50), default='in_progress')
     notes = db.Column(db.Text)
@@ -102,7 +97,6 @@ class Batch(db.Model):
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
 
-    # Relationships
     recipe = db.relationship('Recipe', backref='batches')
     ingredients = db.relationship('BatchIngredient', backref='batch', cascade="all, delete-orphan")
     containers = db.relationship('BatchContainer', backref='batch', cascade="all, delete-orphan")
@@ -196,5 +190,3 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-# Removed duplicate BatchTimer class - using the one defined above
