@@ -162,9 +162,14 @@ function planProduction() {
     stockChecked: false,
     stockCheckPassed: false,
     stockResults: [],
+    showAutofillModal: false,
     containmentPercent: 0,
     remainingToContain: 0,
     flexMode: false,
+
+    acknowledgeAutofillModal() {
+      this.showAutofillModal = false;
+    },
     containmentIssue: '',
 
     init() {
