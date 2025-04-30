@@ -346,13 +346,13 @@ def finish_batch(batch_id, force=False):
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
         # Prevent redundant status changes
-        if batch.status == "completed" and action == "finish":
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-    elif batch.status == "failed" and action == "fail":
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+            if batch.status == "completed" and action == "finish":
+                return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+            elif batch.status == "failed" and action == "fail":
+                return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
-        # Timer check unless forced
-        if not force and action == "finish":
+            # Timer check unless forced
+            if not force and action == "finish":
             active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
             if active_timers:
                 flash("This batch has active timers. Complete timers or confirm finish.", "warning")
