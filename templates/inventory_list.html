@@ -88,12 +88,10 @@
         </div>
         <div class="col">
           <label class="form-label">Storage Unit</label>
-          <select name="storage_unit" class="form-select" required>
-            <option value="">--Select--</option>
-            <option value="oz">oz</option>
-            <option value="ml">ml</option>
-            <option value="g">g</option>
-            <option value="count">count</option>
+          <select name="storage_unit" class="form-select select2" required>
+            {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
           </select>
         </div>
         <div class="col">
