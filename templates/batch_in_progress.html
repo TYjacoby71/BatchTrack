@@ -22,15 +22,15 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
     <!-- Output Type Selection -->
     <div class="form-group">
         <label for="output_type">Batch Type:</label>
         <div class="d-flex align-items-center gap-2">
-            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()">
-                <option value="product" {% if batch.output_type == 'product' %}selected{% endif %}>Product</option>
-                <option value="ingredient" {% if batch.output_type == 'ingredient' %}selected{% endif %}>Ingredient</option>
+            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()" required>
+                <option value="product">Product</option>
+                <option value="ingredient">Ingredient</option>
             </select>
             <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="What unit is this batch stored in? ex. 15 oz or 25 ml">?</button>
         </div>
@@ -42,11 +42,9 @@
 
         <div class="mb-3">
             <label for="product_id" class="form-label">Link to Product</label>
-            <select name="product_id" class="form-select">
+            <select name="product_id" class="form-select" required>
                 {% for product in products %}
-                    <option value="{{ product.id }}" {% if product.id|string == batch.product_id|string %}selected{% endif %}>
-                        {{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}
-                    </option>
+                    <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
                 {% endfor %}
             </select>
             <a href="/products/new" class="btn btn-link">+ Add New Product</a>
@@ -68,7 +66,7 @@
 
         <div class="mb-3">
             <label for="final_quantity" class="form-label">Final Quantity Produced</label>
-            <input type="number" step="1" class="form-control" name="final_quantity">
+            <input type="number" step="1" class="form-control" name="final_quantity" required>
         </div>
     </div>
 
@@ -184,46 +182,25 @@
     <!-- Timer Section -->
     <div class="form-group mt-4">
         <h4>🕒 Batch Timers</h4>
-        <div id="timerContainer">
-            {% if batch.timers %}
-                {% for timer in batch.timers %}
-                    <div class="d-flex align-items-center mb-2">
-                        <input type="datetime-local" name="batch_timers[]" class="form-control me-2" value="{{ timer.target_time.strftime('%Y-%m-%dT%H:%M') }}" required>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        </div>
+        <div id="timerContainer"></div>
         <button type="button" class="btn btn-outline-secondary" onclick="addTimerRow()">➕ Add Timer</button>
     </div>
-
-    <!-- Hidden fields to preserve selections -->
-    <input type="hidden" name="output_type" value="{{ batch.output_type or 'product' }}">
-    {% if batch.product_id %}
-        <input type="hidden" name="product_id" value="{{ batch.product_id }}">
-    {% endif %}
-    {% if batch.variant_label %}
-        <input type="hidden" name="variant_label" value="{{ batch.variant_label }}">
-    {% endif %}
-    {% if batch.final_quantity %}
-        <input type="hidden" name="final_quantity" value="{{ batch.final_quantity }}">
-    {% endif %}
 
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="submit" class="btn btn-success" formaction="{{ url_for('batches.save_batch_progress', batch_id=batch.id) }}">💾 Save Progress</button>
+            <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Save & Exit</a>
         </div>
         <div>
             {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
             {% if not has_active_timers %}
-                <a href="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" class="btn btn-primary me-2">✓ Complete Batch</a>
-                <button type="submit" name="action" value="fail" class="btn btn-danger" formaction="{{ url_for('batches.finish_batch', batch_id=batch.id) }}">✕ Mark as Failed</button>
+                <button type="submit" name="action" value="finish" class="btn btn-success me-2">✓ Complete Batch</button>
+                <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
             {% else %}
                 <div class="alert alert-warning">
                     <strong>Note:</strong> Complete all timers before finishing batch
                     <br>
-                    <button type="submit" name="action" value="finish" class="btn btn-primary mt-2 me-2" disabled>✓ Complete Batch</button>
+                    <button type="submit" name="action" value="finish" class="btn btn-success mt-2 me-2" disabled>✓ Complete Batch</button>
                     <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger mt-2">Force Finish Anyway</a>
                 </div>
             {% endif %}
