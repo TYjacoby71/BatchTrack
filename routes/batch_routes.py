@@ -353,10 +353,10 @@ def finish_batch(batch_id, force=False):
 
             # Timer check unless forced
             if not force and action == "finish":
-            active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
-            if active_timers:
-                flash("This batch has active timers. Complete timers or confirm finish.", "warning")
-                return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
+        active_timers = BatchTimer.query.filter_by(batch_id=batch.id, completed=False).all()
+        if active_timers:
+            flash("This batch has active timers. Complete timers or confirm finish.", "warning")
+            return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
         # Update batch data
         batch.notes = request.form.get("notes", "")
