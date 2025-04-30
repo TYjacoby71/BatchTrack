@@ -26,7 +26,7 @@ def upgrade():
         sa.Column('unit', sa.String(32), nullable=False),
         sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], name='fk_batch_ingredient_batch_id'),
         sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], name='fk_batch_ingredient_ingredient_id'),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id', name='pk_batch_ingredient')
     )
 
     op.create_table('batch_container',
@@ -37,27 +37,22 @@ def upgrade():
         sa.Column('cost_each', sa.Float()),
         sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], name='fk_batch_container_batch_id'),
         sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], name='fk_batch_container_container_id'),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id', name='pk_batch_container')
     )
     
     # Update existing batch table
-    op.add_column('batch', sa.Column('product_id', sa.Integer(), nullable=True))
-    op.add_column('batch', sa.Column('variant_id', sa.Integer(), nullable=True))
-    op.add_column('batch', sa.Column('batch_type', sa.String(32), nullable=True))
-    op.add_column('batch', sa.Column('yield_amount', sa.Float(), nullable=True))
-    op.add_column('batch', sa.Column('yield_unit', sa.String(32), nullable=True))
-    op.add_column('batch', sa.Column('completed_at', sa.DateTime(), nullable=True))
-    
-    # Add foreign key constraints
-    op.create_foreign_key('fk_batch_product_id', 'batch', 'product', ['product_id'], ['id'])
-    op.create_foreign_key('fk_batch_variant_id', 'batch', 'product_variation', ['variant_id'], ['id'])
-    
-    # Rename column for consistency
-    op.alter_column('batch', 'start_time', new_column_name='started_at')
-    
-    # Remove deprecated columns
-    op.drop_column('batch', 'timestamp')
-    op.drop_column('batch', 'containers')
+    with op.batch_alter_table('batch') as batch_op:
+        batch_op.add_column(sa.Column('product_id', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('variant_id', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('batch_type', sa.String(32), nullable=True))
+        batch_op.add_column(sa.Column('yield_amount', sa.Float(), nullable=True))
+        batch_op.add_column(sa.Column('yield_unit', sa.String(32), nullable=True))
+        batch_op.add_column(sa.Column('completed_at', sa.DateTime(), nullable=True))
+        batch_op.create_foreign_key('fk_batch_product_id', 'product', ['product_id'], ['id'])
+        batch_op.create_foreign_key('fk_batch_variant_id', 'product_variation', ['variant_id'], ['id'])
+        batch_op.alter_column('start_time', new_column_name='started_at')
+        batch_op.drop_column('timestamp')
+        batch_op.drop_column('containers')
 
 def downgrade():
     # Remove new tables
@@ -65,14 +60,15 @@ def downgrade():
     op.drop_table('batch_container')
     
     # Restore original batch table structure
-    op.drop_constraint('fk_batch_product_id', 'batch', type_='foreignkey')
-    op.drop_constraint('fk_batch_variant_id', 'batch', type_='foreignkey')
-    op.add_column('batch', sa.Column('containers', sa.PickleType(), nullable=True))
-    op.add_column('batch', sa.Column('timestamp', sa.DateTime(), nullable=True))
-    op.alter_column('batch', 'started_at', new_column_name='start_time')
-    op.drop_column('batch', 'completed_at')
-    op.drop_column('batch', 'yield_unit')
-    op.drop_column('batch', 'yield_amount') 
-    op.drop_column('batch', 'batch_type')
-    op.drop_column('batch', 'variant_id')
-    op.drop_column('batch', 'product_id')
+    with op.batch_alter_table('batch') as batch_op:
+        batch_op.drop_constraint('fk_batch_product_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_batch_variant_id', type_='foreignkey')
+        batch_op.add_column(sa.Column('containers', sa.PickleType(), nullable=True))
+        batch_op.add_column(sa.Column('timestamp', sa.DateTime(), nullable=True))
+        batch_op.alter_column('started_at', new_column_name='start_time')
+        batch_op.drop_column('completed_at')
+        batch_op.drop_column('yield_unit')
+        batch_op.drop_column('yield_amount')
+        batch_op.drop_column('batch_type')
+        batch_op.drop_column('variant_id')
+        batch_op.drop_column('product_id')
