@@ -182,9 +182,30 @@
     <!-- Timer Section -->
     <div class="form-group mt-4">
         <h4>🕒 Batch Timers</h4>
-        <div id="timerContainer"></div>
+        <div id="timerContainer">
+            {% if batch.timers %}
+                {% for timer in batch.timers %}
+                    <div class="d-flex align-items-center mb-2">
+                        <input type="datetime-local" name="batch_timers[]" class="form-control me-2" value="{{ timer.target_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
         <button type="button" class="btn btn-outline-secondary" onclick="addTimerRow()">➕ Add Timer</button>
     </div>
+
+    <!-- Hidden fields to preserve selections -->
+    <input type="hidden" name="output_type" value="{{ batch.output_type or 'product' }}">
+    {% if batch.product_id %}
+        <input type="hidden" name="product_id" value="{{ batch.product_id }}">
+    {% endif %}
+    {% if batch.variant_label %}
+        <input type="hidden" name="variant_label" value="{{ batch.variant_label }}">
+    {% endif %}
+    {% if batch.final_quantity %}
+        <input type="hidden" name="final_quantity" value="{{ batch.final_quantity }}">
+    {% endif %}
 
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">

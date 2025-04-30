@@ -233,6 +233,32 @@ def finish_batch(batch_id, force=False):
                         )
                         db.session.add(timer)
 
+            # Preserve all selections
+            batch.output_type = request.form.get("output_type")
+            batch.product_id = request.form.get("product_id")
+            batch.variant_label = request.form.get("variant_label") 
+            batch.final_quantity = request.form.get("final_quantity")
+            batch.output_unit = request.form.get("output_unit")
+            
+            # Save extra ingredients
+            extra_ingredients = []
+            for i in range(len(request.form.getlist('extra_ingredients[]'))):
+                extra_ingredients.append({
+                    'name': request.form.getlist('extra_ingredients[]')[i],
+                    'amount': request.form.getlist('extra_amounts[]')[i],
+                    'unit': request.form.getlist('extra_units[]')[i]
+                })
+            batch.extra_ingredients = extra_ingredients
+
+            # Save extra containers
+            extra_containers = []
+            for i in range(len(request.form.getlist('extra_containers[]'))):
+                extra_containers.append({
+                    'name': request.form.getlist('extra_containers[]')[i],
+                    'amount': request.form.getlist('extra_container_amounts[]')[i]
+                })
+            batch.extra_containers = extra_containers
+
             try:
                 db.session.commit()
                 flash("Changes saved successfully", "success")
