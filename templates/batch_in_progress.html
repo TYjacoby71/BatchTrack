@@ -206,8 +206,8 @@ function addIngredientRow() {
     row.classList.add('row', 'mb-2', 'align-items-center');
     row.innerHTML = `
         <div class="col-md-4">
-            <select class="form-select ingredient-select" name="extra_ingredients[]" required>
-                <option value="">Select Ingredient</option>
+            <select class="form-select ingredient-select" name="extra_ingredients[]" data-placeholder="Search ingredients..." required>
+                <option value="">Search ingredients...</option>
                 {% if batch.recipe %}
                     <optgroup label="⭐ INGREDIENTS FROM RECIPE" class="fw-bold">
                     {% for ing in batch.recipe.recipe_ingredients %}
