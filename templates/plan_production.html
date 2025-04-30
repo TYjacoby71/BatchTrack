@@ -34,7 +34,7 @@
     <div class="card-body">
       <!-- Blind render up to 10 rows, only show if index < containersSelected.length -->
       <template x-for="i in 10" :key="i">
-        <div class="d-flex align-items-center gap-2 mb-2" x-show="i <= containersSelected.length">
+        <div class="d-flex align-items-center gap-2 mb-2" x-show="containersSelected && i <= containersSelected.length">
           <select class="form-select"
                   x-model="containersSelected[i - 1].id"
                   :disabled="autoFill"
