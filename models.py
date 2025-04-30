@@ -78,19 +78,53 @@ class Recipe(db.Model):
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
+class BatchIngredient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    amount_used = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    
+class BatchContainer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity_used = db.Column(db.Integer, nullable=False)
+    cost_each = db.Column(db.Float)
+
+class BatchTimer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    name = db.Column(db.String(64))
+    duration_seconds = db.Column(db.Integer)
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    status = db.Column(db.String(32), default='pending')
+
 class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'))
+    batch_type = db.Column(db.String(32), default='product')  # 'product' or 'ingredient'
     scale = db.Column(db.Float, default=1.0)
-    start_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     status = db.Column(db.String(50), default='in_progress')
-    containers = db.Column(db.PickleType, default=list)
     recipe_name = db.Column(db.String(128))
     label_code = db.Column(db.String(32))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    yield_amount = db.Column(db.Float)
+    yield_unit = db.Column(db.String(32))
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    ingredients = db.relationship('BatchIngredient', backref='batch', lazy=True, cascade="all, delete-orphan")
+    containers = db.relationship('BatchContainer', backref='batch', lazy=True, cascade="all, delete-orphan")
+    timers = db.relationship('BatchTimer', backref='batch', lazy=True, cascade="all, delete-orphan")
+    product = db.relationship('Product', backref='batches')
+    variant = db.relationship('ProductVariation', backref='batches')
 
 
 class Product(db.Model):
@@ -159,11 +193,3 @@ class Tag(db.Model):
     name = db.Column(db.String(32), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class BatchTimer(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
-    label = db.Column(db.String(64))
-    due_at = db.Column(db.DateTime)
-    completed = db.Column(db.Boolean, default=False)
-
-    batch = db.relationship('Batch', backref='timers')

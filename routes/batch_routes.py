@@ -390,9 +390,36 @@ def finish_batch(batch_id, force=False):
 @login_required
 def cancel_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    db.session.delete(batch)
-    db.session.commit()
-    flash('Batch cancelled successfully.')
+    
+    if batch.status != 'in_progress':
+        flash('Only in-progress batches can be cancelled.')
+        return redirect(url_for('batches.list_batches'))
+
+    # Restore ingredients to inventory
+    for batch_ingredient in batch.ingredients:
+        ingredient = InventoryItem.query.get(batch_ingredient.ingredient_id)
+        if ingredient:
+            ingredient.quantity += batch_ingredient.amount_used
+            db.session.add(ingredient)
+
+    # Restore containers to inventory 
+    for batch_container in batch.containers:
+        container = InventoryItem.query.get(batch_container.container_id)
+        if container:
+            container.quantity += batch_container.quantity_used
+            db.session.add(container)
+
+    batch.status = 'cancelled'
+    batch.completed_at = datetime.utcnow()
+    db.session.add(batch)
+    
+    try:
+        db.session.commit()
+        flash('Batch cancelled and ingredients restored to inventory.')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error cancelling batch: {str(e)}', 'error')
+        
     return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/finish-with-timers/<int:batch_id>', methods=['GET', 'POST'])
