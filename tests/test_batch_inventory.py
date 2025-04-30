@@ -43,6 +43,57 @@ def test_adjust_inventory_with_conversion(setup_inventory):
             'unit': 'lb'
         }]
 
+
+def test_cancel_batch_restores_containers(setup_inventory):
+    with app.app_context():
+        # Set up a container in inventory
+        container_category = IngredientCategory(name="Container", default_density=1.0)
+        db.session.add(container_category)
+        
+        jar = InventoryItem(
+            id=2,
+            name="Glass Jar",
+            quantity=50,
+            unit="count",
+            type="container",
+            category=container_category
+        )
+        db.session.add(jar)
+        db.session.commit()
+
+        # Create batch and add container usage
+        batch = Batch(id=3, recipe_id=1, status='in_progress', started_at=datetime.utcnow())
+        db.session.add(batch)
+        db.session.commit()
+
+        # Add container usage record
+        bc = BatchContainer(
+            batch_id=3,
+            container_id=2,
+            quantity_used=10,
+            cost_each=1.50
+        )
+        db.session.add(bc)
+        db.session.commit()
+
+        # Pre-deduct container inventory
+        jar.quantity -= 10
+        db.session.commit()
+        assert jar.quantity == 40  # Verify deduction
+
+        # Cancel batch and restore container
+        jar.quantity += 10
+        db.session.delete(bc)
+        batch.status = 'cancelled'
+        db.session.add(batch)
+        db.session.commit()
+
+        # Verify restoration
+        restored_jar = InventoryItem.query.get(2)
+        assert restored_jar.quantity == 50
+        assert batch.status == 'cancelled'
+
+
         new_containers = []
         adjust_inventory_deltas(batch.id, new_ingredients, new_containers)
 
