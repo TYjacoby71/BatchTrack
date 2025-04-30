@@ -181,6 +181,14 @@ def finish_batch(batch_id, force=False):
     action = request.form.get('action')
 
     try:
+        # Handle save action
+        if action == "save":
+            batch.notes = request.form.get("notes", "")
+            batch.tags = request.form.get("tags", "")
+            db.session.commit()
+            flash("Changes saved successfully.")
+            return redirect(url_for('batches.list_batches'))
+
         # Prevent redundant status changes
         if batch.status == "completed" and action == "finish":
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))

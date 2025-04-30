@@ -189,7 +189,7 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Save & Exit</a>
+            <button type="submit" name="action" value="save" class="btn btn-secondary">Save & Exit</button>
         </div>
         <div>
             {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
