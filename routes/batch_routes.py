@@ -136,13 +136,6 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
-    
-    # Load saved form data if it exists
-    if hasattr(batch, 'extra_ingredients'):
-        batch.extra_ingredients = batch.extra_ingredients or []
-    if hasattr(batch, 'extra_containers'):  
-        batch.extra_containers = batch.extra_containers or []
-    
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
@@ -181,57 +174,6 @@ def view_batch_in_progress(batch_identifier):
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
-@batches_bp.route('/save_progress/<int:batch_id>', methods=['POST'])
-@login_required 
-def save_batch_progress(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    
-    # Save basic fields
-    batch.notes = request.form.get("notes", "")
-    batch.tags = request.form.get("tags", "")
-    batch.output_type = request.form.get("output_type")
-    batch.product_id = request.form.get("product_id")
-    batch.variant_label = request.form.get("variant_label")
-    batch.output_unit = request.form.get("output_unit")
-    batch.final_quantity = request.form.get("final_quantity")
-
-    # Save extra ingredients
-    extra_ingredients = request.form.getlist('extra_ingredients[]')
-    extra_amounts = request.form.getlist('extra_amounts[]')
-    extra_units = request.form.getlist('extra_units[]')
-    
-    ingredient_list = []
-    for name, amount, unit in zip(extra_ingredients, extra_amounts, extra_units):
-        if name and amount:
-            ingredient_list.append({
-                'name': name,
-                'amount': float(amount),
-                'unit': unit
-            })
-    batch.extra_ingredients = ingredient_list
-
-    # Save extra containers  
-    extra_containers = request.form.getlist('extra_containers[]')
-    extra_container_amounts = request.form.getlist('extra_container_amounts[]')
-    
-    container_list = []
-    for name, amount in zip(extra_containers, extra_container_amounts):
-        if name and amount:
-            container_list.append({
-                'name': name, 
-                'amount': float(amount)
-            })
-    batch.extra_containers = container_list
-
-    try:
-        db.session.commit()
-        flash("Progress saved successfully", "success") 
-        return redirect(url_for('batches.list_batches'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error saving progress: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
 @batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
 @login_required
 def finish_batch(batch_id, force=False):
@@ -239,116 +181,6 @@ def finish_batch(batch_id, force=False):
     action = request.form.get('action')
 
     try:
-        # Handle save action
-        if action == "save":
-            # Basic batch info
-            batch.notes = request.form.get("notes", "")
-            batch.tags = request.form.get("tags", "")
-            
-            # Output type and details
-            output_type = request.form.get("output_type")
-            batch.output_type = output_type
-
-            if output_type == "product":
-                batch.product_id = request.form.get("product_id")
-                batch.variant_label = request.form.get("variant_label")
-                batch.output_unit = request.form.get("output_unit")
-                batch.final_quantity = request.form.get("final_quantity")
-                
-                # Clear ingredient fields
-                batch.ingredient_unit = None
-                batch.ingredient_quantity = None
-            elif output_type == "ingredient":
-                batch.ingredient_unit = request.form.get("ingredient_unit")
-                batch.ingredient_quantity = request.form.get("ingredient_quantity")
-                
-                # Clear product fields
-                batch.product_id = None
-                batch.variant_label = None
-                batch.output_unit = None 
-                batch.final_quantity = None
-            
-            # Extra ingredients
-            extra_ingredients = request.form.getlist('extra_ingredients[]')
-            extra_amounts = request.form.getlist('extra_amounts[]')
-            extra_units = request.form.getlist('extra_units[]')
-            
-            if extra_ingredients:
-                batch.extra_ingredients = [{
-                    'name': ing,
-                    'amount': amt,
-                    'unit': unit
-                } for ing, amt, unit in zip(extra_ingredients, extra_amounts, extra_units)]
-            
-            # Extra containers
-            extra_containers = request.form.getlist('extra_containers[]')
-            extra_container_amounts = request.form.getlist('extra_container_amounts[]')
-            
-            if extra_containers:
-                batch.extra_containers = [{
-                    'name': cont,
-                    'amount': amt
-                } for cont, amt in zip(extra_containers, extra_container_amounts)]
-
-            # Save timers
-            batch_timers = request.form.getlist('batch_timers[]')
-            if batch_timers:
-                from models import BatchTimer
-                for timer_str in batch_timers:
-                    if timer_str:
-                        timer = BatchTimer(
-                            batch_id=batch.id,
-                            target_time=datetime.strptime(timer_str, '%Y-%m-%dT%H:%M'),
-                            completed=False
-                        )
-                        db.session.add(timer)
-
-            # Preserve all selections
-            batch.output_type = request.form.get("output_type")
-            batch.product_id = request.form.get("product_id")
-            batch.variant_label = request.form.get("variant_label") 
-            batch.final_quantity = request.form.get("final_quantity")
-            batch.output_unit = request.form.get("output_unit")
-            
-            # Save extra ingredients
-            extra_ingredients = request.form.getlist('extra_ingredients[]')
-            extra_amounts = request.form.getlist('extra_amounts[]')
-            extra_units = request.form.getlist('extra_units[]')
-            
-            ingredient_list = []
-            for name, amount, unit in zip(extra_ingredients, extra_amounts, extra_units):
-                if name and amount:  # Only add if name and amount are provided
-                    ingredient_list.append({
-                        'name': name,
-                        'amount': float(amount),
-                        'unit': unit
-                    })
-            batch.extra_ingredients = ingredient_list
-
-            # Save extra containers
-            extra_containers = request.form.getlist('extra_containers[]')
-            extra_container_amounts = request.form.getlist('extra_container_amounts[]')
-            
-            container_list = []
-            for name, amount in zip(extra_containers, extra_container_amounts):
-                if name and amount:  # Only add if name and amount are provided
-                    container_list.append({
-                        'name': name,
-                        'amount': float(amount)
-                    })
-            batch.extra_containers = container_list
-
-            db.session.add(batch)
-
-            try:
-                db.session.commit()
-                flash("Changes saved successfully", "success")
-                return redirect(url_for('batches.list_batches'))
-            except Exception as e:
-                db.session.rollback()
-                flash(f"Error saving changes: {str(e)}", "error")
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
         # Prevent redundant status changes
         if batch.status == "completed" and action == "finish":
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
@@ -390,36 +222,9 @@ def finish_batch(batch_id, force=False):
 @login_required
 def cancel_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    
-    if batch.status != 'in_progress':
-        flash('Only in-progress batches can be cancelled.')
-        return redirect(url_for('batches.list_batches'))
-
-    # Restore ingredients to inventory
-    for batch_ingredient in batch.ingredients:
-        ingredient = InventoryItem.query.get(batch_ingredient.ingredient_id)
-        if ingredient:
-            ingredient.quantity += batch_ingredient.amount_used
-            db.session.add(ingredient)
-
-    # Restore containers to inventory 
-    for batch_container in batch.containers:
-        container = InventoryItem.query.get(batch_container.container_id)
-        if container:
-            container.quantity += batch_container.quantity_used
-            db.session.add(container)
-
-    batch.status = 'cancelled'
-    batch.completed_at = datetime.utcnow()
-    db.session.add(batch)
-    
-    try:
-        db.session.commit()
-        flash('Batch cancelled and ingredients restored to inventory.')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error cancelling batch: {str(e)}', 'error')
-        
+    db.session.delete(batch)
+    db.session.commit()
+    flash('Batch cancelled successfully.')
     return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/finish-with-timers/<int:batch_id>', methods=['GET', 'POST'])
