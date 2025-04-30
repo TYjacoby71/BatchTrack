@@ -197,11 +197,4 @@ class Tag(db.Model):
     name = db.Column(db.String(32), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class BatchTimer(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
-    label = db.Column(db.String(64))
-    due_at = db.Column(db.DateTime)
-    completed = db.Column(db.Boolean, default=False)
-
-    batch = db.relationship('Batch', backref='timers')
+# Removed duplicate BatchTimer class - using the one defined above
