@@ -32,12 +32,13 @@
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
     </div>
     <div class="card-body">
-      <!-- Blind render up to 10 rows, only show if index < containersSelected.length -->
+      <!-- Blind render up to 10 rows, only show if the row exists -->
       <template x-for="i in 10" :key="i">
-        <div class="d-flex align-items-center gap-2 mb-2" x-show="containersSelected && i <= containersSelected.length">
-          <select class="form-select"
-                  x-model="containersSelected[i - 1].id"
-                  :disabled="autoFill"
+        <template x-if="containersSelected.length >= i">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <select class="form-select"
+                    x-model="containersSelected[i - 1].id"
+                    :disabled="autoFill"
                   @change="updateContainer(i - 1)"
                   @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
@@ -62,7 +63,8 @@
           <button type="button" class="btn btn-danger btn-sm"
                   @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(i - 1)"
                   :disabled="autoFill">&times;</button>
-        </div>
+          </div>
+        </template>
       </template>
 
       <!-- Containment Progress -->
