@@ -222,9 +222,44 @@ def finish_batch(batch_id, force=False):
 @login_required
 def cancel_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    db.session.delete(batch)
+    if batch.status != 'in_progress':
+        flash("Only in-progress batches can be cancelled.")
+        return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
+
+    # Restore ingredients
+    for bi in batch.ingredients:
+        ingredient = bi.ingredient
+        if ingredient:
+            ingredient.quantity += bi.amount_used
+            db.session.add(ingredient)
+
+    # Restore containers
+    for bc in batch.containers:
+        container = bc.container
+        if container:
+            container.quantity += bc.quantity_used
+            db.session.add(container)
+
+    batch.status = 'cancelled'
+    db.session.add(batch)
     db.session.commit()
-    flash('Batch cancelled successfully.')
+
+    flash("Batch cancelled and inventory restored.")
+    return redirect(url_for('batches.list_batches'))
+
+@batches_bp.route('/fail/<int:batch_id>', methods=['POST'])
+@login_required
+def mark_batch_failed(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    if batch.status != 'in_progress':
+        flash("Only in-progress batches can be marked as failed.")
+        return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
+
+    batch.status = 'failed'
+    batch.completed_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Batch marked as failed. Inventory remains deducted.")
     return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/finish-with-timers/<int:batch_id>', methods=['GET', 'POST'])
