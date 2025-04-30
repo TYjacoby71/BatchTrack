@@ -55,7 +55,7 @@
         <div class="mb-3">
             <label for="output_unit" class="form-label">Output Unit</label>
             <select name="output_unit" class="form-select" required>
-                {% for unit in units if unit.type == 'count' %}
+                {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
