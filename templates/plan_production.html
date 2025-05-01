@@ -320,7 +320,13 @@ function planProduction() {
     },
 
     checkStockOrWarn() {
-      this.checkStock();
+      if (this.containmentPercent < 100 && this.containersSelected.length > 0) {
+        if (confirm(`Some items are not contained. Would you like to continue?`)) {
+          this.checkStock();
+        }
+      } else {
+        this.checkStock();
+      }
     },
 
     checkStock() {
