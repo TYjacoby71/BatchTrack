@@ -19,11 +19,12 @@
 
     <div class="mb-3" id="categorySection" {% if ing.type != 'ingredient' %}style="display: none;"{% endif %}>
         <label for="category">Ingredient Category:</label>
-        <select name="category_id" class="form-select">
-            <option value="">-- Select Category --</option>
+        <select name="category_id" class="form-select" id="categorySelect">
+            <option value="">-- Custom Category --</option>
             {% for category in get_ingredient_categories() %}
-            <option value="{{ category.id }}" {% if ing.category_id == category.id %}selected{% endif %}>
-                {{ category.name }} (Density: {{ category.default_density }})
+            <option value="{{ category.id }}" {% if ing.category_id == category.id %}selected{% endif %}
+                    data-density="{{ category.default_density }}">
+                {{ category.name }} (Density: {{ category.default_density }} g/ml)
             </option>
             {% endfor %}
         </select>
@@ -32,12 +33,14 @@
     <div class="mb-3">
         <label for="density">Density (g/ml):</label>
         <div class="input-group">
-            <input type="number" step="0.001" name="density" id="density" class="form-control" value="{{ ing.density or 1.0 }}">
+            <input type="number" step="0.001" name="density" id="density" 
+                   class="form-control" value="{{ ing.density or 1.0 }}"
+                   {% if ing.category_id and not ing.density %}disabled{% endif %}>
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#densityModal">
                 Reference
             </button>
         </div>
-        <small class="text-muted">Used for volume ↔ weight conversions (e.g. ml to g)</small>
+        <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
     </div>
 
     <label for="unit">Unit:</label>
@@ -55,10 +58,22 @@
             document.getElementById('categorySection').style.display = 
                 this.value === 'ingredient' ? 'block' : 'none';
         });
+
+        document.getElementById('categorySelect').addEventListener('change', function() {
+            const densityInput = document.getElementById('density');
+            if (this.value === '') {
+                densityInput.disabled = false;
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultDensity = selectedOption.dataset.density;
+                densityInput.value = defaultDensity;
+                densityInput.disabled = true;
+            }
+        });
     </script>
 
     <div class="form-group mt-3 d-flex justify-content-between">
-        <a href="{{ url_for('ingredients.list_ingredients') }}" class="btn btn-secondary">Cancel</a>
+        <a href="{{ url_for('inventory.list_ingredients') }}" class="btn btn-secondary">Cancel</a>
         <button type="submit" class="btn btn-primary">Save Changes</button>
     </div>
 </form>

@@ -56,7 +56,11 @@ def edit_ingredient(id):
         item.quantity = float(request.form.get('quantity'))
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
-        item.density = float(request.form.get('density', 1.0))
+        item.category_id = request.form.get('category_id', None)
+        if not item.category_id:  # Custom category selected
+            item.density = float(request.form.get('density', 1.0))
+        else:
+            item.density = None  # Use category default
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
