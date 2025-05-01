@@ -148,6 +148,57 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset form
         document.getElementById('unitName').value = '';
 
+function saveBatch() {
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    const batchId = window.location.pathname.split('/').pop();
+    
+    const data = {
+        notes: formData.get('notes'),
+        tags: formData.get('tags'),
+        ingredients: [],
+        containers: [],
+        timers: []
+    };
+
+    // Collect ingredients
+    document.querySelectorAll('.ingredient-row').forEach((row, index) => {
+        data.ingredients.push({
+            id: formData.get(`ingredients[${index}][id]`),
+            amount: formData.get(`ingredients[${index}][amount]`),
+            unit: formData.get(`ingredients[${index}][unit]`)
+        });
+    });
+
+    // Collect containers
+    document.querySelectorAll('.container-row').forEach((row, index) => {
+        data.containers.push({
+            id: formData.get(`containers[${index}][id]`),
+            qty: formData.get(`containers[${index}][qty]`),
+            cost_each: formData.get(`containers[${index}][cost_each]`)
+        });
+    });
+
+    fetch(`/batches/${batchId}/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrf_token')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert('Batch saved successfully');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving batch:', error);
+        alert('Error saving batch');
+    });
+}
+
 function validateBatchForm() {
     const type = document.getElementById('output_type').value;
     if (type === 'product') {
