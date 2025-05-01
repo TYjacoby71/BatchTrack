@@ -150,9 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveBatch() {
     const batchId = window.location.pathname.split('/').pop();
-    const form = document.querySelector('form');
-    if (!(form instanceof HTMLFormElement)) {
-        console.error("Form not found");
+    const form = document.getElementById('batchForm');
+    if (!form) {
+        console.error("Batch form not found");
         return;
     }
     
