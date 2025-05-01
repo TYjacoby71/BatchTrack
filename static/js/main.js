@@ -149,13 +149,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('unitName').value = '';
 
 function saveBatch() {
-    const form = document.querySelector('form');
-    const formData = new FormData(form);
     const batchId = window.location.pathname.split('/').pop();
+    const form = document.querySelector('form');
     
     const data = {
-        notes: formData.get('notes'),
-        tags: formData.get('tags'),
+        notes: document.querySelector('[name="notes"]').value,
+        tags: document.querySelector('[name="tags"]').value,
         ingredients: [],
         containers: [],
         timers: []
@@ -183,7 +182,7 @@ function saveBatch() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': formData.get('csrf_token')
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
         },
         body: JSON.stringify(data)
     })
