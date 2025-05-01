@@ -5,8 +5,9 @@
 <div class="batch-details">
     <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
     <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
-    <p><strong>Scale:</strong> {{ batch.scale }}</p>
-    <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+    <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    <p><strong>Status:</strong> <span class="badge {% if batch.status == 'completed' %}bg-success{% elif batch.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">{{ batch.status_display }}</span></p>
     <p><strong>Total Cost:</strong> ${{ batch.total_cost or 'N/A' }}</p>
 
     {% if batch.product_id %}
