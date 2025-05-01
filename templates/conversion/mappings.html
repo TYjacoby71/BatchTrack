@@ -5,6 +5,23 @@
   <h2>Custom Unit Mappings</h2>
   <div class="card">
     <div class="card-body">
+      <form method="POST" action="{{ url_for('conversion.manage_mappings') }}">
+        {{ csrf_token() }}
+        <div class="row g-3 mb-3">
+          <div class="col">
+            <input type="text" name="from_unit" class="form-control" placeholder="From Unit" required>
+          </div>
+          <div class="col">
+            <input type="text" name="to_unit" class="form-control" placeholder="To Unit" required>
+          </div>
+          <div class="col">
+            <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="Multiplier" required>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-success">Add Mapping</button>
+          </div>
+        </div>
+      </form>
       <table class="table">
         <thead>
           <tr>
