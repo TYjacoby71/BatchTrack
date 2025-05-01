@@ -48,10 +48,18 @@ class ConversionEngine:
             # Pull density if not passed
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
-                if ingredient:
-                    density = ingredient.density or None
-                    if density is None and ingredient.category:
-                        density = ingredient.category.default_density
+                if ingredient and ingredient.density:
+                    density = ingredient.density
+                elif ingredient:
+                    # Fall back to density reference data
+                    from flask import current_app
+                    import json
+                    with open('data/density_reference.json') as f:
+                        density_data = json.load(f)
+                    if ingredient.type == 'liquid':
+                        density = density_data['liquids'].get('default', 1.0)
+                    else:
+                        density = density_data['powders'].get('default', 0.65)
             if density is None:
                 raise ValueError(f"Missing density for conversion from {from_u.name} to {to_u.name}")
             used_density = density
