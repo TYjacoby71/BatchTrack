@@ -150,11 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveBatch() {
     const batchId = window.location.pathname.split('/').pop();
-    const form = document.querySelector('form');
-    
     const data = {
-        notes: document.querySelector('[name="notes"]').value,
-        tags: document.querySelector('[name="tags"]').value,
+        notes: document.querySelector('[name="notes"]')?.value || '',
+        tags: document.querySelector('[name="tags"]')?.value || '',
         ingredients: [],
         containers: [],
         timers: []
