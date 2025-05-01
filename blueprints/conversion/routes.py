@@ -1,9 +1,14 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, current_app, flash, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from models import db, Unit, CustomUnitMapping, ConversionLog
 from services.unit_conversion import ConversionEngine
+import os
 
 conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
+
+@conversion_bp.route('/density-reference')
+def get_density_reference():
+    return send_file('data/density_reference.json')
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
