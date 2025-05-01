@@ -58,7 +58,7 @@ from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api.routes import api_bp
-from blueprints.api.routes import container_api_bp #Import container API blueprint
+from blueprints.api.container_routes import container_api_bp
 
 
 # Register blueprints
