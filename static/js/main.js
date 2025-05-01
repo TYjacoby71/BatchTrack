@@ -305,8 +305,8 @@ function updateStockCheckTable(data) {
 function saveBatch() {
     const batchId = window.location.pathname.split('/').pop();
     const form = document.getElementById('batchForm');
-    if (!(form instanceof HTMLFormElement)) {
-        console.error('Batch form not found or not a <form>');
+    if (!form) {
+        console.error('Batch form not found');
         return;
     }
 
@@ -318,48 +318,22 @@ function saveBatch() {
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
         product_id: parseInt(form.querySelector('select[name="product_id"]')?.value) || null,
-        variant_id: form.querySelector('input[name="variant_id"]')?.value || '',
+        variant_id: form.querySelector('input[name="variant_label"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredient_id"]').value),
-            amount: parseFloat(row.querySelector('input[name="amount"]').value),
-            unit: row.querySelector('select[name="unit"]').value
+            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
+            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
+            unit: row.querySelector('select[name="units[]"]').value
         })),
         containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="container_id"]').value),
-            qty: parseInt(row.querySelector('input[name="quantity"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="cost_each"]').value) || 0
+            id: parseInt(row.querySelector('select[name="containers[]"]').value),
+            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
+            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
         })),
         timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[name="timer_name"]').value,
-            duration_seconds: parseInt(row.querySelector('input[name="duration"]').value)
+            name: row.querySelector('input[name="timers[]"]').value,
+            duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
         }))
     };
-
-    // Collect ingredients
-    form.querySelectorAll('.ingredient-row').forEach((row, index) => {
-        data.ingredients.push({
-            id: row.querySelector('select').value,
-            amount: row.querySelector('input[type="number"]').value,
-            unit: row.querySelector('select.unit-select').value
-        });
-    });
-
-    // Collect containers
-    form.querySelectorAll('.container-row').forEach((row, index) => {
-        data.containers.push({
-            id: row.querySelector('select').value,
-            qty: row.querySelector('input[placeholder="Quantity"]').value,
-            cost_each: row.querySelector('input[placeholder="Cost Each"]').value
-        });
-    });
-
-    // Collect timers
-    form.querySelectorAll('.timer-row').forEach((row, index) => {
-        data.timers.push({
-            name: row.querySelector('input[placeholder="Timer Name"]').value,
-            duration_seconds: row.querySelector('input[placeholder="Duration (seconds)"]').value
-        });
-    });
 
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
