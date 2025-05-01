@@ -74,7 +74,7 @@ def set_column_visibility():
 @batches_bp.route('/')
 @login_required
 def list_batches():
-    query = Batch.query.order_by(Batch.timestamp.desc())
+    query = Batch.query.order_by(Batch.started_at.desc())
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
