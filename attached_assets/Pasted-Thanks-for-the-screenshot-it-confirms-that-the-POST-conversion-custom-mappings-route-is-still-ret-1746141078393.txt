@@ -1,0 +1,124 @@
+Thanks for the screenshot — it confirms that the POST /conversion/custom-mappings route is still returning a 400, meaning something in the request is malformed or rejected.
+
+Let's methodically fix this now. Below is a complete and clean version of the code you should drop into your project. This version resolves:
+
+✅ Proper CSRF token validation (for JSON and form)
+
+✅ Custom mapping logic with base unit propagation
+
+✅ Clear and consistent route behavior
+
+✅ blueprints/conversion/routes.py
+python
+Copy
+Edit
+from flask import Blueprint, request, render_template, jsonify, redirect, flash
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
+from models import db, Unit, CustomUnitMapping
+from flask_wtf import csrf
+
+conversion_bp = Blueprint('conversion_bp', __name__, url_prefix='/conversion')
+
+@conversion_bp.route('/units')
+def manage_units():
+    units = Unit.query.all()
+    return render_template('conversion/units.html', units=units)
+
+@conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
+def manage_mappings():
+    if request.method == 'POST':
+        try:
+            if request.is_json:
+                data = request.get_json()
+                csrf_token = data.get('csrf_token')
+            else:
+                data = request.form
+                csrf_token = data.get('csrf_token')
+
+            validate_csrf(csrf_token)
+        except ValidationError:
+            return jsonify({'error': 'Invalid CSRF token'}), 400
+
+        from_unit = data.get('from_unit')
+        to_unit = data.get('to_unit')
+        multiplier = float(data.get('multiplier', 0))
+
+        if not from_unit or not to_unit or multiplier <= 0:
+            return jsonify({'error': 'Missing or invalid data'}), 400
+
+        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+
+        if not from_unit_obj or not to_unit_obj:
+            return jsonify({'error': 'One or both units not found'}), 400
+
+        # Save custom mapping
+        mapping = CustomUnitMapping(
+            from_unit=from_unit,
+            to_unit=to_unit,
+            multiplier=multiplier
+        )
+        db.session.add(mapping)
+
+        # Set base_unit and multiplier_to_base
+        from_unit_obj.base_unit = to_unit_obj.base_unit
+        from_unit_obj.multiplier_to_base = multiplier * to_unit_obj.multiplier_to_base
+        db.session.add(from_unit_obj)
+
+        db.session.commit()
+        return jsonify({'success': True}), 200
+
+    units = Unit.query.all()
+    mappings = CustomUnitMapping.query.all()
+    return render_template('conversion/mappings.html', units=units, mappings=mappings, csrf_token=csrf.generate_csrf())
+✅ templates/conversion/mappings.html
+Add this in your <form> for CSRF token:
+
+html
+Copy
+Edit
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+Or if you're submitting via JS, ensure the token is available in a JS-accessible tag:
+
+html
+Copy
+Edit
+<meta name="csrf-token" content="{{ csrf_token }}">
+✅ static/js/main.js
+Update your fetch request for adding custom mappings:
+
+javascript
+Copy
+Edit
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+fetch("/conversion/custom-mappings", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-CSRFToken": csrfToken
+  },
+  body: JSON.stringify({
+    from_unit: "bucket",
+    to_unit: "lb",
+    multiplier: 1,
+    csrf_token: csrfToken
+  })
+})
+.then(response => response.json())
+.then(data => {
+  if (data.error) {
+    alert("Error: " + data.error);
+  } else {
+    alert("Mapping created successfully!");
+    location.reload();
+  }
+});
+✅ Final Notes
+You must call {{ csrf_token() }} in your template if using generate_csrf() manually.
+
+For X-CSRFToken headers to work with fetch, ensure your backend accepts it by default. Flask-WTF does.
+
+Confirm that Unit and CustomUnitMapping models are imported correctly and exist in models.py.
+
