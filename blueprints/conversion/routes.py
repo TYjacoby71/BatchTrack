@@ -106,7 +106,19 @@ def manage_mappings():
         data = request.get_json() if request.is_json else request.form
         from_unit = data.get('from_unit')
         to_unit = data.get('to_unit')
-        multiplier = float(data.get('multiplier'))
+        try:
+            multiplier = float(data.get('multiplier', 0))
+        except (ValueError, TypeError):
+            if request.is_json:
+                return jsonify({'error': 'Invalid multiplier value'}), 400
+            flash('Invalid multiplier value', 'error')
+            return redirect(url_for('conversion.manage_mappings'))
+
+        if not all([from_unit, to_unit, multiplier]):
+            if request.is_json:
+                return jsonify({'error': 'Missing required fields'}), 400
+            flash('All fields are required', 'error')
+            return redirect(url_for('conversion.manage_mappings'))
 
         # Verify both units exist
         from_u = Unit.query.filter_by(name=from_unit).first()
