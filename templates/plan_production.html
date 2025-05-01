@@ -220,18 +220,12 @@ function planProduction() {
               }
             }
 
-            // Second pass: If volume remains, fill with smallest container that can hold it
+            // Only add containers if they have stock and can fit more product
             if (remainingVolume > 0) {
-              const smallestContainer = availableContainers[availableContainers.length - 1];
-              if (smallestContainer && smallestContainer.stock_qty > 0) {
-                selectedContainers.push({
-                  id: smallestContainer.id,
-                  quantity: 1,
-                  name: smallestContainer.name,
-                  capacity: smallestContainer.storage_amount,
-                  unit: smallestContainer.storage_unit
-                });
-                remainingVolume = 0;
+              // Don't create additional rows if no containers have stock
+              const hasAvailableContainers = availableContainers.some(c => c.stock_qty > 0);
+              if (!hasAvailableContainers) {
+                remainingVolume = projected;
               }
             }
 
