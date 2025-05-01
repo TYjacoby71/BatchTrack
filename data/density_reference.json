@@ -1,15 +1,15 @@
 
 {
-  "common_densities": [
-    {"name": "Water", "density_g_per_ml": 1.0, "category": "Base"},
-    {"name": "Olive Oil", "density_g_per_ml": 0.91, "category": "Oils"},
-    {"name": "Beeswax", "density_g_per_ml": 0.96, "category": "Waxes"},
-    {"name": "Shea Butter", "density_g_per_ml": 0.92, "category": "Butters"},
-    {"name": "Coconut Oil", "density_g_per_ml": 0.924, "category": "Oils"},
-    {"name": "Castor Oil", "density_g_per_ml": 0.96, "category": "Oils"},
-    {"name": "Honey", "density_g_per_ml": 1.42, "category": "Sweeteners"},
-    {"name": "Glycerin", "density_g_per_ml": 1.26, "category": "Base"},
-    {"name": "Almond Oil", "density_g_per_ml": 0.91, "category": "Oils"},
-    {"name": "Essential Oil (avg)", "density_g_per_ml": 0.9, "category": "Essential Oils"}
-  ]
+  "liquids": {
+    "default": 1.0,
+    "water": 1.0,
+    "oil": 0.92,
+    "syrup": 1.35
+  },
+  "powders": {
+    "default": 0.65,
+    "flour": 0.53,
+    "sugar": 0.85,
+    "salt": 1.2
+  }
 }
