@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -196,34 +195,34 @@ function planProduction() {
           if (this.autoFill) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
-            const containers = [];
 
             // Sort containers by capacity (largest first)
-            const sortedContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
+            const availableContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
+            const selectedContainers = [];
 
-            for (const container of sortedContainers) {
+            // Fill with largest containers first
+            for (const container of availableContainers) {
               if (remainingVolume <= 0) break;
-              
-              const neededQuantity = Math.ceil(remainingVolume / container.storage_amount);
+
+              const containerCapacity = container.storage_amount;
+              const neededQuantity = Math.ceil(remainingVolume / containerCapacity);
               const availableQuantity = Math.min(neededQuantity, container.stock_qty || 0);
-              
+
               if (availableQuantity > 0) {
-                containers.push({
+                selectedContainers.push({
                   id: container.id,
                   quantity: availableQuantity,
                   name: container.name,
-                  capacity: container.storage_amount,
+                  capacity: containerCapacity,
                   unit: container.storage_unit
                 });
-                remainingVolume -= (availableQuantity * container.storage_amount);
+                remainingVolume -= (availableQuantity * containerCapacity);
               }
             }
 
-            this.containersSelected = containers;
-
-            this.containersSelected.forEach((container, index) => {
-              this.updateContainer(index);
-            });
+            this.containersSelected = selectedContainers;
+            this.updateProgress();
+            this.evaluateContainment();
           }
 
           this.refreshContainmentStatus();
