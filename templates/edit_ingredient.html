@@ -36,9 +36,6 @@
             <input type="number" step="0.001" name="density" id="density" 
                    class="form-control" value="{{ ing.density or 1.0 }}"
                    {% if ing.category_id and not ing.density %}disabled{% endif %}>
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#densityModal">
-                Reference
-            </button>
         </div>
         <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
     </div>
