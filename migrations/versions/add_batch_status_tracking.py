@@ -1,14 +1,15 @@
 
 """add batch status tracking
 
-Revision ID: add_batch_status_tracking
+Revision ID: 28f420a8e591
+Revises: d3417cb6cf8c
 Create Date: 2024-05-01 17:45:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic
-revision = 'add_batch_status_tracking_001'
+revision = '28f420a8e591'
 down_revision = 'd3417cb6cf8c'
 branch_labels = None
 depends_on = None
