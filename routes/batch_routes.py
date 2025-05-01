@@ -163,6 +163,7 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
+    batch.recipe_name = recipe.name  # Add recipe name to batch object
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
