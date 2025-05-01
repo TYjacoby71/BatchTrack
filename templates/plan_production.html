@@ -200,20 +200,25 @@ function planProduction() {
             const availableContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
             const selectedContainers = [];
 
-            // Fill with largest efficient containers first (like making change)
+            // Try each container size
             while (remainingVolume > 0 && availableContainers.length > 0) {
-              // Use largest container if it can be filled over 95%
+              // Find largest container that would be at least 95% utilized
               const bestContainer = availableContainers.find(c => {
                 if (c.stock_qty <= 0) return false;
-                return remainingVolume >= (c.storage_amount * 0.95);
+                const containerCapacity = c.storage_amount;
+                const wouldFill = Math.min(remainingVolume, containerCapacity);
+                const fillPercent = (wouldFill / containerCapacity) * 100;
+                return fillPercent >= 95;
               });
 
               if (!bestContainer) {
+                // If no efficient large container found, try next size down
                 availableContainers.shift();
                 continue;
               }
 
-              const numberNeeded = Math.floor(remainingVolume / bestContainer.storage_amount);
+              const containerCapacity = bestContainer.storage_amount;
+              const numberNeeded = Math.floor(remainingVolume / containerCapacity);
               const numberAvailable = Math.min(numberNeeded, bestContainer.stock_qty);
 
               if (numberAvailable > 0) {
@@ -221,24 +226,26 @@ function planProduction() {
                   id: bestContainer.id,
                   quantity: numberAvailable,
                   name: bestContainer.name,
-                  capacity: bestContainer.storage_amount,
+                  capacity: containerCapacity,
                   unit: bestContainer.storage_unit
                 });
-                remainingVolume -= (numberAvailable * bestContainer.storage_amount);
+                remainingVolume -= (numberAvailable * containerCapacity);
               }
             }
 
-            // Use any container for remaining amount
+            // Handle any remaining volume with smallest available container
             if (remainingVolume > 0 && availableContainers.length > 0) {
               const smallestContainer = availableContainers[availableContainers.length - 1];
               if (smallestContainer && smallestContainer.stock_qty > 0) {
+                const numberNeeded = Math.ceil(remainingVolume / smallestContainer.storage_amount);
                 selectedContainers.push({
                   id: smallestContainer.id,
-                  quantity: 1,
+                  quantity: numberNeeded,
                   name: smallestContainer.name,
                   capacity: smallestContainer.storage_amount,
                   unit: smallestContainer.storage_unit
                 });
+                remainingVolume = 0;
               }
             }
 
