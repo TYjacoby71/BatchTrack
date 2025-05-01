@@ -1,13 +1,27 @@
 
+{# Extend the base layout template which contains common elements like navigation #}
 {% extends 'layout.html' %}
+
+{# Define the main content block #}
 {% block content %}
 <div class="container">
-  <h2>Finish Batch with Active Timers?</h2>
-  <p>This batch has active timers. Are you sure you want to mark it finished anyway?</p>
-  <form method="post">
-    {{ csrf_token() }}
-    <button type="submit" class="btn btn-danger">Yes, Finish Anyway</button>
-    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-secondary">Cancel</a>
-  </form>
+    {# Main warning heading #}
+    <h2>Finish Batch with Active Timers?</h2>
+
+    {# Warning message explaining the situation to the user #}
+    <p>This batch has active timers. Are you sure you want to mark it finished anyway?</p>
+
+    {# Form that will POST to the current URL when submitted #}
+    <form method="post">
+        {# CSRF protection token - required for POST requests #}
+        {{ csrf_token() }}
+
+        {# Danger button to confirm batch completion #}
+        <button type="submit" class="btn btn-danger">Yes, Finish Anyway</button>
+
+        {# Cancel button that returns to the batch in progress view #}
+        <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" 
+           class="btn btn-secondary">Cancel</a>
+    </form>
 </div>
 {% endblock %}

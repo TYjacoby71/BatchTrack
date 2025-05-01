@@ -28,7 +28,6 @@ def start_batch():
         batch_type='product',
         scale=scale,
         notes=data.get('notes', ''),
-        label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}",
         status='in_progress'
     )
 

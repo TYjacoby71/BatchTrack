@@ -60,6 +60,15 @@ checkStock() {
               notes: notes
             })
           });
+
+          const text = await response.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            console.error("Server response:", text);
+            throw new Error("Server returned invalid JSON");
+          }
           //Further handling of the response could be added here.  For example:
           //if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
           //const data = await response.json();
