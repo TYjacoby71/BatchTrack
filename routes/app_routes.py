@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
 from models import Recipe, InventoryItem, Batch
-from stock_check_utils import check_stock_for_recipe
+from services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 
 app_routes_bp = Blueprint('dashboard', __name__)
@@ -67,8 +67,10 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
         
-        # Use stock check utils for both recipe and containers
-        stock_check, all_ok = check_stock_for_recipe(recipe, scale)
+        # Use universal stock check service
+        result = universal_stock_check(recipe, scale)
+        stock_check = result['stock_check']
+        all_ok = result['all_ok']
         
         # Handle container validation
         container_ids = data.get('container_ids', [])

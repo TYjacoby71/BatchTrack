@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -79,7 +80,7 @@
   <h4>Check Ingredients</h4>
   <div class="mb-4">
     <div class="d-flex gap-2">
-      <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
+      <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
     <div x-show="stockChecked" class="mt-3">
@@ -134,7 +135,6 @@
   </div>
 </div>
 
-<!-- Alpine Component -->
 <script>
 function planProduction() {
   return {
@@ -194,11 +194,9 @@ function planProduction() {
           this.allowedContainers = data.available || [];
 
           if (this.autoFill) {
-            // Calculate needed containers with ceiling for partial fills
             const projected = this.baseYield * this.scale;
             const containers = data.plan || [];
 
-            // Add extra container if needed for partial fill
             let totalVolume = containers.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
             if (totalVolume < projected && containers.length > 0) {
               const lastContainer = containers[containers.length - 1];
@@ -238,10 +236,8 @@ function planProduction() {
       const projected = this.baseYield * this.scale;
       const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
 
-      // Clear previous issue
       this.containmentIssue = '';
 
-      // First check if we have enough total containers
       if (totalAvailable < projected) {
         const sizes = this.allowedContainers.map(c => c.storage_amount);
         const smallestContainer = sizes.length ? Math.min(...sizes) : 1;
@@ -250,14 +246,10 @@ function planProduction() {
         return;
       }
 
-      // Check for partial fills
       const totalContained = this.totalContained;
       if (totalContained < projected) {
-        // We need one more container
         this.containmentIssue = 'Warning: Need one more container for partial fill';
       } else if (totalContained > projected) {
-        // We have a container that will be partially filled
-        // Get last container
         const lastContainer = this.containersSelected[this.containersSelected.length - 1];
         if (lastContainer) {
           const partialAmount = projected - (totalContained - lastContainer.capacity);
@@ -343,6 +335,38 @@ function planProduction() {
         });
     },
 
+    downloadCSV() {
+      if (!this.stockResults?.length) return;
+      let csv = "Ingredient,Required,Available,Unit,Status\n";
+      this.stockResults.forEach(row => {
+        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'stock_check_report.csv';
+      link.click();
+    },
+
+    downloadShoppingList() {
+      if (!this.stockResults?.length) return;
+      const needed = this.stockResults.filter(item => item.status === 'LOW' || item.status === 'NEEDED');
+      if (!needed.length) {
+        alert('No items need restocking!');
+        return;
+      }
+      let text = "Shopping List\n=============\n\n";
+      needed.forEach(item => {
+        const missing = item.needed - item.available;
+        text += `${item.ingredient}: ${missing.toFixed(2)} ${item.unit}\n`;
+      });
+      const blob = new Blob([text], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'shopping_list.txt';
+      link.click();
+    },
+
     async startBatch() {
       if (!this.canStartBatch) {
         alert('Please check stock and ensure containers are properly allocated before starting batch');
@@ -382,38 +406,6 @@ function planProduction() {
       } catch (error) {
         alert('Error starting batch: ' + error.message);
       }
-    },
-
-    downloadCSV() {
-      if (!this.stockResults?.length) return;
-      let csv = "Ingredient,Required,Available,Unit,Status\n";
-      this.stockResults.forEach(row => {
-        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'stock_check_report.csv';
-      link.click();
-    },
-
-    downloadShoppingList() {
-      if (!this.stockResults?.length) return;
-      const needed = this.stockResults.filter(item => item.status === 'LOW' || item.status === 'NEEDED');
-      if (!needed.length) {
-        alert('No items need restocking!');
-        return;
-      }
-      let text = "Shopping List\n=============\n\n";
-      needed.forEach(item => {
-        const missing = item.needed - item.available;
-        text += `${item.ingredient}: ${missing.toFixed(2)} ${item.unit}\n`;
-      });
-      const blob = new Blob([text], { type: 'text/plain' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'shopping_list.txt';
-      link.click();
     }
   };
 }
