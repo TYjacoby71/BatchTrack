@@ -320,15 +320,20 @@ def cancel_batch(batch_id):
     try:
         # Begin transaction
         print(f"Starting batch {batch_id} cancellation...")
+        
+        # First verify all ingredients exist to avoid partial crediting
+        for batch_ing in batch.ingredients:
+            if not batch_ing.ingredient:
+                db.session.rollback()
+                flash(f"Cannot cancel - missing ingredient record", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+        # Now process all ingredients
         for batch_ing in batch.ingredients:
             ingredient = batch_ing.ingredient
-            if not ingredient:
-                print(f"Warning: Skipping missing ingredient record")
-                continue
-
             try:
                 print(f"Processing ingredient {ingredient.name}: {batch_ing.amount_used} {batch_ing.unit}")
-                # Get the exact amount that was deducted initially
+                # Convert from batch unit to inventory unit
                 conversion_result = ConversionEngine.convert_units(
                     batch_ing.amount_used,
                     batch_ing.unit,
@@ -338,13 +343,19 @@ def cancel_batch(batch_id):
                 )
                 
                 print(f"Conversion result: {conversion_result}")
-                if conversion_result.get('conversion_type') == 'error':
-                    flash(f"Error converting units for {ingredient.name}: {conversion_result.get('error', 'Unknown error')}", "error")
+                if not conversion_result or conversion_result.get('conversion_type') == 'error':
+                    error_msg = conversion_result.get('error', 'Unknown conversion error') if conversion_result else 'Failed to convert units'
+                    flash(f"Error converting units for {ingredient.name}: {error_msg}", "error")
                     db.session.rollback()
                     return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
-                # Credit inventory
-                credited_amount = conversion_result['converted_value']
+                # Credit inventory with validation
+                credited_amount = float(conversion_result['converted_value'])
+                if credited_amount <= 0:
+                    flash(f"Invalid credit amount for {ingredient.name}: {credited_amount}", "error")
+                    db.session.rollback()
+                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
                 old_qty = ingredient.quantity
                 ingredient.quantity += credited_amount
                 print(f"Crediting {ingredient.name}: {old_qty} + {credited_amount} = {ingredient.quantity} {ingredient.unit}")
