@@ -1,4 +1,5 @@
-from models import InventoryItem, Recipe
+
+from models import Recipe, InventoryItem
 from services.unit_conversion import ConversionEngine
 
 def check_stock_for_recipe(recipe, scale=1.0):
@@ -20,7 +21,7 @@ def check_stock_for_recipe(recipe, scale=1.0):
         try:
             converted = ConversionEngine.convert_units(
                 stock_qty, stock_unit, required_unit, 
-                ingredient_id=inventory.id, 
+                ingredient_id=inventory.id,
                 density=density
             )
         except Exception as e:
