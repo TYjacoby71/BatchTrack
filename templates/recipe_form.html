@@ -278,7 +278,7 @@ function addIngredient(preselectId = null) {
         <input type="number" step="0.01" name="amounts[]" required>
         <select name="units[]" required>
             {% for unit in inventory_units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            <option value="{{ unit.name }}" {% if recipe and recipe.recipe_ingredients and recipe.recipe_ingredients[0].unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
             {% endfor %}
         </select>
         <td class="conversion-warning text-center align-middle small">
