@@ -193,23 +193,20 @@ function planProduction() {
           if (this.autoFill) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
-            const used = new Set();
-            const selectedContainers = [];
 
-            // Sort containers by capacity efficiency (largest first)
+            // Sort containers by capacity (largest first)
             const availableContainers = [...this.allowedContainers]
               .filter(c => c.stock_qty > 0)
               .sort((a, b) => b.storage_amount - a.storage_amount);
 
+            // First pass: Try to fill with largest containers that don't exceed target
+            let selectedContainers = [];
             for (const container of availableContainers) {
-              if (used.has(container.id)) continue;
-
               const capacity = container.storage_amount;
-              const stock = container.stock_qty;
-              const needed = remainingVolume / capacity;
+              if (capacity > remainingVolume) continue;
 
-              // Use either the full number needed or as many as in stock
-              const qtyToUse = Math.min(Math.floor(needed), stock);
+              const maxNeeded = Math.floor(remainingVolume / capacity);
+              const qtyToUse = Math.min(maxNeeded, container.stock_qty);
 
               if (qtyToUse > 0) {
                 selectedContainers.push({
@@ -220,24 +217,21 @@ function planProduction() {
                   unit: container.storage_unit
                 });
                 remainingVolume -= qtyToUse * capacity;
-                used.add(container.id);
               }
             }
 
-            // Try to fill remainder with best match, including partial container
+            // Second pass: If volume remains, fill with smallest container that can hold it
             if (remainingVolume > 0) {
-              const bestFit = availableContainers.find(c => !used.has(c.id) && c.stock_qty > 0 && c.storage_amount >= remainingVolume);
-
-              if (bestFit) {
+              const smallestContainer = availableContainers[availableContainers.length - 1];
+              if (smallestContainer && smallestContainer.stock_qty > 0) {
                 selectedContainers.push({
-                  id: bestFit.id,
+                  id: smallestContainer.id,
                   quantity: 1,
-                  name: bestFit.name,
-                  capacity: bestFit.storage_amount,
-                  unit: bestFit.storage_unit
+                  name: smallestContainer.name,
+                  capacity: smallestContainer.storage_amount,
+                  unit: smallestContainer.storage_unit
                 });
                 remainingVolume = 0;
-                used.add(bestFit.id);
               }
             }
 
