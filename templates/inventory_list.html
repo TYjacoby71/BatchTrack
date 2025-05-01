@@ -50,9 +50,6 @@
             <input type="text" class="form-control form-control-sm filter-input" placeholder="Quantity">
           </th>
           <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
-          </th>
-          <th>
             <input type="text" class="form-control form-control-sm filter-input" placeholder="Density">
           </th>
           <th>
@@ -64,7 +61,6 @@
           <th>Name</th>
           <th>Unit</th>
           <th>Quantity</th>
-          <th>Category</th>
           <th>Density (g/ml)</th>
           <th>Cost/Unit</th>
           <th>Actions</th>
@@ -76,7 +72,6 @@
           <td>{{ item.name }}</td>
           <td>{{ item.unit }}</td>
           <td>{{ item.quantity }}</td>
-          <td>{{ item.category.name if item.category else 'N/A' }}</td>
           <td>{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
