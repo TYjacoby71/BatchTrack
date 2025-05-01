@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, flash, jsonify
+from flask import Blueprint, request, render_template, redirect, flash
 from flask_wtf.csrf import validate_csrf, generate_csrf
 from wtforms.validators import ValidationError
 from models import db, Unit, CustomUnitMapping
