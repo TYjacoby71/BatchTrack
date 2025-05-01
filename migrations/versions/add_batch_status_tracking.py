@@ -11,7 +11,7 @@ import sqlalchemy as sa
 # revision identifiers, used by Alembic
 revision = '28f420a8e591'
 down_revision = 'd3417cb6cf8c'
-branch_labels = None
+branch_labels = ('addstatuscolumns',)
 depends_on = None
 
 def upgrade():
