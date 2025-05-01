@@ -332,17 +332,27 @@ def cancel_batch(batch_id):
         for batch_ing in batch.ingredients:
             ingredient = batch_ing.ingredient
             try:
-                print(f"Processing ingredient {ingredient.name}: {batch_ing.amount_used} {batch_ing.unit}")
-                # Convert from batch unit to inventory unit
-                conversion_result = ConversionEngine.convert_units(
-                    batch_ing.amount_used,
-                    batch_ing.unit,
-                    ingredient.unit,
-                    ingredient_id=ingredient.id,
-                    density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                )
-                
-                print(f"Conversion result: {conversion_result}")
+                print(f"Processing ingredient {ingredient.name}: {batch_ing.amount_used} {batch_ing.unit} -> {ingredient.unit}")
+                try:
+                    # Convert from batch unit to inventory unit
+                    conversion_result = ConversionEngine.convert_units(
+                        batch_ing.amount_used,
+                        batch_ing.unit,
+                        ingredient.unit,
+                        ingredient_id=ingredient.id,
+                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                    )
+                    
+                    print(f"Conversion result: {conversion_result}")
+                    if not conversion_result:
+                        raise ValueError(f"Conversion returned None for {ingredient.name}")
+                except Exception as e:
+                    print(f"❌ Conversion failed for {ingredient.name}: {str(e)}")
+                    print(f"   From: {batch_ing.amount_used} {batch_ing.unit}")
+                    print(f"   To: {ingredient.unit}")
+                    print(f"   Density: {ingredient.density}")
+                    print(f"   Category Default Density: {ingredient.category.default_density if ingredient.category else None}")
+                    raise
                 if not conversion_result or conversion_result.get('conversion_type') == 'error':
                     error_msg = conversion_result.get('error', 'Unknown conversion error') if conversion_result else 'Failed to convert units'
                     flash(f"Error converting units for {ingredient.name}: {error_msg}", "error")
