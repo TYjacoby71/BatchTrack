@@ -86,11 +86,13 @@
           ✅ All ingredients are available!
         </div>
       </template>
-      <div x-show="!stockCheckPassed" class="alert alert-warning mt-2">
-        ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
-      </div>
+      <template x-if="!stockCheckPassed">
+        <div class="alert alert-warning mt-2">
+          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
+        </div>
+      </template>
 
-      <table x-show="stockResults.stock_check && stockResults.stock_check.length > 0" class="table table-bordered table-sm mt-2">
+      <table class="table table-bordered table-sm mt-2">
         <thead>
           <tr>
             <th>Ingredient</th>
@@ -100,11 +102,11 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="item in stockResults.stock_check" :key="item.name">
+          <template x-for="item in stockResults" :key="item.ingredient">
             <tr>
-              <td x-text="item.name"></td>
-              <td x-text="`${item.needed} ${item.unit}`"></td>
-              <td x-text="`${item.available} ${item.unit}`"></td>
+              <td x-text="item.ingredient"></td>
+              <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
+              <td x-text="`${item.available} ${item.inventory_unit}`"></td>
               <td>
                 <span x-show="item.status === 'OK'" class="text-success">✅</span>
                 <span x-show="item.status === 'LOW'" class="text-warning">⚠️</span>
@@ -318,13 +320,7 @@ function planProduction() {
     },
 
     checkStockOrWarn() {
-      if (this.containmentPercent < 100 && this.containersSelected.length > 0) {
-        if (confirm(`Some items are not contained. Would you like to continue?`)) {
-          this.checkStock();
-        }
-      } else {
-        this.checkStock();
-      }
+      this.checkStock();
     },
 
     checkStock() {
@@ -337,13 +333,7 @@ function planProduction() {
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
-          scale: parseFloat(this.scale),
-          containers: this.containersSelected
-            .filter(c => c.id && c.quantity)
-            .map(c => ({
-              id: parseInt(c.id),
-              quantity: parseInt(c.quantity)
-            }))
+          scale: parseFloat(this.scale)
         })
       })
         .then(res => res.json())
