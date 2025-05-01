@@ -299,7 +299,7 @@ def cancel_batch(batch_id):
                     # Calculate amount to restore based on recipe and batch scale
                     amount_to_restore = recipe_ing.amount * batch.scale
                     
-                    # Convert back to inventory unit
+                    # Convert back to inventory unit using UUCS
                     conversion_result = ConversionEngine.convert_units(
                         amount_to_restore,
                         recipe_ing.unit,
@@ -307,7 +307,13 @@ def cancel_batch(batch_id):
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
                     )
+                    
+                    if conversion_result['conversion_type'] == 'error':
+                        flash(f"Error converting units for {ingredient.name}", "error")
+                        continue
+                        
                     ingredient.quantity += conversion_result['converted_value']
+                    db.session.add(ingredient)
                     db.session.add(ingredient)
                 except Exception as e:
                     flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
