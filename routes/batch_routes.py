@@ -72,10 +72,39 @@ def start_batch():
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
-    if ingredient_errors:
-        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
+    # Handle container deductions
+    container_errors = []
+    containers_data = data.get('containers', [])
+    
+    for container in containers_data:
+        container_id = container.get('id')
+        quantity = int(container.get('quantity', 0))
+        
+        container_item = InventoryItem.query.get(container_id)
+        if not container_item:
+            container_errors.append(f"Container {container_id} not found")
+            continue
+            
+        if container_item.quantity < quantity:
+            container_errors.append(f"Not enough {container_item.name} in stock")
+            continue
+            
+        # Deduct containers and create BatchContainer record
+        container_item.quantity -= quantity
+        db.session.add(container_item)
+        
+        batch_container = BatchContainer(
+            batch_id=new_batch.id,
+            container_id=container_id,
+            quantity_used=quantity
+        )
+        db.session.add(batch_container)
+
+    if ingredient_errors or container_errors:
+        all_errors = ingredient_errors + container_errors
+        flash("Some items were not deducted due to errors: " + ", ".join(all_errors), "warning")
     else:
-        flash("Batch started and inventory deducted.", "success")
+        flash("Batch started, ingredients and containers deducted.", "success")
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
