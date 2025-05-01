@@ -313,15 +313,26 @@ function saveBatch() {
     const data = {
         notes: form.querySelector('textarea[name="notes"]')?.value || '',
         tags: form.querySelector('input[name="tags"]')?.value || '',
-        yield_amount: form.querySelector('input[name="yield_amount"]')?.value || 0,
+        yield_amount: parseFloat(form.querySelector('input[name="yield_amount"]')?.value) || 0,
         yield_unit: form.querySelector('select[name="yield_unit"]')?.value || '',
-        final_quantity: form.querySelector('input[name="final_quantity"]')?.value || 0,
+        final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
-        product_id: form.querySelector('select[name="product_id"]')?.value || null,
+        product_id: parseInt(form.querySelector('select[name="product_id"]')?.value) || null,
         variant_id: form.querySelector('input[name="variant_id"]')?.value || '',
-        ingredients: [],
-        containers: [],
-        timers: []
+        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
+            id: parseInt(row.querySelector('select[name="ingredient_id"]').value),
+            amount: parseFloat(row.querySelector('input[name="amount"]').value),
+            unit: row.querySelector('select[name="unit"]').value
+        })),
+        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
+            id: parseInt(row.querySelector('select[name="container_id"]').value),
+            qty: parseInt(row.querySelector('input[name="quantity"]').value),
+            cost_each: parseFloat(row.querySelector('input[name="cost_each"]').value) || 0
+        })),
+        timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
+            name: row.querySelector('input[name="timer_name"]').value,
+            duration_seconds: parseInt(row.querySelector('input[name="duration"]').value)
+        }))
     };
 
     // Collect ingredients
