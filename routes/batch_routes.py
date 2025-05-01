@@ -223,9 +223,18 @@ def finish_batch(batch_id, force=False):
             if batch.batch_type == 'ingredient':
                 # Credit produced ingredient to inventory
                 ingredient = InventoryItem.query.filter_by(name=batch.recipe.name).first()
-                if ingredient:
+                if not ingredient:
+                    # Create new intermediate ingredient
+                    ingredient = InventoryItem(
+                        name=batch.recipe.name,
+                        quantity=batch.final_quantity,
+                        unit=batch.output_unit,
+                        type='ingredient',
+                        intermediate=True
+                    )
+                else:
                     ingredient.quantity += batch.final_quantity
-                    db.session.add(ingredient)
+                db.session.add(ingredient)
             elif batch.batch_type == 'product':
                 # Credit to product inventory
                 product_inv = ProductInventory(
