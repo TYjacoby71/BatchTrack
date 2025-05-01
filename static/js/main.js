@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       console.log(`Creating unit: ${name} (${type})`);
 
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
       fetch('/quick-add/unit', {
         method: 'POST',
@@ -306,7 +306,7 @@ function finishBatch(action) {
     const form = document.getElementById('batchForm');
     const formData = new FormData(form);
     formData.append('action', action);
-    
+
     fetch(form.action, {
         method: 'POST',
         body: formData,
@@ -330,13 +330,13 @@ function cancelBatch() {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/batches/cancel/${batchId}`;
-        
+
         const csrf = document.querySelector('.csrf-token').value;
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrf_token';
         csrfInput.value = csrf;
-        
+
         form.appendChild(csrfInput);
         document.body.appendChild(form);
         form.submit();
@@ -347,7 +347,7 @@ function saveBatch(event) {
     if (event) {
         event.preventDefault();
     }
-    
+
     const batchId = window.location.pathname.split('/').pop();
     const form = document.getElementById('batchForm');
     if (!form) {
