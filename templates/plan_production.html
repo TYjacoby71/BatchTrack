@@ -102,7 +102,7 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="item in stockResults" :key="item.ingredient">
+          <template x-for="item in stockResults.stock_check" :key="item.name">
             <tr>
               <td x-text="item.name"></td>
               <td x-text="`${item.needed} ${item.unit}`"></td>
