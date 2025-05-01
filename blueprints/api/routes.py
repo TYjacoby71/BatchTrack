@@ -6,10 +6,14 @@ from services.stock_check import universal_stock_check
 api_bp = Blueprint('api', __name__)
 container_api_bp = Blueprint('container_api', __name__)
 
-@api_bp.route('/api/check-stock/<int:recipe_id>')
-def check_stock(recipe_id):
+@api_bp.route('/api/check-stock', methods=['POST'])
+def check_stock():
     try:
-        scale = float(request.args.get('scale', 1.0))
+        data = request.get_json()
+        recipe_id = data.get('recipe_id')
+        scale = float(data.get('scale', 1.0))
+        flex_mode = data.get('flex_mode', False)
+        
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale)
         return jsonify(result)

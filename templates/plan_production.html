@@ -319,12 +319,12 @@ function planProduction() {
     },
 
     checkStock() {
-      const csrfToken = document.querySelector('input[name=csrf_token]').value;
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
       fetch('/api/check-stock', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRF-Token': csrfToken
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
