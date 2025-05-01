@@ -1,7 +1,10 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, InventoryItem, Unit
+from models import db, InventoryItem, Unit, IngredientCategory
+
+def get_ingredient_categories():
+    return IngredientCategory.query.order_by(IngredientCategory.name).all()
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -57,7 +60,7 @@ def edit_ingredient(id):
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_ingredient.html', ing=item)
+    return render_template('edit_ingredient.html', ing=item, get_ingredient_categories=get_ingredient_categories)
 
 @inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
 @login_required
