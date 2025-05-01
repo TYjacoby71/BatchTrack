@@ -150,9 +150,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveBatch() {
     const batchId = window.location.pathname.split('/').pop();
+    const form = document.querySelector('form');
+    if (!(form instanceof HTMLFormElement)) {
+        console.error("Form not found");
+        return;
+    }
+    
     const data = {
-        notes: document.querySelector('[name="notes"]')?.value || '',
-        tags: document.querySelector('[name="tags"]')?.value || '',
+        notes: form.querySelector('[name="notes"]')?.value || '',
+        tags: form.querySelector('[name="tags"]')?.value || '',
         ingredients: [],
         containers: [],
         timers: []
