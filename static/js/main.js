@@ -407,7 +407,10 @@ function saveBatch(event) {
 }
 
 // Density Reference Functionality
-document.addEventListener('DOMContentLoaded', function() {
+function initDensityReference() {
+  const densityModal = document.getElementById('densityModal');
+  if (!densityModal) return;
+
   fetch('/api/density-reference')
     .then(response => response.json())
     .then(data => {
@@ -415,13 +418,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const searchInput = document.getElementById('densitySearch');
 
       function renderDensityTable(items) {
+        if (!tableBody) return;
         tableBody.innerHTML = items.map(item => `
           <tr>
             <td>${item.name}</td>
             <td>${item.density_g_per_ml}</td>
             <td>${item.category || ''}</td>
             <td>
-              <button class="btn btn-sm btn-primary" onclick="useDensity(${item.density_g_per_ml})">
+              <button class="btn btn-sm btn-primary" onclick="window.useDensity(${item.density_g_per_ml})">
                 Use
               </button>
             </td>
@@ -429,20 +433,31 @@ document.addEventListener('DOMContentLoaded', function() {
         `).join('');
       }
 
-      renderDensityTable(data.common_densities);
+      if (data.common_densities) {
+        renderDensityTable(data.common_densities);
+      }
 
-      searchInput?.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filtered = data.common_densities.filter(item => 
-          item.name.toLowerCase().includes(searchTerm) ||
-          (item.category && item.category.toLowerCase().includes(searchTerm))
-        );
-        renderDensityTable(filtered);
-      });
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const searchTerm = e.target.value.toLowerCase();
+          const filtered = data.common_densities.filter(item => 
+            item.name.toLowerCase().includes(searchTerm) ||
+            (item.category && item.category.toLowerCase().includes(searchTerm))
+          );
+          renderDensityTable(filtered);
+        });
+      }
 
       window.useDensity = function(density) {
-        document.getElementById('density').value = density;
-        bootstrap.Modal.getInstance(document.getElementById('densityModal')).hide();
+        const densityInput = document.getElementById('density');
+        if (densityInput) {
+          densityInput.value = density;
+          const modal = bootstrap.Modal.getInstance(densityModal);
+          if (modal) modal.hide();
+        }
       };
-    });
-});
+    })
+    .catch(error => console.error('Error loading density reference:', error));
+}
+
+document.addEventListener('DOMContentLoaded', initDensityReference);
