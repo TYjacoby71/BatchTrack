@@ -17,6 +17,25 @@
         <option value="packaging" {% if ing.type == 'packaging' %}selected{% endif %}>Packaging</option>
     </select>
 
+    <div class="mb-3" id="categorySection" {% if ing.type != 'ingredient' %}style="display: none;"{% endif %}>
+        <label for="category">Ingredient Category:</label>
+        <select name="category_id" class="form-select">
+            <option value="">-- Select Category --</option>
+            {% for category in get_ingredient_categories() %}
+            <option value="{{ category.id }}" {% if ing.category_id == category.id %}selected{% endif %}>
+                {{ category.name }} (Density: {{ category.default_density }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <script>
+        document.querySelector('select[name="type"]').addEventListener('change', function() {
+            document.getElementById('categorySection').style.display = 
+                this.value === 'ingredient' ? 'block' : 'none';
+        });
+    </script>
+
     <label for="unit">Unit:</label>
     <select name="unit" class="form-select select2" data-unit-select>
         {% for unit in get_global_unit_list() %}
