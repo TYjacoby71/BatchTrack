@@ -12,53 +12,76 @@ class ConversionEngine:
     def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
         from_u = Unit.query.filter_by(name=from_unit).first()
         to_u = Unit.query.filter_by(name=to_unit).first()
+
         if not from_u or not to_u:
             raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
 
-        custom_mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
-        if custom_mapping:
-            result = amount * custom_mapping.multiplier
+        conversion_type = 'unknown'
+        used_density = None
+        converted = None
+
+        # 1. Custom Mapping
+        mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
+        if mapping:
+            converted = amount * mapping.multiplier
+            conversion_type = 'custom'
+
+        # 2. Direct (same unit)
         elif from_unit == to_unit:
-            result = amount
+            converted = amount
+            conversion_type = 'direct'
+
+        # 3. Same-type base conversion (volume → volume, weight → weight)
         elif from_u.type == to_u.type:
             base_amount = amount * from_u.multiplier_to_base
-            result = base_amount / to_u.multiplier_to_base
+            converted = base_amount / to_u.multiplier_to_base
+            conversion_type = 'direct'
+
+        # 4. Cross-type: volume ↔ weight
         elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+            # Pull density if not passed
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
                 if ingredient:
-                    density = ingredient.density
+                    density = ingredient.density or None
                     if density is None and ingredient.category:
                         density = ingredient.category.default_density
-                    density = density or 1.0
             if density is None:
-                density = 1.0
+                raise ValueError(f"Missing density for conversion from {from_u.name} to {to_u.name}")
+            used_density = density
+
             if from_u.type == 'volume':
                 grams = amount * from_u.multiplier_to_base * density
-                result = grams / to_u.multiplier_to_base
-            else:
+                converted = grams / to_u.multiplier_to_base
+            else:  # weight → volume
                 ml = (amount * from_u.multiplier_to_base) / density
-                result = ml / to_u.multiplier_to_base
+                converted = ml / to_u.multiplier_to_base
+
+            conversion_type = 'density'
+
         else:
             raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
 
+        # Log it
         log = ConversionLog(
             user_id=current_user.id if current_user.is_authenticated else None,
             timestamp=datetime.utcnow(),
             amount=amount,
             from_unit=from_unit,
             to_unit=to_unit,
-            result=result,
+            result=converted,
             ingredient_id=ingredient_id,
-            density_used=density
+            density_used=used_density
         )
         db.session.add(log)
         db.session.commit()
 
-        return ConversionEngine.round_value(result)
-
-    @staticmethod
-    def get_units_by_type(unit_type=None):
-        if unit_type:
-            return Unit.query.filter_by(type=unit_type).all()
-        return Unit.query.all()
+        # Return structured metadata
+        return {
+            'converted_value': ConversionEngine.round_value(converted),
+            'conversion_type': conversion_type,
+            'density_used': used_density,
+            'from': from_unit,
+            'to': to_unit,
+            'requires_attention': conversion_type in ['custom', 'density']
+        }
