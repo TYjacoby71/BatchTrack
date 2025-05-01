@@ -55,6 +55,9 @@
           <th>
             <input type="text" class="form-control form-control-sm filter-input" placeholder="Cost/Unit">
           </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
+          </th>
           <th>Actions</th>
         </tr>
         <tr>
@@ -63,6 +66,7 @@
           <th>Quantity</th>
           <th>Density (g/ml)</th>
           <th>Cost/Unit</th>
+          <th>Category</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -74,6 +78,7 @@
           <td>{{ item.quantity }}</td>
           <td>{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+          <td>{{ item.category.name if item.category else 'None' }}</td>
           <td>
             <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
