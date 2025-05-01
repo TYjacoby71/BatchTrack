@@ -339,7 +339,8 @@ function planProduction() {
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
-          scale: parseFloat(this.scale)
+          scale: parseFloat(this.scale),
+          container_ids: this.containersSelected.map(c => c.id).filter(id => id)
         })
       })
         .then(res => res.json())

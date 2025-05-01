@@ -19,13 +19,27 @@ def universal_stock_check(recipe, scale=1.0, container_plan=None):
         density = ingredient.category.default_density if ingredient.category else 1.0
 
         try:
-            available_converted = ConversionEngine.convert_units(
-                available, 
-                stock_unit, 
-                recipe_unit,
-                ingredient_id=ingredient.id,
-                density=density
-            )
+            try:
+                available_converted = ConversionEngine.convert_units(
+                    available, 
+                    stock_unit, 
+                    recipe_unit,
+                    ingredient_id=ingredient.id,
+                    density=density
+                )
+            except ValueError as e:
+                results.append({
+                    'type': 'ingredient',
+                    'name': ingredient.name,
+                    'needed': needed_amount,
+                    'needed_unit': recipe_unit,
+                    'available': 0,
+                    'available_unit': recipe_unit,
+                    'status': 'ERROR',
+                    'error': f'Unit conversion failed: {str(e)}'
+                })
+                all_ok = False
+                continue
             
             if available_converted >= needed_amount:
                 status = 'OK'
