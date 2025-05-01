@@ -152,7 +152,7 @@
                     <h5 class="card-title">{{ batch.recipe_name }}</h5>
                     <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
                     <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
-                    <p class="card-text text-muted">{{ batch.timestamp.strftime("%Y-%m-%d") }}</p>
+                    <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d") }}</p>
                     <p class="card-text"><strong>Status:</strong> {{ 'In Progress' if batch.total_cost is none else 'Completed' }}</p>
                     <p class="card-text"><strong>Cost:</strong> ${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</p>
                     {% if batch.total_cost is none %}

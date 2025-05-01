@@ -9,7 +9,8 @@ import os
 db = SQLAlchemy()
 
 # Create app and attach config
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
+app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')

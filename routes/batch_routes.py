@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory
+from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer
 from datetime import datetime
 from sqlalchemy import extract
 import uuid, os
@@ -55,12 +55,14 @@ def start_batch():
         required_amount = assoc.amount * scale
 
         try:
-            required_converted = ConversionEngine.convert_units(
+            conversion_result = ConversionEngine.convert_units(
                 required_amount,
                 assoc.unit,
                 ingredient.unit,
-                ingredient_id=ingredient.id
-            )['converted_value']
+                ingredient_id=ingredient.id,
+                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            )
+            required_converted = conversion_result['converted_value']
             
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
@@ -69,12 +71,6 @@ def start_batch():
                 db.session.add(ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
-
-        if ingredient.quantity < required_amount:
-            ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
-        else:
-            ingredient.quantity -= required_amount
-            db.session.add(ingredient)
 
     if ingredient_errors:
         flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
@@ -154,10 +150,20 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_identifier)
+    
+    if batch.status != 'in_progress':
+        flash('This batch is already completed.')
+        return redirect(url_for('batches.list_batches'))
+
+    # Get existing batch data
+    ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
+    containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
+    timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
     recipe = Recipe.query.get_or_404(batch.recipe_id)
+    batch.recipe_name = recipe.name  # Add recipe name to batch object
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
