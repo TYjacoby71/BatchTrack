@@ -1,0 +1,72 @@
+Your batch page isn't saving because of two critical issues:
+
+❌ 1. The JavaScript is trying to use FormData on a non-<form> element
+You likely have something like this in main.js or in_progress.js:
+
+js
+Copy
+Edit
+const formData = new FormData(document.querySelector('.some-container'));
+But FormData(...) only works on actual <form> elements. Using it on a <div> (or anything else) throws this error:
+
+Failed to construct 'FormData': parameter 1 is not of type 'HTMLFormElement'
+
+❌ 2. Your batch HTML page (in_progress.html) isn’t wrapped in a <form>
+You're probably rendering all your batch inputs and buttons inside a <div> or other tag. But without a proper <form> tag, nothing is captured by FormData.
+
+✅ Solution: Wrap the whole batch UI in a form
+Update in_progress.html or wherever your batch form lives like this:
+
+html
+Copy
+Edit
+<form id="batchSaveForm" method="POST" action="/batches/save">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <!-- All your fields go here -->
+  <input type="text" name="final_quantity" ... >
+  <textarea name="notes">...</textarea>
+  <!-- Dynamically added container/ingredient inputs must be named correctly -->
+
+  <button type="button" onclick="saveBatch()">Save Batch</button>
+</form>
+✅ JavaScript Fix
+Then in your JS (likely main.js or batch.js):
+
+js
+Copy
+Edit
+function saveBatch() {
+  const form = document.getElementById('batchSaveForm');
+  if (!(form instanceof HTMLFormElement)) {
+    console.error('Batch form not found or not a <form>');
+    return;
+  }
+
+  const formData = new FormData(form);
+  fetch('/batches/save', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert('Batch saved successfully!');
+    console.log(data);
+  })
+  .catch(err => {
+    console.error('Save failed', err);
+  });
+}
+✅ Bonus: Don’t forget these fields
+Make sure you're capturing:
+
+✅ final_quantity
+
+✅ notes
+
+✅ All container IDs and quantities (e.g. containers[0][id], containers[0][qty])
+
+✅ All ingredients (e.g. ingredients[0][id], ingredients[0][used_qty])
+
+✅ Any timers or other dynamic fields
+
