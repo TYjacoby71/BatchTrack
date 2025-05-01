@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, InventoryItem, Unit
@@ -13,7 +12,7 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    
+
     item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
     db.session.add(item)
     db.session.commit()
@@ -45,7 +44,7 @@ def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
@@ -62,7 +61,7 @@ def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'container':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
