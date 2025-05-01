@@ -7,13 +7,25 @@ conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
-    ingredient_id = request.args.get('ingredient_id', None)
-    density = request.args.get('density', None, type=float)
+    ingredient_id = request.args.get('ingredient_id', type=int)
+    density = request.args.get('density', type=float)
+
     try:
-        result = ConversionEngine.convert_units(amount, from_unit, to_unit, ingredient_id=ingredient_id, density=density)
-        return jsonify({'result': round(result, 2), 'unit': to_unit})
+        result = ConversionEngine.convert_units(
+            amount,
+            from_unit,
+            to_unit,
+            ingredient_id=ingredient_id,
+            density=density
+        )
+        return jsonify(result), 200
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({
+            'converted_value': None,
+            'conversion_type': 'error',
+            'message': str(e),
+            'requires_attention': True
+        }), 400
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
