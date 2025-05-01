@@ -23,8 +23,18 @@ def start_batch():
         extract('year', Batch.started_at) == current_year
     ).count()
 
+    # Get current year and count of batches for this recipe this year
+    current_year = datetime.now().year
+    year_batches = Batch.query.filter(
+        Batch.recipe_id == recipe.id,
+        extract('year', Batch.started_at) == current_year
+    ).count()
+
+    label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
+
     new_batch = Batch(
         recipe_id=recipe.id,
+        label_code=label_code,
         batch_type='product',
         scale=scale,
         notes=data.get('notes', ''),
