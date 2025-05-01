@@ -289,29 +289,17 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Use batch ingredients which represent what was actually used
+        # Create credit entries for ingredients
         for batch_ing in batch.ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Convert back to inventory unit using UUCS
-                    conversion_result = ConversionEngine.convert_units(
-                        batch_ing.amount_used,
-                        batch_ing.unit,
-                        ingredient.unit,
-                        ingredient_id=ingredient.id,
-                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                    )
-                    
-                    if conversion_result['conversion_type'] == 'error':
-                        flash(f"Error converting units for {ingredient.name}", "error")
-                        continue
-                        
-                    ingredient.quantity += conversion_result['converted_value']
-                    db.session.add(ingredient)
+                    # Create credit entry in inventory
+                    ingredient.quantity += batch_ing.amount_used
                     db.session.add(ingredient)
                 except Exception as e:
-                    flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
+                    flash(f"Error crediting {ingredient.name}: {str(e)}", "error")
+                    continue
 
         # Restore containers
         for bc in batch.containers:
