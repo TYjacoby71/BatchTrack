@@ -365,3 +365,44 @@ function saveBatch(batchId) {
         alert('Error saving batch');
     });
 }
+
+// Density Reference Functionality
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/data/density_reference.json')
+    .then(response => response.json())
+    .then(data => {
+      const tableBody = document.getElementById('densityTableBody');
+      const searchInput = document.getElementById('densitySearch');
+
+      function renderDensityTable(items) {
+        tableBody.innerHTML = items.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.density_g_per_ml}</td>
+            <td>${item.category || ''}</td>
+            <td>
+              <button class="btn btn-sm btn-primary" onclick="useDensity(${item.density_g_per_ml})">
+                Use
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      renderDensityTable(data.common_densities);
+
+      searchInput?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = data.common_densities.filter(item => 
+          item.name.toLowerCase().includes(searchTerm) ||
+          (item.category && item.category.toLowerCase().includes(searchTerm))
+        );
+        renderDensityTable(filtered);
+      });
+
+      window.useDensity = function(density) {
+        document.getElementById('density').value = density;
+        bootstrap.Modal.getInstance(document.getElementById('densityModal')).hide();
+      };
+    });
+});

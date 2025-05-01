@@ -1,0 +1,15 @@
+
+{
+  "common_densities": [
+    {"name": "Water", "density": 1.0, "category": "Base"},
+    {"name": "Olive Oil", "density": 0.91, "category": "Oils"},
+    {"name": "Beeswax", "density": 0.96, "category": "Waxes"},
+    {"name": "Shea Butter", "density": 0.92, "category": "Butters"},
+    {"name": "Coconut Oil", "density": 0.924, "category": "Oils"},
+    {"name": "Castor Oil", "density": 0.96, "category": "Oils"},
+    {"name": "Honey", "density": 1.42, "category": "Sweeteners"},
+    {"name": "Glycerin", "density": 1.26, "category": "Base"},
+    {"name": "Almond Oil", "density": 0.91, "category": "Oils"},
+    {"name": "Essential Oil (avg)", "density": 0.9, "category": "Essential Oils"}
+  ]
+}
