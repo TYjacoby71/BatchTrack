@@ -1,7 +1,8 @@
+
 from flask import Blueprint, jsonify, request, current_app
 import json
 import os
-from models import Recipe
+from models import Recipe, IngredientCategory, InventoryItem
 from services.stock_check import universal_stock_check
 
 api_bp = Blueprint('api', __name__)
@@ -17,6 +18,16 @@ def check_stock():
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
         
+        # Ensure response matches expected structure
+        if 'stock_check' not in result:
+            result = {
+                'stock_check': result.get('ingredients', []),
+                'all_ok': result.get('all_ok', False)
+            }
+            
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @api_bp.route('/density-reference', methods=['GET'])
 def get_density_reference():
@@ -28,16 +39,6 @@ def get_density_reference():
     except FileNotFoundError:
         return jsonify({"error": "Density reference data not found"}), 404
 
-        # Ensure response matches expected structure
-        if 'stock_check' not in result:
-            result = {
-                'stock_check': result.get('ingredients', []),
-                'all_ok': result.get('all_ok', False)
-            }
-            
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
 @api_bp.route('/categories', methods=['GET'])
 def get_categories():
     categories = IngredientCategory.query.all()
