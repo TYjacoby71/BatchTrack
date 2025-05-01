@@ -1,3 +1,22 @@
+
+// Add CSRF token to fetch headers
+function addMappingUnit(fromUnit, toUnit, multiplier) {
+  const csrfToken = document.getElementById('csrfToken').value;
+  
+  return fetch('/conversion/custom-mappings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({
+      from_unit: fromUnit,
+      to_unit: toUnit,
+      multiplier: multiplier
+    })
+  });
+}
+
 $(document).ready(function() {
   // Initialize all global Select2 dropdowns (ingredients page, recipes page, etc.)
   $('select[data-unit-select]').select2({
