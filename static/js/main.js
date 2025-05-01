@@ -310,33 +310,37 @@ function saveBatch() {
         return;
     }
 
+    const outputType = form.querySelector('select[name="output_type"]')?.value;
     const data = {
         notes: form.querySelector('textarea[name="notes"]')?.value || '',
         tags: form.querySelector('input[name="tags"]')?.value || '',
-        yield_amount: parseFloat(form.querySelector('input[name="yield_amount"]')?.value) || 0,
-        yield_unit: form.querySelector('select[name="yield_unit"]')?.value || '',
+        output_type: outputType,
+        product_id: outputType === 'product' ? parseInt(form.querySelector('select[name="product_id"]')?.value) : null,
+        variant_id: outputType === 'product' ? form.querySelector('input[name="variant_label"]')?.value : '',
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
-        product_id: parseInt(form.querySelector('select[name="product_id"]')?.value) || null,
-        variant_id: form.querySelector('input[name="variant_label"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
-            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
-            unit: row.querySelector('select[name="units[]"]').value
+            id: parseInt(row.querySelector('select[name="ingredient_id"]').value),
+            amount: parseFloat(row.querySelector('input[name="amount"]').value),
+            unit: row.querySelector('select[name="unit"]').value
         })),
         containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="containers[]"]').value),
-            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
+            id: parseInt(row.querySelector('select[name="container_id"]').value),
+            qty: parseInt(row.querySelector('input[name="quantity"]').value),
+            cost_each: parseFloat(row.querySelector('input[name="cost_each"]').value) || 0
         })),
         timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[name="timers[]"]').value,
-            duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
+            name: row.querySelector('input[name="timer_name"]').value,
+            duration_seconds: parseInt(row.querySelector('input[name="duration"]').value)
         }))
     };
 
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
