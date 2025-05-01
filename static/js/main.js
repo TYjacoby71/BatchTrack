@@ -314,12 +314,12 @@ function saveBatch() {
     const data = {
         notes: form.querySelector('[name="notes"]')?.value || '',
         tags: form.querySelector('[name="tags"]')?.value || '',
-        yield_amount: form.querySelector('[name="yield_amount"]')?.value,
-        yield_unit: form.querySelector('[name="yield_unit"]')?.value,
-        final_quantity: form.querySelector('[name="final_quantity"]')?.value,
-        output_unit: form.querySelector('[name="output_unit"]')?.value,
-        product_id: form.querySelector('[name="product_id"]')?.value,
-        variant_id: form.querySelector('[name="variant_id"]')?.value,
+        yield_amount: form.querySelector('[name="yield_amount"]')?.value || 0,
+        yield_unit: form.querySelector('[name="yield_unit"]')?.value || '',
+        final_quantity: form.querySelector('[name="final_quantity"]')?.value || 0,
+        output_unit: form.querySelector('[name="output_unit"]')?.value || '',
+        product_id: form.querySelector('[name="product_id"]')?.value || null,
+        variant_id: form.querySelector('[name="variant_id"]')?.value || '',
         ingredients: [],
         containers: [],
         timers: []
