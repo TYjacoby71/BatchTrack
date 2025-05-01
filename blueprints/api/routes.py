@@ -11,9 +11,10 @@ def check_stock():
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
         flex_mode = data.get('flex_mode', False)
-        
+
         recipe = Recipe.query.get_or_404(recipe_id)
-        result = universal_stock_check(recipe, scale)
+        result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
+
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400

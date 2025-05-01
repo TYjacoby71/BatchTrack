@@ -5,6 +5,7 @@
     </div>
     <div class="card-body">
       <div x-show="stockChecked">
+        <!-- Status Alert -->
         <div class="alert" :class="{
           'alert-success': stockCheckPassed,
           'alert-warning': !stockCheckPassed
@@ -16,7 +17,9 @@
             <span>⚠ Some ingredients are low or missing. Adjust inventory before proceeding.</span>
           </template>
         </div>
-        <table class="table">
+
+        <!-- Table -->
+        <table class="table table-bordered table-sm">
           <thead>
             <tr>
               <th>Item</th>
