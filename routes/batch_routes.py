@@ -388,7 +388,18 @@ def cancel_batch(batch_id):
         print("Committing transaction...")
         db.session.commit()
         print("Batch cancellation complete")
-        flash("Batch cancelled and inventory restored successfully.", "success")
+        
+        # Build detailed restoration message
+        restored_items = []
+        for bi in batch.ingredients:
+            if bi.ingredient:
+                restored_items.append(f"{bi.amount_used} {bi.unit} of {bi.ingredient.name}")
+        for bc in batch.containers:
+            if bc.container:
+                restored_items.append(f"{bc.quantity_used} {bc.container.name}")
+                
+        restoration_details = ", ".join(restored_items)
+        flash(f"Batch cancelled. Restored to inventory: {restoration_details}", "success")
         return redirect(url_for('batches.list_batches'))
 
     except Exception as e:
