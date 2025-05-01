@@ -7,6 +7,12 @@ Create Date: 2024-05-01 17:45:00.000000
 from alembic import op
 import sqlalchemy as sa
 
+# revision identifiers, used by Alembic
+revision = 'add_batch_status_tracking_001'
+down_revision = 'd3417cb6cf8c'
+branch_labels = None
+depends_on = None
+
 def upgrade():
     op.add_column('batch', sa.Column('status_reason', sa.Text(), nullable=True))
     op.add_column('batch', sa.Column('failed_at', sa.DateTime(), nullable=True))
