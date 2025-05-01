@@ -2,6 +2,17 @@ from models import InventoryItem, Recipe
 from services.unit_conversion import ConversionEngine
 
 
+def convert_units(amount, from_unit, to_unit, density=1.0):
+    """Converts units of measurement using UUCS."""
+    try:
+        from services.unit_conversion_service import convert_units as ucs_convert_units
+        return ucs_convert_units(amount, from_unit, to_unit, density=density)
+    except Exception as e:
+        print(f"UUCS Conversion error: {e}")
+        return None
+
+
+
 def get_available_containers(recipe_yield, recipe_unit, scale=1.0):
     projected_volume = recipe_yield * scale
 
