@@ -14,7 +14,14 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
-
+        
+        # Ensure response matches expected structure
+        if 'stock_check' not in result:
+            result = {
+                'stock_check': result.get('ingredients', []),
+                'all_ok': result.get('all_ok', False)
+            }
+            
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
