@@ -86,13 +86,11 @@
           ✅ All ingredients are available!
         </div>
       </template>
-      <template x-if="!stockCheckPassed">
-        <div class="alert alert-warning mt-2">
-          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
-        </div>
-      </template>
+      <div x-show="!stockCheckPassed" class="alert alert-warning mt-2">
+        ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
+      </div>
 
-      <table class="table table-bordered table-sm mt-2">
+      <table x-show="stockResults.stock_check && stockResults.stock_check.length > 0" class="table table-bordered table-sm mt-2">
         <thead>
           <tr>
             <th>Ingredient</th>
