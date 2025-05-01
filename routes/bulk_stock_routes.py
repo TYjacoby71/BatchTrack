@@ -40,12 +40,11 @@ def bulk_stock_check():
                 recipe = Recipe.query.get(int(rid))
                 if not recipe:
                     continue
-                try:
-                    result = universal_stock_check(recipe, scale)
-                    results = result['stock_check']
+                result = universal_stock_check(recipe, scale)
+                results = result['stock_check']
 
-                    for row in results:
-                        name = row['name']
+                for row in results:
+                    name = row['name']
                     needed = row['needed']
                     from_unit = row.get('unit') or 'ml'
                     ingredient = InventoryItem.query.filter_by(name=name).first()
