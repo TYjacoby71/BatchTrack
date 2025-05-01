@@ -25,7 +25,7 @@ def start_batch():
 
     new_batch = Batch(
         recipe_id=recipe.id,
-        recipe_name=recipe.name,
+        batch_type='product',
         scale=scale,
         notes=data.get('notes', ''),
         label_code=f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}",
