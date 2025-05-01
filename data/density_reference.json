@@ -1,15 +1,33 @@
 
 {
   "common_densities": [
-    {"name": "Water", "density_g_per_ml": 1.0, "category": "Base"},
-    {"name": "Olive Oil", "density_g_per_ml": 0.91, "category": "Oils"},
-    {"name": "Beeswax", "density_g_per_ml": 0.96, "category": "Waxes"},
-    {"name": "Shea Butter", "density_g_per_ml": 0.92, "category": "Butters"},
-    {"name": "Coconut Oil", "density_g_per_ml": 0.924, "category": "Oils"},
-    {"name": "Castor Oil", "density_g_per_ml": 0.96, "category": "Oils"},
-    {"name": "Honey", "density_g_per_ml": 1.42, "category": "Sweeteners"},
-    {"name": "Glycerin", "density_g_per_ml": 1.26, "category": "Base"},
-    {"name": "Almond Oil", "density_g_per_ml": 0.91, "category": "Oils"},
-    {"name": "Essential Oil (avg)", "density_g_per_ml": 0.9, "category": "Essential Oils"}
+    {"name": "Water", "density_g_per_ml": 1.0, "category": "Liquid"},
+    {"name": "Milk", "density_g_per_ml": 1.03, "category": "Dairy"},
+    {"name": "Heavy Cream", "density_g_per_ml": 0.994, "category": "Dairy"},
+    {"name": "Yogurt", "density_g_per_ml": 1.03, "category": "Dairy"},
+    
+    {"name": "Olive Oil", "density_g_per_ml": 0.91, "category": "Oil"},
+    {"name": "Coconut Oil", "density_g_per_ml": 0.924, "category": "Oil"},
+    {"name": "Castor Oil", "density_g_per_ml": 0.96, "category": "Oil"},
+    {"name": "Almond Oil", "density_g_per_ml": 0.91, "category": "Oil"},
+    
+    {"name": "Honey", "density_g_per_ml": 1.42, "category": "Syrup"},
+    {"name": "Maple Syrup", "density_g_per_ml": 1.37, "category": "Syrup"},
+    {"name": "Agave", "density_g_per_ml": 1.4, "category": "Syrup"},
+    
+    {"name": "Beeswax", "density_g_per_ml": 0.96, "category": "Wax"},
+    {"name": "Soy Wax", "density_g_per_ml": 0.93, "category": "Wax"},
+    {"name": "Paraffin Wax", "density_g_per_ml": 0.9, "category": "Wax"},
+    
+    {"name": "Shea Butter", "density_g_per_ml": 0.92, "category": "Solid"},
+    {"name": "Cocoa Butter", "density_g_per_ml": 0.89, "category": "Solid"},
+    {"name": "Mango Butter", "density_g_per_ml": 0.91, "category": "Solid"},
+    
+    {"name": "Bentonite Clay", "density_g_per_ml": 2.35, "category": "Clay"},
+    {"name": "Kaolin Clay", "density_g_per_ml": 2.6, "category": "Clay"},
+    
+    {"name": "Lavender Essential Oil", "density_g_per_ml": 0.885, "category": "Fragrance"},
+    {"name": "Peppermint Essential Oil", "density_g_per_ml": 0.9, "category": "Fragrance"},
+    {"name": "Tea Tree Essential Oil", "density_g_per_ml": 0.89, "category": "Fragrance"}
   ]
 }
