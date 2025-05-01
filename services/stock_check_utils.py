@@ -1,66 +1,63 @@
+
 from models import InventoryItem, Recipe
 from services.unit_conversion import ConversionEngine
 
+def check_stock_for_recipe(recipe, scale=1.0):
+    report = []
+    all_ok = True
 
-def convert_units(amount, from_unit, to_unit, density=1.0):
-    """Converts units of measurement using UUCS."""
-    try:
-        from services.unit_conversion_service import convert_units as ucs_convert_units
-        return ucs_convert_units(amount, from_unit, to_unit, density=density)
-    except Exception as e:
-        print(f"UUCS Conversion error: {e}")
-        return None
-
-
-
-def get_available_containers(recipe_yield, recipe_unit, scale=1.0):
-    projected_volume = recipe_yield * scale
-
-    # Step 1: Find in-stock containers
-    in_stock = []
-    inventory = InventoryItem.query.filter_by(type='container').all()
-
-    for item in inventory:
-        container = Container.query.get(item.container_id)
-        if not container or item.quantity <= 0:
+    for ingredient in recipe.recipe_ingredients:
+        inventory_item = InventoryItem.query.get(ingredient.inventory_item_id)
+        if not inventory_item:
+            report.append({
+                "ingredient": ingredient.name,
+                "recipe_unit": ingredient.unit,
+                "original_amount": ingredient.amount,
+                "available": 0,
+                "unit": ingredient.unit,
+                "status": "NEEDED"
+            })
+            all_ok = False
             continue
 
-        converted_capacity = convert_units(container.storage_amount, container.storage_unit, recipe_unit)
-        if converted_capacity is None:
+        needed_amount = ingredient.amount * scale
+        
+        # Convert inventory amount to recipe unit
+        converted_amount = ConversionEngine.convert_units(
+            inventory_item.quantity,
+            inventory_item.unit,
+            ingredient.unit,
+            ingredient_id=inventory_item.id
+        )
+
+        if converted_amount is None:
+            report.append({
+                "ingredient": ingredient.name,
+                "recipe_unit": ingredient.unit,
+                "original_amount": ingredient.amount,
+                "available": inventory_item.quantity,
+                "unit": inventory_item.unit,
+                "status": "UNIT_MISMATCH"
+            })
+            all_ok = False
             continue
 
-        in_stock.append({
-            "id": container.id,
-            "name": container.name,
-            "storage_amount": converted_capacity,
-            "storage_unit": recipe_unit,
-            "stock_qty": item.quantity
+        if converted_amount >= needed_amount:
+            status = "OK"
+        elif converted_amount > 0:
+            status = "LOW"
+            all_ok = False
+        else:
+            status = "NEEDED"
+            all_ok = False
+
+        report.append({
+            "ingredient": ingredient.name,
+            "recipe_unit": ingredient.unit,
+            "original_amount": ingredient.amount,
+            "available": converted_amount,
+            "unit": ingredient.unit,
+            "status": status
         })
 
-    # Step 2: Sort containers from largest to smallest
-    sorted_containers = sorted(in_stock, key=lambda c: c['storage_amount'], reverse=True)
-
-    # Step 3: Greedy fill logic
-    plan = []
-    remaining = projected_volume
-
-    for c in sorted_containers:
-        per_unit = c['storage_amount']
-        if per_unit <= 0:
-            continue
-
-        while remaining >= per_unit and c['stock_qty'] > 0:
-            plan.append({
-                "id": c['id'],
-                "name": c['name'],
-                "capacity": per_unit,
-                "unit": recipe_unit,
-                "quantity": 1
-            })
-            remaining -= per_unit
-            c['stock_qty'] -= 1
-
-    return {
-        "available": sorted_containers,
-        "plan": plan
-    }
+    return report, all_ok
