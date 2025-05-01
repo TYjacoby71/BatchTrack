@@ -302,7 +302,11 @@ function updateStockCheckTable(data) {
 }
 
 // Batch save handler
-function saveBatch() {
+function saveBatch(event) {
+    if (event) {
+        event.preventDefault();
+    }
+    
     const batchId = window.location.pathname.split('/').pop();
     const form = document.getElementById('batchForm');
     if (!form) {
@@ -313,6 +317,9 @@ function saveBatch() {
     const data = {
         notes: form.querySelector('textarea[name="notes"]')?.value || '',
         tags: form.querySelector('input[name="tags"]')?.value || '',
+        output_type: form.querySelector('select[name="output_type"]')?.value,
+        product_id: form.querySelector('select[name="product_id"]')?.value,
+        variant_label: form.querySelector('input[name="variant_label"]')?.value,
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
