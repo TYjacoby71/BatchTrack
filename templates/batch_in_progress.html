@@ -6,7 +6,7 @@
     <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
     <p><strong>Recipe:</strong> {{ batch.recipe_name }}</p>
     <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
-    <p><strong>Started:</strong> {{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
 </div>
 
 {% if batch.containers %}
