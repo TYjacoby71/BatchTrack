@@ -29,15 +29,7 @@ def check_stock():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@api_bp.route('/density-reference', methods=['GET'])
-def get_density_reference():
-    json_path = os.path.join(current_app.root_path, 'data', 'density_reference.json')
-    try:
-        with open(json_path, 'r') as f:
-            data = json.load(f)
-        return jsonify(data)
-    except FileNotFoundError:
-        return jsonify({"error": "Density reference data not found"}), 404
+
 
 @api_bp.route('/categories', methods=['GET'])
 def get_categories():
