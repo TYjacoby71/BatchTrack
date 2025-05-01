@@ -33,8 +33,11 @@ class ConversionEngine:
 
         # 3. Same-type base conversion (volume → volume, weight → weight)
         elif from_u.type == to_u.type:
-            base_amount = amount * from_u.multiplier_to_base
-            converted = base_amount / to_u.multiplier_to_base
+            if from_unit == to_unit:
+                converted = amount
+            else:
+                base_amount = amount * float(from_u.multiplier_to_base)
+                converted = base_amount / float(to_u.multiplier_to_base)
             conversion_type = 'direct'
 
         # 4. Cross-type: volume ↔ weight
