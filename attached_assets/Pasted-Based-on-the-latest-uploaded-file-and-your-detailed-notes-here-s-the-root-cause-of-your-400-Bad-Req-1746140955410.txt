@@ -1,0 +1,93 @@
+Based on the latest uploaded file and your detailed notes, here's the root cause of your 400 Bad Request error during custom unit mapping, along with a clean fix plan:
+
+✅ Core Issue Summary
+CSRF Token Validation Fails:
+
+If the request is sent via JavaScript (fetch()), the CSRF token must be included in headers, not just embedded in the HTML form.
+
+JSON vs Form POST Confusion:
+
+Your /custom-mappings route handles form and JSON POSTs, but CSRF validation was only designed for one type, likely checking request.form even if the frontend sends JSON.
+
+Unit Handling Logic:
+
+The logic for converting "1 bucket = 1 lb" to a base unit (e.g., grams) was not completing the chain to update the multiplier_to_base of the new unit (bucket).
+
+✅ Fix Plan: Custom Mapping POST Flow
+1. Fix the CSRF Handling Logic in routes.py
+Update the route handling POST to detect JSON requests and get the CSRF token appropriately.
+
+python
+Copy
+Edit
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
+
+@conversion_bp.route('/custom-mappings', methods=['POST'])
+def manage_mappings():
+    if request.is_json:
+        data = request.get_json()
+        csrf_token = data.get("csrf_token", "")
+    else:
+        data = request.form
+        csrf_token = data.get("csrf_token", "")
+
+    try:
+        validate_csrf(csrf_token)
+    except ValidationError:
+        return jsonify({"error": "Invalid CSRF token"}), 400
+2. Include CSRF Token in JS Fetch Requests
+In main.js or wherever the custom mapping fetch request lives:
+
+javascript
+Copy
+Edit
+const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+fetch("/custom-mappings", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-CSRFToken": csrfToken
+  },
+  body: JSON.stringify({
+    from_unit: "bucket",
+    to_unit: "lb",
+    multiplier: 1.0,
+    csrf_token: csrfToken
+  })
+});
+3. Fix the Mapping Logic to Propagate to Base Unit
+In your route logic (routes.py), after parsing and validating, do this:
+
+python
+Copy
+Edit
+from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+
+# Handle missing units
+if not from_unit_obj or not to_unit_obj:
+    return jsonify({"error": "Unit(s) not found"}), 400
+
+# Derive full base conversion
+base_multiplier = multiplier * to_unit_obj.multiplier_to_base
+from_unit_obj.multiplier_to_base = base_multiplier
+from_unit_obj.base_unit = to_unit_obj.base_unit
+db.session.commit()
+4. Show Proper Output in Unit Manager Table
+Ensure your /units page uses:
+
+jinja2
+Copy
+Edit
+<td>{{ unit.name }}</td>
+<td>{{ unit.type }}</td>
+<td>{{ unit.base_unit }}</td>
+<td>{{ "%.3f"|format(unit.multiplier_to_base) }}</td>
+✅ Summary
+Fix	Location	Status
+CSRF token fix (JSON & Form)	routes.py	✅
+CSRF token header injection	main.js	✅
+Unit propagation to base	routes.py	✅
+Table display	templates/units.html	✅

@@ -18,10 +18,8 @@ def setup_logging(app):
 
 def get_global_unit_list():
     try:
-        units = Unit.query.order_by(Unit.name).all()
-        if not units:
-            app.logger.warning("No units found in database")
-        return units
+        units = Unit.query.filter_by(is_custom=False).order_by(Unit.type, Unit.name).all()
+        custom_units = Unit.query.filter_by(is_custom=True).order_by(Unit.name).all()
+        return units + custom_units
     except Exception as e:
-        app.logger.error(f"Error loading units: {str(e)}")
         return []

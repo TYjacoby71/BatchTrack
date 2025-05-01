@@ -104,10 +104,55 @@ def manage_units():
 def manage_mappings():
     if request.method == 'POST':
         data = request.get_json() if request.is_json else request.form
+        if not data.get('csrf_token'):
+            return jsonify({'error': 'CSRF token missing'}), 400
         from_unit = data.get('from_unit')
         to_unit = data.get('to_unit')
-        multiplier = float(data.get('multiplier'))
+        try:
+            multiplier = float(data.get('multiplier', 0))
+        except (ValueError, TypeError):
+            if request.is_json:
+                return jsonify({'error': 'Invalid multiplier value'}), 400
+            flash('Invalid multiplier value', 'error')
+            return redirect(url_for('conversion.manage_mappings'))
 
+        if not all([from_unit, to_unit, multiplier]):
+            if request.is_json:
+                return jsonify({'error': 'Missing required fields'}), 400
+            flash('All fields are required', 'error')
+            return redirect(url_for('conversion.manage_mappings'))
+
+        # Verify both units exist
+        from_u = Unit.query.filter_by(name=from_unit).first()
+        to_u = Unit.query.filter_by(name=to_unit).first()
+        
+        # Create units if they don't exist
+        if not from_u:
+            # Get the base unit from the target unit if it exists
+            base_unit = to_u.base_unit if to_u else 'g'
+            unit_type = to_u.type if to_u else 'weight'
+            
+            from_u = Unit(
+                name=from_unit,
+                type=unit_type,
+                base_unit=base_unit,
+                multiplier_to_base=multiplier,  # Initial multiplier from mapping
+                is_custom=True
+            )
+            db.session.add(from_u)
+
+        if not to_u:
+            to_u = Unit(
+                name=to_unit,
+                type=from_u.type,
+                base_unit=from_u.base_unit,
+                multiplier_to_base=1.0,  # Default multiplier
+                is_custom=True
+            )
+            db.session.add(to_u)
+            db.session.flush()  # Ensure IDs are generated
+            
+        # Create the custom mapping
         mapping = CustomUnitMapping(
             user_id=current_user.id,
             from_unit=from_unit,
@@ -115,6 +160,17 @@ def manage_mappings():
             multiplier=multiplier
         )
         db.session.add(mapping)
+
+        # Update the from_unit's base conversion based on the mapping
+        if to_u.base_unit == to_u.name:
+            # Direct mapping to base unit
+            from_u.multiplier_to_base = multiplier
+        else:
+            # Calculate through the target unit's base conversion
+            from_u.multiplier_to_base = multiplier * to_u.multiplier_to_base
+            
+        db.session.add(from_u)
+
         db.session.commit()
 
         if request.is_json:
