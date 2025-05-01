@@ -72,39 +72,10 @@ def start_batch():
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
-    # Handle container deductions
-    container_errors = []
-    containers_data = data.get('containers', [])
-    
-    for container in containers_data:
-        container_id = container.get('id')
-        quantity = int(container.get('quantity', 0))
-        
-        container_item = InventoryItem.query.get(container_id)
-        if not container_item:
-            container_errors.append(f"Container {container_id} not found")
-            continue
-            
-        if container_item.quantity < quantity:
-            container_errors.append(f"Not enough {container_item.name} in stock")
-            continue
-            
-        # Deduct containers and create BatchContainer record
-        container_item.quantity -= quantity
-        db.session.add(container_item)
-        
-        batch_container = BatchContainer(
-            batch_id=new_batch.id,
-            container_id=container_id,
-            quantity_used=quantity
-        )
-        db.session.add(batch_container)
-
-    if ingredient_errors or container_errors:
-        all_errors = ingredient_errors + container_errors
-        flash("Some items were not deducted due to errors: " + ", ".join(all_errors), "warning")
+    if ingredient_errors:
+        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
     else:
-        flash("Batch started, ingredients and containers deducted.", "success")
+        flash("Batch started and inventory deducted.", "success")
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
@@ -318,110 +289,48 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Begin transaction
-        print(f"Starting batch {batch_id} cancellation...")
+        # Get recipe ingredients to know original amounts
+        recipe = Recipe.query.get(batch.recipe_id)
         
-        # First verify all ingredients exist to avoid partial crediting
-        for batch_ing in batch.ingredients:
-            if not batch_ing.ingredient:
-                db.session.rollback()
-                flash(f"Cannot cancel - missing ingredient record", "error")
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-        # Now process all ingredients
-        for batch_ing in batch.ingredients:
-            ingredient = batch_ing.ingredient
-            try:
-                print(f"Processing ingredient {ingredient.name}: {batch_ing.amount_used} {batch_ing.unit} -> {ingredient.unit}")
+        for recipe_ing in recipe.recipe_ingredients:
+            ingredient = recipe_ing.inventory_item
+            if ingredient:
                 try:
-                    # Convert from batch unit to inventory unit
-                    density = ingredient.density
-                    if not density and ingredient.category:
-                        density = ingredient.category.default_density
-                    print(f"Using density: {density} for {ingredient.name}")
+                    # Calculate amount to restore based on recipe and batch scale
+                    amount_to_restore = recipe_ing.amount * batch.scale
                     
+                    # Convert back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
-                        batch_ing.amount_used,
-                        batch_ing.unit,
+                        amount_to_restore,
+                        recipe_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
-                        density=density
+                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
                     )
-                    
-                    print(f"Conversion result for {ingredient.name}: {conversion_result}")
-                    if not conversion_result:
-                        raise ValueError(f"Conversion returned None for {ingredient.name}")
+                    ingredient.quantity += conversion_result['converted_value']
+                    db.session.add(ingredient)
                 except Exception as e:
-                    print(f"❌ Conversion failed for {ingredient.name}: {str(e)}")
-                    print(f"   From: {batch_ing.amount_used} {batch_ing.unit}")
-                    print(f"   To: {ingredient.unit}")
-                    print(f"   Density: {ingredient.density}")
-                    print(f"   Category Default Density: {ingredient.category.default_density if ingredient.category else None}")
-                    raise
-                if not conversion_result or conversion_result.get('conversion_type') == 'error':
-                    error_msg = conversion_result.get('error', 'Unknown conversion error') if conversion_result else 'Failed to convert units'
-                    flash(f"Error converting units for {ingredient.name}: {error_msg}", "error")
-                    db.session.rollback()
-                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+                    flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
 
-                # Credit inventory with validation
-                credited_amount = float(conversion_result['converted_value'])
-                if credited_amount <= 0:
-                    flash(f"Invalid credit amount for {ingredient.name}: {credited_amount}", "error")
-                    db.session.rollback()
-                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-                old_qty = ingredient.quantity
-                ingredient.quantity += credited_amount
-                print(f"Crediting {ingredient.name}: {old_qty} + {credited_amount} = {ingredient.quantity} {ingredient.unit}")
-                db.session.add(ingredient)
-                
-                flash(f"Credited {credited_amount} {ingredient.unit} of {ingredient.name}", "success")
-            except Exception as e:
-                print(f"Error processing ingredient {ingredient.name if ingredient else 'unknown'}: {str(e)}")
-                db.session.rollback()
-                flash(f"Error crediting {ingredient.name}: {str(e)}", "error")
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-        # Restore containers in same transaction
-        print("Processing containers...")
+        # Restore containers
         for bc in batch.containers:
-            if bc.container:
-                old_qty = bc.container.quantity
-                bc.container.quantity += bc.quantity_used
-                print(f"Crediting container {bc.container.name}: {old_qty} + {bc.quantity_used} = {bc.container.quantity}")
-                db.session.add(bc.container)
+            container = bc.container
+            if container:
+                container.quantity += bc.quantity_used
+                db.session.add(container)
 
-        # Update batch status
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
-        batch.status_reason = "Batch cancelled - ingredients credited back to inventory"
-        batch.inventory_credited = True
         db.session.add(batch)
-
-        # Commit all changes
-        print("Committing transaction...")
         db.session.commit()
-        print("Batch cancellation complete")
-        
-        # Build detailed restoration message
-        restored_items = []
-        for bi in batch.ingredients:
-            if bi.ingredient:
-                restored_items.append(f"{bi.amount_used} {bi.unit} of {bi.ingredient.name}")
-        for bc in batch.containers:
-            if bc.container:
-                restored_items.append(f"{bc.quantity_used} {bc.container.name}")
-                
-        restoration_details = ", ".join(restored_items)
-        flash(f"Batch cancelled. Restored to inventory: {restoration_details}", "success")
-        return redirect(url_for('batches.list_batches'))
 
+        flash("Batch cancelled and inventory restored successfully.", "success")
     except Exception as e:
-        print(f"Fatal error in batch cancellation: {str(e)}")
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/fail/<int:batch_id>', methods=['POST'])
 @login_required
