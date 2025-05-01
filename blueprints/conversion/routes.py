@@ -103,9 +103,16 @@ def manage_units():
 @login_required
 def manage_mappings():
     if request.method == 'POST':
-        data = request.get_json() if request.is_json else request.form
-        if not data.get('csrf_token'):
+        if request.is_json:
+            data = request.get_json()
+            csrf_token = request.headers.get('X-CSRFToken', '')
+        else:
+            data = request.form
+            csrf_token = data.get('csrf_token', '')
+            
+        if not csrf_token:
             return jsonify({'error': 'CSRF token missing'}), 400
+            
         from_unit = data.get('from_unit')
         to_unit = data.get('to_unit')
         try:
