@@ -137,6 +137,17 @@
 <script>
 function planProduction() {
   return {
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockResults: [],
+    containmentPercent: 0,
+    remainingToContain: 0,
+    containmentIssue: '',
+    flexMode: false,
+    containersSelected: [],
+    allowedContainers: [],
+    autoFill: true,
+    scale: 1.0,
     recipeId: {{ recipe.id }},
     baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
     unit: '{{ recipe.predicted_yield_unit }}',
@@ -195,9 +206,6 @@ function planProduction() {
           if (this.autoFill) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
-
-            // Get projected volume and calculate target container size with 5% buffer
-            const projected = this.baseYield * this.scale;
             const targetSize = projected * 1.05; // Allow 5% overflow
 
             // Sort containers by how close they are to the target size
