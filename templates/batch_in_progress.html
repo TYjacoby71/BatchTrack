@@ -169,6 +169,15 @@
                     <td>${{ "%.2f"|format(cost.line_cost) }}</td>
                 </tr>
                 {% endfor %}
+                {% for container in containers %}
+                <tr>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.quantity_used }}</td>
+                    <td>count</td>
+                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
+                </tr>
+                {% endfor %}
             </tbody>
             <tfoot>
                 <tr>

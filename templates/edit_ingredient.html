@@ -1,73 +1,80 @@
 
 {% extends 'layout.html' %}
-{% from 'macros/forms.html' import csrf_form %}
 {% block content %}
 <h2>Edit Ingredient</h2>
+<form method="post">
+    {{ csrf_token() }}
+    <label for="name">Name:</label>
+    <input type="text" name="name" value="{{ ing.name }}" required><br>
 
-{% call csrf_form() %}
-  <div class="mb-3">
-    <label class="form-label">Name</label>
-    <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
-  </div>
+    <label for="quantity">Quantity:</label>
+    <input type="number" step="0.01" name="quantity" value="{{ ing.quantity }}"><br>
 
-  <div class="mb-3">
-    <label class="form-label">Quantity</label>
-    <input type="number" step="0.01" name="quantity" class="form-control" value="{{ item.quantity }}" required>
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Unit</label>
-    <select name="unit" class="form-control" data-unit-select>
-      <option value="{{ item.unit }}" selected>{{ item.unit }}</option>
+    <label for="type">Inventory Type:</label>
+    <select name="type" class="form-select" required>
+        <option value="ingredient" {% if ing.type == 'ingredient' %}selected{% endif %}>Ingredient</option>
+        <option value="container" {% if ing.type == 'container' %}selected{% endif %}>Container</option>
+        <option value="packaging" {% if ing.type == 'packaging' %}selected{% endif %}>Packaging</option>
     </select>
-  </div>
 
-  <div class="mb-3">
-    <label class="form-label">Cost/Unit</label>
-    <input type="number" step="0.01" name="cost_per_unit" class="form-control" value="{{ item.cost_per_unit }}" required>
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Density (g/ml)</label>
-    <div class="input-group">
-      <input type="number" step="0.001" name="density" id="density" class="form-control" value="{{ item.density or 1.0 }}">
-      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#densityModal">
-        Reference
-      </button>
+    <div class="mb-3" id="categorySection" {% if ing.type != 'ingredient' %}style="display: none;"{% endif %}>
+        <label for="category">Ingredient Category:</label>
+        <select name="category_id" class="form-select" id="categorySelect">
+            <option value="">-- Custom Category --</option>
+            {% for category in get_ingredient_categories() %}
+            <option value="{{ category.id }}" {% if ing.category_id == category.id %}selected{% endif %}
+                    data-density="{{ category.default_density }}">
+                {{ category.name }} (Density: {{ category.default_density }} g/ml)
+            </option>
+            {% endfor %}
+        </select>
     </div>
-    <small class="text-muted">Used for volume ↔ weight conversions (e.g. ml to g)</small>
-  </div>
 
-  <!-- Density Reference Modal -->
-  <div class="modal fade" id="densityModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Common Ingredient Densities</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="mb-3">
+        <label for="density">Density (g/ml):</label>
+        <div class="input-group">
+            <input type="number" step="0.001" name="density" id="density" 
+                   class="form-control" value="{{ ing.density or 1.0 }}"
+                   {% if ing.category_id and not ing.density %}disabled{% endif %}>
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#densityModal">
+                Reference
+            </button>
         </div>
-        <div class="modal-body">
-          <input type="text" id="densitySearch" class="form-control mb-3" placeholder="Search ingredients...">
-          <div class="table-responsive">
-            <table class="table" id="densityTable">
-              <thead>
-                <tr>
-                  <th>Ingredient</th>
-                  <th>Density (g/ml)</th>
-                  <th>Category</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="densityTableBody">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
     </div>
-  </div>
 
-  <button type="submit" class="btn btn-primary">Save Changes</button>
-  <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-secondary">Cancel</a>
-{% endcall %}
+    <label for="unit">Unit:</label>
+    <select name="unit" class="form-select select2" data-unit-select>
+        {% for unit in get_global_unit_list() %}
+        <option value="{{ unit.name }}" {% if unit.name == ing.unit %}selected{% endif %}>{{ unit.name }}</option>
+        {% endfor %}
+    </select><br>
+
+    <label for="cost_per_unit">Cost Per Unit:</label>
+    <input type="number" step="0.01" name="cost_per_unit" value="{{ ing.cost_per_unit or 0.0 }}"><br>
+
+    <script>
+        document.querySelector('select[name="type"]').addEventListener('change', function() {
+            document.getElementById('categorySection').style.display = 
+                this.value === 'ingredient' ? 'block' : 'none';
+        });
+
+        document.getElementById('categorySelect').addEventListener('change', function() {
+            const densityInput = document.getElementById('density');
+            if (this.value === '') {
+                densityInput.disabled = false;
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultDensity = selectedOption.dataset.density;
+                densityInput.value = defaultDensity;
+                densityInput.disabled = true;
+            }
+        });
+    </script>
+
+    <div class="form-group mt-3 d-flex justify-content-between">
+        <a href="{{ url_for('inventory.list_ingredients') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+</form>
 {% endblock %}

@@ -17,7 +17,7 @@
   </div>
 
   <!-- Auto-Fill Toggle -->
-  <div class="row mb-4">
+  <div class="row mb-4" x-show="recipeNeedsContainers">
     <div class="col-md-6">
       <input type="checkbox" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
       <label for="autoFill">Auto-Fill Containers</label>
@@ -25,7 +25,7 @@
   </div>
 
   <!-- Container Selection -->
-  <div class="card mb-4">
+  <div class="card mb-4" x-show="recipeNeedsContainers">
     <div class="card-header d-flex justify-content-between">
       <h5>Selected Containers</h5>
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
@@ -136,6 +136,7 @@
 function planProduction() {
   return {
       recipeId: {{ recipe.id }},
+      recipeNeedsContainers: {{ 'true' if recipe.requires_containers else 'false' }},
       baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
       unit: '{{ recipe.predicted_yield_unit }}',
       allowedContainers: [],
@@ -180,7 +181,10 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
+      if (this.recipeNeedsContainers) {
+        return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
+      }
+      return this.stockChecked && this.stockCheckPassed;
     },
 
     fetchContainerPlan() {
