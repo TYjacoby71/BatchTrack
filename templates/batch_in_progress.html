@@ -174,8 +174,8 @@
                     <td>{{ container.container.name }} (Container)</td>
                     <td>{{ container.quantity_used }}</td>
                     <td>count</td>
-                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
-                    <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
+                    <td>${{ "%.2f"|format(container.cost_each or 0.0) }}</td>
+                    <td>${{ "%.2f"|format(container.quantity_used * (container.cost_each or 0.0)) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
