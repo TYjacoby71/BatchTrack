@@ -41,6 +41,8 @@ def delete_inventory(id):
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_ingredient(id):
+    from utils.unit_utils import get_global_unit_list
+    
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
@@ -53,7 +55,7 @@ def edit_ingredient(id):
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_ingredient.html', item=item)
+    return render_template('edit_ingredient.html', item=item, get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
 @login_required
