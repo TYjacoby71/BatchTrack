@@ -289,12 +289,12 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Create credit entries for ingredients
+        # Create credit entries using batch ingredients
         for batch_ing in batch.ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Convert from batch unit to inventory unit
+                    # Convert from batch unit to inventory unit using UUCS
                     conversion_result = ConversionEngine.convert_units(
                         batch_ing.amount_used,
                         batch_ing.unit,
@@ -303,12 +303,17 @@ def cancel_batch(batch_id):
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
                     )
                     
-                    if isinstance(conversion_result, dict) and conversion_result.get('conversion_type') != 'error':
-                        ingredient.quantity += conversion_result['converted_value']
-                        db.session.add(ingredient)
-                    else:
+                    if conversion_result['conversion_type'] == 'error':
                         flash(f"Error converting units for {ingredient.name}", "error")
+                        continue
+                        
+                    # Credit the converted amount back to inventory
+                    ingredient.quantity += conversion_result['converted_value']
+                    db.session.add(ingredient)
+                    
+                    flash(f"Credited {conversion_result['converted_value']} {ingredient.unit} of {ingredient.name}", "success")
                 except Exception as e:
+                    db.session.rollback()
                     flash(f"Error crediting {ingredient.name}: {str(e)}", "error")
                     continue
 
