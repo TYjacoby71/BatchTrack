@@ -112,27 +112,31 @@ def manage_mappings():
         from_u = Unit.query.filter_by(name=from_unit).first()
         to_u = Unit.query.filter_by(name=to_unit).first()
         
+        # Create units if they don't exist
         if not from_u:
-            # For bucket, we know 1 bucket = 1 lb = 453.592g
-            is_bucket = from_unit.lower() == 'bucket'
+            # Get the base unit from the target unit if it exists
+            base_unit = to_u.base_unit if to_u else 'g'
+            unit_type = to_u.type if to_u else 'weight'
+            
             from_u = Unit(
                 name=from_unit,
-                type='weight',
-                base_unit='g',
-                multiplier_to_base=453.592,  # Same as pound since 1 bucket = 1 lb
+                type=unit_type,
+                base_unit=base_unit,
+                multiplier_to_base=multiplier,  # Initial multiplier from mapping
                 is_custom=True
             )
             db.session.add(from_u)
-            
-            # If this is a bucket, automatically create the lb mapping
-            if is_bucket:
-                bucket_to_lb = CustomUnitMapping(
-                    user_id=current_user.id,
-                    from_unit='bucket',
-                    to_unit='lb',
-                    multiplier=1.0  # 1 bucket = 1 lb
-                )
-                db.session.add(bucket_to_lb)
+
+        if not to_u:
+            to_u = Unit(
+                name=to_unit,
+                type=from_u.type,
+                base_unit=from_u.base_unit,
+                multiplier_to_base=1.0,  # Default multiplier
+                is_custom=True
+            )
+            db.session.add(to_u)
+            db.session.flush()  # Ensure IDs are generated
             
         # Create the custom mapping
         mapping = CustomUnitMapping(
@@ -143,14 +147,15 @@ def manage_mappings():
         )
         db.session.add(mapping)
 
-        # Update the unit's base conversion if needed
-        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
-        
-        # If mapping to a base unit, update the multiplier
-        if to_unit_obj and to_unit_obj.base_unit == to_unit_obj.name:
-            from_unit_obj.multiplier_to_base = multiplier
-            db.session.add(from_unit_obj)
+        # Update the from_unit's base conversion based on the mapping
+        if to_u.base_unit == to_u.name:
+            # Direct mapping to base unit
+            from_u.multiplier_to_base = multiplier
+        else:
+            # Calculate through the target unit's base conversion
+            from_u.multiplier_to_base = multiplier * to_u.multiplier_to_base
+            
+        db.session.add(from_u)
 
         db.session.commit()
 
