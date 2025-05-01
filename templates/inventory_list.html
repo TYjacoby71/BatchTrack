@@ -77,7 +77,7 @@
           <td>{{ item.unit }}</td>
           <td>{{ item.quantity }}</td>
           <td>{{ item.category.name if item.category else 'N/A' }}</td>
-          <td>{{ "%.3f"|format(item.category.default_density) if item.category else 'N/A' }}</td>
+          <td>{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
