@@ -1,69 +1,70 @@
-    from models import db, Recipe, InventoryItem
-    from services.unit_conversion import ConversionEngine
 
-    def universal_stock_check(recipe, scale=1.0, flex_mode=False):
-        """Universal Stock Check Service (USCS) - Ingredients Only"""
-        results = []
-        all_ok = True
+from models import db, Recipe, InventoryItem
+from services.unit_conversion import ConversionEngine
 
-        # Check each ingredient in the recipe
-        for recipe_ingredient in recipe.recipe_ingredients:
-            ingredient = recipe_ingredient.inventory_item
-            needed_amount = recipe_ingredient.amount * scale
+def universal_stock_check(recipe, scale=1.0, flex_mode=False):
+    """Universal Stock Check Service (USCS) - Ingredients Only"""
+    results = []
+    all_ok = True
 
-            # Get current inventory details
-            available = ingredient.quantity or 0
-            stock_unit = ingredient.unit
-            recipe_unit = recipe_ingredient.unit
-            density = ingredient.category.default_density if ingredient.category else 1.0
+    # Check each ingredient in the recipe
+    for recipe_ingredient in recipe.recipe_ingredients:
+        ingredient = recipe_ingredient.inventory_item
+        needed_amount = recipe_ingredient.amount * scale
 
-            try:
-                # Convert available stock to recipe unit using UUCS
-                available_converted = ConversionEngine.convert_units(
-                    available,
-                    stock_unit,
-                    recipe_unit,
-                    ingredient_id=ingredient.id,
-                    density=density
-                )
+        # Get current inventory details
+        available = ingredient.quantity or 0
+        stock_unit = ingredient.unit
+        recipe_unit = recipe_ingredient.unit
+        density = ingredient.category.default_density if ingredient.category else 1.0
 
-                # Determine status
-                if available_converted >= needed_amount:
-                    status = 'OK'
-                elif available_converted >= needed_amount * 0.5:
-                    status = 'LOW'
-                    all_ok = False
-                else:
-                    status = 'NEEDED'
-                    all_ok = False
+        try:
+            # Convert available stock to recipe unit using UUCS
+            available_converted = ConversionEngine.convert_units(
+                available,
+                stock_unit,
+                recipe_unit,
+                ingredient_id=ingredient.id,
+                density=density
+            )
 
-                # Append result for this ingredient
-                results.append({
-                    'type': 'ingredient',
-                    'name': ingredient.name,
-                    'needed': needed_amount,
-                    'needed_unit': recipe_unit,
-                    'available': available_converted,
-                    'available_unit': recipe_unit,
-                    'raw_stock': available,
-                    'stock_unit': stock_unit,
-                    'status': status
-                })
-
-            except Exception as e:
-                results.append({
-                    'type': 'ingredient',
-                    'name': ingredient.name,
-                    'needed': needed_amount,
-                    'needed_unit': recipe_unit,
-                    'available': 0,
-                    'available_unit': recipe_unit,
-                    'status': 'ERROR',
-                    'error': str(e)
-                })
+            # Determine status
+            if available_converted >= needed_amount:
+                status = 'OK'
+            elif available_converted >= needed_amount * 0.5:
+                status = 'LOW'
+                all_ok = False
+            else:
+                status = 'NEEDED'
                 all_ok = False
 
-        return {
-            'stock_check': results,
-            'all_ok': all_ok
-        }
+            # Append result for this ingredient
+            results.append({
+                'type': 'ingredient',
+                'name': ingredient.name,
+                'needed': needed_amount,
+                'needed_unit': recipe_unit,
+                'available': available_converted,
+                'available_unit': recipe_unit,
+                'raw_stock': available,
+                'stock_unit': stock_unit,
+                'status': status
+            })
+
+        except Exception as e:
+            results.append({
+                'type': 'ingredient',
+                'name': ingredient.name,
+                'needed': needed_amount,
+                'needed_unit': recipe_unit,
+                'available': 0,
+                'available_unit': recipe_unit,
+                'status': 'ERROR',
+                'error': str(e)
+            })
+            all_ok = False
+
+    return {
+        'stock_check': results,
+        'all_ok': all_ok
+    }
