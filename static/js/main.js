@@ -316,18 +316,18 @@ function saveBatch() {
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredient_id"]').value),
-            amount: parseFloat(row.querySelector('input[name="amount"]').value),
-            unit: row.querySelector('select[name="unit"]').value
+            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
+            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
+            unit: row.querySelector('select[name="units[]"]').value
         })),
         containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="container_id"]').value),
-            qty: parseInt(row.querySelector('input[name="quantity"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="cost_each"]').value) || 0
+            id: parseInt(row.querySelector('select[name="containers[]"]').value),
+            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
+            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
         })),
         timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[name="timer_name"]').value,
-            duration_seconds: parseInt(row.querySelector('input[name="duration"]').value)
+            name: row.querySelector('input[name="timers[]"]').value,
+            duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
         }))
     };
 
