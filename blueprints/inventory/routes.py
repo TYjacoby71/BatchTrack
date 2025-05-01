@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, InventoryItem, Unit
@@ -12,7 +13,7 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
-
+    
     item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
     db.session.add(item)
     db.session.commit()
@@ -41,12 +42,10 @@ def delete_inventory(id):
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_ingredient(id):
-    from utils.unit_utils import get_global_unit_list
-    
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
-
+    
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
@@ -55,7 +54,7 @@ def edit_ingredient(id):
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_ingredient.html', item=item, get_global_unit_list=get_global_unit_list)
+    return render_template('edit_ingredient.html', item=item)
 
 @inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -63,7 +62,7 @@ def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'container':
         abort(404)
-
+    
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
