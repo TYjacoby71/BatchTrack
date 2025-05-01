@@ -134,6 +134,7 @@ def manage_mappings():
                 )
                 db.session.add(bucket_to_lb)
             
+        # Create the custom mapping
         mapping = CustomUnitMapping(
             user_id=current_user.id,
             from_unit=from_unit,
@@ -141,6 +142,16 @@ def manage_mappings():
             multiplier=multiplier
         )
         db.session.add(mapping)
+
+        # Update the unit's base conversion if needed
+        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+        
+        # If mapping to a base unit, update the multiplier
+        if to_unit_obj and to_unit_obj.base_unit == to_unit_obj.name:
+            from_unit_obj.multiplier_to_base = multiplier
+            db.session.add(from_unit_obj)
+
         db.session.commit()
 
         if request.is_json:
