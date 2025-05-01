@@ -412,11 +412,14 @@ function updateStockCheckTable(data) {
 // Batch save handler
 function saveBatch(batchId) {
     const form = document.getElementById('batchForm');
-    const formData = new FormData(form);
+    if (!form) {
+        console.error('Batch form not found');
+        return;
+    }
 
     const data = {
-        notes: formData.get('notes'),
-        tags: formData.get('tags'),
+        notes: form.querySelector('[name="notes"]')?.value || '',
+        tags: form.querySelector('[name="tags"]')?.value || '',
         yield_amount: formData.get('yield_amount'),
         yield_unit: formData.get('yield_unit'),
         final_quantity: formData.get('final_quantity'),
