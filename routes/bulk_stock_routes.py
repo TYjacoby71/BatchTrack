@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
 from models import db, Recipe, InventoryItem
-from stock_check_utils import check_stock_for_recipe
+from services.stock_check import universal_stock_check
 from services.unit_conversion import ConversionEngine
 from sqlalchemy.exc import SQLAlchemyError
 import io
@@ -40,7 +40,8 @@ def bulk_stock_check():
                 recipe = Recipe.query.get(int(rid))
                 if not recipe:
                     continue
-                results, _ = check_stock_for_recipe(recipe, scale)
+                result = universal_stock_check(recipe, scale)
+results = result['stock_check']
 
                 for row in results:
                     name = row['name']
