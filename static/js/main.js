@@ -414,29 +414,41 @@ document.addEventListener('DOMContentLoaded', function() {
       const tableBody = document.getElementById('densityTableBody');
       const searchInput = document.getElementById('densitySearch');
 
-      function renderDensityTable(items) {
-        tableBody.innerHTML = items.map(item => `
-          <tr>
-            <td>${item.name}</td>
-            <td>${item.density_g_per_ml}</td>
-            <td>${item.category || ''}</td>
-            <td>
-              <button class="btn btn-sm btn-primary" onclick="useDensity(${item.density_g_per_ml})">
-                Use
-              </button>
-            </td>
-          </tr>
-        `).join('');
+      function renderDensityTable(data) {
+        const rows = [];
+        for (const [category, items] of Object.entries(data)) {
+          for (const [name, density] of Object.entries(items)) {
+            rows.push(`
+              <tr>
+                <td>${name}</td>
+                <td>${density}</td>
+                <td>${category}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="useDensity(${density})">
+                    Use
+                  </button>
+                </td>
+              </tr>
+            `);
+          }
+        }
+        tableBody.innerHTML = rows.join('');
       }
 
-      renderDensityTable(data.common_densities);
+      renderDensityTable(data);
 
       searchInput?.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        const filtered = data.common_densities.filter(item => 
-          item.name.toLowerCase().includes(searchTerm) ||
-          (item.category && item.category.toLowerCase().includes(searchTerm))
-        );
+        const filtered = {};
+        for (const [category, items] of Object.entries(data)) {
+          filtered[category] = {};
+          for (const [name, density] of Object.entries(items)) {
+            if (name.toLowerCase().includes(searchTerm) || 
+                category.toLowerCase().includes(searchTerm)) {
+              filtered[category][name] = density;
+            }
+          }
+        }
         renderDensityTable(filtered);
       });
 
