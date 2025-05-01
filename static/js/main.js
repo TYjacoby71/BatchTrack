@@ -310,13 +310,9 @@ function saveBatch() {
         return;
     }
 
-    const outputType = form.querySelector('select[name="output_type"]')?.value;
     const data = {
         notes: form.querySelector('textarea[name="notes"]')?.value || '',
         tags: form.querySelector('input[name="tags"]')?.value || '',
-        output_type: outputType,
-        product_id: outputType === 'product' ? parseInt(form.querySelector('select[name="product_id"]')?.value) : null,
-        variant_id: outputType === 'product' ? form.querySelector('input[name="variant_label"]')?.value : '',
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
@@ -335,15 +331,13 @@ function saveBatch() {
         }))
     };
 
+    const csrfToken = form.querySelector('input[name="csrf_token"]').value;
+
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-        },
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify(data)
     })
