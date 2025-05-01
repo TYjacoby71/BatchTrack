@@ -180,6 +180,7 @@ class InventoryItem(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
     storage_unit = db.Column(db.String(50), default="")  # e.g., oz, ml, count
+    density = db.Column(db.Float, nullable=True)  # Per-item density override
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 

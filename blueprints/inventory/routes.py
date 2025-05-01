@@ -26,8 +26,10 @@ from utils.unit_utils import get_global_unit_list
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
+    units = Unit.query.all()
     return render_template('inventory_list.html', 
                          items=items,
+                         units=units,
                          get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/delete/<int:id>')
@@ -51,6 +53,7 @@ def edit_ingredient(id):
         item.quantity = float(request.form.get('quantity'))
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        item.density = float(request.form.get('density', 1.0))
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
