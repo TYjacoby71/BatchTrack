@@ -408,7 +408,7 @@ function saveBatch(event) {
 
 // Density Reference Functionality
 document.addEventListener('DOMContentLoaded', function() {
-  fetch('/conversion/density-reference')
+  fetch('/data/density_reference.json')
     .then(response => response.json())
     .then(data => {
       const tableBody = document.getElementById('densityTableBody');
