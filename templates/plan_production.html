@@ -80,7 +80,7 @@
   <h4>Check Ingredients</h4>
   <div class="mb-4">
     <div class="d-flex gap-2">
-      <button type="button" class="btn btn-warning" @click="checkStockOrWarn">Check Stock</button>
+      <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">Check Stock</button>
       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
     <div x-show="stockChecked" class="mt-3">
