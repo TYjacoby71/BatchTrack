@@ -328,9 +328,10 @@ def cancel_batch(batch_id):
                 db.session.add(bc.container)
 
         # Update batch status
-        batch.status = 'failed'  # Using failed instead of cancelled since ingredients were used
-        batch.failed_at = datetime.utcnow()
+        batch.status = 'cancelled'
+        batch.cancelled_at = datetime.utcnow()
         batch.status_reason = "Batch cancelled - ingredients credited back to inventory"
+        batch.inventory_credited = True
         db.session.add(batch)
 
         # Commit all changes
