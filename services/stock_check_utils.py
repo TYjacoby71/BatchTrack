@@ -41,6 +41,19 @@ def check_stock_for_recipe(recipe, scale=1.0):
             })
             all_ok = False
             continue
+</old_str>
+
+        if converted_amount is None:
+            report.append({
+                "ingredient": ingredient.name,
+                "recipe_unit": ingredient.unit,
+                "original_amount": ingredient.amount,
+                "available": inventory_item.quantity,
+                "unit": inventory_item.unit,
+                "status": "UNIT_MISMATCH"
+            })
+            all_ok = False
+            continue
 
         if converted_amount >= needed_amount:
             status = "OK"
