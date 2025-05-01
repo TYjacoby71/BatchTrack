@@ -39,4 +39,34 @@ checkStock() {
       link.href = URL.createObjectURL(blob);
       link.download = 'stock_check_report.csv';
       link.click();
+    },
+
+    async startBatch() {
+      const recipeId = document.getElementById('recipeSelect').value;
+      const scale = document.getElementById('scaleInput').value;
+      const notes = document.getElementById('batchNotes').value;
+      const token = document.querySelector('input[name=csrf_token]').value;
+
+      try {
+        const response = await fetch('/batches/start_batch', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token
+          },
+          body: JSON.stringify({ 
+            recipe_id: recipeId, 
+            scale: parseFloat(scale),
+            notes: notes
+          })
+        });
+        //Further handling of the response could be added here.  For example:
+        //if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
+        //const data = await response.json();
+        //Handle the data from the server response.
+
+      } catch (error) {
+        console.error('Error starting batch:', error);
+        //Add error handling as needed. For example, display an error message to the user.
+      }
     }
