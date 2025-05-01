@@ -82,10 +82,10 @@ def manage_mappings():
             flash("Invalid CSRF token", "danger")
             return redirect(request.url)
 
-        from_unit = data.get('from_unit')
-        to_unit = data.get('to_unit')
+        from_unit = request.form.get('from_unit')
+        to_unit = request.form.get('to_unit')
         try:
-            multiplier = float(data.get('multiplier', 0))
+            multiplier = float(request.form.get('multiplier', 0))
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid multiplier value'}), 400
 
