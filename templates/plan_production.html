@@ -135,20 +135,19 @@
 <script>
 function planProduction() {
   return {
-    recipeId: {{ recipe.id }},
-    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
-    unit: '{{ recipe.predicted_yield_unit }}',
-    allowedContainers: [],
-    containersSelected: [],
-    autoFill: true,
-    scale: 1.0,
-    stockChecked: false,
-    stockCheckPassed: false,
-    stockResults: [],
-    containmentPercent: 0,
-    remainingToContain: 0,
-    flexMode: false,
-    containmentIssue: '',
+      recipeId: {{ recipe.id }},
+      baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+      unit: '{{ recipe.predicted_yield_unit }}',
+      allowedContainers: [],
+      containersSelected: [],
+      autoFill: true,
+      scale: 1.0,
+      stockChecked: false,
+      stockCheckPassed: false,
+      stockResults: [],
+      containmentPercent: 0,
+      remainingToContain: 0,
+      containmentIssue: '',
 
     init() {
       this.fetchContainerPlan();
@@ -181,7 +180,7 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      return (this.flexMode || this.containmentPercent >= 100) && this.stockChecked && this.stockCheckPassed;
+      return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
     },
 
     fetchContainerPlan() {
@@ -321,14 +320,7 @@ function planProduction() {
     },
 
     checkStockOrWarn() {
-      if (!this.flexMode && this.containmentPercent < 100 && this.containersSelected.length > 0) {
-        if (confirm(`You do not have enough containers selected, or there will be ${this.remainingToContain.toFixed(2)} ${this.unit} left over. Would you like to continue anyway?`)) {
-          this.flexMode = true;
-          this.checkStock();
-        }
-      } else {
-        this.checkStock();
-      }
+      this.checkStock();
     },
 
     checkStock() {
@@ -341,8 +333,7 @@ function planProduction() {
         },
         body: JSON.stringify({ 
           recipe_id: parseInt(this.recipeId), 
-          scale: parseFloat(this.scale),
-          flex_mode: this.flexMode
+          scale: parseFloat(this.scale)
         })
       })
         .then(res => res.json())
