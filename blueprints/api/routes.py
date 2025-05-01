@@ -56,3 +56,13 @@ def get_ingredient_density(id):
     elif ingredient.category:
         return jsonify({'density': ingredient.category.default_density})
     return jsonify({'density': 1.0})  # Default fallback
+
+@api_bp.route('/density-reference', methods=['GET'])
+def get_density_reference():
+    import json
+    import os
+    try:
+        with open('data/density_reference.json', 'r') as f:
+            return jsonify(json.load(f))
+    except FileNotFoundError:
+        return jsonify({"error": "Density reference data not found"}), 404
