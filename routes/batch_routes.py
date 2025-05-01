@@ -20,7 +20,7 @@ def start_batch():
     current_year = datetime.now().year
     year_batches = Batch.query.filter(
         Batch.recipe_id == recipe.id,
-        extract('year', Batch.timestamp) == current_year
+        extract('year', Batch.started_at) == current_year
     ).count()
 
     new_batch = Batch(
