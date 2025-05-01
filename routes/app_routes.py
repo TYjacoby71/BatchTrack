@@ -73,9 +73,36 @@ def check_stock():
         all_ok = result['all_ok']
         
         # Handle container validation
-        container_ids = data.get('container_ids', [])
-        if container_ids and isinstance(container_ids, list):
-            container_check, containers_ok = check_container_availability(container_ids, scale)
+        containers = data.get('containers', [])
+        if containers and isinstance(containers, list):
+            container_check = []
+            containers_ok = True
+            for container in containers:
+                container_id = container.get('id')
+                quantity = container.get('quantity', 0)
+                if not container_id or not quantity:
+                    continue
+                    
+                container_obj = Container.query.get(container_id)
+                if not container_obj:
+                    continue
+                    
+                available = container_obj.quantity or 0
+                if available >= quantity:
+                    status = 'OK'
+                else:
+                    status = 'NEEDED'
+                    containers_ok = False
+                    
+                container_check.append({
+                    'type': 'container',
+                    'name': container_obj.name,
+                    'needed': quantity,
+                    'available': available,
+                    'unit': 'count',
+                    'status': status
+                })
+                
             stock_check.extend(container_check)
             all_ok = all_ok and containers_ok
 
