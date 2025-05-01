@@ -196,11 +196,17 @@ function planProduction() {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
-            // Sort containers by capacity (largest first)
-            const availableContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
-            const selectedContainers = [];
+            // Get projected volume and calculate target container size with 5% buffer
+            const projected = this.baseYield * this.scale;
+            const targetSize = projected * 1.05; // Allow 5% overflow
 
-            // Fill with largest containers first
+            // Sort containers by how close they are to the target size
+            const availableContainers = [...this.allowedContainers]
+              .sort((a, b) => Math.abs(targetSize - a.storage_amount) - Math.abs(targetSize - b.storage_amount));
+            
+            const selectedContainers = [];
+            
+            // Use best-fitting containers
             for (const container of availableContainers) {
               if (remainingVolume <= 0) break;
 
