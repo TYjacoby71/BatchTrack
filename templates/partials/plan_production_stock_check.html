@@ -5,7 +5,21 @@
     </div>
     <div class="card-body">
       <div x-show="stockChecked">
-        <table class="table">
+        <!-- Status Alert -->
+        <div class="alert" :class="{
+          'alert-success': stockCheckPassed,
+          'alert-warning': !stockCheckPassed
+        }">
+          <template x-if="stockCheckPassed">
+            <span>✅ All ingredients are available!</span>
+          </template>
+          <template x-if="!stockCheckPassed">
+            <span>⚠ Some ingredients are low or missing. Adjust inventory before proceeding.</span>
+          </template>
+        </div>
+
+        <!-- Table -->
+        <table class="table table-bordered table-sm">
           <thead>
             <tr>
               <th>Item</th>
@@ -15,11 +29,11 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="item in stockResults.ingredients" :key="item.ingredient">
+            <template x-for="item in stockResults.stock_check" :key="item.name">
               <tr>
-                <td x-text="item.ingredient"></td>
-                <td x-text="item.needed + ' ' + item.recipe_unit"></td>
-                <td x-text="item.available + ' ' + item.inventory_unit"></td>
+                <td x-text="item.name"></td>
+                <td x-text="item.needed + ' ' + item.needed_unit"></td>
+                <td x-text="item.available + ' ' + item.available_unit"></td>
                 <td :class="{
                   'text-success': item.status === 'OK',
                   'text-warning': item.status === 'LOW',
