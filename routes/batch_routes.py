@@ -235,6 +235,7 @@ def finish_batch(batch_id, force=False):
                 else:
                     ingredient.quantity += batch.final_quantity
                 db.session.add(ingredient)
+                batch.inventory_credited = True
             elif batch.batch_type == 'product':
                 # Credit to product inventory
                 product_inv = ProductInventory(
@@ -245,6 +246,11 @@ def finish_batch(batch_id, force=False):
                     batch_id=batch.id
                 )
                 db.session.add(product_inv)
+                batch.inventory_credited = True
+            
+            # Update batch completion status
+            batch.status = 'completed'
+            batch.completed_at = datetime.utcnow()
 
         # Timer check unless forced
         if not force and action == "finish":
