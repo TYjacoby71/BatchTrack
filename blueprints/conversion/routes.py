@@ -76,21 +76,16 @@ def manage_units():
 def manage_mappings():
     if request.method == 'POST':
         try:
-            if request.is_json:
-                data = request.get_json()
-                csrf_token = data.get('csrf_token')
-            else:
-                data = request.form
-                csrf_token = data.get('csrf_token')
-
+            csrf_token = request.form.get("csrf_token")
             validate_csrf(csrf_token)
         except ValidationError:
-            return jsonify({'error': 'Invalid CSRF token'}), 400
+            flash("Invalid CSRF token", "danger")
+            return redirect(request.url)
 
-        from_unit = data.get('from_unit')
-        to_unit = data.get('to_unit')
+        from_unit = request.form.get('from_unit')
+        to_unit = request.form.get('to_unit')
         try:
-            multiplier = float(data.get('multiplier', 0))
+            multiplier = float(request.form.get('multiplier', 0))
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid multiplier value'}), 400
 
