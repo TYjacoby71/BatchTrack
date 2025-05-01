@@ -206,31 +206,45 @@ function planProduction() {
           if (this.autoFill) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
-            const targetSize = projected * 1.05; // Allow 5% overflow
 
-            // Sort containers by how close they are to the target size
-            const availableContainers = [...this.allowedContainers]
-              .sort((a, b) => Math.abs(targetSize - a.storage_amount) - Math.abs(targetSize - b.storage_amount));
-            
+            // First try to fill with exact matches
+            const availableContainers = [...this.allowedContainers].sort((a, b) => a.storage_amount - b.storage_amount);
             const selectedContainers = [];
-            
-            // Use best-fitting containers
-            for (const container of availableContainers) {
-              if (remainingVolume <= 0) break;
 
-              const containerCapacity = container.storage_amount;
-              const neededQuantity = Math.ceil(remainingVolume / containerCapacity);
-              const availableQuantity = Math.min(neededQuantity, container.stock_qty || 0);
+            // Fill with best-fitting containers starting with smallest
+            while (remainingVolume > 0 && availableContainers.length > 0) {
+              // Find best container for remaining volume
+              const bestContainer = availableContainers.find(c => 
+                c.storage_amount <= remainingVolume && c.stock_qty > 0
+              ) || availableContainers[0];
+
+              if (!bestContainer) break;
+
+              const containerCapacity = bestContainer.storage_amount;
+              const maxQuantity = Math.floor(remainingVolume / containerCapacity);
+              const availableQuantity = Math.min(maxQuantity, bestContainer.stock_qty || 0);
 
               if (availableQuantity > 0) {
                 selectedContainers.push({
-                  id: container.id,
+                  id: bestContainer.id,
                   quantity: availableQuantity,
-                  name: container.name,
+                  name: bestContainer.name,
                   capacity: containerCapacity,
-                  unit: container.storage_unit
+                  unit: bestContainer.storage_unit
                 });
                 remainingVolume -= (availableQuantity * containerCapacity);
+              }
+
+              // Handle any remaining volume with one more container if needed
+              if (remainingVolume > 0 && remainingVolume < containerCapacity) {
+                selectedContainers.push({
+                  id: bestContainer.id,
+                  quantity: 1,
+                  name: bestContainer.name,
+                  capacity: containerCapacity,
+                  unit: bestContainer.storage_unit
+                });
+                remainingVolume = 0;
               }
             }
 
