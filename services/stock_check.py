@@ -20,13 +20,14 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
         try:
             # Convert available stock to recipe unit using UUCS
-            available_converted = ConversionEngine.convert_units(
+            conversion_result = ConversionEngine.convert_units(
                 available,
                 stock_unit,
                 recipe_unit,
                 ingredient_id=ingredient.id,
                 density=density
             )
+            available_converted = conversion_result['converted_value'] if isinstance(conversion_result, dict) else conversion_result
 
             # Determine status
             if available_converted >= needed_amount:
