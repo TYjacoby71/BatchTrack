@@ -29,8 +29,42 @@
 
   <div class="mb-3">
     <label class="form-label">Density (g/ml)</label>
-    <input type="number" step="0.001" name="density" class="form-control" value="{{ item.density or (item.category.default_density if item.category else 1.0) }}">
-    <small class="text-muted">Used for volume ↔ weight conversions. Default from category: {{ item.category.default_density if item.category else 1.0 }} g/ml</small>
+    <div class="input-group">
+      <input type="number" step="0.001" name="density" id="density" class="form-control" value="{{ item.density or 1.0 }}">
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#densityModal">
+        Reference
+      </button>
+    </div>
+    <small class="text-muted">Used for volume ↔ weight conversions (e.g. ml to g)</small>
+  </div>
+
+  <!-- Density Reference Modal -->
+  <div class="modal fade" id="densityModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Common Ingredient Densities</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="densitySearch" class="form-control mb-3" placeholder="Search ingredients...">
+          <div class="table-responsive">
+            <table class="table" id="densityTable">
+              <thead>
+                <tr>
+                  <th>Ingredient</th>
+                  <th>Density (g/ml)</th>
+                  <th>Category</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="densityTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <button type="submit" class="btn btn-primary">Save Changes</button>
