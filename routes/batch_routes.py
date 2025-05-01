@@ -288,19 +288,34 @@ def cancel_batch(batch_id):
         flash("Only in-progress batches can be cancelled.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
-    # Restore ingredients
-    for bi in batch.ingredients:
-        ingredient = bi.ingredient
-        if ingredient:
-            ingredient.quantity += bi.amount_used
-            db.session.add(ingredient)
+    try:
+        # Restore ingredients with proper unit conversion
+        for bi in batch.ingredients:
+            ingredient = bi.ingredient
+            if ingredient:
+                try:
+                    conversion_result = ConversionEngine.convert_units(
+                        bi.amount_used,
+                        bi.unit,
+                        ingredient.unit,
+                        ingredient_id=ingredient.id,
+                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                    )
+                    ingredient.quantity += conversion_result['converted_value']
+                    db.session.add(ingredient)
+                except Exception as e:
+                    flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
 
-    # Restore containers
-    for bc in batch.containers:
-        container = bc.container
-        if container:
-            container.quantity += bc.quantity_used
-            db.session.add(container)
+        # Restore containers
+        for bc in batch.containers:
+            container = bc.container
+            if container:
+                container.quantity += bc.quantity_used
+                db.session.add(container)
+
+        batch.status = 'cancelled'
+        batch.cancelled_at = datetime.utcnow()
+        db.session.add(batch)
 
     batch.status = 'cancelled'
     db.session.add(batch)
