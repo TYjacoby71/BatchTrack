@@ -335,15 +335,20 @@ def cancel_batch(batch_id):
                 print(f"Processing ingredient {ingredient.name}: {batch_ing.amount_used} {batch_ing.unit} -> {ingredient.unit}")
                 try:
                     # Convert from batch unit to inventory unit
+                    density = ingredient.density
+                    if not density and ingredient.category:
+                        density = ingredient.category.default_density
+                    print(f"Using density: {density} for {ingredient.name}")
+                    
                     conversion_result = ConversionEngine.convert_units(
                         batch_ing.amount_used,
                         batch_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
-                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                        density=density
                     )
                     
-                    print(f"Conversion result: {conversion_result}")
+                    print(f"Conversion result for {ingredient.name}: {conversion_result}")
                     if not conversion_result:
                         raise ValueError(f"Conversion returned None for {ingredient.name}")
                 except Exception as e:
