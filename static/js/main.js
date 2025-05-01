@@ -302,6 +302,28 @@ function updateStockCheckTable(data) {
 }
 
 // Batch save handler
+function finishBatch(action) {
+    const form = document.getElementById('batchForm');
+    const formData = new FormData(form);
+    formData.append('action', action);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': form.querySelector('input[name="csrf_token"]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        window.location.href = '/batches/';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error finishing batch: ' + error.message);
+    });
+}
+
 function saveBatch(event) {
     if (event) {
         event.preventDefault();
