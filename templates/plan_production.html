@@ -184,8 +184,9 @@ function planProduction() {
     },
 
     fetchContainerPlan() {
-      if (!this.scale || this.scale <= 0) return;
-      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
+      const scale = parseFloat(this.scale);
+      if (isNaN(scale) || scale <= 0) return;
+      fetch(`/api/available-containers/${this.recipeId}?scale=${scale}`)
         .then(res => res.json())
         .then(data => {
           this.allowedContainers = data.available || [];
