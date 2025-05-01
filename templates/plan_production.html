@@ -213,19 +213,27 @@ function planProduction() {
 
             // Fill with largest efficient containers first (like making change)
             while (remainingVolume > 0 && availableContainers.length > 0) {
-              // Find largest container that doesn't waste more than 5% capacity
+              // Only use a container if it would be at least 95% utilized
               const bestContainer = availableContainers.find(c => {
                 if (c.stock_qty <= 0) return false;
                 const containerCapacity = c.storage_amount;
-                const wouldWaste = containerCapacity - (remainingVolume % containerCapacity);
-                const wastePercent = (wouldWaste / containerCapacity) * 100;
-                return wastePercent <= 5 || containerCapacity <= remainingVolume;
+                // Only use this container if we need at least 95% of its capacity
+                return remainingVolume >= (containerCapacity * 0.95);
               });
 
               if (!bestContainer) {
-                // If no efficient container found, move to next smaller size
-                availableContainers.shift();
-                continue;
+                // If no efficient large container found, use the smallest available
+                const smallestContainer = availableContainers[availableContainers.length - 1];
+                if (smallestContainer && smallestContainer.stock_qty > 0) {
+                  return [{ 
+                    id: smallestContainer.id,
+                    quantity: Math.ceil(remainingVolume / smallestContainer.storage_amount),
+                    name: smallestContainer.name,
+                    capacity: smallestContainer.storage_amount,
+                    unit: smallestContainer.storage_unit
+                  }];
+                }
+                break;
               }
 
               const containerCapacity = bestContainer.storage_amount;
