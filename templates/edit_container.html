@@ -17,7 +17,9 @@
 
   <div class="mb-3">
     <label class="form-label">Storage Unit</label>
-    <input type="text" name="storage_unit" class="form-control" value="{{ item.storage_unit }}" readonly>
+    <select name="storage_unit" class="form-select" data-unit-select>
+      <option value="{{ item.storage_unit }}" selected>{{ item.storage_unit }}</option>
+    </select>
   </div>
 
   <div class="mb-3">
