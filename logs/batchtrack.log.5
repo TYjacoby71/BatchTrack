@@ -1,20 +1,6 @@
-2025-05-01 05:40:41,258 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:41:14,223 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:42:08,434 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:42:50,069 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:47:07,362 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:49:26,257 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:51:14,337 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:51:56,800 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:53:13,823 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:54:27,203 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 05:56:36,925 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:01:48,558 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:01:53,504 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:04:18,040 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:05:43,451 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:07:48,943 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:07:55,358 ERROR: Exception on /inventory/edit/ingredient/2 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-01 07:05:21,881 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:06:23,733 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:09:40,334 ERROR: Exception on /batches/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -31,9 +17,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 57, in edit_ingredient
-    return render_template('edit_ingredient.html', item=item)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/routes/batch_routes.py", line 115, in list_batches
+    return render_template('batches_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -44,31 +30,26 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 3, in top-level template code
-    {% from 'macros/forms.html' import csrf_form %}
+  File "/home/runner/workspace/templates/batches_list.html", line 2, in top-level template code
+    {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 7, in block 'content'
-    {% call csrf_form() %}
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/runtime.py", line 784, in _invoke
-    rv = self._func(*arguments)
-         ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/macros/forms.html", line 5, in template
-    {{ caller() }}
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/runtime.py", line 784, in _invoke
-    rv = self._func(*arguments)
-         ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 21, in template
-    {% for unit in get_global_unit_list() %}
+  File "/home/runner/workspace/templates/batches_list.html", line 155, in block 'content'
+    <p class="card-text text-muted">{{ batch.timestamp.strftime("%Y-%m-%d") }}</p>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/utils.py", line 92, in from_obj
-    if hasattr(obj, "jinja_pass_arg"):
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'get_global_unit_list' is undefined
-2025-05-01 06:08:31,296 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:08:38,621 ERROR: Exception on /inventory/edit/ingredient/2 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'models.Batch object' has no attribute 'timestamp'
+2025-05-01 07:10:21,697 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:12:16,014 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:13:14,636 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:15:02,350 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:17:27,844 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:20:40,908 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:20:44,358 ERROR: Exception on /batches/in-progress/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -85,45 +66,12 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 56, in edit_ingredient
-    return render_template('edit_ingredient.html', item=item)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 3, in top-level template code
-    {% from 'macros/forms.html' import csrf_form %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 7, in block 'content'
-    {% call csrf_form() %}
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/runtime.py", line 784, in _invoke
-    rv = self._func(*arguments)
-         ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/macros/forms.html", line 5, in template
-    {{ caller() }}
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/runtime.py", line 784, in _invoke
-    rv = self._func(*arguments)
-         ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/edit_ingredient.html", line 21, in template
-    {% for unit in get_global_unit_list() %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/utils.py", line 92, in from_obj
-    if hasattr(obj, "jinja_pass_arg"):
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'get_global_unit_list' is undefined
-2025-05-01 06:09:07,875 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:15:08,212 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:15:31,316 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:15:38,183 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:17:09,463 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-01 06:20:03,497 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+  File "/home/runner/workspace/routes/batch_routes.py", line 159, in view_batch_in_progress
+    ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
+                  ^^^^^^^^^^^^^^^
+NameError: name 'BatchIngredient' is not defined
+2025-05-01 07:21:14,507 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:22:10,613 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:23:06,184 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:25:53,005 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-01 07:28:31,554 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
