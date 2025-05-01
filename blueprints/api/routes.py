@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+import json
+import os
 from models import Recipe
 from services.stock_check import universal_stock_check
 
@@ -15,6 +17,17 @@ def check_stock():
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
         
+
+@api_bp.route('/density-reference', methods=['GET'])
+def get_density_reference():
+    json_path = os.path.join(current_app.root_path, 'data', 'density_reference.json')
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({"error": "Density reference data not found"}), 404
+
         # Ensure response matches expected structure
         if 'stock_check' not in result:
             result = {
