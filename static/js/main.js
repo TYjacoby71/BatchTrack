@@ -324,6 +324,25 @@ function finishBatch(action) {
     });
 }
 
+function cancelBatch() {
+    if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/batches/cancel/${batchId}`;
+        
+        const csrf = document.querySelector('.csrf-token').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrf;
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
 function saveBatch(event) {
     if (event) {
         event.preventDefault();

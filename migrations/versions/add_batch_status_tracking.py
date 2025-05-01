@@ -1,17 +1,16 @@
-
 """add batch status tracking
 
-Revision ID: 28f420a8e591
-Revises: d3417cb6cf8c
+Revision ID: add_batch_status_tracking
+Revises: add_density_column
 Create Date: 2024-05-01 17:45:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic
-revision = '28f420a8e591'
-down_revision = 'd3417cb6cf8c'
-branch_labels = ('addstatuscolumns',)
+revision = 'add_batch_status_tracking'
+down_revision = 'add_density_column'
+branch_labels = None
 depends_on = None
 
 def upgrade():
