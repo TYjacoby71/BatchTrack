@@ -294,9 +294,20 @@ def cancel_batch(batch_id):
             ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Create credit entry in inventory
-                    ingredient.quantity += batch_ing.amount_used
-                    db.session.add(ingredient)
+                    # Convert from batch unit to inventory unit
+                    conversion_result = ConversionEngine.convert_units(
+                        batch_ing.amount_used,
+                        batch_ing.unit,
+                        ingredient.unit,
+                        ingredient_id=ingredient.id,
+                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                    )
+                    
+                    if isinstance(conversion_result, dict) and conversion_result.get('conversion_type') != 'error':
+                        ingredient.quantity += conversion_result['converted_value']
+                        db.session.add(ingredient)
+                    else:
+                        flash(f"Error converting units for {ingredient.name}", "error")
                 except Exception as e:
                     flash(f"Error crediting {ingredient.name}: {str(e)}", "error")
                     continue
