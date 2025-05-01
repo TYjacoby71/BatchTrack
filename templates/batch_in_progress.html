@@ -22,7 +22,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data">
+<form method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
     <!-- Output Type Selection -->
     <div class="form-group">

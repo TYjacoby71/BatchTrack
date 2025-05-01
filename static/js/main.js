@@ -147,6 +147,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Reset form
         document.getElementById('unitName').value = '';
+
+function validateBatchForm() {
+    const type = document.getElementById('output_type').value;
+    if (type === 'product') {
+        const quantity = document.querySelector('[name="final_quantity"]').value;
+        const unit = document.querySelector('[name="output_unit"]').value;
+        if (!quantity || !unit) {
+            alert('Please fill in both quantity and unit for product output');
+            return false;
+        }
+    }
+    return true;
+}
+
         document.getElementById('unitType').selectedIndex = 0;
       })
       .catch(err => {
