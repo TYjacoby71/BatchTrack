@@ -106,7 +106,12 @@
                         <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                    <td class="conversion-warning text-center align-middle small">
+                        <!-- JS will inject conversion warning here -->
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
+                    </td>
                 </div>
                 {% endfor %}
             {% elif ingredient_prefill %}
@@ -124,7 +129,12 @@
                         <option value="{{ unit.name }}" {% if unit.name == unit %}selected{% endif %}>{{ unit.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" onclick="this.parentElement.remove()">Remove</button>
+                    <td class="conversion-warning text-center align-middle small">
+                        <!-- JS will inject conversion warning here -->
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
+                    </td>
                 </div>
                 {% endfor %}
             {% endif %}
@@ -225,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (containerSelect) {
                     // Get currently selected values
                     const selectedValues = Array.from(containerSelect.selectedOptions).map(opt => opt.value);
-                    
+
                     // Add new option
                     const option = new Option(
                         `${data.name} (${data.storage_amount} ${data.storage_unit})`,
@@ -234,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         false
                     );
                     containerSelect.add(option);
-                    
+
                     // Restore previous selections and select new option
                     selectedValues.push(data.id.toString());
                     selectedValues.forEach(value => {
@@ -271,7 +281,12 @@ function addIngredient(preselectId = null) {
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
-        <button type="button" onclick="this.parentElement.remove()">Remove</button>
+        <td class="conversion-warning text-center align-middle small">
+            <!-- JS will inject conversion warning here -->
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
+        </td>
     `;
     container.appendChild(entry);
     if (preselectId) {
