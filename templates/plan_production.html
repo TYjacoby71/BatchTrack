@@ -37,10 +37,8 @@
             @change="updateContainer(index)"
             @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
             <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers" :key="allowed.id">
-              <template x-if="getRemainingStock(allowed.id, index) > 0 || container.id == allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
-              </template>
+            <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
+              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
             </template>
           </select>
           <input type="number" min="1" class="form-control" 
@@ -328,6 +326,11 @@ function planProduction() {
     manualAddContainer() {
       if (this.autoFill) {
         alert('Please uncheck Auto-Fill to add containers manually.');
+        return;
+      }
+      const availableContainers = this.allowedContainers.filter(c => c.stock_qty > 0);
+      if (availableContainers.length === 0) {
+        alert('No containers available in stock.');
         return;
       }
       this.containersSelected.push({ id: '', name: '', capacity: 0, quantity: 1, unit: '' });
