@@ -159,10 +159,50 @@ function saveBatch() {
     const data = {
         notes: form.querySelector('[name="notes"]')?.value || '',
         tags: form.querySelector('[name="tags"]')?.value || '',
+        yield_amount: form.querySelector('[name="yield_amount"]')?.value,
+        yield_unit: form.querySelector('[name="yield_unit"]')?.value,
+        final_quantity: form.querySelector('[name="final_quantity"]')?.value,
+        output_unit: form.querySelector('[name="output_unit"]')?.value,
+        product_id: form.querySelector('[name="product_id"]')?.value,
+        variant_id: form.querySelector('[name="variant_id"]')?.value,
         ingredients: [],
         containers: [],
         timers: []
     };
+
+    // Collect ingredients
+    document.querySelectorAll('.ingredient-row').forEach(row => {
+        const ingId = row.querySelector('select').value;
+        const amount = row.querySelector('input[type="number"]').value;
+        const unit = row.querySelector('select[name*="unit"]').value;
+        data.ingredients.push({
+            id: ingId,
+            amount: amount,
+            unit: unit
+        });
+    });
+
+    // Collect containers
+    document.querySelectorAll('.container-row').forEach(row => {
+        const contId = row.querySelector('select').value;
+        const qty = row.querySelector('input[name*="qty"]').value;
+        const cost = row.querySelector('input[name*="cost"]').value;
+        data.containers.push({
+            id: contId,
+            qty: qty,
+            cost_each: cost
+        });
+    });
+
+    // Collect timers
+    document.querySelectorAll('.timer-row').forEach(row => {
+        const name = row.querySelector('input[name*="name"]').value;
+        const duration = row.querySelector('input[name*="duration"]').value;
+        data.timers.push({
+            name: name,
+            duration_seconds: duration
+        });
+    });
 
     // Collect ingredients
     document.querySelectorAll('.ingredient-row').forEach((row, index) => {
