@@ -289,14 +289,20 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Restore ingredients with proper unit conversion
-        for bi in batch.ingredients:
-            ingredient = bi.ingredient
+        # Get recipe ingredients to know original amounts
+        recipe = Recipe.query.get(batch.recipe_id)
+        
+        for recipe_ing in recipe.recipe_ingredients:
+            ingredient = recipe_ing.inventory_item
             if ingredient:
                 try:
+                    # Calculate amount to restore based on recipe and batch scale
+                    amount_to_restore = recipe_ing.amount * batch.scale
+                    
+                    # Convert back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
-                        bi.amount_used,
-                        bi.unit,
+                        amount_to_restore,
+                        recipe_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
@@ -317,11 +323,13 @@ def cancel_batch(batch_id):
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
         db.session.commit()
+
+        flash("Batch cancelled and inventory restored successfully.", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
-    flash("Batch cancelled and inventory restored.")
     return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/fail/<int:batch_id>', methods=['POST'])
