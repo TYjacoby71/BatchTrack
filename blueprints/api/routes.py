@@ -12,6 +12,7 @@ def check_stock():
         data = request.get_json()
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
+        flex_mode = data.get('flex_mode', False)
         
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale)
