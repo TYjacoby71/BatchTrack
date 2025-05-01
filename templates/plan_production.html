@@ -104,9 +104,9 @@
         <tbody>
           <template x-for="item in stockResults" :key="item.ingredient">
             <tr>
-              <td x-text="item.ingredient"></td>
-              <td x-text="`${item.needed} ${item.recipe_unit}`"></td>
-              <td x-text="`${item.available} ${item.inventory_unit}`"></td>
+              <td x-text="item.name"></td>
+              <td x-text="`${item.needed} ${item.unit}`"></td>
+              <td x-text="`${item.available} ${item.unit}`"></td>
               <td>
                 <span x-show="item.status === 'OK'" class="text-success">✅</span>
                 <span x-show="item.status === 'LOW'" class="text-warning">⚠️</span>
