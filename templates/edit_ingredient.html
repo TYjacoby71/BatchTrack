@@ -17,7 +17,9 @@
 
   <div class="mb-3">
     <label class="form-label">Unit</label>
-    <input type="text" name="unit" class="form-control" value="{{ item.unit }}" readonly>
+    <select name="unit" class="form-control" data-unit-select>
+      <option value="{{ item.unit }}" selected>{{ item.unit }}</option>
+    </select>
   </div>
 
   <div class="mb-3">
