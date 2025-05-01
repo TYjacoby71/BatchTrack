@@ -113,14 +113,26 @@ def manage_mappings():
         to_u = Unit.query.filter_by(name=to_unit).first()
         
         if not from_u:
+            # For bucket, we know 1 bucket = 1 lb = 453.592g
+            is_bucket = from_unit.lower() == 'bucket'
             from_u = Unit(
                 name=from_unit,
-                type='weight',  # Assuming weight for bucket
+                type='weight',
                 base_unit='g',
-                multiplier_to_base=453.592,  # Converting through pounds to grams
+                multiplier_to_base=453.592,  # Same as pound since 1 bucket = 1 lb
                 is_custom=True
             )
             db.session.add(from_u)
+            
+            # If this is a bucket, automatically create the lb mapping
+            if is_bucket:
+                bucket_to_lb = CustomUnitMapping(
+                    user_id=current_user.id,
+                    from_unit='bucket',
+                    to_unit='lb',
+                    multiplier=1.0  # 1 bucket = 1 lb
+                )
+                db.session.add(bucket_to_lb)
             
         mapping = CustomUnitMapping(
             user_id=current_user.id,
