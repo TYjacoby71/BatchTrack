@@ -98,7 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
