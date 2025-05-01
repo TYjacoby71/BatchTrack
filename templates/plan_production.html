@@ -207,18 +207,26 @@ function planProduction() {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
-            // First try to fill with exact matches
-            const availableContainers = [...this.allowedContainers].sort((a, b) => a.storage_amount - b.storage_amount);
+            // Sort containers by size (largest first)
+            const availableContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
             const selectedContainers = [];
 
-            // Fill with best-fitting containers starting with smallest
+            // Fill with largest efficient containers first (like making change)
             while (remainingVolume > 0 && availableContainers.length > 0) {
-              // Find best container for remaining volume
-              const bestContainer = availableContainers.find(c => 
-                c.storage_amount <= remainingVolume && c.stock_qty > 0
-              ) || availableContainers[0];
+              // Find largest container that doesn't waste more than 5% capacity
+              const bestContainer = availableContainers.find(c => {
+                if (c.stock_qty <= 0) return false;
+                const containerCapacity = c.storage_amount;
+                const wouldWaste = containerCapacity - (remainingVolume % containerCapacity);
+                const wastePercent = (wouldWaste / containerCapacity) * 100;
+                return wastePercent <= 5 || containerCapacity <= remainingVolume;
+              });
 
-              if (!bestContainer) break;
+              if (!bestContainer) {
+                // If no efficient container found, move to next smaller size
+                availableContainers.shift();
+                continue;
+              }
 
               const containerCapacity = bestContainer.storage_amount;
               const maxQuantity = Math.floor(remainingVolume / containerCapacity);
