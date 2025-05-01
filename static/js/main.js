@@ -310,16 +310,15 @@ function saveBatch() {
         return;
     }
 
-    const formData = new FormData(form);
     const data = {
-        notes: form.querySelector('[name="notes"]')?.value || '',
-        tags: form.querySelector('[name="tags"]')?.value || '',
-        yield_amount: form.querySelector('[name="yield_amount"]')?.value || 0,
-        yield_unit: form.querySelector('[name="yield_unit"]')?.value || '',
-        final_quantity: form.querySelector('[name="final_quantity"]')?.value || 0,
-        output_unit: form.querySelector('[name="output_unit"]')?.value || '',
-        product_id: form.querySelector('[name="product_id"]')?.value || null,
-        variant_id: form.querySelector('[name="variant_id"]')?.value || '',
+        notes: form.querySelector('textarea[name="notes"]')?.value || '',
+        tags: form.querySelector('input[name="tags"]')?.value || '',
+        yield_amount: form.querySelector('input[name="yield_amount"]')?.value || 0,
+        yield_unit: form.querySelector('select[name="yield_unit"]')?.value || '',
+        final_quantity: form.querySelector('input[name="final_quantity"]')?.value || 0,
+        output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
+        product_id: form.querySelector('select[name="product_id"]')?.value || null,
+        variant_id: form.querySelector('input[name="variant_id"]')?.value || '',
         ingredients: [],
         containers: [],
         timers: []
@@ -362,6 +361,11 @@ function saveBatch() {
     .then(response => response.json())
     .then(data => {
         if (data.message) {
+            // Keep form values after save
+            const notesField = form.querySelector('textarea[name="notes"]');
+            const tagsField = form.querySelector('input[name="tags"]');
+            if (notesField) notesField.value = data.notes || notesField.value;
+            if (tagsField) tagsField.value = data.tags || tagsField.value;
             alert('Batch saved successfully');
         }
     })
