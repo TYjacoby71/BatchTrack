@@ -108,6 +108,20 @@ def manage_mappings():
         to_unit = data.get('to_unit')
         multiplier = float(data.get('multiplier'))
 
+        # Verify both units exist
+        from_u = Unit.query.filter_by(name=from_unit).first()
+        to_u = Unit.query.filter_by(name=to_unit).first()
+        
+        if not from_u:
+            from_u = Unit(
+                name=from_unit,
+                type='weight',  # Assuming weight for bucket
+                base_unit='g',
+                multiplier_to_base=453.592,  # Converting through pounds to grams
+                is_custom=True
+            )
+            db.session.add(from_u)
+            
         mapping = CustomUnitMapping(
             user_id=current_user.id,
             from_unit=from_unit,
