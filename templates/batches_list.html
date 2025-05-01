@@ -117,7 +117,7 @@
                 <td>{{ batch.label_code }}</td>
                 <td>{{ batch.scale }}</td>
                 {% if 'timestamp' in visible_columns %}
-                <td>{{ batch.timestamp.strftime("%Y-%m-%d") }}</td>
+                <td>{{ batch.started_at.strftime("%Y-%m-%d") }}</td>
                 {% endif %}
                 <td>{{ batch.status }}</td>
                 {% if 'total_cost' in visible_columns %}
