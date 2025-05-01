@@ -37,13 +37,35 @@
       </div>
     </form>
 
-    <table class="table">
+    <table class="table" id="ingredientsTable">
       <thead>
+        <tr>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Name">
+          </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Unit">
+          </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Quantity">
+          </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
+          </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Density">
+          </th>
+          <th>
+            <input type="text" class="form-control form-control-sm filter-input" placeholder="Cost/Unit">
+          </th>
+          <th>Actions</th>
+        </tr>
         <tr>
           <th>Name</th>
           <th>Unit</th>
           <th>Quantity</th>
-          <th>Type</th>
+          <th>Category</th>
+          <th>Density (g/ml)</th>
           <th>Cost/Unit</th>
           <th>Actions</th>
         </tr>
@@ -54,14 +76,11 @@
           <td>{{ item.name }}</td>
           <td>{{ item.unit }}</td>
           <td>{{ item.quantity }}</td>
-          <td>{{ item.type|capitalize }}</td>
+          <td>{{ item.category.name if item.category else 'N/A' }}</td>
+          <td>{{ "%.3f"|format(item.category.default_density) if item.category else 'N/A' }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
-            {% if item.type == 'container' %}
-            <a href="{{ url_for('inventory.edit_container', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
-            {% else %}
             <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
-            {% endif %}
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
           </td>
         </tr>
@@ -128,11 +147,7 @@
           <td>{{ item.quantity }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
-            {% if item.type == 'container' %}
             <a href="{{ url_for('inventory.edit_container', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
-            {% else %}
-            <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
-            {% endif %}
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
           </td>
         </tr>
@@ -141,4 +156,24 @@
     </table>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.getElementById('ingredientsTable');
+  const filters = table.querySelectorAll('.filter-input');
+
+  filters.forEach((filter, index) => {
+    filter.addEventListener('keyup', function() {
+      const searchText = this.value.toLowerCase();
+      const rows = table.querySelectorAll('tbody tr');
+
+      rows.forEach(row => {
+        const cell = row.cells[index];
+        const text = cell.textContent.toLowerCase();
+        row.style.display = text.includes(searchText) ? '' : 'none';
+      });
+    });
+  });
+});
+</script>
 {% endblock %}

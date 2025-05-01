@@ -26,8 +26,10 @@ from utils.unit_utils import get_global_unit_list
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
+    units = Unit.query.all()
     return render_template('inventory_list.html', 
                          items=items,
+                         units=units,
                          get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/delete/<int:id>')
