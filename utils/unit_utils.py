@@ -18,7 +18,8 @@ def setup_logging(app):
 
 def get_global_unit_list():
     try:
-        units = Unit.query.order_by(Unit.name).all()
+        # Include both system and custom units, ordered by name
+        units = Unit.query.order_by(Unit.type, Unit.name).all()
         if not units:
             app.logger.warning("No units found in database")
         return units
