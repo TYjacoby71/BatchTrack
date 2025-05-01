@@ -21,16 +21,16 @@ def available_containers(recipe_id):
                 continue
 
             try:
-                converted_capacity = ConversionEngine.convert_units(
+                conversion_result = ConversionEngine.convert_units(
                     container.storage_amount,
                     container.storage_unit,
                     recipe.predicted_yield_unit
                 )
-                if converted_capacity:
+                if conversion_result and 'converted_value' in conversion_result:
                     in_stock.append({
                         "id": container.id,
                         "name": container.name,
-                        "storage_amount": converted_capacity,
+                        "storage_amount": conversion_result['converted_value'],
                         "storage_unit": recipe.predicted_yield_unit,
                         "stock_qty": container.quantity
                     })
