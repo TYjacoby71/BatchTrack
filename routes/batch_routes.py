@@ -55,12 +55,14 @@ def start_batch():
         required_amount = assoc.amount * scale
 
         try:
-            required_converted = ConversionEngine.convert_units(
+            conversion_result = ConversionEngine.convert_units(
                 required_amount,
                 assoc.unit,
                 ingredient.unit,
-                ingredient_id=ingredient.id
-            )['converted_value']
+                ingredient_id=ingredient.id,
+                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            )
+            required_converted = conversion_result['converted_value']
             
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
@@ -69,12 +71,6 @@ def start_batch():
                 db.session.add(ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
-
-        if ingredient.quantity < required_amount:
-            ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
-        else:
-            ingredient.quantity -= required_amount
-            db.session.add(ingredient)
 
     if ingredient_errors:
         flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
