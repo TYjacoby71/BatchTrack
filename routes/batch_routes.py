@@ -152,6 +152,10 @@ def view_batch_in_progress(batch_identifier):
     batch = Batch.query.get_or_404(batch_identifier)
     
     if batch.status != 'in_progress':
+        flash('This batch is no longer in progress and cannot be edited.', 'warning')
+        return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
+    
+    if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
