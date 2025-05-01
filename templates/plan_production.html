@@ -194,35 +194,38 @@ function planProduction() {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
-            // Sort containers by capacity (ascending order to prioritize smaller containers first)
+            // Sort containers by capacity (largest first)
             const availableContainers = [...this.allowedContainers]
               .filter(c => c.stock_qty > 0)
-              .sort((a, b) => a.storage_amount - b.storage_amount);
+              .sort((a, b) => b.storage_amount - a.storage_amount);
 
+            // First pass: Try to fill with largest containers that don't exceed target
             let selectedContainers = [];
-            while (remainingVolume > 0 && availableContainers.length > 0) {
-              const bestContainer = availableContainers[0];
-              const bestQty = Math.floor(remainingVolume / bestContainer.storage_amount);
-              const bestPossibleQty = Math.min(bestQty, bestContainer.stock_qty);
-              if (bestPossibleQty > 0) {
-                selectedContainers.push({
-                  id: bestContainer.id,
-                  quantity: bestPossibleQty,
-                  name: bestContainer.name,
-                  capacity: bestContainer.storage_amount,
-                  unit: bestContainer.storage_unit
-                });
-                remainingVolume -= bestPossibleQty * bestContainer.storage_amount;
+            for (const container of availableContainers) {
+              const capacity = container.storage_amount;
+              if (capacity > remainingVolume) continue;
 
-                // Update available stock
-                bestContainer.stock_qty -= bestPossibleQty;
-                if (bestContainer.stock_qty <= 0) {
-                  const idx = availableContainers.indexOf(bestContainer);
-                  availableContainers.splice(idx, 1);
-                }
-              } else {
-                //remove container if it has no stock
-                availableContainers.shift();
+              const maxNeeded = Math.floor(remainingVolume / capacity);
+              const qtyToUse = Math.min(maxNeeded, container.stock_qty);
+
+              if (qtyToUse > 0) {
+                selectedContainers.push({
+                  id: container.id,
+                  quantity: qtyToUse,
+                  name: container.name,
+                  capacity: capacity,
+                  unit: container.storage_unit
+                });
+                remainingVolume -= qtyToUse * capacity;
+              }
+            }
+
+            // Only add containers if they have stock and can fit more product
+            if (remainingVolume > 0) {
+              // Don't create additional rows if no containers have stock
+              const hasAvailableContainers = availableContainers.some(c => c.stock_qty > 0);
+              if (!hasAvailableContainers) {
+                remainingVolume = projected;
               }
             }
 
