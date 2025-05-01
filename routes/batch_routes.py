@@ -54,9 +54,21 @@ def start_batch():
 
         required_amount = assoc.amount * scale
 
-        if ingredient.unit != assoc.unit:
-            ingredient_errors.append(f"Unit mismatch for {ingredient.name}")
-            continue
+        try:
+            required_converted = ConversionEngine.convert_units(
+                required_amount,
+                assoc.unit,
+                ingredient.unit,
+                ingredient_id=ingredient.id
+            )['converted_value']
+            
+            if ingredient.quantity < required_converted:
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
+            else:
+                ingredient.quantity -= required_converted
+                db.session.add(ingredient)
+        except ValueError as e:
+            ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
         if ingredient.quantity < required_amount:
             ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
