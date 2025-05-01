@@ -195,21 +195,31 @@ function planProduction() {
 
           if (this.autoFill) {
             const projected = this.baseYield * this.scale;
-            const containers = data.plan || [];
+            let remainingVolume = projected;
+            const containers = [];
 
-            let totalVolume = containers.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
-            if (totalVolume < projected && containers.length > 0) {
-              const lastContainer = containers[containers.length - 1];
-              lastContainer.quantity += 1;
+            // Sort containers by capacity (largest first)
+            const sortedContainers = [...this.allowedContainers].sort((a, b) => b.storage_amount - a.storage_amount);
+
+            for (const container of sortedContainers) {
+              if (remainingVolume <= 0) break;
+              
+              const neededQuantity = Math.ceil(remainingVolume / container.storage_amount);
+              const availableQuantity = Math.min(neededQuantity, container.stock_qty || 0);
+              
+              if (availableQuantity > 0) {
+                containers.push({
+                  id: container.id,
+                  quantity: availableQuantity,
+                  name: container.name,
+                  capacity: container.storage_amount,
+                  unit: container.storage_unit
+                });
+                remainingVolume -= (availableQuantity * container.storage_amount);
+              }
             }
 
-            this.containersSelected = containers.map(container => ({
-              id: container.id,
-              quantity: container.quantity,
-              name: '',
-              capacity: 0,
-              unit: ''
-            }));
+            this.containersSelected = containers;
 
             this.containersSelected.forEach((container, index) => {
               this.updateContainer(index);
