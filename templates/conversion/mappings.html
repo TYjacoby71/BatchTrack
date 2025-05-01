@@ -4,14 +4,24 @@
   <h2>Custom Unit Mappings</h2>
   <div class="card">
     <div class="card-body">
-      <form method="POST" action="{{ url_for('conversion.manage_mappings') }}" id="mappingForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrfToken">
+      <form method="POST" action="{{ url_for('conversion_bp.manage_mappings') }}" id="mappingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" id="csrfToken">
         <div class="row g-3 mb-3">
           <div class="col">
-            <input type="text" name="from_unit" class="form-control" placeholder="From Unit" required>
+            <select name="from_unit" class="form-control" required>
+              <option value="">Select From Unit</option>
+              {% for unit in units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="col">
-            <input type="text" name="to_unit" class="form-control" placeholder="To Unit" required>
+            <select name="to_unit" class="form-control" required>
+              <option value="">Select To Unit</option>
+              {% for unit in units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="col">
             <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="Multiplier" required>

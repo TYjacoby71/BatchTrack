@@ -1,9 +1,7 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
-from flask_login import login_required
-from models import db, Unit, CustomUnitMapping
-from flask_wtf.csrf import validate_csrf
+from flask import Blueprint, request, render_template, redirect, flash
+from flask_wtf.csrf import validate_csrf, generate_csrf
 from wtforms.validators import ValidationError
-from services.unit_conversion import ConversionEngine
+from models import db, Unit, CustomUnitMapping
 
 conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
 
@@ -72,7 +70,6 @@ def manage_units():
     return render_template('conversion/units.html', units=units, units_by_type={})
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
-@login_required
 def manage_mappings():
     if request.method == 'POST':
         try:
@@ -82,54 +79,41 @@ def manage_mappings():
             flash("Invalid CSRF token", "danger")
             return redirect(request.url)
 
-        from_unit = request.form.get('from_unit')
-        to_unit = request.form.get('to_unit')
+        from_unit = request.form.get("from_unit", "").strip()
+        to_unit = request.form.get("to_unit", "").strip()
         try:
-            multiplier = float(request.form.get('multiplier', 0))
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid multiplier value'}), 400
+            multiplier = float(request.form.get("multiplier", "0"))
+        except:
+            flash("Multiplier must be a number.", "danger")
+            return redirect(request.url)
 
-        if not all([from_unit, to_unit, multiplier > 0]):
-            return jsonify({'error': 'Missing or invalid required fields'}), 400
+        if not from_unit or not to_unit or multiplier <= 0:
+            flash("All fields are required.", "danger")
+            return redirect(request.url)
 
-        # Verify both units exist
-        from_u = Unit.query.filter_by(name=from_unit).first()
-        to_u = Unit.query.filter_by(name=to_unit).first()
+        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
-        if not from_u or not to_u:
-            return jsonify({'error': 'One or both units not found'}), 400
+        if not from_unit_obj or not to_unit_obj:
+            flash("Units not found in database.", "danger")
+            return redirect(request.url)
 
-        # Create the custom mapping
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier
-        )
+        from_unit_obj.base_unit = to_unit_obj.base_unit
+        from_unit_obj.multiplier_to_base = multiplier * to_unit_obj.multiplier_to_base
+
+        mapping = CustomUnitMapping(from_unit=from_unit, to_unit=to_unit, multiplier=multiplier)
         db.session.add(mapping)
-
-        # Update the from_unit's base conversion
-        from_u.base_unit = to_u.base_unit
-        from_u.multiplier_to_base = multiplier * to_u.multiplier_to_base
-        db.session.add(from_u)
-
+        db.session.add(from_unit_obj)
         db.session.commit()
 
-        if request.is_json:
-            return jsonify({'success': True}), 200
-        flash('Custom mapping added successfully.', 'success')
-        return redirect(url_for('conversion.manage_mappings'))
+        flash("Custom mapping added successfully.", "success")
+        return redirect(request.url)
 
+    units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
-    if request.headers.get('Accept') == 'application/json':
-        return jsonify([{
-            'from_unit': m.from_unit,
-            'to_unit': m.to_unit,
-            'multiplier': m.multiplier
-        } for m in mappings])
-    return render_template('conversion/mappings.html', mappings=mappings)
+    return render_template("conversion/mappings.html", units=units, mappings=mappings, csrf_token=generate_csrf())
 
 @conversion_bp.route('/logs')
-@login_required
 def view_logs():
     logs = ConversionLog.query.order_by(ConversionLog.timestamp.desc()).all()
     return render_template('conversion/logs.html', logs=logs)
