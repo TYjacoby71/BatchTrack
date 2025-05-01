@@ -316,9 +316,6 @@ def cancel_batch(batch_id):
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
-
-    batch.status = 'cancelled'
-    db.session.add(batch)
     db.session.commit()
 
     flash("Batch cancelled and inventory restored.")
