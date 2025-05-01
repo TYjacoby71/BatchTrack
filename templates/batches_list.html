@@ -154,12 +154,22 @@
                     <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
                     <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d") }}</p>
                     <p class="card-text"><strong>Status:</strong> {{ 'In Progress' if batch.total_cost is none else 'Completed' }}</p>
-                    <p class="card-text"><strong>Cost:</strong> ${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</p>
-                    {% if batch.total_cost is none %}
-                        <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
-                    {% else %}
-                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                    {% endif %}
+                    <p class="card-text">
+        <strong>Cost:</strong> ${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}
+        <br>
+        <strong>Status:</strong> 
+        <span class="badge {% if batch.status == 'in_progress' %}bg-warning
+                         {% elif batch.status == 'completed' %}bg-success
+                         {% elif batch.status == 'failed' %}bg-danger
+                         {% else %}bg-secondary{% endif %}">
+          {{ batch.status|title }}
+        </span>
+      </p>
+      {% if batch.status == 'in_progress' %}
+          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
+      {% else %}
+          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+      {% endif %}
                 </div>
             </div>
         </div>

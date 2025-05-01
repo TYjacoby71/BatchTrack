@@ -152,6 +152,10 @@ def view_batch_in_progress(batch_identifier):
     batch = Batch.query.get_or_404(batch_identifier)
     
     if batch.status != 'in_progress':
+        flash('This batch is no longer in progress and cannot be edited.', 'warning')
+        return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
+    
+    if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
@@ -213,6 +217,25 @@ def finish_batch(batch_id, force=False):
         if batch.status != 'in_progress':
             flash("Only in-progress batches can be finished.")
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+        # Handle inventory crediting based on batch type
+        if action == "finish":
+            if batch.batch_type == 'ingredient':
+                # Credit produced ingredient to inventory
+                ingredient = InventoryItem.query.filter_by(name=batch.recipe.name).first()
+                if ingredient:
+                    ingredient.quantity += batch.final_quantity
+                    db.session.add(ingredient)
+            elif batch.batch_type == 'product':
+                # Credit to product inventory
+                product_inv = ProductInventory(
+                    product_id=batch.product_id,
+                    variant=batch.variant_id,
+                    unit=batch.output_unit,
+                    quantity=batch.final_quantity,
+                    batch_id=batch.id
+                )
+                db.session.add(product_inv)
 
         # Timer check unless forced
         if not force and action == "finish":

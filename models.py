@@ -91,12 +91,29 @@ class Batch(db.Model):
     final_quantity = db.Column(db.Float)
     output_unit = db.Column(db.String(50))
     scale = db.Column(db.Float, default=1.0)
-    status = db.Column(db.String(50), default='in_progress')
+    status = db.Column(db.String(50), default='in_progress')  # in_progress, completed, failed, cancelled
+    status_reason = db.Column(db.Text)  # Optional reason for status change
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
+    failed_at = db.Column(db.DateTime)
+    cancelled_at = db.Column(db.DateTime)
+    inventory_credited = db.Column(db.Boolean, default=False)  # Track if inventory was returned
+
+    @property
+    def status_display(self):
+        """Human readable status with timestamp"""
+        if self.status == 'in_progress':
+            return f"In Progress (since {self.started_at.strftime('%Y-%m-%d %H:%M')})"
+        elif self.status == 'completed':
+            return f"Completed on {self.completed_at.strftime('%Y-%m-%d %H:%M')}"
+        elif self.status == 'failed':
+            return f"Failed on {self.failed_at.strftime('%Y-%m-%d %H:%M')}"
+        elif self.status == 'cancelled':
+            return f"Cancelled on {self.cancelled_at.strftime('%Y-%m-%d %H:%M')}"
+        return self.status.title()
 
     recipe = db.relationship('Recipe', backref='batches')
     ingredients = db.relationship('BatchIngredient', backref='batch', cascade="all, delete-orphan")

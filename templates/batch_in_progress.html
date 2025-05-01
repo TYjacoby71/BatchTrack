@@ -196,19 +196,19 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="button" onclick="saveBatch()" class="btn btn-primary me-2">Save</button>
+            <button type="button" onclick="saveBatch(event)" class="btn btn-primary me-2">Save</button>
             <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Exit</a>
         </div>
         <div>
             {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
             {% if not has_active_timers %}
-                <button type="submit" name="action" value="finish" class="btn btn-success me-2">✓ Complete Batch</button>
-                <button type="submit" name="action" value="fail" class="btn btn-danger">✕ Mark as Failed</button>
+                <button type="button" onclick="finishBatch('finish')" class="btn btn-success me-2">✓ Complete Batch</button>
+                <button type="button" onclick="finishBatch('fail')" class="btn btn-danger">✕ Mark as Failed</button>
             {% else %}
                 <div class="alert alert-warning">
                     <strong>Note:</strong> Complete all timers before finishing batch
                     <br>
-                    <button type="submit" name="action" value="finish" class="btn btn-success mt-2 me-2" disabled>✓ Complete Batch</button>
+                    <button type="button" class="btn btn-success mt-2 me-2" disabled>✓ Complete Batch</button>
                     <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger mt-2">Force Finish Anyway</a>
                 </div>
             {% endif %}
