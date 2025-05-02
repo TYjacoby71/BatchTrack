@@ -67,6 +67,11 @@ def manage_units():
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 def manage_mappings():
+    if request.method == 'GET':
+        units = Unit.query.all()
+        mappings = CustomUnitMapping.query.all()
+        return render_template('conversion/mappings.html', units=units, mappings=mappings)
+        
     try:
         csrf_token = request.form.get("csrf_token")
         validate_csrf(csrf_token)
