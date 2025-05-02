@@ -102,16 +102,12 @@ def manage_mappings():
                 flash("Invalid multiplier value", "danger")
                 return redirect(request.url)
             
-        # Validate required fields exist
-        required_fields = ['from_unit', 'to_unit', 'multiplier']
-        for field in required_fields:
-            if not request.form.get(field):
-                flash(f"Missing required field: {field}", "danger")
-                return redirect(request.url)
-            
-        # Validate multiplier is valid number
+        # Get and validate fields
+        from_unit = request.form.get("from_unit", "").strip()
+        to_unit = request.form.get("to_unit", "").strip()
+        
         try:
-            multiplier = float(request.form.get("multiplier"))
+            multiplier = float(request.form.get("multiplier", "0"))
             if multiplier <= 0:
                 flash("Multiplier must be greater than 0", "danger")
                 return redirect(request.url)
@@ -119,12 +115,8 @@ def manage_mappings():
             flash("Invalid multiplier value", "danger")
             return redirect(request.url)
 
-        from_unit = request.form.get("from_unit", "").strip()
-        to_unit = request.form.get("to_unit", "").strip()
-        try:
-            multiplier = float(request.form.get("multiplier", "0"))
-        except ValueError:
-            flash("Multiplier must be a valid number.", "danger")
+        if not from_unit or not to_unit:
+            flash("Both units are required", "danger")
             return redirect(request.url)
 
         logger.info(f"Form keys: {list(request.form.keys())}")
