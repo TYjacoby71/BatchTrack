@@ -55,6 +55,12 @@ def quick_add_unit():
         elif type_ == 'volume':
             base_unit = 'ml'
             multiplier = 1.0  # Default to 1 milliliter
+        elif type_ == 'length':
+            base_unit = 'cm'
+            multiplier = 1.0  # Default to 1 centimeter
+        elif type_ == 'area':
+            base_unit = 'sqcm'
+            multiplier = 1.0  # Default to 1 square centimeter
         else:
             return jsonify({'error': 'Invalid unit type'}), 400
 

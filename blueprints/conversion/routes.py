@@ -89,6 +89,12 @@ def manage_units():
             elif type_ == 'volume':
                 base_unit = 'ml'
                 multiplier = float(request.form.get('multiplier', 1.0))
+            elif type_ == 'length':
+                base_unit = 'cm'
+                multiplier = float(request.form.get('multiplier', 1.0))
+            elif type_ == 'area':
+                base_unit = 'sqcm'
+                multiplier = float(request.form.get('multiplier', 1.0))
             else:
                 flash('Invalid unit type', 'error')
                 return redirect(url_for('conversion.manage_units'))
