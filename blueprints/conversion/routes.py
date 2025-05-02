@@ -79,35 +79,42 @@ def manage_mappings():
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
         
-        # Handle JSON requests
-        if request.is_json:
-            data = request.get_json()
-            from_unit = data.get('from_unit')
-            to_unit = data.get('to_unit')
-            try:
-                multiplier = float(data.get('multiplier', 0))
-            except (TypeError, ValueError):
-                return jsonify({'error': 'Invalid multiplier'}), 400
-        # Handle form submissions
-        else:
-            logger.info(f"Form data: {request.form}")
-            if not request.form:
-                flash("No form data received", "danger")
-                return redirect(request.url)
-            from_unit = request.form.get('from_unit')
-            to_unit = request.form.get('to_unit')
-            try:
-                multiplier = float(request.form.get('multiplier', 0))
-            except ValueError:
-                flash("Invalid multiplier value", "danger")
-                return redirect(request.url)
-            
-        # Get and validate fields
-        from_unit = request.form.get("from_unit", "").strip()
-        to_unit = request.form.get("to_unit", "").strip()
+        # Get data from either JSON or form
+        data = request.get_json() if request.is_json else request.form
+        
+        if not data:
+            if request.is_json:
+                return jsonify({'error': 'No data received'}), 400
+            flash("No form data received", "danger") 
+            return redirect(request.url)
+
+        # Extract and validate fields
+        from_unit = data.get('from_unit', '').strip()
+        to_unit = data.get('to_unit', '').strip()
         
         try:
-            multiplier = float(request.form.get("multiplier", "0"))
+            multiplier = float(data.get('multiplier', 0))
+            if multiplier <= 0:
+                raise ValueError("Multiplier must be positive")
+        except (TypeError, ValueError) as e:
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
+            flash("Invalid multiplier value", "danger")
+            return redirect(request.url)
+
+        if not from_unit or not to_unit:
+            if request.is_json:
+                return jsonify({'error': 'Both units are required'}), 400
+            flash("Both units are required", "danger")
+            return redirect(request.url)
+        for field in required_fields:
+            if not request.form.get(field):
+                flash(f"Missing required field: {field}", "danger")
+                return redirect(request.url)
+            
+        # Validate multiplier is valid number
+        try:
+            multiplier = float(request.form.get("multiplier"))
             if multiplier <= 0:
                 flash("Multiplier must be greater than 0", "danger")
                 return redirect(request.url)
@@ -115,8 +122,12 @@ def manage_mappings():
             flash("Invalid multiplier value", "danger")
             return redirect(request.url)
 
-        if not from_unit or not to_unit:
-            flash("Both units are required", "danger")
+        from_unit = request.form.get("from_unit", "").strip()
+        to_unit = request.form.get("to_unit", "").strip()
+        try:
+            multiplier = float(request.form.get("multiplier", "0"))
+        except ValueError:
+            flash("Multiplier must be a valid number.", "danger")
             return redirect(request.url)
 
         logger.info(f"Form keys: {list(request.form.keys())}")
@@ -126,11 +137,15 @@ def manage_mappings():
             flash("All fields are required and multiplier must be greater than 0.", "danger")
             return redirect(request.url)
 
+        # Validate units exist in database
         from_unit_obj = Unit.query.filter_by(name=from_unit).first()
         to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
         if not from_unit_obj or not to_unit_obj:
-            flash("Units not found in database.", "danger")
+            error_msg = f"Units not found: {from_unit if not from_unit_obj else to_unit}"
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, "danger")
             return redirect(request.url)
 
         from_unit_obj.base_unit = to_unit_obj.base_unit
