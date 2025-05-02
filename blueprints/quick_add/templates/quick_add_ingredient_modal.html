@@ -89,18 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // Reset form
       form.reset();
       
-      // Update ingredient dropdowns without page reload
-      document.querySelectorAll('select[name="ingredient_ids[]"]').forEach(select => {
-        const option = new Option(data.name, data.id);
-        select.add(option);
-        if (ingredientReturnContext === 'main') {
-          select.value = data.id;
-        }
-      });
-      
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-      modal.hide();
+      // Reload page to refresh dropdowns
+      window.location.reload();
 
     } catch (error) {
       console.error('Error:', error);
