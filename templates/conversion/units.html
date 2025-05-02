@@ -6,7 +6,7 @@
 
 {% for unit_type in types %}
   <h3>{{ unit_type | title }} Units</h3>
-  
+
   <table class="table table-bordered">
     <thead>
       <tr>
@@ -28,6 +28,14 @@
           <td>{{ unit.type }}</td>
           <td>{{ unit.base_unit }}</td>
           <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
+          <td>
+            {% if unit.is_custom or unit.user_id %}
+              <form method="POST" action="{{ url_for('conversion.delete_unit', unit_id=unit.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this unit?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </tbody>
@@ -37,10 +45,10 @@
 <div class="card p-3 mb-3">
   <h4>Inventory Units</h4>
   <form method="POST" action="{{ url_for('conversion.manage_units') }}">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row mb-2">
       <div class="col">
-        <input type="text" class="form-control" name="name" placeholder="Name" required>
+        <input type="text" class="form-control" name="name" placeholder="Unit Name" required>
       </div>
       <div class="col">
         <select name="type" class="form-control" required>
@@ -49,14 +57,7 @@
           <option value="count">Count</option>
           <option value="length">Length</option>
           <option value="area">Area</option>
-          <option value="time">Time</option>
         </select>
-      </div>
-      <div class="col">
-        <input type="text" class="form-control" name="base_unit" placeholder="Base Unit" required>
-      </div>
-      <div class="col">
-        <input type="number" step="0.0001" class="form-control" name="multiplier" placeholder="Multiplier to base" required>
       </div>
       <div class="col">
         <button type="submit" class="btn btn-primary">Add Unit</button>

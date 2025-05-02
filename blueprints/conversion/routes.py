@@ -1,5 +1,6 @@
-from flask import Blueprint, request, render_template, redirect, flash, jsonify
+from flask import Blueprint, request, render_template, redirect, flash, jsonify, url_for
 from flask_wtf.csrf import CSRFProtect
+from flask_login import current_user
 from models import db, Unit, CustomUnitMapping
 
 csrf = CSRFProtect()
@@ -30,12 +31,40 @@ def convert(amount, from_unit, to_unit):
             'requires_attention': True
         }), 400
 
+@conversion_bp.route('/units/<int:unit_id>/delete', methods=['POST'])
+def delete_unit(unit_id):
+    unit = Unit.query.get_or_404(unit_id)
+    if not (unit.is_custom or unit.user_id):
+        flash('Cannot delete system units', 'error')
+        return redirect(url_for('conversion.manage_units'))
+
+    try:
+        # First delete any custom mappings associated with this unit
+        CustomUnitMapping.query.filter(
+            (CustomUnitMapping.from_unit == unit.name) | 
+            (CustomUnitMapping.to_unit == unit.name)
+        ).delete()
+
+        # Then delete the unit
+        db.session.delete(unit)
+        db.session.commit()
+        logger.info(f"Successfully deleted unit: {unit.name}")
+        flash('Unit deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting unit: {str(e)}', 'error')
+
+    return redirect(url_for('conversion.manage_units'))
+
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
     from utils.unit_utils import get_global_unit_list
     try:
         units = get_global_unit_list()
+        custom_units = [unit for unit in units if unit.is_custom]
+        logger.info(f"Found custom units: {[(unit.name, unit.type) for unit in custom_units]}")
     except Exception as e:
+        logger.error(f"Error loading units: {str(e)}")
         return jsonify({'error': f'Error loading units: {str(e)}'}), 500
 
     if request.headers.get('Accept') == 'application/json':
@@ -50,21 +79,48 @@ def manage_units():
 
     if request.method == 'POST':
         try:
-            name = request.form.get('name')
-            type_ = request.form.get('type')
-            base_unit = request.form.get('base_unit')
-            multiplier = float(request.form.get('multiplier', 1.0))
+            name = request.form.get('name', '').strip()
+            type_ = request.form.get('type', '').strip()
+
+            if not name or not type_:
+                flash('Name and type are required', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
+            # First check if unit exists
+            existing_unit = Unit.query.filter_by(name=name).first()
+            if existing_unit:
+                flash('Unit already exists', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
+            # Set base unit based on type
+            if type_ == 'count':
+                base_unit = 'count'
+            elif type_ == 'weight':
+                base_unit = 'gram'
+            elif type_ == 'volume':
+                base_unit = 'ml'
+            elif type_ == 'length':
+                base_unit = 'cm'
+            elif type_ == 'area':
+                base_unit = 'sqcm'
+            else:
+                flash('Invalid unit type', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
+            # Always start with multiplier 1.0
+            multiplier = 1.0
 
             unit = Unit(
                 name=name,
                 type=type_,
                 base_unit=base_unit,
                 multiplier_to_base=multiplier,
-                is_custom=True
+                is_custom=True,
+                user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
             )
             db.session.add(unit)
             db.session.commit()
-            flash('Unit added successfully', 'success')
+            flash(f'Unit "{name}" added successfully. Remember to define a custom mapping if needed!', 'info')
             return redirect(url_for('conversion.manage_units'))
         except Exception as e:
             flash(f'Error adding unit: {str(e)}', 'error')
@@ -78,10 +134,10 @@ def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
-        
+
         # Get data from either JSON or form
         data = request.get_json() if request.is_json else request.form
-        
+
         if not data:
             if request.is_json:
                 return jsonify({'error': 'No data received'}), 400
@@ -91,7 +147,7 @@ def manage_mappings():
         # Extract and validate fields
         from_unit = data.get('from_unit', '').strip()
         to_unit = data.get('to_unit', '').strip()
-        
+
         try:
             multiplier = float(data.get('multiplier', 0))
             if multiplier <= 0:
@@ -111,7 +167,7 @@ def manage_mappings():
             if not request.form.get(field):
                 flash(f"Missing required field: {field}", "danger")
                 return redirect(request.url)
-            
+
         # Validate multiplier is valid number
         try:
             multiplier = float(request.form.get("multiplier"))
@@ -148,12 +204,14 @@ def manage_mappings():
             flash(error_msg, "danger")
             return redirect(request.url)
 
-        from_unit_obj.base_unit = to_unit_obj.base_unit
-        from_unit_obj.multiplier_to_base = multiplier * to_unit_obj.multiplier_to_base
-
-        mapping = CustomUnitMapping(from_unit=from_unit, to_unit=to_unit, multiplier=multiplier)
+        # Create custom mapping without modifying original units
+        mapping = CustomUnitMapping(
+            from_unit="bucket",  # Your custom unit
+            to_unit="lb",        # Standard weight unit
+            multiplier=1.0,      # 1 bucket = 1 lb
+            user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
+        )
         db.session.add(mapping)
-        db.session.add(from_unit_obj)
         db.session.commit()
 
         flash("Custom mapping added successfully.", "success")
