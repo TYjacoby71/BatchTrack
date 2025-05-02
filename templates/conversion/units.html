@@ -48,7 +48,7 @@
     {{ csrf_token() }}
     <div class="row mb-2">
       <div class="col">
-        <input type="text" class="form-control" name="name" placeholder="Name" required>
+        <input type="text" class="form-control" name="name" placeholder="Unit Name" required>
       </div>
       <div class="col">
         <select name="type" class="form-control" required>
@@ -59,12 +59,6 @@
           <option value="area">Area</option>
           <option value="time">Time</option>
         </select>
-      </div>
-      <div class="col">
-        <input type="text" class="form-control" name="base_unit" placeholder="Base Unit" required>
-      </div>
-      <div class="col">
-        <input type="number" step="0.0001" class="form-control" name="multiplier" placeholder="Multiplier to base" required>
       </div>
       <div class="col">
         <button type="submit" class="btn btn-primary">Add Unit</button>

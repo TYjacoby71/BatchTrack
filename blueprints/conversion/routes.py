@@ -69,13 +69,25 @@ def manage_units():
         try:
             name = request.form.get('name')
             type_ = request.form.get('type')
-            base_unit = request.form.get('base_unit')
-            multiplier = float(request.form.get('multiplier', 1.0))
-
             # First check if unit exists
             existing_unit = Unit.query.filter_by(name=name).first()
             if existing_unit:
                 flash('Unit already exists', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
+            # Set appropriate base unit based on type
+            if type_ == 'count':
+                base_unit = 'count'
+            elif type_ == 'weight':
+                base_unit = 'gram'
+            elif type_ == 'volume':
+                base_unit = 'ml'
+            elif type_ == 'length':
+                base_unit = 'cm'
+            elif type_ == 'area':
+                base_unit = 'sqcm'
+            else:
+                flash('Invalid unit type', 'error')
                 return redirect(url_for('conversion.manage_units'))
 
             # Create new custom unit
@@ -109,8 +121,8 @@ def manage_units():
             )
             db.session.add(unit)
             db.session.commit()
-            flash('Unit added successfully', 'success')
-            return redirect(url_for('conversion.manage_units'))
+            flash('Unit added successfully. Please define its conversion ratio.', 'info')
+            return redirect(url_for('conversion.manage_mappings', from_unit=name))
         except Exception as e:
             flash(f'Error adding unit: {str(e)}', 'error')
             return redirect(url_for('conversion.manage_units'))
