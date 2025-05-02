@@ -4,6 +4,9 @@ from wtforms.validators import ValidationError
 from models import db, Unit, CustomUnitMapping
 from flask_login import current_user
 from services.unit_conversion import ConversionEngine
+import logging
+
+logger = logging.getLogger(__name__)
 
 conversion_bp = Blueprint('conversion_bp', __name__, url_prefix='/conversion')
 
@@ -94,6 +97,14 @@ def manage_mappings():
         flash("Units not found in database.", "danger")
         return redirect(url_for('conversion_bp.manage_units'))
 
+    existing = CustomUnitMapping.query.filter_by(
+        from_unit=from_unit,
+        to_unit=to_unit
+    ).first()
+    if existing:
+        flash("This mapping already exists.", "warning")
+        return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
+
     mapping = CustomUnitMapping(
         from_unit=from_unit,
         to_unit=to_unit,
@@ -103,4 +114,4 @@ def manage_mappings():
     db.session.add(mapping)
     db.session.commit()
     flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units'))
+    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
