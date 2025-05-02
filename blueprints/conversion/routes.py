@@ -116,7 +116,7 @@ def manage_mappings():
 
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
-    return render_template("conversion/mappings.html", units=units, mappings=mappings, csrf_token=generate_csrf())
+    return render_template("conversion/mappings.html", units=units, mappings=mappings)
 
 @conversion_bp.route('/logs')
 def view_logs():
