@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, flash, url_for, jsonify
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
-from models import db, Unit, CustomUnitMapping
+from models import db, Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
 from services.unit_conversion import ConversionEngine
 import logging
@@ -140,7 +140,7 @@ def manage_units():
             user_id=getattr(current_user, "id", None)
         )
         db.session.add(mapping)
-        
+
         # Mark the custom unit as mapped
         from_unit_obj.is_mapped = True
         db.session.commit()
@@ -174,3 +174,58 @@ def delete_mapping(mapping_id):
         flash(f'Error deleting mapping: {str(e)}', 'error')
     return redirect(url_for('conversion_bp.manage_units'))
 
+@conversion_bp.route('/validate_mapping', methods=['POST'])
+def validate_mapping():
+    data = request.get_json()
+    from_unit = Unit.query.filter_by(name=data['from_unit']).first()
+    to_unit = Unit.query.filter_by(name=data['to_unit']).first()
+
+    if from_unit.type == to_unit.type:
+        return jsonify({"valid": True})
+
+    # Handle volume ↔ weight conversions
+    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+        if data.get('ingredient_id'):
+            ingredient = InventoryItem.query.get(data['ingredient_id'])
+            if not ingredient.density and not ingredient.category:
+                return jsonify({
+                    "valid": False,
+                    "error": "Density required for volume ↔ weight conversion. Set ingredient density first."
+                })
+        else:
+            return jsonify({
+                "valid": False,
+                "error": "Volume ↔ weight mappings require ingredient context"
+            })
+
+    return jsonify({"valid": True})
+
+@conversion_bp.route('/add_mapping', methods=['POST'])
+def add_mapping():
+    data = request.get_json()
+
+    # Validate units exist
+    from_unit = Unit.query.filter_by(name=data['from_unit']).first()
+    to_unit = Unit.query.filter_by(name=data['to_unit']).first()
+
+    if not from_unit or not to_unit:
+        return jsonify({"error": "Invalid units"}), 400
+
+    # Cross-type validation
+    if from_unit.type != to_unit.type:
+        if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+            if not data.get('density'):
+                return jsonify({
+                    "error": "Density required for volume ↔ weight conversion"
+                }), 400
+
+    mapping = CustomUnitMapping(
+        from_unit=data['from_unit'],
+        to_unit=data['to_unit'],
+        multiplier=float(data['multiplier'])
+    )
+
+    db.session.add(mapping)
+    db.session.commit()
+
+    return jsonify({"message": "Mapping added successfully"})

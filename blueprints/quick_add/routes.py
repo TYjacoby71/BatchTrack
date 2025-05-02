@@ -97,7 +97,22 @@ def quick_add_ingredient():
     if existing:
         return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
 
-    new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+    # Check if unit requires density
+    from_unit = Unit.query.filter_by(name=unit).first()
+    if from_unit and from_unit.type in ['volume']:
+        # Set default water density for volume ingredients
+        new_item = InventoryItem(
+            name=name, 
+            unit=unit, 
+            quantity=0.0, 
+            cost_per_unit=0.0,
+            density=1.0  # Default water density
+        )
+        message = "Added with default water density (1.0 g/mL). Update if needed."
+    else:
+        new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+        message = "Added successfully."
+        
     db.session.add(new_item)
     db.session.commit()
 
