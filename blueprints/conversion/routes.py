@@ -65,6 +65,43 @@ def manage_units():
         try:
             csrf_token = request.form.get("csrf_token")
             validate_csrf(csrf_token)
+
+            # Handle unit creation
+            if 'unit_name' in request.form:
+                name = request.form.get('unit_name').strip()
+                unit_type = request.form.get('unit_type')
+
+                if not name or not unit_type:
+                    flash('Unit name and type are required', 'error')
+                    return redirect(url_for('conversion_bp.manage_units'))
+
+                existing = Unit.query.filter_by(name=name).first()
+                if existing:
+                    flash('Unit already exists', 'error')
+                    return redirect(url_for('conversion_bp.manage_units'))
+
+                # Set base unit and multiplier based on type
+                base_units = {
+                    'weight': 'gram',
+                    'volume': 'ml',
+                    'count': 'count',
+                    'length': 'cm',
+                    'area': 'sqcm'
+                }
+
+                new_unit = Unit(
+                    name=name,
+                    type=unit_type,
+                    base_unit=base_units.get(unit_type, 'count'),
+                    multiplier_to_base=1.0,
+                    is_custom=True,
+                    is_mapped=False,  # Start as unmapped
+                    user_id=current_user.id if current_user.is_authenticated else None
+                )
+                db.session.add(new_unit)
+                db.session.commit()
+                flash('Unit created successfully', 'success')
+                return redirect(url_for('conversion_bp.manage_units'))
         except ValidationError:
             flash("Invalid CSRF token", "danger")
             return redirect(url_for('conversion_bp.manage_units'))
@@ -103,6 +140,9 @@ def manage_units():
             user_id=getattr(current_user, "id", None)
         )
         db.session.add(mapping)
+        
+        # Mark the custom unit as mapped
+        from_unit_obj.is_mapped = True
         db.session.commit()
         flash("Custom mapping added successfully.", "success")
         return redirect(url_for('conversion_bp.manage_units'))
@@ -134,49 +174,3 @@ def delete_mapping(mapping_id):
         flash(f'Error deleting mapping: {str(e)}', 'error')
     return redirect(url_for('conversion_bp.manage_units'))
 
-@conversion_bp.route('/custom-mappings', methods=['POST'])
-def manage_mappings():
-    try:
-        csrf_token = request.form.get("csrf_token")
-        validate_csrf(csrf_token)
-    except ValidationError:
-        flash("Invalid CSRF token", "danger")
-        return redirect(url_for('conversion_bp.manage_units'))
-
-    from_unit = request.form.get("from_unit", "").strip()
-    to_unit = request.form.get("to_unit", "").strip()
-    try:
-        multiplier = float(request.form.get("multiplier", "0"))
-    except:
-        flash("Multiplier must be a number.", "danger")
-        return redirect(url_for('conversion_bp.manage_units'))
-
-    if not from_unit or not to_unit or multiplier <= 0:
-        flash("All fields are required.", "danger")
-        return redirect(url_for('conversion_bp.manage_units'))
-
-    from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-    to_unit_obj = Unit.query.filter_by(name=to_unit).first()
-
-    if not from_unit_obj or not to_unit_obj:
-        flash("Units not found in database.", "danger")
-        return redirect(url_for('conversion_bp.manage_units'))
-
-    existing = CustomUnitMapping.query.filter_by(
-        from_unit=from_unit,
-        to_unit=to_unit
-    ).first()
-    if existing:
-        flash("This mapping already exists.", "warning")
-        return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
-
-    mapping = CustomUnitMapping(
-        from_unit=from_unit,
-        to_unit=to_unit,
-        multiplier=multiplier,
-        user_id=getattr(current_user, "id", None)
-    )
-    db.session.add(mapping)
-    db.session.commit()
-    flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units'))

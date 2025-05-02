@@ -1,20 +1,4 @@
-2025-05-02 06:42:58,662 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 06:52:29,814 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 06:59:23,410 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:05:01,575 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:05:04,285 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:06:29,095 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:09:09,434 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:09:26,842 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:11:00,837 ERROR: Exception on /recipes/units/quick-add [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 234, in quick_add_unit
-    unit = InventoryUnit(name=name, type=type)
-           ^^^^^^^^^^^^^
-NameError: name 'InventoryUnit' is not defined
-
-During handling of the above exception, another exception occurred:
-
+2025-05-02 08:15:45,793 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -28,57 +12,33 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/recipes/routes.py", line 243, in quick_add_unit
-    return jsonify({'error': str(e)}), 400
-           ^^^^^^^
-NameError: name 'jsonify' is not defined
-2025-05-02 07:12:59,374 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:15:23,772 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:20:29,639 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:22:15,501 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:24:13,746 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:28:07,489 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:29:48,447 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:30:56,048 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:34:14,214 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:36:11,250 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:36:20,504 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:36:33,820 ERROR: Exception on /conversion/units [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 107, in manage_units
-    user_id=current_user.id if current_user.is_authenticated else None
-                               ^^^^^^^^^^^^
-NameError: name 'current_user' is not defined
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 115, in manage_units
-    return redirect(url_for('conversion.manage_units'))
-                    ^^^^^^^
-NameError: name 'url_for' is not defined
-2025-05-02 07:36:58,653 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:37:34,749 ERROR: Exception on /conversion/units [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 107, in manage_units
-    user_id=current_user.id if current_user.is_authenticated else None
-                               ^^^^^^^^^^^^
-NameError: name 'current_user' is not defined
-
-During handling of the above exception, another exception occurred:
-
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 62, in manage_units
+    return render_template('conversion/units.html', units=units)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/conversion/units.html", line 1, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/conversion/units.html", line 88, in block 'content'
+    {% for type, type_units in units_by_type.items() %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'units_by_type' is undefined
+2025-05-02 08:16:04,067 ERROR: Exception on /conversion/units [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -92,41 +52,57 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 115, in manage_units
-    return redirect(url_for('conversion.manage_units'))
-                    ^^^^^^^
-NameError: name 'url_for' is not defined
-2025-05-02 07:38:50,432 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:39:04,298 ERROR: Exception on /conversion/units [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 107, in manage_units
-    user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
-                                       ^^^^^^^^^^^^
-NameError: name 'current_user' is not defined
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/conversion/routes.py", line 115, in manage_units
-    return redirect(url_for('conversion.manage_units'))
-                    ^^^^^^^
-NameError: name 'url_for' is not defined
-2025-05-02 07:39:58,108 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:40:09,500 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:42:05,423 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:43:51,757 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:43:58,173 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:45:46,773 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-02 07:47:46,443 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+  File "/home/runner/workspace/blueprints/conversion/routes.py", line 62, in manage_units
+    return render_template('conversion/units.html', units=units)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/conversion/units.html", line 1, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/conversion/units.html", line 88, in block 'content'
+    {% for type, type_units in units_by_type.items() %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'units_by_type' is undefined
+2025-05-02 08:17:20,771 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:17:20,774 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:17:28,113 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:20:45,496 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:20:51,297 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:20:51,409 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:20:51,436 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:21:07,376 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:21:38,100 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:21:55,765 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:21,719 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:27,376 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:36,302 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:37,590 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:43,937 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:22:46,526 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:23:49,176 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:27:58,418 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:27:58,423 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:27:58,432 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 08:30:13,428 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:19:43,420 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:19:43,425 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:19:43,995 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:32:16,974 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:38:30,943 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:40:26,532 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 16:42:42,697 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
