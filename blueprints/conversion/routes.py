@@ -30,6 +30,23 @@ def convert(amount, from_unit, to_unit):
             'requires_attention': True
         }), 400
 
+@conversion_bp.route('/units/<int:unit_id>/delete', methods=['POST'])
+def delete_unit(unit_id):
+    unit = Unit.query.get_or_404(unit_id)
+    if not unit.is_custom:
+        flash('Cannot delete system units', 'error')
+        return redirect(url_for('conversion.manage_units'))
+    
+    try:
+        db.session.delete(unit)
+        db.session.commit()
+        flash('Unit deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting unit: {str(e)}', 'error')
+    
+    return redirect(url_for('conversion.manage_units'))
+
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
     from utils.unit_utils import get_global_unit_list
