@@ -1,3 +1,4 @@
+
 """mappingtrue
 
 Revision ID: cb882d825368
@@ -17,8 +18,8 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    op.add_column('unit', sa.Column('is_mapped', sa.Boolean(), nullable=True, server_default='0'))
 
 
 def downgrade():
-    pass
+    op.drop_column('unit', 'is_mapped')
