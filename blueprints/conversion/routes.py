@@ -1,12 +1,10 @@
-from flask import Blueprint, request, render_template, redirect, flash, jsonify, url_for
-from flask_wtf.csrf import CSRFProtect
-from flask_login import current_user
+from flask import Blueprint, request, render_template, redirect, flash, url_for
+from flask_wtf.csrf import validate_csrf, generate_csrf
+from wtforms.validators import ValidationError
 from models import db, Unit, CustomUnitMapping
-from services.unit_conversion import ConversionEngine
-import logging
+from flask_login import current_user
 
-logger = logging.getLogger(__name__)
-conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
+conversion_bp = Blueprint('conversion_bp', __name__, url_prefix='/conversion')
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
@@ -73,47 +71,50 @@ def manage_units():
 def manage_mappings():
     if request.method == 'POST':
         try:
-            from_unit = request.form.get('from_unit', '').strip()
-            to_unit = request.form.get('to_unit', '').strip()
-            multiplier = request.form.get('multiplier', type=float)
+            csrf_token = request.form.get("csrf_token")
+            validate_csrf(csrf_token)
+        except ValidationError:
+            flash("Invalid CSRF token", "danger")
+            return redirect(request.url)
 
-            # Validate input
-            if not from_unit or not to_unit or not multiplier or multiplier <= 0:
-                flash("All fields required and multiplier must be positive", "danger")
-                return redirect(url_for('conversion.manage_mappings'))
+        from_unit = request.form.get("from_unit", "").strip()
+        to_unit = request.form.get("to_unit", "").strip()
+        try:
+            multiplier = float(request.form.get("multiplier", "0"))
+        except:
+            flash("Multiplier must be a number.", "danger")
+            return redirect(request.url)
 
-            # Check for circular mapping
-            if from_unit == to_unit:
-                flash("Cannot create mapping between same units", "danger")
-                return redirect(url_for('conversion.manage_mappings'))
+        if not from_unit or not to_unit or multiplier <= 0:
+            flash("All fields are required.", "danger")
+            return redirect(request.url)
 
-            from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-            to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
-            if not from_unit_obj or not to_unit_obj:
-                flash("Invalid units selected", "danger")
-                return redirect(url_for('conversion.manage_mappings'))
+        if not from_unit_obj or not to_unit_obj:
+            flash("Units not found in database.", "danger")
+            return redirect(request.url)
 
-            # Create mapping
-            mapping = CustomUnitMapping(
-                from_unit=from_unit,
-                to_unit=to_unit,
-                multiplier=multiplier,
-                user_id=current_user.id if current_user.is_authenticated else None
-            )
-            db.session.add(mapping)
-            db.session.commit()
-            flash("Mapping added successfully", "success")
-            return redirect(url_for('conversion.manage_mappings'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Error creating mapping: {str(e)}", "danger")
-            logger.error(f"Error creating mapping: {str(e)}")
-            return redirect(url_for('conversion.manage_mappings'))
+        mapping = CustomUnitMapping(
+            from_unit=from_unit,
+            to_unit=to_unit,
+            multiplier=multiplier,
+            user_id=getattr(current_user, "id", None)
+        )
+        db.session.add(mapping)
+
+        from_unit_obj.base_unit = to_unit_obj.base_unit
+        from_unit_obj.multiplier_to_base = multiplier * to_unit_obj.multiplier_to_base
+        db.session.add(from_unit_obj)
+
+        db.session.commit()
+        flash("Custom mapping added successfully.", "success")
+        return redirect(request.url)
 
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
-    return render_template('conversion/mappings.html', units=units, mappings=mappings)
+    return render_template("conversion/mappings.html", units=units, mappings=mappings, csrf_token=generate_csrf())
 
 @conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
 def delete_mapping(mapping_id):
