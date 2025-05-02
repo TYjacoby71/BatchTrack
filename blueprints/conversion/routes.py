@@ -58,6 +58,55 @@ def delete_unit(unit_id):
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
     from utils.unit_utils import get_global_unit_list
+    from flask_wtf.csrf import validate_csrf
+    from wtforms.validators import ValidationError
+    
+    if request.method == 'POST':
+        try:
+            csrf_token = request.form.get("csrf_token")
+            validate_csrf(csrf_token)
+        except ValidationError:
+            flash("Invalid CSRF token", "danger")
+            return redirect(url_for('conversion_bp.manage_units'))
+            
+        from_unit = request.form.get("from_unit", "").strip()
+        to_unit = request.form.get("to_unit", "").strip()
+        try:
+            multiplier = float(request.form.get("multiplier", "0"))
+        except:
+            flash("Multiplier must be a number.", "danger")
+            return redirect(url_for('conversion_bp.manage_units'))
+
+        if not from_unit or not to_unit or multiplier <= 0:
+            flash("All fields are required.", "danger")
+            return redirect(url_for('conversion_bp.manage_units'))
+
+        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+
+        if not from_unit_obj or not to_unit_obj:
+            flash("Units not found in database.", "danger")
+            return redirect(url_for('conversion_bp.manage_units'))
+
+        existing = CustomUnitMapping.query.filter_by(
+            from_unit=from_unit,
+            to_unit=to_unit
+        ).first()
+        if existing:
+            flash("This mapping already exists.", "warning")
+            return redirect(url_for('conversion_bp.manage_units'))
+
+        mapping = CustomUnitMapping(
+            from_unit=from_unit,
+            to_unit=to_unit,
+            multiplier=multiplier,
+            user_id=getattr(current_user, "id", None)
+        )
+        db.session.add(mapping)
+        db.session.commit()
+        flash("Custom mapping added successfully.", "success")
+        return redirect(url_for('conversion_bp.manage_units'))
+
     units = get_global_unit_list()
     mappings = CustomUnitMapping.query.all()
 
@@ -114,4 +163,4 @@ def manage_mappings():
     db.session.add(mapping)
     db.session.commit()
     flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
+    return redirect(url_for('conversion_bp.manage_units'))
