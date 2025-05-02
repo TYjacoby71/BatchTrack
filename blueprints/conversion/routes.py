@@ -129,7 +129,6 @@ def manage_units():
     return render_template('conversion/units.html', units=units, units_by_type={})
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
-@csrf.exempt
 def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
@@ -138,31 +137,16 @@ def manage_mappings():
         from_unit = request.form.get('from_unit', '').strip()
         to_unit = request.form.get('to_unit', '').strip()
         
+        if not from_unit or not to_unit:
+            flash("Both units are required", "danger")
+            return redirect(request.url)
+
         try:
             multiplier = float(request.form.get('multiplier', 0))
             if multiplier <= 0:
                 raise ValueError("Multiplier must be positive")
         except (TypeError, ValueError):
             flash("Invalid multiplier value", "danger")
-            return redirect(request.url)
-
-        if not from_unit or not to_unit:
-            if request.is_json:
-                return jsonify({'error': 'Both units are required'}), 400
-            flash("Both units are required", "danger")
-            return redirect(request.url)
-        # Basic field validation
-        from_unit = data.get("from_unit", "").strip()
-        to_unit = data.get("to_unit", "").strip()
-        
-        try:
-            multiplier = float(data.get("multiplier", 0))
-            if multiplier <= 0:
-                raise ValueError("Multiplier must be greater than 0")
-        except ValueError as e:
-            if request.is_json:
-                return jsonify({'error': str(e)}), 400
-            flash(str(e), "danger")
             return redirect(request.url)
 
         logger.info(f"Form keys: {list(request.form.keys())}")
