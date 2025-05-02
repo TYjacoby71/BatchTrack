@@ -102,18 +102,6 @@ def manage_mappings():
             db.session.rollback()
             flash(f"Error creating mapping: {str(e)}", "danger")
             logger.error(f"Error creating mapping: {str(e)}")
-            return redirect(url_for('conversion.manage_mappings'))
-
-        # Create mapping
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier,
-            user_id=current_user.id if current_user.is_authenticated else None
-        )
-        db.session.add(mapping)
-        db.session.commit()
-        flash("Mapping added successfully", "success")
         return redirect(url_for('conversion.manage_mappings'))
 
     units = Unit.query.all()
