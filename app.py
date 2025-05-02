@@ -26,9 +26,9 @@ app.config['UPLOAD_FOLDER'] = 'static/product_images'
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# Temporarily disabled CSRF protection for testing
-# csrf = CSRFProtect()
-# csrf.init_app(app)
+# CSRF protection disabled
+WTF_CSRF_ENABLED = False
+app.config['WTF_CSRF_ENABLED'] = False
 
 # Import models after db initialization
 from models import User, Recipe, InventoryItem, Unit, IngredientCategory
