@@ -193,12 +193,43 @@ def manage_mappings():
             flash("All fields are required and multiplier must be greater than 0.", "danger")
             return redirect(request.url)
 
-        # Validate units exist in database
+        # Validate units exist and check type consistency
         from_unit_obj = Unit.query.filter_by(name=from_unit).first()
         to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
         if not from_unit_obj or not to_unit_obj:
             error_msg = f"Units not found: {from_unit if not from_unit_obj else to_unit}"
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, "danger")
+            return redirect(request.url)
+
+        # Prevent circular mappings
+        existing_mappings = CustomUnitMapping.query.all()
+        def check_circular(start, current, visited=None):
+            if visited is None:
+                visited = set()
+            if current in visited:
+                return True
+            visited.add(current)
+            for mapping in existing_mappings:
+                if mapping.from_unit == current:
+                    if check_circular(start, mapping.to_unit, visited):
+                        return True
+            return False
+
+        if check_circular(from_unit, to_unit):
+            error_msg = "Circular unit mapping detected"
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, "danger")
+            return redirect(request.url)
+
+        # Validate unit type consistency
+        if from_unit_obj.type != to_unit_obj.type and not (
+            {'volume', 'weight'} >= {from_unit_obj.type, to_unit_obj.type}
+        ):
+            error_msg = f"Cannot create mapping between different unit types: {from_unit_obj.type} and {to_unit_obj.type}"
             if request.is_json:
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, "danger")

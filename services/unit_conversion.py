@@ -30,11 +30,28 @@ class ConversionEngine:
         used_density = None
         converted = None
 
-        # 1. Custom Mapping
-        mapping = CustomUnitMapping.query.filter_by(from_unit=from_unit, to_unit=to_unit).first()
-        if mapping:
-            converted = amount * mapping.multiplier
-            conversion_type = 'custom'
+        # 1. Custom Mapping (including compound)
+        def find_conversion_path(start, end, visited=None):
+            if visited is None:
+                visited = set()
+            if start == end:
+                return []
+            if start in visited:
+                return None
+            visited.add(start)
+            mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
+            for mapping in mappings:
+                path = find_conversion_path(mapping.to_unit, end, visited.copy())
+                if path is not None:
+                    return [mapping] + path
+            return None
+
+        conversion_path = find_conversion_path(from_unit, to_unit)
+        if conversion_path:
+            converted = amount
+            for mapping in conversion_path:
+                converted *= mapping.multiplier
+            conversion_type = 'custom_compound' if len(conversion_path) > 1 else 'custom'
 
         # 2. Direct (same unit)
         elif from_unit == to_unit:
