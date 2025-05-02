@@ -69,25 +69,13 @@ def manage_units():
         try:
             name = request.form.get('name')
             type_ = request.form.get('type')
+            base_unit = request.form.get('base_unit')
+            multiplier = float(request.form.get('multiplier', 1.0))
+
             # First check if unit exists
             existing_unit = Unit.query.filter_by(name=name).first()
             if existing_unit:
                 flash('Unit already exists', 'error')
-                return redirect(url_for('conversion.manage_units'))
-
-            # Set appropriate base unit based on type
-            if type_ == 'count':
-                base_unit = 'count'
-            elif type_ == 'weight':
-                base_unit = 'gram'
-            elif type_ == 'volume':
-                base_unit = 'ml'
-            elif type_ == 'length':
-                base_unit = 'cm'
-            elif type_ == 'area':
-                base_unit = 'sqcm'
-            else:
-                flash('Invalid unit type', 'error')
                 return redirect(url_for('conversion.manage_units'))
 
             # Create new custom unit
@@ -115,31 +103,16 @@ def manage_units():
                 name=name,
                 type=type_,
                 base_unit=base_unit,
-                multiplier_to_base=1.0,  # Always start with 1.0
-                is_custom=True,
+                multiplier_to_base=multiplier,
                 is_custom=True,
                 user_id=current_user.id if current_user.is_authenticated else None
             )
             db.session.add(unit)
             db.session.commit()
-
-            # Return JSON if requested
-            if request.headers.get('Accept') == 'application/json':
-                return jsonify({
-                    'name': unit.name,
-                    'type': unit.type,
-                    'base_unit': unit.base_unit,
-                    'multiplier': unit.multiplier_to_base
-                })
-            
-            flash('Unit added successfully. Please define its conversion ratio.', 'info')
-            return redirect(url_for('conversion.manage_mappings', from_unit=name))
+            flash('Unit added successfully', 'success')
+            return redirect(url_for('conversion.manage_units'))
         except Exception as e:
-            db.session.rollback()
-            error_msg = str(e)
-            if request.headers.get('Accept') == 'application/json':
-                return jsonify({'error': error_msg}), 400
-            flash(f'Error adding unit: {error_msg}', 'error')
+            flash(f'Error adding unit: {str(e)}', 'error')
             return redirect(url_for('conversion.manage_units'))
 
     return render_template('conversion/units.html', units=units, units_by_type={})
