@@ -62,7 +62,7 @@ def manage_units():
     try:
         units = get_global_unit_list()
         custom_units = [unit for unit in units if unit.is_custom]
-        logger.info(f"Found custom units: {[(unit.name, unit.type) for unit in custom_units]}")
+        logger.info(f"Found custom units: {[(unit.name, unit.type, unit.user_id) for unit in custom_units]}")
     except Exception as e:
         logger.error(f"Error loading units: {str(e)}")
         return jsonify({'error': f'Error loading units: {str(e)}'}), 500
