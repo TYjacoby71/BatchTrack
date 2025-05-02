@@ -67,10 +67,12 @@ def manage_units():
 
     if request.method == 'POST':
         try:
-            name = request.form.get('name')
-            type_ = request.form.get('type')
-            base_unit = request.form.get('base_unit')
-            multiplier = float(request.form.get('multiplier', 1.0))
+            name = request.form.get('name', '').strip()
+            type_ = request.form.get('type', '').strip()
+
+            if not name or not type_:
+                flash('Name and type are required', 'error')
+                return redirect(url_for('conversion.manage_units'))
 
             # First check if unit exists
             existing_unit = Unit.query.filter_by(name=name).first()
@@ -78,26 +80,23 @@ def manage_units():
                 flash('Unit already exists', 'error')
                 return redirect(url_for('conversion.manage_units'))
 
-            # Create new custom unit
-            # Determine correct base unit and default multiplier
+            # Set base unit based on type
             if type_ == 'count':
                 base_unit = 'count'
-                multiplier = 1.0
             elif type_ == 'weight':
                 base_unit = 'gram'
-                multiplier = float(request.form.get('multiplier', 1.0))
             elif type_ == 'volume':
                 base_unit = 'ml'
-                multiplier = float(request.form.get('multiplier', 1.0))
             elif type_ == 'length':
                 base_unit = 'cm'
-                multiplier = float(request.form.get('multiplier', 1.0))
             elif type_ == 'area':
                 base_unit = 'sqcm'
-                multiplier = float(request.form.get('multiplier', 1.0))
             else:
                 flash('Invalid unit type', 'error')
                 return redirect(url_for('conversion.manage_units'))
+                
+            # Always start with multiplier 1.0
+            multiplier = 1.0
 
             unit = Unit(
                 name=name,
@@ -109,7 +108,7 @@ def manage_units():
             )
             db.session.add(unit)
             db.session.commit()
-            flash('Unit added successfully', 'success')
+            flash(f'Unit "{name}" added successfully. Remember to define a custom mapping if needed!', 'info')
             return redirect(url_for('conversion.manage_units'))
         except Exception as e:
             flash(f'Error adding unit: {str(e)}', 'error')
