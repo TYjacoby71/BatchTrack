@@ -55,12 +55,20 @@ def manage_units():
             base_unit = request.form.get('base_unit')
             multiplier = float(request.form.get('multiplier', 1.0))
 
+            # First check if unit exists
+            existing_unit = Unit.query.filter_by(name=name).first()
+            if existing_unit:
+                flash('Unit already exists', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
+            # Create new custom unit
             unit = Unit(
                 name=name,
                 type=type_,
                 base_unit=base_unit,
                 multiplier_to_base=multiplier,
-                is_custom=True
+                is_custom=True,
+                user_id=current_user.id if current_user.is_authenticated else None
             )
             db.session.add(unit)
             db.session.commit()
@@ -148,12 +156,14 @@ def manage_mappings():
             flash(error_msg, "danger")
             return redirect(request.url)
 
-        from_unit_obj.base_unit = to_unit_obj.base_unit
-        from_unit_obj.multiplier_to_base = multiplier * to_unit_obj.multiplier_to_base
-
-        mapping = CustomUnitMapping(from_unit=from_unit, to_unit=to_unit, multiplier=multiplier)
+        # Create custom mapping without modifying original units
+        mapping = CustomUnitMapping(
+            from_unit=from_unit,
+            to_unit=to_unit,
+            multiplier=multiplier,
+            user_id=current_user.id if current_user.is_authenticated else None
+        )
         db.session.add(mapping)
-        db.session.add(from_unit_obj)
         db.session.commit()
 
         flash("Custom mapping added successfully.", "success")
