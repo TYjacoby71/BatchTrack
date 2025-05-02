@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, sen
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_wtf.csrf import CSRFProtect # Added import for CSRF protection
 import os
 
 # Create the db object first
@@ -26,8 +25,6 @@ app.config['UPLOAD_FOLDER'] = 'static/product_images'
 db.init_app(app)
 migrate = Migrate(app, db)
 
-csrf = CSRFProtect() # Initialize CSRFProtect object
-csrf.init_app(app) # Initialize CSRF protection for the app
 
 # Import models after db initialization
 from models import User, Recipe, InventoryItem, Unit, IngredientCategory
