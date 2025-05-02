@@ -16,6 +16,13 @@ def start_batch():
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     scale = float(data['scale'])
 
+    # Store recipe ingredients snapshot
+    recipe_snapshot = [{
+        'ingredient_id': ri.inventory_item_id,
+        'amount': ri.amount,
+        'unit': ri.unit
+    } for ri in recipe.recipe_ingredients]
+
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
     year_batches = Batch.query.filter(
@@ -38,7 +45,8 @@ def start_batch():
         batch_type='product',
         scale=scale,
         notes=data.get('notes', ''),
-        status='in_progress'
+        status='in_progress',
+        recipe_ingredients=recipe_snapshot
     )
 
     db.session.add(new_batch)
@@ -63,7 +71,7 @@ def start_batch():
                 density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
             )
             required_converted = conversion_result['converted_value']
-            
+
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
             else:
@@ -150,11 +158,11 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_identifier)
-    
+
     if batch.status != 'in_progress':
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
-    
+
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
@@ -247,7 +255,7 @@ def finish_batch(batch_id, force=False):
                 )
                 db.session.add(product_inv)
                 batch.inventory_credited = True
-            
+
             # Update batch completion status
             batch.status = 'completed'
             batch.completed_at = datetime.utcnow()
@@ -289,20 +297,18 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Get recipe ingredients to know original amounts
-        recipe = Recipe.query.get(batch.recipe_id)
-        
-        for recipe_ing in recipe.recipe_ingredients:
-            ingredient = recipe_ing.inventory_item
+        # Use the stored recipe ingredients from the batch record
+        for recipe_ing in batch.recipe_ingredients:
+            ingredient = InventoryItem.query.get(recipe_ing['ingredient_id'])
             if ingredient:
                 try:
                     # Calculate amount to restore based on recipe and batch scale
-                    amount_to_restore = recipe_ing.amount * batch.scale
-                    
+                    amount_to_restore = recipe_ing['amount'] * batch.scale
+
                     # Convert back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
                         amount_to_restore,
-                        recipe_ing.unit,
+                        recipe_ing['unit'],
                         ingredient.unit,
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
