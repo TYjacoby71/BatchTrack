@@ -70,6 +70,8 @@ def manage_mappings():
     if request.method == 'POST':
         try:
             csrf_token = request.form.get("csrf_token")
+            print("Form data:", request.form.to_dict())
+            print("Session CSRF token:", session.get('_csrf_token'))
             validate_csrf(csrf_token)
         except ValidationError:
             flash("Invalid CSRF token", "danger")
