@@ -122,7 +122,7 @@ def delete_mapping(mapping_id):
     db.session.delete(mapping)
     db.session.commit()
     flash('Mapping deleted successfully', 'success')
-    return redirect(url_for('conversion.manage_mappings'))
+    return redirect(url_for('conversion_bp.manage_mappings'))
 
 @conversion_bp.route('/logs')
 def view_logs():
