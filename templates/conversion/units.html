@@ -120,15 +120,32 @@
     </div>
   </form>
 
+  {% if mappings %}
   <table class="table table-sm mt-3">
-    <thead><tr><th>Custom Unit</th><th>Equals</th><th>Base Unit</th></tr></thead>
-    <tbody>{% for mapping in mappings %}
+    <thead>
       <tr>
-        <td>1 {{ mapping.from_unit }}</td>
+        <th>From Unit</th>
+        <th>Multiplier</th>
+        <th>To Unit</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mapping in mappings %}
+      <tr>
+        <td>{{ mapping.from_unit }}</td>
         <td>{{ mapping.multiplier }}</td>
         <td>{{ mapping.to_unit }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('conversion_bp.delete_mapping', mapping_id=mapping.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
       </tr>
-    {% endfor %}</tbody>
+      {% endfor %}
+    </tbody>
   </table>
+  {% endif %}
 </div>
 {% endblock %}
