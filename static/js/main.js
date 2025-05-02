@@ -73,12 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-// Initialize unit loading when unit converter modal opens
-const unitConverterModal = document.getElementById('unitConverterModal');
-if (unitConverterModal) {
-  unitConverterModal.addEventListener('show.bs.modal', loadUnits);
-}
-
+// Unit loading now handled by Jinja templates
 document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
@@ -178,57 +173,7 @@ function filterUnits() {
   });
 }
 
-function loadUnits() {
-  fetch('/conversion/units', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    credentials: 'same-origin'
-  })
-    .then(response => {
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    })
-    .then(units => {
-      if (!units || (Array.isArray(units) && units.length === 0)) {
-        console.warn('No units available');
-        return;
-      }
-      const unitSelectors = document.querySelectorAll('select[data-unit-select], #fromUnit, #toUnit');
-      unitSelectors.forEach(select => {
-        if (!select) return;
-        select.innerHTML = '';
-        //Added grouping of units by category
-        const unitGroups = {};
-        units.forEach(unit => {
-          const category = unit.type || 'Other';
-          if (!unitGroups[category]) {
-            unitGroups[category] = [];
-          }
-          unitGroups[category].push(unit);
-        });
-
-        for (const category in unitGroups) {
-          const optgroup = document.createElement('optgroup');
-          optgroup.label = category;
-          unitGroups[category].forEach(unit => {
-            const option = new Option(unit.name, unit.name);
-            optgroup.appendChild(option);
-          });
-          select.appendChild(optgroup);
-        }
-        // Initialize Select2 with search
-        $(select).select2({
-          placeholder: 'Search for a unit...',
-          width: '100%',
-          allowClear: true
-        });
-      });
-    })
-    .catch(error => console.error('Error loading units:', error));
-}
+// Unit loading now handled by Jinja templates directly
 
 function displayResult(element, text) {
   element.innerHTML = `
