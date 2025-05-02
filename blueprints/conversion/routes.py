@@ -134,27 +134,15 @@ def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
-
-        # Get data from either JSON or form
-        data = request.get_json() if request.is_json else request.form
-
-        if not data:
-            if request.is_json:
-                return jsonify({'error': 'No data received'}), 400
-            flash("No form data received", "danger") 
-            return redirect(request.url)
-
-        # Extract and validate fields
-        from_unit = data.get('from_unit', '').strip()
-        to_unit = data.get('to_unit', '').strip()
-
+        
+        from_unit = request.form.get('from_unit', '').strip()
+        to_unit = request.form.get('to_unit', '').strip()
+        
         try:
-            multiplier = float(data.get('multiplier', 0))
+            multiplier = float(request.form.get('multiplier', 0))
             if multiplier <= 0:
                 raise ValueError("Multiplier must be positive")
-        except (TypeError, ValueError) as e:
-            if request.is_json:
-                return jsonify({'error': str(e)}), 400
+        except (TypeError, ValueError):
             flash("Invalid multiplier value", "danger")
             return redirect(request.url)
 
@@ -189,10 +177,7 @@ def manage_mappings():
         to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
         if not from_unit_obj or not to_unit_obj:
-            error_msg = f"Units not found: {from_unit if not from_unit_obj else to_unit}"
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            flash(error_msg, "danger")
+            flash(f"Units not found: {from_unit if not from_unit_obj else to_unit}", "danger")
             return redirect(request.url)
 
         # Prevent circular mappings
