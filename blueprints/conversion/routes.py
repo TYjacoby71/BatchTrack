@@ -72,13 +72,14 @@ def manage_units():
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 def manage_mappings():
     if request.method == 'POST':
-        from_unit = request.form.get('from_unit')
-        to_unit = request.form.get('to_unit')
-        multiplier = request.form.get('multiplier', type=float)
+        try:
+            from_unit = request.form.get('from_unit', '').strip()
+            to_unit = request.form.get('to_unit', '').strip()
+            multiplier = request.form.get('multiplier', type=float)
 
-        if not all([from_unit, to_unit, multiplier]) or multiplier <= 0:
-            flash("All fields required and multiplier must be positive", "danger")
-            return redirect(url_for('conversion.manage_mappings'))
+            if not from_unit or not to_unit or not multiplier or multiplier <= 0:
+                flash("All fields required and multiplier must be positive", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
 
         from_unit_obj = Unit.query.filter_by(name=from_unit).first()
         to_unit_obj = Unit.query.filter_by(name=to_unit).first()
