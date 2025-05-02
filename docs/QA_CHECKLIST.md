@@ -1,69 +1,55 @@
-
 # BatchTrack MVP Bug & QA Checklist
 
 ## 1. UNIVERSAL STOCK CHECK SERVICE (USCS)
+- [ ] Global `/api/check-stock` endpoint implementation working
+- [ ] Unified API response format with type, name, needed, available, status
+- [ ] Unit conversion integration verified
+- [ ] Status indicators (OK/LOW/NEEDED) accuracy verified
+- [ ] Stock check button behavior working
+- [ ] Bulk stock check export working
 
-- [ ] Global `/api/check-stock` endpoint implemented
-- [ ] Accepts recipe_id, scale, container plan
-- [ ] Returns unified list with type, name, needed, available, status
-- [ ] Scaling calculations verified
-- [ ] Unit conversion integration complete
-- [ ] Container validation working
-- [ ] Status indicators (OK/LOW/NEEDED) accurate
-- [ ] Containment failure detection working
-- [ ] Override option implemented
-- [ ] Error handling with clear messages
-
-## 2. PLAN PRODUCTION FLOW
-
-- [ ] Scale selection shown first
-- [ ] Container selection follows scale input
-- [ ] Strict Mode (Auto Fill) default ON
-- [ ] Recipe yield predictions accurate
-- [ ] Flexible Mode container selection working
-- [ ] Auto-fill container logic verified
-- [ ] Container type filtering working
-- [ ] Progress bar shows containment %
-- [ ] Remaining volume display accurate
-- [ ] Manual container adjustments possible
-- [ ] Containment error handling working
-- [ ] Yield predictions visible in Flex Mode
+## 2. UNIT CONVERSION SYSTEM
+- [ ] Base unit and multiplier relationships clear
+- [ ] Custom unit creation process working
+- [ ] Unit conversion path through base units consistent
+- [ ] Custom mappings saving correctly
+- [ ] Unit deletion handling properly
+- [ ] Unit conversion edge cases handled
 
 ## 3. CONTAINER MANAGEMENT
+- [ ] Container validation uniqueness working
+- [ ] Available containers display accurate
+- [ ] Auto-fill container logic verified
+- [ ] Container type filtering functional
+- [ ] Container cost tracking working
+- [ ] Container inventory sync verified
 
-- [ ] Container model complete (Name/Amount/Unit)
-- [ ] Volume vs Count logic working
-- [ ] Count-based multiplication correct
-- [ ] Volume-based capacity correct
-- [ ] Quick Add Modal in Recipe Edit
-- [ ] Container validation complete
+## 4. INVENTORY TRACKING
+- [ ] FIFO inventory tracking working
+- [ ] Expiration alerts displaying correctly
+- [ ] Low stock alerts accurate
+- [ ] Inventory adjustments logging properly
+- [ ] Stock level thresholds working
+- [ ] Inventory export/import functioning
 
-## 4. RECIPE MANAGEMENT
-
-- [ ] Predicted Yield field required
-- [ ] Yield Unit type enforced
-- [ ] Container eligibility working
-- [ ] Quick Add Container attachment working
-
-## 5. BATCH COMPLETION
-
-- [ ] Actual Yield recording
-- [ ] Yield comparison working
-- [ ] Recipe update option available
-- [ ] Variation creation option working
+## 5. BATCH PRODUCTION FLOW
+- [ ] Scale selection interface working
+- [ ] Container selection following scale input
+- [ ] Batch status tracking accurate
+- [ ] Actual yield recording working
+- [ ] Batch completion flow verified
+- [ ] Production planning interface clear
 
 ## PRIORITY ORDER
-
-1. 🔴 Universal Stock Check Service
-2. 🟡 Plan Production Setup
-3. 🟢 Container Quick Add Modal
-4. 🟢 Container System Revamp
-5. 🟢 Batch Completion Flow
+1. 🔴 Unit Conversion System
+2. 🔴 Stock Check Service
+3. 🟡 Container Management
+4. 🟡 Inventory Tracking
+5. 🟢 Batch Production Flow
 
 ## Current Issues
-
-1. Stock check endpoint needs centralization
-2. Container validation incomplete
-3. Yield calculations need verification
-4. Mobile optimization needed
-5. Error message standardization required
+1. Unit conversion edge cases need testing
+2. Container validation needs improvement
+3. Stock check service needs centralization 
+4. Mobile interface needs optimization
+5. Production planning UX needs refinement
