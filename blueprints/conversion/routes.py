@@ -56,6 +56,7 @@ def delete_unit(unit_id):
 def manage_units():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
+    mappings = CustomUnitMapping.query.all()
 
     units_by_type = {}
     for unit in units:
@@ -63,7 +64,7 @@ def manage_units():
             units_by_type[unit.type] = []
         units_by_type[unit.type].append(unit)
 
-    return render_template('conversion/units.html', units=units, units_by_type=units_by_type)
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=mappings)
 
 @conversion_bp.route('/custom-mappings', methods=['POST'])
 def manage_mappings():
