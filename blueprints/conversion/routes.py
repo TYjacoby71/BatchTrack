@@ -1,6 +1,8 @@
 from flask import Blueprint, request, render_template, redirect, flash, jsonify
-from flask_wtf.csrf import csrf
+from flask_wtf.csrf import CSRFProtect
 from models import db, Unit, CustomUnitMapping
+
+csrf = CSRFProtect()
 import logging
 logger = logging.getLogger(__name__)
 
