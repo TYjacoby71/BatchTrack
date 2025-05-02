@@ -115,16 +115,31 @@ def manage_units():
                 name=name,
                 type=type_,
                 base_unit=base_unit,
-                multiplier_to_base=multiplier,
+                multiplier_to_base=1.0,  # Always start with 1.0
+                is_custom=True,
                 is_custom=True,
                 user_id=current_user.id if current_user.is_authenticated else None
             )
             db.session.add(unit)
             db.session.commit()
+
+            # Return JSON if requested
+            if request.headers.get('Accept') == 'application/json':
+                return jsonify({
+                    'name': unit.name,
+                    'type': unit.type,
+                    'base_unit': unit.base_unit,
+                    'multiplier': unit.multiplier_to_base
+                })
+            
             flash('Unit added successfully. Please define its conversion ratio.', 'info')
             return redirect(url_for('conversion.manage_mappings', from_unit=name))
         except Exception as e:
-            flash(f'Error adding unit: {str(e)}', 'error')
+            db.session.rollback()
+            error_msg = str(e)
+            if request.headers.get('Accept') == 'application/json':
+                return jsonify({'error': error_msg}), 400
+            flash(f'Error adding unit: {error_msg}', 'error')
             return redirect(url_for('conversion.manage_units'))
 
     return render_template('conversion/units.html', units=units, units_by_type={})
