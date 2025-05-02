@@ -95,6 +95,7 @@ def manage_units():
                     base_unit=base_units.get(unit_type, 'count'),
                     multiplier_to_base=1.0,
                     is_custom=True,
+                    is_mapped=False,  # Start as unmapped
                     user_id=current_user.id if current_user.is_authenticated else None
                 )
                 db.session.add(new_unit)
@@ -139,6 +140,9 @@ def manage_units():
             user_id=getattr(current_user, "id", None)
         )
         db.session.add(mapping)
+        
+        # Mark the custom unit as mapped
+        from_unit_obj.is_mapped = True
         db.session.commit()
         flash("Custom mapping added successfully.", "success")
         return redirect(url_for('conversion_bp.manage_units'))

@@ -21,6 +21,7 @@ class Unit(db.Model):
     multiplier_to_base = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_custom = db.Column(db.Boolean, default=False)
+    is_mapped = db.Column(db.Boolean, default=False)
 
 class CustomUnitMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
