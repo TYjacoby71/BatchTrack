@@ -78,10 +78,29 @@ def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
-        logger.info(f"Form data: {request.form}")
-        if not request.form:
-            flash("No form data received", "danger")
-            return redirect(request.url)
+        
+        # Handle JSON requests
+        if request.is_json:
+            data = request.get_json()
+            from_unit = data.get('from_unit')
+            to_unit = data.get('to_unit')
+            try:
+                multiplier = float(data.get('multiplier', 0))
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid multiplier'}), 400
+        # Handle form submissions
+        else:
+            logger.info(f"Form data: {request.form}")
+            if not request.form:
+                flash("No form data received", "danger")
+                return redirect(request.url)
+            from_unit = request.form.get('from_unit')
+            to_unit = request.form.get('to_unit')
+            try:
+                multiplier = float(request.form.get('multiplier', 0))
+            except ValueError:
+                flash("Invalid multiplier value", "danger")
+                return redirect(request.url)
             
         # Validate required fields exist
         required_fields = ['from_unit', 'to_unit', 'multiplier']
