@@ -36,7 +36,7 @@ def delete_unit(unit_id):
     if not unit.is_custom:
         flash('Cannot delete system units', 'error')
         return redirect(url_for('conversion.manage_units'))
-    
+
     try:
         db.session.delete(unit)
         db.session.commit()
@@ -44,7 +44,7 @@ def delete_unit(unit_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting unit: {str(e)}', 'error')
-    
+
     return redirect(url_for('conversion.manage_units'))
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
@@ -94,7 +94,7 @@ def manage_units():
             else:
                 flash('Invalid unit type', 'error')
                 return redirect(url_for('conversion.manage_units'))
-                
+
             # Always start with multiplier 1.0
             multiplier = 1.0
 
@@ -104,7 +104,7 @@ def manage_units():
                 base_unit=base_unit,
                 multiplier_to_base=multiplier,
                 is_custom=True,
-                user_id=current_user.id if current_user.is_authenticated else None
+                user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
             )
             db.session.add(unit)
             db.session.commit()
@@ -122,10 +122,10 @@ def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
-        
+
         # Get data from either JSON or form
         data = request.get_json() if request.is_json else request.form
-        
+
         if not data:
             if request.is_json:
                 return jsonify({'error': 'No data received'}), 400
@@ -135,7 +135,7 @@ def manage_mappings():
         # Extract and validate fields
         from_unit = data.get('from_unit', '').strip()
         to_unit = data.get('to_unit', '').strip()
-        
+
         try:
             multiplier = float(data.get('multiplier', 0))
             if multiplier <= 0:
@@ -155,7 +155,7 @@ def manage_mappings():
             if not request.form.get(field):
                 flash(f"Missing required field: {field}", "danger")
                 return redirect(request.url)
-            
+
         # Validate multiplier is valid number
         try:
             multiplier = float(request.form.get("multiplier"))
@@ -197,7 +197,7 @@ def manage_mappings():
             from_unit="bucket",  # Your custom unit
             to_unit="lb",        # Standard weight unit
             multiplier=1.0,      # 1 bucket = 1 lb
-            user_id=current_user.id if current_user.is_authenticated else None
+            user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
         )
         db.session.add(mapping)
         db.session.commit()
