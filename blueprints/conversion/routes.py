@@ -163,27 +163,18 @@ def manage_mappings():
                 return jsonify({'error': 'Both units are required'}), 400
             flash("Both units are required", "danger")
             return redirect(request.url)
-        for field in required_fields:
-            if not request.form.get(field):
-                flash(f"Missing required field: {field}", "danger")
-                return redirect(request.url)
-
-        # Validate multiplier is valid number
+        # Basic field validation
+        from_unit = data.get("from_unit", "").strip()
+        to_unit = data.get("to_unit", "").strip()
+        
         try:
-            multiplier = float(request.form.get("multiplier"))
+            multiplier = float(data.get("multiplier", 0))
             if multiplier <= 0:
-                flash("Multiplier must be greater than 0", "danger")
-                return redirect(request.url)
-        except ValueError:
-            flash("Invalid multiplier value", "danger")
-            return redirect(request.url)
-
-        from_unit = request.form.get("from_unit", "").strip()
-        to_unit = request.form.get("to_unit", "").strip()
-        try:
-            multiplier = float(request.form.get("multiplier", "0"))
-        except ValueError:
-            flash("Multiplier must be a valid number.", "danger")
+                raise ValueError("Multiplier must be greater than 0")
+        except ValueError as e:
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
+            flash(str(e), "danger")
             return redirect(request.url)
 
         logger.info(f"Form keys: {list(request.form.keys())}")
