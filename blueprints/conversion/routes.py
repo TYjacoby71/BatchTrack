@@ -65,8 +65,8 @@ def manage_units():
             unit = Unit(
                 name=name,
                 type=type_,
-                base_unit=base_unit,
-                multiplier_to_base=multiplier,
+                base_unit="lb",  # Base unit should be lb for weight
+                multiplier_to_base=1.0,  # 1 bucket = 1 lb
                 is_custom=True,
                 user_id=current_user.id if current_user.is_authenticated else None
             )
