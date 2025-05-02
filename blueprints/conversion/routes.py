@@ -37,7 +37,7 @@ def delete_unit(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     if not (unit.is_custom or unit.user_id):
         flash('Cannot delete system units', 'error')
-        return redirect(url_for('conversion.manage_units'))
+        return redirect(url_for('conversion_bp.manage_units'))
 
     try:
         CustomUnitMapping.query.filter(
@@ -53,7 +53,7 @@ def delete_unit(unit_id):
         db.session.rollback()
         flash(f'Error deleting unit: {str(e)}', 'error')
 
-    return redirect(url_for('conversion.manage_units'))
+    return redirect(url_for('conversion_bp.manage_units'))
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
@@ -120,6 +120,19 @@ def manage_units():
                          units=units, 
                          units_by_type=units_by_type, 
                          mappings=mappings)
+
+
+@conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
+def delete_mapping(mapping_id):
+    mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+    try:
+        db.session.delete(mapping)
+        db.session.commit()
+        flash('Mapping deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting mapping: {str(e)}', 'error')
+    return redirect(url_for('conversion_bp.manage_units'))
 
 @conversion_bp.route('/custom-mappings', methods=['POST'])
 def manage_mappings():
