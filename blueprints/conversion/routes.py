@@ -81,8 +81,8 @@ def manage_mappings():
                 flash("All fields required and multiplier must be positive", "danger")
                 return redirect(url_for('conversion.manage_mappings'))
 
-        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+            from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+            to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
         if not from_unit_obj or not to_unit_obj:
             flash("Invalid units selected", "danger")
