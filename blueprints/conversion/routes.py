@@ -44,10 +44,11 @@ def delete_unit(unit_id):
             (CustomUnitMapping.from_unit == unit.name) | 
             (CustomUnitMapping.to_unit == unit.name)
         ).delete()
-        
+
         # Then delete the unit
         db.session.delete(unit)
         db.session.commit()
+        logger.info(f"Successfully deleted unit: {unit.name}")
         flash('Unit deleted successfully', 'success')
     except Exception as e:
         db.session.rollback()
