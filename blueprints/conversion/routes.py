@@ -76,12 +76,9 @@ def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
         logger.info("POST to /custom-mappings received.")
-        try:
-            csrf_token = request.form.get("csrf_token")
-            validate_csrf(csrf_token)
-            logger.info(f"CSRF token validated: {csrf_token}")
-        except ValidationError:
-            flash("Invalid CSRF token", "danger")
+        logger.info(f"Form data: {request.form}")
+        if not request.form:
+            flash("No form data received", "danger")
             return redirect(request.url)
 
         from_unit = request.form.get("from_unit", "").strip()
