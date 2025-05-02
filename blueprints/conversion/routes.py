@@ -62,12 +62,11 @@ def manage_units():
                 return redirect(url_for('conversion.manage_units'))
 
             # Create new custom unit
-            # Create unit with correct base unit and multiplier
             unit = Unit(
                 name=name,
                 type=type_,
-                base_unit="gram",  # All weight units use gram as base
-                multiplier_to_base=453.592,  # Same as lb's multiplier to gram
+                base_unit=base_unit,  # Use the provided base unit
+                multiplier_to_base=1.0,  # Let mapping handle conversion
                 is_custom=True,
                 user_id=current_user.id if current_user.is_authenticated else None
             )
