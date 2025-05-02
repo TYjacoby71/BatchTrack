@@ -103,4 +103,4 @@ def manage_mappings():
     db.session.add(mapping)
     db.session.commit()
     flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units'))
+    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
