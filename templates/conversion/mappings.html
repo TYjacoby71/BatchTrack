@@ -1,10 +1,12 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container mt-4">
   <h2>Custom Unit Mappings</h2>
   <div class="card">
     <div class="card-body">
-      <form method="POST" action="{{ url_for('conversion_bp.manage_mappings') }}" id="mappingForm">
+      <form method="POST" action="{{ url_for('conversion.manage_mappings') }}" id="mappingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row g-3 mb-3">
           <div class="col">
             <select name="from_unit" class="form-control" required>
@@ -36,6 +38,7 @@
             <th>From Unit</th>
             <th>To Unit</th>
             <th>Multiplier</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -44,6 +47,12 @@
             <td>{{ mapping.from_unit }}</td>
             <td>{{ mapping.to_unit }}</td>
             <td>{{ mapping.multiplier }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('conversion.delete_mapping', mapping_id=mapping.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

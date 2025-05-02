@@ -205,6 +205,7 @@ def manage_mappings():
             return redirect(request.url)
 
         # Create custom mapping without modifying original units
+        # Create custom mapping
         mapping = CustomUnitMapping(
             from_unit=from_unit,
             to_unit=to_unit,
@@ -212,10 +213,27 @@ def manage_mappings():
             user_id=current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
         )
         db.session.add(mapping)
+        
+        # Update the custom unit's multiplier_to_base
+        custom_unit = Unit.query.filter_by(name=from_unit).first()
+        if custom_unit and custom_unit.is_custom:
+            custom_unit.multiplier_to_base = multiplier
+        
         db.session.commit()
-
         flash("Custom mapping added successfully.", "success")
         return redirect(request.url)
+
+@conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
+def delete_mapping(mapping_id):
+    mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+    try:
+        db.session.delete(mapping)
+        db.session.commit()
+        flash('Mapping deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting mapping: {str(e)}', 'error')
+    return redirect(url_for('conversion.manage_mappings'))
 
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
