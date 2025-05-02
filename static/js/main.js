@@ -1,4 +1,3 @@
-
 // Add CSRF token to fetch headers
 // Unit mapping now handled by form submit
 
@@ -156,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   initQuickAddUnit();
-  loadUnits();
 });
 
 function filterUnits() {
