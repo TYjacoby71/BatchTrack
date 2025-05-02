@@ -70,6 +70,7 @@ def manage_units():
     return render_template('conversion/units.html', units=units, units_by_type={})
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
+@csrf.exempt
 def manage_mappings():
     logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
