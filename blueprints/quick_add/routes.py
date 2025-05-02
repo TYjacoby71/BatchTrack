@@ -45,7 +45,26 @@ def quick_add_unit():
         if existing:
             return jsonify({'error': 'Unit already exists'}), 409
 
-        new_unit = Unit(name=name, type=type_, base_unit=name, multiplier_to_base=1.0)
+        # Set proper base unit and multiplier based on type
+        if type_ == 'count':
+            base_unit = 'count'
+            multiplier = 1.0
+        elif type_ == 'weight':
+            base_unit = 'gram'
+            multiplier = 1.0  # Default to 1 gram
+        elif type_ == 'volume':
+            base_unit = 'ml'
+            multiplier = 1.0  # Default to 1 milliliter
+        else:
+            return jsonify({'error': 'Invalid unit type'}), 400
+
+        new_unit = Unit(
+            name=name,
+            type=type_,
+            base_unit=base_unit,
+            multiplier_to_base=multiplier,
+            is_custom=True
+        )
         db.session.add(new_unit)
         db.session.commit()
 

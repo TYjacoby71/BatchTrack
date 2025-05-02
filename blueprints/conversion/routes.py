@@ -62,11 +62,25 @@ def manage_units():
                 return redirect(url_for('conversion.manage_units'))
 
             # Create new custom unit
+            # Determine correct base unit and default multiplier
+            if type_ == 'count':
+                base_unit = 'count'
+                multiplier = 1.0
+            elif type_ == 'weight':
+                base_unit = 'gram'
+                multiplier = float(request.form.get('multiplier', 1.0))
+            elif type_ == 'volume':
+                base_unit = 'ml'
+                multiplier = float(request.form.get('multiplier', 1.0))
+            else:
+                flash('Invalid unit type', 'error')
+                return redirect(url_for('conversion.manage_units'))
+
             unit = Unit(
                 name=name,
                 type=type_,
-                base_unit=base_unit,  # Use the provided base unit
-                multiplier_to_base=1.0,  # Let mapping handle conversion
+                base_unit=base_unit,
+                multiplier_to_base=multiplier,
                 is_custom=True,
                 user_id=current_user.id if current_user.is_authenticated else None
             )
