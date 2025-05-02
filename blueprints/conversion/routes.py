@@ -65,7 +65,7 @@ def manage_units():
 
     return render_template('conversion/units.html', units=units, units_by_type=units_by_type)
 
-@conversion_bp.route('/custom-mappings', methods=['POST'])
+@conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 def manage_mappings():
     try:
         csrf_token = request.form.get("csrf_token")
@@ -102,4 +102,4 @@ def manage_mappings():
     db.session.add(mapping)
     db.session.commit()
     flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units') + '#mappings')
+    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
