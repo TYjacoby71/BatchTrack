@@ -46,7 +46,7 @@
 <div class="card p-3 mb-3">
   <h4>Inventory Units</h4>
   <form method="POST" action="{{ url_for('conversion_bp.manage_units') }}">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row mb-2">
       <div class="col">
         <input type="text" class="form-control" name="unit_name" placeholder="Unit Name" required>
