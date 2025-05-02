@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Manage Units</h2>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('conversion_bp.manage_units') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3 align-items-end">
+          <div class="col">
+            <label class="form-label">Unit Name</label>
+            <input type="text" name="unit_name" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Unit Type</label>
+            <select name="unit_type" class="form-select" required>
+              <option value="weight">Weight</option>
+              <option value="volume">Volume</option>
+              <option value="count">Count</option>
+              <option value="length">Length</option>
+              <option value="area">Area</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Add Unit</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% for unit_type, unit_list in units_by_type.items() %}
+  <div class="card mb-3">
+    <div class="card-header bg-light">{{ unit_type|capitalize }} Units</div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Base Unit</th>
+            <th>To Base Multiplier</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for unit in unit_list %}
+          <tr>
+            <td>{{ unit.name }}</td>
+            <td>{{ unit.base_unit }}</td>
+            <td>{{ unit.multiplier_to_base }}</td>
+            <td>
+              {% if unit.is_custom or unit.user_id %}
+              <form method="POST" action="{{ url_for('conversion_bp.delete_unit', unit_id=unit.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
