@@ -56,6 +56,7 @@ def delete_unit(unit_id):
 def manage_units():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
+    mappings = CustomUnitMapping.query.all()
 
     units_by_type = {}
     for unit in units:
@@ -63,15 +64,10 @@ def manage_units():
             units_by_type[unit.type] = []
         units_by_type[unit.type].append(unit)
 
-    return render_template('conversion/units.html', units=units, units_by_type=units_by_type)
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=mappings)
 
-@conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
+@conversion_bp.route('/custom-mappings', methods=['POST'])
 def manage_mappings():
-    if request.method == 'GET':
-        units = Unit.query.all()
-        mappings = CustomUnitMapping.query.all()
-        return render_template('conversion/mappings.html', units=units, mappings=mappings)
-        
     try:
         csrf_token = request.form.get("csrf_token")
         validate_csrf(csrf_token)
@@ -107,4 +103,4 @@ def manage_mappings():
     db.session.add(mapping)
     db.session.commit()
     flash("Custom mapping added successfully.", "success")
-    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
+    return redirect(url_for('conversion_bp.manage_units'))
