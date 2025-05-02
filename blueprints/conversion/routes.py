@@ -264,7 +264,7 @@ def delete_mapping(mapping_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting mapping: {str(e)}', 'error')
-    return redirect(url_for('conversion.manage_mappings'))
+        return redirect(url_for('conversion.manage_mappings'))
 
     # Get all units and mappings
     units = Unit.query.all()
