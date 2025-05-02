@@ -2,50 +2,50 @@
   {
     "name": "Plate",
     "quantity": 20.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 0.5,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "storage_unit": ""
   },
   {
     "name": "Eggs",
-    "quantity": 2.0,
+    "quantity": 0.0,
     "unit": "count",
     "type": "ingredient",
     "cost_per_unit": 0.25,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "salt",
-    "quantity": 400.0,
+    "quantity": 150.0,
     "unit": "gram",
     "type": "ingredient",
     "cost_per_unit": 0.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "big plate",
     "quantity": 20.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 0.1,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 5.0,
-    "storage_unit": "count",
-    "category_id": null
+    "storage_unit": "count"
   },
   {
     "name": "pepper",
@@ -53,11 +53,10 @@
     "unit": "lb",
     "type": "ingredient",
     "cost_per_unit": 20.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "poop",
@@ -65,59 +64,62 @@
     "unit": "turd",
     "type": "ingredient",
     "cost_per_unit": 0.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "Small Plate",
     "quantity": 23.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 1.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 1.0,
-    "storage_unit": "count",
-    "category_id": null
+    "storage_unit": "count"
   },
   {
     "name": "extra big plate",
     "quantity": 15.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 12.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 10.0,
-    "storage_unit": "count",
-    "category_id": null
+    "storage_unit": "count"
   },
   {
     "name": "super big plate",
     "quantity": 24.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 22.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 15.0,
-    "storage_unit": "count",
-    "category_id": null
+    "storage_unit": "count"
   },
   {
     "name": "gigantic plate",
     "quantity": 4.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 12.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 20.0,
-    "storage_unit": "count",
-    "category_id": null
+    "storage_unit": "count"
   },
   {
     "name": "lemon",
@@ -125,23 +127,23 @@
     "unit": "ml",
     "type": "ingredient",
     "cost_per_unit": 0.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "Tin ",
     "quantity": 30.0,
-    "unit": null,
+    "unit": "",
     "type": "container",
     "cost_per_unit": 0.1,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
+    "is_perishable": false,
+    "category_id": null,
+    "density": null,
     "storage_amount": 0.5,
-    "storage_unit": "floz",
-    "category_id": null
+    "storage_unit": "floz"
   },
   {
     "name": "Grass Fed Tallow",
@@ -149,11 +151,10 @@
     "unit": "lb",
     "type": "ingredient",
     "cost_per_unit": 14.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "Beeswax",
@@ -161,11 +162,10 @@
     "unit": "oz",
     "type": "ingredient",
     "cost_per_unit": 0.75,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "carrot seed oil",
@@ -173,11 +173,10 @@
     "unit": "floz",
     "type": "ingredient",
     "cost_per_unit": 0.6,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "Castor Oil",
@@ -185,22 +184,20 @@
     "unit": "liter",
     "type": "ingredient",
     "cost_per_unit": 20.0,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   },
   {
     "name": "Lavender Essential Oil",
-    "quantity": 357.0,
+    "quantity": 342.0,
     "unit": "drop",
     "type": "ingredient",
     "cost_per_unit": 0.05,
-    "intermediate": false,
     "low_stock_threshold": 0.0,
-    "storage_amount": 0.0,
-    "storage_unit": "",
-    "category_id": null
+    "is_perishable": false,
+    "category_id": null,
+    "density": null
   }
 ]
