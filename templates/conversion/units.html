@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends 'layout.html' %}
 {% block content %}
 <h2>All Units</h2>
 
@@ -14,13 +14,14 @@
         <th>Type</th>
         <th>Base Unit</th>
         <th>Multiplier</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
       {% for unit in units if unit.type == unit_type %}
         {% if unit.is_custom and loop.first %}
           <tr class="table-secondary">
-            <td colspan="4"><strong>Custom Units</strong></td>
+            <td colspan="5"><strong>Custom Units</strong></td>
           </tr>
         {% endif %}
         <tr{% if unit.is_custom %} class="table-light"{% endif %}>
@@ -30,8 +31,8 @@
           <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
           <td>
             {% if unit.is_custom or unit.user_id %}
-              <form method="POST" action="{{ url_for('conversion.delete_unit', unit_id=unit.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this unit?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <form method="POST" action="{{ url_for('conversion_bp.delete_unit', unit_id=unit.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this unit?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
               </form>
             {% endif %}
@@ -44,14 +45,14 @@
 
 <div class="card p-3 mb-3">
   <h4>Inventory Units</h4>
-  <form method="POST" action="{{ url_for('conversion.manage_units') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <form method="POST" action="{{ url_for('conversion_bp.manage_units') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="row mb-2">
       <div class="col">
-        <input type="text" class="form-control" name="name" placeholder="Unit Name" required>
+        <input type="text" class="form-control" name="unit_name" placeholder="Unit Name" required>
       </div>
       <div class="col">
-        <select name="type" class="form-control" required>
+        <select name="unit_type" class="form-control" required>
           <option value="weight">Weight</option>
           <option value="volume">Volume</option>
           <option value="count">Count</option>
@@ -77,13 +78,14 @@
 <!-- Custom Mappings Form -->
 <div class="card p-3">
   <h4>Custom Unit Mappings</h4>
-  <form method="POST" action="{{ url_for('conversion.manage_mappings') }}">
+  <form method="POST" action="{{ url_for('conversion_bp.manage_mappings') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="row g-2 align-items-center">
       <div class="col-auto">
         <label class="form-label">1</label>
       </div>
       <div class="col">
-        <select name="from_unit" class="form-control select2" data-unit-select required>
+        <select name="from_unit" class="form-control select2" required>
           <option value="">Select From Unit</option>
           {% for type, type_units in units_by_type.items() %}
           <optgroup label="{{ type|title }}">
@@ -101,7 +103,7 @@
         <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="1.0" required>
       </div>
       <div class="col">
-        <select name="to_unit" class="form-control select2" data-unit-select required>
+        <select name="to_unit" class="form-control select2" required>
           <option value="">Select To Unit</option>
           {% for type, type_units in units_by_type.items() %}
           <optgroup label="{{ type|title }}">
