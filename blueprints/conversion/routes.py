@@ -70,8 +70,13 @@ def manage_mappings():
     if request.method == 'POST':
         try:
             csrf_token = request.form.get("csrf_token")
+            session_token = session.get('_csrf_token')
+            print("\nCSRF Token Comparison:")
+            print("Form CSRF token  :", csrf_token)
+            print("Session token    :", session_token)
+            print("Tokens match?    :", csrf_token == session_token)
+            print("\nDebug Info:")
             print("Form data:", request.form.to_dict())
-            print("Session CSRF token:", session.get('_csrf_token'))
             print("Request headers:", dict(request.headers))
             validate_csrf(csrf_token)
         except ValidationError:
