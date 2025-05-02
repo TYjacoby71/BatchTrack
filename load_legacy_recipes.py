@@ -3,7 +3,7 @@ import json
 from app import app, db
 from models import Recipe, RecipeIngredient, InventoryItem
 
-JSON_PATH = 'recipes_export_20250430_235506.json'
+JSON_PATH = 'recipes_export_20250430_235506 (1).json'
 
 def load_legacy_recipes():
     with app.app_context():
