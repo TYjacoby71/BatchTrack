@@ -16,6 +16,8 @@
 - [ ] Unit deletion handling properly
 - [ ] Unit conversion edge cases handled
 
+See detailed Unit & Mapping QA guidelines in [UNIT_MAPPING_QA.md](UNIT_MAPPING_QA.md)
+
 ## 3. CONTAINER MANAGEMENT
 - [ ] Container validation uniqueness working
 - [ ] Available containers display accurate
