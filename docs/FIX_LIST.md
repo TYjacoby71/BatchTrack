@@ -19,6 +19,12 @@
   - Update available containers display
   - Fix auto-fill container logic
 
+## Edit Ingredient Form Issues
+- **Unit Selection Reset**: After page reload on edit ingredient form
+  - Unit selection gets reset to default
+  - Need to persist selected unit through page reloads
+  - Fix form state preservation in edit_ingredient.html
+
 ## Stock Check System
 - **Universal Stock Check**: Core service implementation needed
   - Centralize stock checking logic
