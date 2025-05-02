@@ -59,37 +59,57 @@ def delete_unit(unit_id):
 def manage_units():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
-    return render_template('conversion/units.html', units=units)
+    
+    # Organize units by type
+    units_by_type = {}
+    for unit in units:
+        if unit.type not in units_by_type:
+            units_by_type[unit.type] = []
+        units_by_type[unit.type].append(unit)
+    
+    return render_template('conversion/units.html', units=units, units_by_type=units_by_type)
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 def manage_mappings():
     if request.method == 'POST':
-        from_unit = request.form.get('from_unit')
-        to_unit = request.form.get('to_unit')
-        multiplier = request.form.get('multiplier', type=float)
+        try:
+            from_unit = request.form.get('from_unit', '').strip()
+            to_unit = request.form.get('to_unit', '').strip()
+            multiplier = request.form.get('multiplier', type=float)
 
-        if not all([from_unit, to_unit, multiplier]) or multiplier <= 0:
-            flash("All fields required and multiplier must be positive", "danger")
+            # Validate input
+            if not from_unit or not to_unit or not multiplier or multiplier <= 0:
+                flash("All fields required and multiplier must be positive", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
+
+            # Check for circular mapping
+            if from_unit == to_unit:
+                flash("Cannot create mapping between same units", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
+
+            from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+            to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+
+            if not from_unit_obj or not to_unit_obj:
+                flash("Invalid units selected", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
+
+            # Create mapping
+            mapping = CustomUnitMapping(
+                from_unit=from_unit,
+                to_unit=to_unit,
+                multiplier=multiplier,
+                user_id=current_user.id if current_user.is_authenticated else None
+            )
+            db.session.add(mapping)
+            db.session.commit()
+            flash("Mapping added successfully", "success")
             return redirect(url_for('conversion.manage_mappings'))
-
-        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
-
-        if not from_unit_obj or not to_unit_obj:
-            flash("Invalid units selected", "danger")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error creating mapping: {str(e)}", "danger")
+            logger.error(f"Error creating mapping: {str(e)}")
             return redirect(url_for('conversion.manage_mappings'))
-
-        # Create mapping
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier,
-            user_id=current_user.id if current_user.is_authenticated else None
-        )
-        db.session.add(mapping)
-        db.session.commit()
-        flash("Mapping added successfully", "success")
-        return redirect(url_for('conversion.manage_mappings'))
 
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
