@@ -67,52 +67,44 @@ def manage_units():
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
 def manage_mappings():
-    if request.method == 'POST':
-        try:
-            csrf_token = request.form.get("csrf_token")
-            session_token = session.get('_csrf_token')
-            print("\nCSRF Token Comparison:")
-            print("Form CSRF token  :", csrf_token)
-            print("Session token    :", session_token)
-            print("Tokens match?    :", csrf_token == session_token)
-            print("\nDebug Info:")
-            print("Form data:", request.form.to_dict())
-            print("Request headers:", dict(request.headers))
-            validate_csrf(csrf_token)
-        except ValidationError:
-            flash("Invalid CSRF token", "danger")
-            return redirect(request.url)
+    if request.method == 'GET':
+        units = Unit.query.all()
+        mappings = CustomUnitMapping.query.all()
+        return render_template('conversion/mappings.html', units=units, mappings=mappings)
+        
+    try:
+        csrf_token = request.form.get("csrf_token")
+        validate_csrf(csrf_token)
+    except ValidationError:
+        flash("Invalid CSRF token", "danger")
+        return redirect(url_for('conversion_bp.manage_units'))
 
-        from_unit = request.form.get("from_unit", "").strip()
-        to_unit = request.form.get("to_unit", "").strip()
-        try:
-            multiplier = float(request.form.get("multiplier", "0"))
-        except:
-            flash("Multiplier must be a number.", "danger")
-            return redirect(request.url)
+    from_unit = request.form.get("from_unit", "").strip()
+    to_unit = request.form.get("to_unit", "").strip()
+    try:
+        multiplier = float(request.form.get("multiplier", "0"))
+    except:
+        flash("Multiplier must be a number.", "danger")
+        return redirect(url_for('conversion_bp.manage_units'))
 
-        if not from_unit or not to_unit or multiplier <= 0:
-            flash("All fields are required.", "danger")
-            return redirect(request.url)
+    if not from_unit or not to_unit or multiplier <= 0:
+        flash("All fields are required.", "danger")
+        return redirect(url_for('conversion_bp.manage_units'))
 
-        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
+    from_unit_obj = Unit.query.filter_by(name=from_unit).first()
+    to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
-        if not from_unit_obj or not to_unit_obj:
-            flash("Units not found in database.", "danger")
-            return redirect(request.url)
+    if not from_unit_obj or not to_unit_obj:
+        flash("Units not found in database.", "danger")
+        return redirect(url_for('conversion_bp.manage_units'))
 
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier,
-            user_id=getattr(current_user, "id", None)
-        )
-        db.session.add(mapping)
-        db.session.commit()
-        flash("Custom mapping added successfully.", "success")
-        return redirect(request.url)
-
-    units = Unit.query.all()
-    mappings = CustomUnitMapping.query.all()
-    return render_template('conversion/mappings.html', units=units, mappings=mappings)
+    mapping = CustomUnitMapping(
+        from_unit=from_unit,
+        to_unit=to_unit,
+        multiplier=multiplier,
+        user_id=getattr(current_user, "id", None)
+    )
+    db.session.add(mapping)
+    db.session.commit()
+    flash("Custom mapping added successfully.", "success")
+    return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
