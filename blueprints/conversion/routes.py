@@ -53,7 +53,10 @@ def manage_units():
     from utils.unit_utils import get_global_unit_list
     try:
         units = get_global_unit_list()
+        custom_units = [unit for unit in units if unit.is_custom]
+        logger.info(f"Found custom units: {[(unit.name, unit.type) for unit in custom_units]}")
     except Exception as e:
+        logger.error(f"Error loading units: {str(e)}")
         return jsonify({'error': f'Error loading units: {str(e)}'}), 500
 
     if request.headers.get('Accept') == 'application/json':
