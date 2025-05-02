@@ -158,9 +158,9 @@ def manage_mappings():
 
         # Create custom mapping without modifying original units
         mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier,
+            from_unit="bucket",  # Your custom unit
+            to_unit="lb",        # Standard weight unit
+            multiplier=1.0,      # 1 bucket = 1 lb
             user_id=current_user.id if current_user.is_authenticated else None
         )
         db.session.add(mapping)
