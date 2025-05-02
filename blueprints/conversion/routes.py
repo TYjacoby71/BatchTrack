@@ -84,8 +84,24 @@ def manage_mappings():
             from_unit_obj = Unit.query.filter_by(name=from_unit).first()
             to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
-        if not from_unit_obj or not to_unit_obj:
-            flash("Invalid units selected", "danger")
+            if not from_unit_obj or not to_unit_obj:
+                flash("Invalid units selected", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
+
+            # Create mapping
+            mapping = CustomUnitMapping(
+                from_unit=from_unit,
+                to_unit=to_unit,
+                multiplier=multiplier,
+                user_id=current_user.id if current_user.is_authenticated else None
+            )
+            db.session.add(mapping)
+            db.session.commit()
+            flash("Mapping added successfully", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error creating mapping: {str(e)}", "danger")
+            logger.error(f"Error creating mapping: {str(e)}")
             return redirect(url_for('conversion.manage_mappings'))
 
         # Create mapping
