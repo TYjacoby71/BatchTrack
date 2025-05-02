@@ -1,8 +1,8 @@
-"""initial schema
+"""initial_migration
 
-Revision ID: d3417cb6cf8c
+Revision ID: 67d6bd741153
 Revises: 
-Create Date: 2025-04-30 23:45:02.323066
+Create Date: 2025-05-02 22:36:45.106464
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd3417cb6cf8c'
+revision = '67d6bd741153'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -94,6 +94,7 @@ def upgrade():
     sa.Column('is_perishable', sa.Boolean(), nullable=True),
     sa.Column('storage_amount', sa.Float(), nullable=True),
     sa.Column('storage_unit', sa.String(length=50), nullable=True),
+    sa.Column('density', sa.Float(), nullable=True),
     sa.Column('category_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['ingredient_category.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -127,6 +128,7 @@ def upgrade():
     sa.Column('multiplier_to_base', sa.Float(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('is_custom', sa.Boolean(), nullable=True),
+    sa.Column('is_mapped', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
@@ -134,6 +136,7 @@ def upgrade():
     op.create_table('batch',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('recipe_id', sa.Integer(), nullable=False),
+    sa.Column('label_code', sa.String(length=32), nullable=True),
     sa.Column('batch_type', sa.String(length=32), nullable=False),
     sa.Column('yield_amount', sa.Float(), nullable=True),
     sa.Column('yield_unit', sa.String(length=50), nullable=True),
@@ -143,15 +146,20 @@ def upgrade():
     sa.Column('output_unit', sa.String(length=50), nullable=True),
     sa.Column('scale', sa.Float(), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=True),
+    sa.Column('status_reason', sa.Text(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('tags', sa.Text(), nullable=True),
     sa.Column('total_cost', sa.Float(), nullable=True),
     sa.Column('started_at', sa.DateTime(), nullable=True),
     sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('failed_at', sa.DateTime(), nullable=True),
+    sa.Column('cancelled_at', sa.DateTime(), nullable=True),
+    sa.Column('inventory_credited', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
     sa.ForeignKeyConstraint(['variant_id'], ['product_variation.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('label_code')
     )
     op.create_table('conversion_log',
     sa.Column('id', sa.Integer(), nullable=False),
