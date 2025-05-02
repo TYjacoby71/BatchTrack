@@ -20,6 +20,8 @@ See detailed Unit & Mapping QA guidelines in [UNIT_MAPPING_QA.md](UNIT_MAPPING_Q
 
 ## 3. CONTAINER MANAGEMENT
 - [ ] Container validation uniqueness working
+- [ ] Container names follow naming convention (see CONTAINER_NAMING.md)
+- [ ] Container capacities clearly indicated in names
 - [ ] Available containers display accurate
 - [ ] Auto-fill container logic verified
 - [ ] Container type filtering functional
