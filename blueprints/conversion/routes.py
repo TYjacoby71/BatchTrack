@@ -34,11 +34,18 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route('/units/<int:unit_id>/delete', methods=['POST'])
 def delete_unit(unit_id):
     unit = Unit.query.get_or_404(unit_id)
-    if not unit.is_custom:
+    if not (unit.is_custom or unit.user_id):
         flash('Cannot delete system units', 'error')
         return redirect(url_for('conversion.manage_units'))
 
     try:
+        # First delete any custom mappings associated with this unit
+        CustomUnitMapping.query.filter(
+            (CustomUnitMapping.from_unit == unit.name) | 
+            (CustomUnitMapping.to_unit == unit.name)
+        ).delete()
+        
+        # Then delete the unit
         db.session.delete(unit)
         db.session.commit()
         flash('Unit deleted successfully', 'success')
