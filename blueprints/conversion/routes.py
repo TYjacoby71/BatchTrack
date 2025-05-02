@@ -77,8 +77,14 @@ def manage_mappings():
             to_unit = request.form.get('to_unit', '').strip()
             multiplier = request.form.get('multiplier', type=float)
 
+            # Validate input
             if not from_unit or not to_unit or not multiplier or multiplier <= 0:
                 flash("All fields required and multiplier must be positive", "danger")
+                return redirect(url_for('conversion.manage_mappings'))
+
+            # Check for circular mapping
+            if from_unit == to_unit:
+                flash("Cannot create mapping between same units", "danger")
                 return redirect(url_for('conversion.manage_mappings'))
 
             from_unit_obj = Unit.query.filter_by(name=from_unit).first()
