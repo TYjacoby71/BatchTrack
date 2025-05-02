@@ -65,6 +65,42 @@ def manage_units():
         try:
             csrf_token = request.form.get("csrf_token")
             validate_csrf(csrf_token)
+
+            # Handle unit creation
+            if 'unit_name' in request.form:
+                name = request.form.get('unit_name').strip()
+                unit_type = request.form.get('unit_type')
+
+                if not name or not unit_type:
+                    flash('Unit name and type are required', 'error')
+                    return redirect(url_for('conversion_bp.manage_units'))
+
+                existing = Unit.query.filter_by(name=name).first()
+                if existing:
+                    flash('Unit already exists', 'error')
+                    return redirect(url_for('conversion_bp.manage_units'))
+
+                # Set base unit and multiplier based on type
+                base_units = {
+                    'weight': 'gram',
+                    'volume': 'ml',
+                    'count': 'count',
+                    'length': 'cm',
+                    'area': 'sqcm'
+                }
+
+                new_unit = Unit(
+                    name=name,
+                    type=unit_type,
+                    base_unit=base_units.get(unit_type, 'count'),
+                    multiplier_to_base=1.0,
+                    is_custom=True,
+                    user_id=current_user.id if current_user.is_authenticated else None
+                )
+                db.session.add(new_unit)
+                db.session.commit()
+                flash('Unit created successfully', 'success')
+                return redirect(url_for('conversion_bp.manage_units'))
         except ValidationError:
             flash("Invalid CSRF token", "danger")
             return redirect(url_for('conversion_bp.manage_units'))
