@@ -266,6 +266,7 @@ def delete_mapping(mapping_id):
         flash(f'Error deleting mapping: {str(e)}', 'error')
     return redirect(url_for('conversion.manage_mappings'))
 
+    # Get all units and mappings
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
     return render_template("conversion/mappings.html", units=units, mappings=mappings)
