@@ -4,7 +4,7 @@ from app import app, db
 from models import InventoryItem
 
 # Path to your legacy inventory export
-JSON_PATH = 'inventory_export_20250430_235506.json'
+JSON_PATH = 'inventory_export_20250502_225444.json'
 
 def load_legacy_inventory():
     with app.app_context():

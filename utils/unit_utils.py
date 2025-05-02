@@ -23,3 +23,24 @@ def get_global_unit_list():
         return units + custom_units
     except Exception as e:
         return []
+def validate_density_requirements(from_unit, to_unit, ingredient=None):
+    """
+    Validates density requirements for unit conversions
+    Returns (needs_density: bool, message: str)
+    """
+    if from_unit.type == to_unit.type:
+        return False, None
+        
+    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+        if not ingredient:
+            return True, "Ingredient context required for volume ↔ weight conversion"
+            
+        if ingredient.density:
+            return False, None
+            
+        if ingredient.category and ingredient.category.default_density:
+            return False, None
+            
+        return True, f"Density required for {ingredient.name}. Set ingredient density or category."
+        
+    return False, None
