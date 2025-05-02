@@ -60,7 +60,7 @@ def manage_units():
     from utils.unit_utils import get_global_unit_list
     from flask_wtf.csrf import validate_csrf
     from wtforms.validators import ValidationError
-    
+
     if request.method == 'POST':
         try:
             csrf_token = request.form.get("csrf_token")
@@ -68,7 +68,7 @@ def manage_units():
         except ValidationError:
             flash("Invalid CSRF token", "danger")
             return redirect(url_for('conversion_bp.manage_units'))
-            
+
         from_unit = request.form.get("from_unit", "").strip()
         to_unit = request.form.get("to_unit", "").strip()
         try:
@@ -116,7 +116,10 @@ def manage_units():
             units_by_type[unit.type] = []
         units_by_type[unit.type].append(unit)
 
-    return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=mappings)
+    return render_template('conversion/units.html', 
+                         units=units, 
+                         units_by_type=units_by_type, 
+                         mappings=mappings)
 
 @conversion_bp.route('/custom-mappings', methods=['POST'])
 def manage_mappings():
