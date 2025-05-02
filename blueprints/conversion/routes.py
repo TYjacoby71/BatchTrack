@@ -117,6 +117,21 @@ def manage_units():
         units_by_type[unit.type].append(unit)
 
     return render_template('conversion/units.html', 
+
+
+@conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
+def delete_mapping(mapping_id):
+    mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+    try:
+        db.session.delete(mapping)
+        db.session.commit()
+        flash('Mapping deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting mapping: {str(e)}', 'error')
+    return redirect(url_for('conversion_bp.manage_units'))
+
+
                          units=units, 
                          units_by_type=units_by_type, 
                          mappings=mappings)
