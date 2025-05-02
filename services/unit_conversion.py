@@ -10,11 +10,21 @@ class ConversionEngine:
 
     @staticmethod
     def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
+        # Validate input parameters
+        if not isinstance(amount, (int, float)) or amount < 0:
+            raise ValueError(f"Invalid amount: {amount}. Must be a positive number.")
+        if not from_unit or not isinstance(from_unit, str):
+            raise ValueError(f"Invalid from_unit: {from_unit}")
+        if not to_unit or not isinstance(to_unit, str):
+            raise ValueError(f"Invalid to_unit: {to_unit}")
+            
         from_u = Unit.query.filter_by(name=from_unit).first()
         to_u = Unit.query.filter_by(name=to_unit).first()
 
-        if not from_u or not to_u:
-            raise ValueError(f"Unknown unit(s): {from_unit}, {to_unit}")
+        if not from_u:
+            raise ValueError(f"Unknown source unit: {from_unit}")
+        if not to_u:
+            raise ValueError(f"Unknown target unit: {to_unit}")
 
         conversion_type = 'unknown'
         used_density = None

@@ -1,7 +1,10 @@
 from flask import Blueprint, request, render_template, redirect, flash, jsonify
-from flask_wtf.csrf import validate_csrf, generate_csrf
-from wtforms.validators import ValidationError
+from flask_wtf.csrf import CSRFProtect
 from models import db, Unit, CustomUnitMapping
+
+csrf = CSRFProtect()
+import logging
+logger = logging.getLogger(__name__)
 
 conversion_bp = Blueprint('conversion', __name__, template_folder='templates')
 
@@ -70,32 +73,79 @@ def manage_units():
     return render_template('conversion/units.html', units=units, units_by_type={})
 
 @conversion_bp.route('/custom-mappings', methods=['GET', 'POST'])
+@csrf.exempt
 def manage_mappings():
+    logger.info("Request to /custom-mappings received.")
     if request.method == 'POST':
+        logger.info("POST to /custom-mappings received.")
+        
+        # Get data from either JSON or form
+        data = request.get_json() if request.is_json else request.form
+        
+        if not data:
+            if request.is_json:
+                return jsonify({'error': 'No data received'}), 400
+            flash("No form data received", "danger") 
+            return redirect(request.url)
+
+        # Extract and validate fields
+        from_unit = data.get('from_unit', '').strip()
+        to_unit = data.get('to_unit', '').strip()
+        
         try:
-            csrf_token = request.form.get("csrf_token")
-            validate_csrf(csrf_token)
-        except ValidationError:
-            flash("Invalid CSRF token", "danger")
+            multiplier = float(data.get('multiplier', 0))
+            if multiplier <= 0:
+                raise ValueError("Multiplier must be positive")
+        except (TypeError, ValueError) as e:
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
+            flash("Invalid multiplier value", "danger")
+            return redirect(request.url)
+
+        if not from_unit or not to_unit:
+            if request.is_json:
+                return jsonify({'error': 'Both units are required'}), 400
+            flash("Both units are required", "danger")
+            return redirect(request.url)
+        for field in required_fields:
+            if not request.form.get(field):
+                flash(f"Missing required field: {field}", "danger")
+                return redirect(request.url)
+            
+        # Validate multiplier is valid number
+        try:
+            multiplier = float(request.form.get("multiplier"))
+            if multiplier <= 0:
+                flash("Multiplier must be greater than 0", "danger")
+                return redirect(request.url)
+        except ValueError:
+            flash("Invalid multiplier value", "danger")
             return redirect(request.url)
 
         from_unit = request.form.get("from_unit", "").strip()
         to_unit = request.form.get("to_unit", "").strip()
         try:
             multiplier = float(request.form.get("multiplier", "0"))
-        except:
-            flash("Multiplier must be a number.", "danger")
+        except ValueError:
+            flash("Multiplier must be a valid number.", "danger")
             return redirect(request.url)
+
+        logger.info(f"Form keys: {list(request.form.keys())}")
+        logger.info(f"from_unit: {from_unit}, to_unit: {to_unit}, multiplier: {multiplier}")
 
         if not from_unit or not to_unit or multiplier <= 0:
-            flash("All fields are required.", "danger")
+            flash("All fields are required and multiplier must be greater than 0.", "danger")
             return redirect(request.url)
 
+        # Validate units exist in database
         from_unit_obj = Unit.query.filter_by(name=from_unit).first()
         to_unit_obj = Unit.query.filter_by(name=to_unit).first()
 
         if not from_unit_obj or not to_unit_obj:
-            flash("Units not found in database.", "danger")
+            error_msg = f"Units not found: {from_unit if not from_unit_obj else to_unit}"
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, "danger")
             return redirect(request.url)
 
         from_unit_obj.base_unit = to_unit_obj.base_unit
@@ -111,7 +161,7 @@ def manage_mappings():
 
     units = Unit.query.all()
     mappings = CustomUnitMapping.query.all()
-    return render_template("conversion/mappings.html", units=units, mappings=mappings, csrf_token=generate_csrf())
+    return render_template("conversion/mappings.html", units=units, mappings=mappings)
 
 @conversion_bp.route('/logs')
 def view_logs():
