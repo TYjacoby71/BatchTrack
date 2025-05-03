@@ -250,9 +250,7 @@ function updateStockCheckTable(data) {
 
 // Save batch data to server
 function saveBatch(event) {
-    if (event) {
-        event.preventDefault();
-    }
+    event.preventDefault();
 
     const batchId = window.location.pathname.split('/').pop();
     const form = document.getElementById('batchForm');

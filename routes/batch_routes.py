@@ -380,8 +380,7 @@ def save_batch(batch_id):
     data = request.get_json()
 
     # Save form data in recipe_snapshot
-    current_snapshot = batch.recipe_snapshot or {}
-    current_snapshot.update({
+    batch.recipe_snapshot = {
         'form_data': {
             'notes': data.get('notes'),
             'tags': data.get('tags'),
@@ -395,9 +394,7 @@ def save_batch(batch_id):
             'containers': data.get('containers', []),
             'timers': data.get('timers', [])
         }
-    })
-    
-    batch.recipe_snapshot = current_snapshot
+    }
 
     # Track and adjust inventory deltas
     adjust_inventory_deltas(
