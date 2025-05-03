@@ -263,9 +263,9 @@ function saveBatch(event) {
         output_unit: document.querySelector('[name="output_unit"]')?.value ?? '',
         product_id: document.querySelector('[name="product_id"]')?.value ?? null,
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select')?.value ?? null,
-            amount: row.querySelector('input[type="number"]')?.value || '0',
-            unit: row.querySelector('select:last-child')?.value ?? ''
+            id: row.querySelector('select[name="ingredient_id"]')?.value,
+            amount: row.querySelector('input[name="amount"]')?.value || '0',
+            unit: row.querySelector('select[name="unit"]')?.value || 'g'
         })),
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
             id: row.querySelector('select')?.value ?? null,
