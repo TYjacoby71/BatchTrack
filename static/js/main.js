@@ -256,7 +256,7 @@ function saveBatch(event) {
 
     const batchId = window.location.pathname.split('/').pop();
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
-    
+
     if (!csrfToken) {
         console.error('CSRF token input not found');
         alert('CSRF token not found - please refresh the page');
@@ -417,13 +417,13 @@ function saveBatch(event) {
     if (event) {
         event.preventDefault();
     }
-    
+
     const batchId = window.location.pathname.split('/').pop();
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
 
     // Update summary before saving
     updateBatchSummary();
-    
+
     if (!csrfToken) {
         console.error('CSRF token not found');
         return;
