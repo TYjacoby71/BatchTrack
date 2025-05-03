@@ -421,11 +421,9 @@ function saveBatch(event) {
     const batchId = window.location.pathname.split('/').pop();
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
 
-    // Update summary before saving
-    updateBatchSummary();
-
     if (!csrfToken) {
         console.error('CSRF token not found');
+        alert('CSRF token not found - please refresh the page');
         return;
     }
 
@@ -437,19 +435,27 @@ function saveBatch(event) {
         final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
         output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
         product_id: document.querySelector('select[name="product_id"]')?.value || null,
-        variant_label: document.querySelector('input[name="variant_label"]')?.value || '',
-        // Collect current ingredients including recipe snapshot
+        variant_id: document.querySelector('input[name="variant_label"]')?.value || '',
+        
+        // Get all ingredients including extras
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
             id: row.querySelector('select[name*="ingredients"]')?.value,
             amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
             unit: row.querySelector('select[name*="unit"]')?.value
-        })).filter(ing => ing.id),
-        // Collect current containers
+        })).filter(ing => ing.id && ing.amount > 0),
+
+        // Get all containers
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
             id: row.querySelector('select[name*="containers"]')?.value,
             qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
             cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
-        })).filter(cont => cont.id)
+        })).filter(cont => cont.id && cont.qty > 0),
+
+        // Get all timers
+        timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
+            name: row.querySelector('input[type="text"]')?.value || '',
+            duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
+        })).filter(timer => timer.name && timer.duration_seconds > 0)
     };
 
     // Send save request

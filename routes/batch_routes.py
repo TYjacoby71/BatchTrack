@@ -386,35 +386,44 @@ def save_batch(batch_id):
     if not data:
         return jsonify({"error": "No data received"}), 400
 
-    # Compare against current recipe snapshot to detect changes
-    current_ingredients = {bi.ingredient_id: bi.amount_used for bi in batch.ingredients}
-    current_containers = {bc.container_id: bc.quantity_used for bc in batch.containers}
+    # Get current snapshot or initialize empty
+    current_snapshot = batch.recipe_snapshot or {}
     
-    new_ingredients = {int(item['id']): float(item['amount']) for item in data.get('ingredients', [])}
-    new_containers = {int(item['id']): int(item['qty']) for item in data.get('containers', [])}
-
-    # Set inventory_logged flag based on changes
-    if (current_ingredients != new_ingredients or current_containers != new_containers):
-        batch.inventory_logged = False
-    if not data:
-        return jsonify({"error": "No JSON data received"}), 400
-
-    # Save form data in recipe_snapshot
-    batch.recipe_snapshot = {
+    # Update snapshot with new form data
+    new_snapshot = {
         'form_data': {
             'notes': data.get('notes'),
             'tags': data.get('tags'),
-            'yield_amount': data.get('yield_amount'),
-            'yield_unit': data.get('yield_unit'), 
+            'output_type': data.get('output_type'),
             'final_quantity': data.get('final_quantity'),
             'output_unit': data.get('output_unit'),
             'product_id': data.get('product_id'),
-            'variant_id': data.get('variant_id'),
-            'ingredients': data.get('ingredients', []),
-            'containers': data.get('containers', []),
-            'timers': data.get('timers', [])
-        }
+            'variant_id': data.get('variant_id')
+        },
+        'ingredients': data.get('ingredients', []),
+        'containers': data.get('containers', []),
+        'timers': data.get('timers', []),
+        'inventory_logged': False
     }
+
+    # Check if ingredients or containers changed
+    if (str(current_snapshot.get('ingredients')) != str(new_snapshot['ingredients']) or 
+        str(current_snapshot.get('containers')) != str(new_snapshot['containers'])):
+        batch.inventory_logged = False
+    
+    # Update batch fields
+    batch.notes = data.get('notes', '')
+    batch.tags = data.get('tags', '')
+    batch.recipe_snapshot = new_snapshot
+    
+    try:
+        # Adjust inventory based on changes
+        adjust_inventory_deltas(batch_id, data.get('ingredients', []), data.get('containers', []))
+        db.session.commit()
+        return jsonify({"message": "Batch saved successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
     # Track and adjust inventory deltas
     adjust_inventory_deltas(
