@@ -255,13 +255,15 @@ function saveBatch(event) {
     }
 
     const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-    if (!csrfToken) {
-        console.error('CSRF token not found');
+    const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+    
+    if (!csrfTokenInput) {
+        console.error('CSRF token input not found');
         alert('CSRF token not found - please refresh the page');
         return;
     }
+
+    const csrfToken = csrfTokenInput.value;
 
     // Collect form data
     const formData = {
@@ -272,13 +274,13 @@ function saveBatch(event) {
         output_unit: document.querySelector('[name="output_unit"]')?.value || '',
         product_id: document.querySelector('[name="product_id"]')?.value || null,
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            ingredient_id: row.querySelector('select[name="ingredient_id"]')?.value || null,
+            id: row.querySelector('select[name="ingredient_id"]')?.value || null,
             amount: row.querySelector('input[name="amount"]')?.value || '0',
             unit: row.querySelector('select[name="unit"]')?.value || 'g'
         })),
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            container_id: row.querySelector('select')?.value || null,
-            quantity: row.querySelector('input[type="number"]')?.value || '0',
+            id: row.querySelector('select')?.value || null,
+            qty: row.querySelector('input[type="number"]')?.value || '0',
             cost_each: row.querySelector('input[type="number"]:last-child')?.value || '0'
         })),
         timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
@@ -295,7 +297,12 @@ function saveBatch(event) {
         },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.message) {
             alert(data.message);
@@ -303,7 +310,7 @@ function saveBatch(event) {
     })
     .catch(error => {
         console.error('Error saving batch:', error);
-        alert('Error saving batch');
+        alert('Error saving batch. Please check the form and try again.');
     });
 }
 
