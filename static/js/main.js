@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('[data-bs-toggle="tooltip"]').tooltip();
 
   // Quick add modal transitions
-  document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
+  const cancelQuickUnit = document.getElementById('cancelQuickUnit');
+  if (cancelQuickUnit) {
+    cancelQuickUnit.addEventListener('click', () => {
     const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
     unitModal?.hide();
 
@@ -35,7 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
   });
 
-  document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
+  });
+  }
+  
+  const cancelQuickIngredient = document.getElementById('cancelQuickIngredient');
+  if (cancelQuickIngredient) {
+    cancelQuickIngredient.addEventListener('click', () => {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     modal?.hide();
   });
@@ -202,6 +209,72 @@ function copyToClipboard(text) {
     .catch((err) => console.error('Failed to copy:', err));
 }
 
+// Batch Snapshot Manager
+const batchSnapshot = {
+  data: {
+    recipe_ingredients: [],
+    recipe_containers: [],
+    extra_ingredients: [],
+    extra_containers: [],
+    timers: []
+  },
+
+  addIngredient(data) {
+    this.data.extra_ingredients.push(data);
+    this.save();
+    this.updateUI();
+  },
+
+  addContainer(data) {
+    this.data.extra_containers.push(data);
+    this.save();
+    this.updateUI();
+  },
+
+  save() {
+    const snapshotElem = document.getElementById('recipe-snapshot');
+    if (snapshotElem) {
+      snapshotElem.value = JSON.stringify(this.data);
+    }
+  },
+
+  load(snapshotString) {
+    try {
+      if (!snapshotString) {
+        this.data = {
+          recipe_ingredients: [],
+          recipe_containers: [],
+          extra_ingredients: [],
+          extra_containers: [],
+          timers: []
+        };
+      } else {
+        this.data = JSON.parse(snapshotString);
+        // Ensure all arrays exist
+        this.data.recipe_ingredients = this.data.recipe_ingredients || [];
+        this.data.recipe_containers = this.data.recipe_containers || [];
+        this.data.extra_ingredients = this.data.extra_ingredients || [];
+        this.data.extra_containers = this.data.extra_containers || [];
+        this.data.timers = this.data.timers || [];
+      }
+      this.updateUI();
+    } catch (e) {
+      console.error('Failed to load snapshot:', e);
+      this.data = {
+        recipe_ingredients: [],
+        recipe_containers: [],
+        extra_ingredients: [],
+        extra_containers: [],
+        timers: []
+      };
+    }
+  },
+
+  updateUI() {
+    updateBatchSummary();
+  }
+};
+
 // Stock check table update
 function updateStockCheckTable(data) {
   const tableBody = document.getElementById('stockCheckTableBody');
@@ -336,6 +409,8 @@ function addIngredient() {
   const select = document.getElementById('newIngredient');
   const amount = document.getElementById('newIngAmount');
   const unit = document.getElementById('newIngUnit');
+  
+  if (!select || !amount || !unit) return;
 
   const data = {
     id: select.value,
@@ -344,7 +419,7 @@ function addIngredient() {
     unit: unit.value,
   };
 
-  addToSnapshot('ingredient', data);
+  batchSnapshot.addIngredient(data);
   amount.value = '';
 }
 
