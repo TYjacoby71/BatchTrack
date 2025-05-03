@@ -374,10 +374,11 @@ def mark_batch_failed(batch_id):
 def save_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     if batch.status != 'in_progress':
-        flash("Only in-progress batches can be saved.")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        return jsonify({"error": "Only in-progress batches can be saved"}), 400
 
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON data received"}), 400
 
     # Save form data in recipe_snapshot
     batch.recipe_snapshot = {

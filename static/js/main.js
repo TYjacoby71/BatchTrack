@@ -255,40 +255,18 @@ function saveBatch(event) {
     }
 
     const batchId = window.location.pathname.split('/').pop();
-    const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
     
-    if (!csrfTokenInput) {
+    if (!csrfToken) {
         console.error('CSRF token input not found');
         alert('CSRF token not found - please refresh the page');
         return;
     }
 
-    const csrfToken = csrfTokenInput.value;
-
-    // Collect form data with validation
-    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => {
-        const id = row.querySelector('select[name="ingredient_id"]')?.value;
-        if (!id) return null;
-        return {
-            id: parseInt(id),
-            amount: parseFloat(row.querySelector('input[name="amount"]')?.value || '0'),
-            unit: row.querySelector('select[name="unit"]')?.value || 'g'
-        };
-    }).filter(Boolean);
-
-    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => {
-        const id = row.querySelector('select')?.value;
-        if (!id) return null;
-        return {
-            id: parseInt(id),
-            qty: parseInt(row.querySelector('input[type="number"]')?.value || '0'),
-            cost_each: parseFloat(row.querySelector('input[type="number"]:last-child')?.value || '0')
-        };
-    }).filter(Boolean);
-
+    // Collect form data
     const formData = {
-        notes: document.querySelector('[name="notes"]')?.value || '',
-        tags: document.querySelector('[name="tags"]')?.value || '',
+        notes: document.querySelector('textarea[name="notes"]')?.value || '',
+        tags: document.querySelector('input[name="tags"]')?.value || '',
         output_type: document.querySelector('#output_type')?.value || null,
         final_quantity: document.querySelector('[name="final_quantity"]')?.value || '0',
         output_unit: document.querySelector('[name="output_unit"]')?.value || '',
