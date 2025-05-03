@@ -1,0 +1,67 @@
+
+<div class="modal fade" id="completeBatchModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Complete Batch</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="completeBatchForm">
+          <div class="form-group mb-3">
+            <label for="output_type">Batch Type:</label>
+            <select name="output_type" id="output_type" class="form-select" required>
+              <option value="product">Product</option>
+              <option value="ingredient">Ingredient</option>
+            </select>
+          </div>
+
+          <div id="productFields">
+            <div class="mb-3">
+              <label for="product_id">Link to Product</label>
+              <select name="product_id" class="form-select" required>
+                {% for product in products %}
+                  <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="variant_label">Variant (optional)</label>
+              <input type="text" class="form-control" name="variant_label" placeholder="e.g., 4 oz, Citrus">
+            </div>
+          </div>
+
+          <div id="ingredientFields" style="display:none;">
+            <div class="mb-3">
+              <label for="ingredient_unit">Ingredient Unit</label>
+              <select name="ingredient_unit" class="form-select" required>
+                {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="final_quantity">Final Quantity</label>
+            <input type="number" step="0.01" class="form-control" name="final_quantity" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="output_unit">Output Unit</label>
+            <select name="output_unit" class="form-select" required>
+              {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="submitCompleteBatch()">Complete Batch</button>
+      </div>
+    </div>
+  </div>
+</div>

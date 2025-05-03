@@ -480,17 +480,55 @@ function saveBatch(event) {
     });
 }
 
-function finishBatch(action) {
-    if (confirm(`Are you sure you want to ${action} this batch?`)) {
-        const form = document.getElementById('batchForm');
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'action';
-        input.value = action;
-        form.appendChild(input);
-        form.submit();
-    }
+function showCompleteBatchModal() {
+    const modal = new bootstrap.Modal(document.getElementById('completeBatchModal'));
+    modal.show();
 }
+
+function submitCompleteBatch() {
+    const form = document.getElementById('completeBatchForm');
+    const formData = new FormData(form);
+    const batchId = window.location.pathname.split('/').pop();
+
+    fetch(`/batches/${batchId}/finish`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/batches/';
+        } else {
+            alert(data.error || 'Error completing batch');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error completing batch');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const outputTypeSelect = document.getElementById('output_type');
+    if (outputTypeSelect) {
+        outputTypeSelect.addEventListener('change', function() {
+            const productFields = document.getElementById('productFields');
+            const ingredientFields = document.getElementById('ingredientFields');
+            
+            if (this.value === 'product') {
+                productFields.style.display = 'block';
+                ingredientFields.style.display = 'none';
+            } else {
+                productFields.style.display = 'none';
+                ingredientFields.style.display = 'block';
+            }
+        });
+    }
+});
 
 function cancelBatch() {
     if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
