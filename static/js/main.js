@@ -380,6 +380,8 @@ function addContainer() {
     const quantity = document.getElementById('newContainerQty');
     const cost = document.getElementById('newContainerCost');
 
+    if (!select.value || !quantity.value || !cost.value) return;
+
     const data = {
         id: select.value,
         name: select.options[select.selectedIndex].text,
@@ -390,6 +392,76 @@ function addContainer() {
     addToSnapshot('container', data);
     quantity.value = '';
     cost.value = '';
+    updateBatchSummary();
+}
+
+function addToSnapshot(type, data) {
+    const snapshotElem = document.getElementById('recipe-snapshot');
+    let snapshot = JSON.parse(snapshotElem.value || '{}');
+
+    if (!snapshot.extra_ingredients) snapshot.extra_ingredients = [];
+    if (!snapshot.extra_containers) snapshot.extra_containers = [];
+
+    if (type === 'ingredient') {
+        snapshot.extra_ingredients.push(data);
+    } else if (type === 'container') {
+        snapshot.extra_containers.push(data);
+    }
+
+    snapshotElem.value = JSON.stringify(snapshot);
+    updateBatchSummary();
+}
+
+function updateBatchSummary() {
+    const snapshotElem = document.getElementById('recipe-snapshot');
+    const snapshot = JSON.parse(snapshotElem.value || '{}');
+    const summaryTable = document.querySelector('.batch-summary table tbody');
+
+    let html = '';
+
+    // Recipe ingredients
+    if (snapshot.recipe_ingredients) {
+        snapshot.recipe_ingredients.forEach(item => {
+            html += `<tr class="table-info">
+                <td>${item.name} (recipe)</td>
+                <td>${item.amount}</td>
+                <td>${item.unit}</td>
+                <td>$${item.cost_per_unit || 0}</td>
+                <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
+            </tr>`;
+        });
+    }
+
+    // Extra ingredients
+    if (snapshot.extra_ingredients) {
+        snapshot.extra_ingredients.forEach(item => {
+            html += `<tr class="table-warning">
+                <td>${item.name} (extra)</td>
+                <td>${item.amount}</td>
+                <td>${item.unit}</td>
+                <td>$${item.cost_per_unit || 0}</td>
+                <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
+            </tr>`;
+        });
+    }
+
+    // Extra containers
+    if (snapshot.extra_containers) {
+        snapshot.extra_containers.forEach(item => {
+            html += `<tr class="table-danger">
+                <td>${item.name} (container)</td>
+                <td>${item.quantity}</td>
+                <td>count</td>
+                <td>$${item.cost}</td>
+                <td>$${(item.quantity * item.cost).toFixed(2)}</td>
+            </tr>`;
+        });
+    }
+
+    if (summaryTable) {
+        summaryTable.innerHTML = html;
+    }
+} = '';
 }
 
 
