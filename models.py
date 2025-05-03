@@ -103,6 +103,7 @@ class Batch(db.Model):
     failed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
     inventory_credited = db.Column(db.Boolean, default=False)  # Track if inventory was returned
+    inventory_logged = db.Column(db.Boolean, default=False)  # Track if current changes are logged
 
     @property
     def status_display(self):

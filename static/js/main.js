@@ -356,20 +356,36 @@ function addTimerRow() {
 
 // Helper functions for other batch operations
 function saveBatch(event) {
-    event.preventDefault();
-    const batchId = window.location.pathname.split('/').pop();
+    if (event) {
+        event.preventDefault();
+    }
     
-    // Collect form data
+    const batchId = window.location.pathname.split('/').pop();
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+    
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    // Collect current form data
     const formData = {
         notes: document.querySelector('textarea[name="notes"]')?.value || '',
         tags: document.querySelector('input[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value || 'product',
+        final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
+        output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
+        product_id: document.querySelector('select[name="product_id"]')?.value || null,
+        variant_label: document.querySelector('input[name="variant_label"]')?.value || '',
+        // Collect current ingredients including recipe snapshot
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select[name*="ingredient"]')?.value,
-            amount: parseFloat(row.querySelector('input[type="number"]')?.value || '0'),
+            id: row.querySelector('select[name*="ingredients"]')?.value,
+            amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
             unit: row.querySelector('select[name*="unit"]')?.value
         })).filter(ing => ing.id),
+        // Collect current containers
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('select[name*="container"]')?.value,
+            id: row.querySelector('select[name*="containers"]')?.value,
             qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
             cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
         })).filter(cont => cont.id)
