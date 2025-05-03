@@ -363,15 +363,25 @@ def save_batch(batch_id):
 
     data = request.get_json()
 
-    # Save basic metadata
-    batch.notes = data.get("notes")
-    batch.tags = data.get("tags")
-    batch.yield_amount = data.get("yield_amount")
-    batch.yield_unit = data.get("yield_unit")
-    batch.final_quantity = data.get("final_quantity")
-    batch.output_unit = data.get("output_unit")
-    batch.product_id = data.get("product_id")
-    batch.variant_id = data.get("variant_id")
+    # Save form data in recipe_snapshot
+    current_snapshot = batch.recipe_snapshot or {}
+    current_snapshot.update({
+        'form_data': {
+            'notes': data.get('notes'),
+            'tags': data.get('tags'),
+            'yield_amount': data.get('yield_amount'),
+            'yield_unit': data.get('yield_unit'), 
+            'final_quantity': data.get('final_quantity'),
+            'output_unit': data.get('output_unit'),
+            'product_id': data.get('product_id'),
+            'variant_id': data.get('variant_id'),
+            'ingredients': data.get('ingredients', []),
+            'containers': data.get('containers', []),
+            'timers': data.get('timers', [])
+        }
+    })
+    
+    batch.recipe_snapshot = current_snapshot
 
     # Track and adjust inventory deltas
     adjust_inventory_deltas(

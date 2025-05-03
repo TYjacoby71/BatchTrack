@@ -302,6 +302,33 @@ function saveBatch(event) {
         return;
     }
 
+    // Collect all form data
+    const data = {
+        notes: form.querySelector('textarea[name="notes"]')?.value,
+        tags: form.querySelector('input[name="tags"]')?.value,
+        yield_amount: form.querySelector('input[name="yield_amount"]')?.value,
+        yield_unit: form.querySelector('select[name="yield_unit"]')?.value,
+        final_quantity: form.querySelector('input[name="final_quantity"]')?.value,
+        output_unit: form.querySelector('select[name="output_unit"]')?.value,
+        product_id: form.querySelector('select[name="product_id"]')?.value,
+        variant_id: form.querySelector('input[name="variant_id"]')?.value,
+        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
+            id: row.querySelector('select').value,
+            amount: row.querySelector('input[type="number"]').value,
+            unit: row.querySelector('.unit-select').value
+        })),
+        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
+            id: row.querySelector('select').value,
+            qty: row.querySelector('input[type="number"]').value,
+            cost_each: row.querySelector('input[name*="cost"]').value
+        })),
+        timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
+            name: row.querySelector('input[type="text"]').value,
+            duration_seconds: row.querySelector('input[type="number"]').value
+        }))
+    };
+    }
+
     const data = {
         notes: form.querySelector('textarea[name="notes"]')?.value || '',
         tags: form.querySelector('input[name="tags"]')?.value || '',
