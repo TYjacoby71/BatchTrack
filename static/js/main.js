@@ -250,30 +250,32 @@ function updateStockCheckTable(data) {
 
 // Save batch data to server
 function saveBatch(event) {
-    event.preventDefault();
+    if (event) {
+        event.preventDefault();
+    }
 
     const batchId = window.location.pathname.split('/').pop();
     
     // Collect form data
     const formData = {
-        notes: document.querySelector('[name="notes"]')?.value ?? '',
-        tags: document.querySelector('[name="tags"]')?.value ?? '',
-        output_type: document.querySelector('#output_type')?.value ?? null,
+        notes: document.querySelector('[name="notes"]')?.value || '',
+        tags: document.querySelector('[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value || null,
         final_quantity: document.querySelector('[name="final_quantity"]')?.value || '0',
-        output_unit: document.querySelector('[name="output_unit"]')?.value ?? '',
-        product_id: document.querySelector('[name="product_id"]')?.value ?? null,
+        output_unit: document.querySelector('[name="output_unit"]')?.value || '',
+        product_id: document.querySelector('[name="product_id"]')?.value || null,
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select[name="ingredient_id"]')?.value,
+            ingredient_id: row.querySelector('select[name="ingredient_id"]')?.value || null,
             amount: row.querySelector('input[name="amount"]')?.value || '0',
             unit: row.querySelector('select[name="unit"]')?.value || 'g'
         })),
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('select')?.value ?? null,
-            qty: row.querySelector('input[type="number"]')?.value || '0',
+            container_id: row.querySelector('select')?.value || null,
+            quantity: row.querySelector('input[type="number"]')?.value || '0',
             cost_each: row.querySelector('input[type="number"]:last-child')?.value || '0'
         })),
         timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[type="text"]')?.value ?? '',
+            name: row.querySelector('input[type="text"]')?.value || '',
             duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
         }))
     };
@@ -282,7 +284,7 @@ function saveBatch(event) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
         body: JSON.stringify(formData)
     })
@@ -296,6 +298,7 @@ function saveBatch(event) {
         console.error('Error saving batch:', error);
         alert('Error saving batch');
     });
+}
 }
 
 function cancelBatch() {
