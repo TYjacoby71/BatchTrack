@@ -1,5 +1,8 @@
 // CSRF Helper
-const getCSRFToken = () => document.querySelector('input[name="csrf_token"]')?.value;
+function getCSRFToken() {
+  var tokenElement = document.querySelector('input[name="csrf_token"]');
+  return tokenElement ? tokenElement.value : '';
+}
 
 // Batch Snapshot Manager
 const batchSnapshot = {
@@ -45,13 +48,34 @@ const batchSnapshot = {
 
   load(snapshotString) {
     try {
-      this.data = JSON.parse(snapshotString || '{}');
+      if (!snapshotString) {
+        this.data = {
+          recipe_ingredients: [],
+          recipe_containers: [],
+          extra_ingredients: [],
+          extra_containers: [],
+          timers: []
+        };
+      } else {
+        this.data = JSON.parse(snapshotString);
+      }
+      // Ensure all required arrays exist
+      this.data.recipe_ingredients = this.data.recipe_ingredients || [];
+      this.data.recipe_containers = this.data.recipe_containers || [];
       this.data.extra_ingredients = this.data.extra_ingredients || [];
       this.data.extra_containers = this.data.extra_containers || [];
       this.data.timers = this.data.timers || [];
       this.updateUI();
     } catch (e) {
       console.error('Failed to load snapshot:', e);
+      // Initialize with empty data on error
+      this.data = {
+        recipe_ingredients: [],
+        recipe_containers: [],
+        extra_ingredients: [],
+        extra_containers: [],
+        timers: []
+      };
     }
   },
 
@@ -539,17 +563,31 @@ function updateStockCheckTable(data) {
 
 
 // Remove duplicate function declarations and use object methods directly
-window.addContainer = function(container) {
-    batchSnapshot.addContainer(container);
-};
+function addContainer(container) {
+    if (batchSnapshot && typeof batchSnapshot.addContainer === 'function') {
+        batchSnapshot.addContainer(container);
+    }
+}
 
-window.addIngredient = function(ingredient) {
-    batchSnapshot.addIngredient(ingredient);
-};
+function addIngredient(ingredient) {
+    if (batchSnapshot && typeof batchSnapshot.addIngredient === 'function') {
+        batchSnapshot.addIngredient(ingredient);
+    }
+}
 
-window.saveBatch = function(event) {
-    batchForm.save(event);
-};
+function saveBatch(event) {
+    if (batchForm && typeof batchForm.save === 'function') {
+        batchForm.save(event);
+    }
+}
+
+function showCompleteBatchModal() {
+    var modalElement = document.getElementById('completeBatchModal');
+    if (modalElement) {
+        var modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+}
 
 window.cancelBatch = function() {
     if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
