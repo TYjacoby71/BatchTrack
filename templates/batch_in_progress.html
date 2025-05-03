@@ -89,34 +89,33 @@
     <!-- INGREDIENT SECTION -->
     <div class="mt-4">
         <h4>Ingredients Used</h4>
-        <div id="ingredient-list">
-            {% for bi in ingredients %}
-            <div class="ingredient-row d-flex gap-2 mb-2">
-                <select name="ingredients[{{ loop.index0 }}][id]" class="form-select">
-                    {% for ing in inventory_items if ing.type == 'ingredient' %}
-                    <option value="{{ ing.id }}" {% if bi.ingredient_id == ing.id %}selected{% endif %}>{{ ing.name }}</option>
-                    {% endfor %}
-                </select>
-                <input type="number" step="0.01" name="ingredients[{{ loop.index0 }}][amount]" value="{{ bi.amount_used }}" class="form-control">
-                <select name="ingredients[{{ loop.index0 }}][unit]" class="form-select">
-                    {% for unit in units %}
-                    <option value="{{ unit.name }}" {% if unit.name == bi.unit %}selected{% endif %}>{{ unit.name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-            </div>
-            {% endfor %}
+        <div class="input-group mb-3">
+            <select id="newIngredient" class="form-select">
+                {% for ing in inventory_items if ing.type == 'ingredient' %}
+                <option value="{{ ing.id }}">{{ ing.name }} ({{ ing.quantity }} {{ ing.unit }} available)</option>
+                {% endfor %}
+            </select>
+            <input type="number" id="newIngAmount" class="form-control" placeholder="Amount">
+            <select id="newIngUnit" class="form-select">
+                {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-primary" onclick="addIngredient()">Add</button>
         </div>
-        <button type="button" onclick="addIngredientRow()" class="btn btn-outline-secondary mt-2">+ Add Ingredient</button>
-    </div>
+
+        <div id="ingredient-list">
+            <!-- Snapshot data loaded in summary -->
+        </div>
+        </div>
 
     <!-- Recipe Snapshot Data -->
-<input type="hidden" id="recipe-snapshot" value="{{ batch.recipe_snapshot|tojson if batch.recipe_snapshot else '[]' }}">
+    <input type="hidden" id="recipe-snapshot" value="{{ batch.recipe_snapshot|tojson if batch.recipe_snapshot else '[]' }}">
 
-<!-- CONTAINER SECTION -->
-<div class="mt-4">
-    <h4>Containers Used</h4>
-    <div id="container-list">
+    <!-- CONTAINER SECTION -->
+    <div class="mt-4">
+        <h4>Containers Used</h4>
+        <div id="container-list">
             {% for bc in containers %}
             <div class="container-row d-flex gap-2 mb-2">
                 <select name="containers[{{ loop.index0 }}][id]" class="form-select">
@@ -251,6 +250,29 @@ function toggleOutputFields() {
         select.value = '';
     }
 }
+
+function addIngredient() {
+    const ingredientId = document.getElementById('newIngredient').value;
+    const amount = document.getElementById('newIngAmount').value;
+    const unit = document.getElementById('newIngUnit').value;
+
+    if (!ingredientId || !amount || !unit) return; // Handle missing values
+
+    const ingredientData = { ingredientId, amount, unit };
+    //  Update the recipe_snapshot in the database using AJAX or a similar method.
+
+
+    //For demonstration purposes only: Add to a local array (replace with actual DB update)
+    let snapshot = JSON.parse(document.getElementById("recipe-snapshot").value) || {extra_ingredients: []};
+    snapshot.extra_ingredients.push(ingredientData);
+    document.getElementById("recipe-snapshot").value = JSON.stringify(snapshot);
+
+    // Clear the input fields
+    document.getElementById('newIngredient').value = '';
+    document.getElementById('newIngAmount').value = '';
+    document.getElementById('newIngUnit').value = '';
+}
+
 
 function addIngredientRow() {
     const row = document.createElement('div');
