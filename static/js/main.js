@@ -264,6 +264,20 @@ function saveBatch(event) {
     }
 
     // Collect form data
+    // Collect ingredients data
+    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+        id: row.querySelector('select[name*="ingredient"]')?.value,
+        amount: parseFloat(row.querySelector('input[type="number"]')?.value || '0'),
+        unit: row.querySelector('select[name*="unit"]')?.value
+    })).filter(ing => ing.id);
+
+    // Collect containers data
+    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
+        id: row.querySelector('select[name*="container"]')?.value,
+        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+    })).filter(cont => cont.id);
+
     const formData = {
         notes: document.querySelector('textarea[name="notes"]')?.value || '',
         tags: document.querySelector('input[name="tags"]')?.value || '',
