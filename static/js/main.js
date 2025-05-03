@@ -248,48 +248,7 @@ function updateStockCheckTable(data) {
   }
 }
 
-// Batch save handler
-function finishBatch(action) {
-    const form = document.getElementById('batchForm');
-    const formData = new FormData(form);
-    formData.append('action', action);
-
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': form.querySelector('input[name="csrf_token"]').value
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        window.location.href = '/batches/';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error finishing batch: ' + error.message);
-    });
-}
-
-function cancelBatch() {
-    if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-        const batchId = window.location.pathname.split('/').pop();
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/batches/cancel/${batchId}`;
-
-        const csrf = document.querySelector('.csrf-token').value;
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrf;
-
-        form.appendChild(csrfInput);
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
+// Save batch data to server
 function saveBatch(event) {
     if (event) {
         event.preventDefault();
@@ -304,80 +263,111 @@ function saveBatch(event) {
 
     // Collect all form data
     const data = {
+        output_type: form.querySelector('#output_type')?.value,
         notes: form.querySelector('textarea[name="notes"]')?.value,
         tags: form.querySelector('input[name="tags"]')?.value,
-        yield_amount: form.querySelector('input[name="yield_amount"]')?.value,
-        yield_unit: form.querySelector('select[name="yield_unit"]')?.value,
-        final_quantity: form.querySelector('input[name="final_quantity"]')?.value,
-        output_unit: form.querySelector('select[name="output_unit"]')?.value,
+
+        // Product output fields
         product_id: form.querySelector('select[name="product_id"]')?.value,
-        variant_id: form.querySelector('input[name="variant_id"]')?.value,
+        variant_label: form.querySelector('input[name="variant_label"]')?.value,
+        output_unit: form.querySelector('select[name="output_unit"]')?.value,
+        final_quantity: form.querySelector('input[name="final_quantity"]')?.value,
+
+        // Ingredient output fields
+        ingredient_unit: form.querySelector('select[name="ingredient_unit"]')?.value,
+        ingredient_quantity: form.querySelector('input[name="ingredient_quantity"]')?.value,
+
+        // Collect ingredients data
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
             id: row.querySelector('select').value,
             amount: row.querySelector('input[type="number"]').value,
             unit: row.querySelector('.unit-select').value
         })),
+
+        // Collect containers data
         containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
             id: row.querySelector('select').value,
             qty: row.querySelector('input[type="number"]').value,
             cost_each: row.querySelector('input[name*="cost"]').value
         })),
+
+        // Collect timers data
         timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
             name: row.querySelector('input[type="text"]').value,
-            duration_seconds: row.querySelector('input[type="number"]').value
-        }))
-    };
-    }
-
-    const data = {
-        notes: form.querySelector('textarea[name="notes"]')?.value || '',
-        tags: form.querySelector('input[name="tags"]')?.value || '',
-        output_type: form.querySelector('select[name="output_type"]')?.value,
-        product_id: form.querySelector('select[name="product_id"]')?.value,
-        variant_label: form.querySelector('input[name="variant_label"]')?.value,
-        final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
-        output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
-        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
-            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
-            unit: row.querySelector('select[name="units[]"]').value
-        })),
-        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="containers[]"]').value),
-            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
-        })),
-        timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[name="timers[]"]').value,
-            duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
+            duration_seconds: parseInt(row.querySelector('input[type="number"]').value || '0'),
+            completed: row.querySelector('.timer-completed')?.checked || false
         }))
     };
 
-    const csrfToken = form.querySelector('input[name="csrf_token"]').value;
-
+    // Send data to server
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': document.querySelector('.csrf-token').value
         },
         body: JSON.stringify(data)
     })
     .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            // Keep form values after save
-            const notesField = form.querySelector('textarea[name="notes"]');
-            const tagsField = form.querySelector('input[name="tags"]');
-            if (notesField) notesField.value = data.notes || notesField.value;
-            if (tagsField) tagsField.value = data.tags || tagsField.value;
-            alert('Batch saved successfully');
+    .then(result => {
+        if (result.message) {
+            alert('✓ Batch saved successfully');
+            // Optionally refresh the page to show saved data
+            // window.location.reload();
         }
     })
     .catch(error => {
         console.error('Error saving batch:', error);
-        alert('Error saving batch');
+        alert('Error saving batch. Please try again.');
     });
+}
+
+// Timer management functions
+function addTimerRow() {
+    const container = document.getElementById('timer-list');
+    const div = document.createElement('div');
+    div.className = 'timer-row d-flex gap-2 mb-2';
+
+    div.innerHTML = `
+        <input type="text" name="timers[]" class="form-control me-2" placeholder="Timer Name" required>
+        <input type="number" name="timer_durations[]" class="form-control me-2" placeholder="Duration (seconds)" required>
+        <input type="checkbox" name="timer_completed[]" class="form-check-input me-2 timer-completed">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    container.appendChild(div);
+}
+
+// Helper functions for other batch operations
+function finishBatch(action) {
+    if (confirm(`Are you sure you want to ${action} this batch?`)) {
+        const form = document.getElementById('batchForm');
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'action';
+        input.value = action;
+        form.appendChild(input);
+        form.submit();
+    }
+}
+
+function cancelBatch() {
+    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/batches/cancel/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('.csrf-token').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            } else {
+                alert('Error cancelling batch');
+            }
+        });
+    }
 }
 
 // Density Reference Functionality
