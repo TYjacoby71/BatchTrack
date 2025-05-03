@@ -564,7 +564,7 @@ def adjust_inventory_deltas(batch_id, new_ingredients, new_containers):
         if inventory:
             stock_unit = inventory.unit
             try:
-                converted_delta = ConversionEngine.convert(abs(delta), unit_used, stock_unit, density=inventory.category.default_density)
+                converted_delta = ConversionEngine.convert_units(abs(delta), unit_used, stock_unit, density=inventory.category.default_density if inventory.category else None)
                 if delta < 0:
                     inventory.quantity += converted_delta
                 else:
