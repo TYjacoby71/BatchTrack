@@ -110,10 +110,30 @@
         <button type="button" onclick="addIngredientRow()" class="btn btn-outline-secondary mt-2">+ Add Ingredient</button>
     </div>
 
-    <!-- CONTAINER SECTION -->
-    <div class="mt-4">
-        <h4>Containers Used</h4>
-        <div id="container-list">
+    <!-- Batch Summary Section -->
+<div class="mt-4">
+    <h4>Batch Summary</h4>
+    <table id="batch-summary" class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Amount</th>
+                <th>Unit</th>
+                <th>Cost (if applicable)</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<!-- Recipe Snapshot Data -->
+<input type="hidden" id="recipe-snapshot" value="{{ batch.recipe_snapshot|tojson if batch.recipe_snapshot else '[]' }}">
+
+<!-- CONTAINER SECTION -->
+<div class="mt-4">
+    <h4>Containers Used</h4>
+    <div id="container-list">
             {% for bc in containers %}
             <div class="container-row d-flex gap-2 mb-2">
                 <select name="containers[{{ loop.index0 }}][id]" class="form-select">

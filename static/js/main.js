@@ -355,6 +355,64 @@ function addTimerRow() {
 }
 
 // Helper functions for other batch operations
+function updateBatchSummary() {
+    const summaryTable = document.getElementById('batch-summary');
+    if (!summaryTable) return;
+
+    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+        id: row.querySelector('select[name*="ingredients"]')?.value,
+        name: row.querySelector('select[name*="ingredients"] option:checked')?.text,
+        amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
+        unit: row.querySelector('select[name*="unit"]')?.value
+    })).filter(ing => ing.id);
+
+    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
+        id: row.querySelector('select[name*="containers"]')?.value,
+        name: row.querySelector('select[name*="containers"] option:checked')?.text,
+        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+    })).filter(cont => cont.id);
+
+    // Update summary table HTML
+    const tbody = summaryTable.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    // Add recipe snapshot items
+    const recipeSnapshot = JSON.parse(document.getElementById('recipe-snapshot').value || '[]');
+    recipeSnapshot.forEach(item => {
+        tbody.innerHTML += `
+            <tr class="table-info">
+                <td>${item.name} (from recipe)</td>
+                <td>${item.amount}</td>
+                <td>${item.unit}</td>
+            </tr>
+        `;
+    });
+
+    // Add current ingredients
+    ingredients.forEach(ing => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${ing.name}</td>
+                <td>${ing.amount}</td>
+                <td>${ing.unit}</td>
+            </tr>
+        `;
+    });
+
+    // Add container section
+    containers.forEach(cont => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${cont.name}</td>
+                <td>${cont.qty}</td>
+                <td>count</td>
+                <td>$${cont.cost_each}</td>
+            </tr>
+        `;
+    });
+}
+
 function saveBatch(event) {
     if (event) {
         event.preventDefault();
@@ -362,6 +420,9 @@ function saveBatch(event) {
     
     const batchId = window.location.pathname.split('/').pop();
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+
+    // Update summary before saving
+    updateBatchSummary();
     
     if (!csrfToken) {
         console.error('CSRF token not found');

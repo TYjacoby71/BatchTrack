@@ -384,6 +384,19 @@ def save_batch(batch_id):
 
     data = request.get_json()
     if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    # Compare against current recipe snapshot to detect changes
+    current_ingredients = {bi.ingredient_id: bi.amount_used for bi in batch.ingredients}
+    current_containers = {bc.container_id: bc.quantity_used for bc in batch.containers}
+    
+    new_ingredients = {int(item['id']): float(item['amount']) for item in data.get('ingredients', [])}
+    new_containers = {int(item['id']): int(item['qty']) for item in data.get('containers', [])}
+
+    # Set inventory_logged flag based on changes
+    if (current_ingredients != new_ingredients or current_containers != new_containers):
+        batch.inventory_logged = False
+    if not data:
         return jsonify({"error": "No JSON data received"}), 400
 
     # Save form data in recipe_snapshot
