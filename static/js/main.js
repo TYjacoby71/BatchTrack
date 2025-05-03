@@ -253,31 +253,28 @@ function saveBatch(event) {
     event.preventDefault();
 
     const batchId = window.location.pathname.split('/').pop();
-    const form = document.getElementById('batchForm');
-
+    
     // Collect form data
     const formData = {
-        notes: document.querySelector('[name="notes"]')?.value,
-        tags: document.querySelector('[name="tags"]')?.value,
-        yield_amount: document.querySelector('[name="yield_amount"]')?.value,
-        yield_unit: document.querySelector('[name="yield_unit"]')?.value,
+        notes: document.querySelector('[name="notes"]')?.value || '',
+        tags: document.querySelector('[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value,
         final_quantity: document.querySelector('[name="final_quantity"]')?.value,
         output_unit: document.querySelector('[name="output_unit"]')?.value,
         product_id: document.querySelector('[name="product_id"]')?.value,
-        variant_id: document.querySelector('[name="variant_id"]')?.value,
         ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('[name="ingredient_id"]').value,
-            amount: row.querySelector('[name="amount"]').value,
-            unit: row.querySelector('[name="unit"]').value
+            id: row.querySelector('select').value,
+            amount: row.querySelector('input[type="number"]').value,
+            unit: row.querySelector('select:last-child').value
         })),
         containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('[name="container_id"]').value,
-            qty: row.querySelector('[name="quantity"]').value,
-            cost_each: row.querySelector('[name="cost"]').value
+            id: row.querySelector('select').value,
+            qty: row.querySelector('input[type="number"]').value,
+            cost_each: row.querySelector('input[type="number"]:last-child').value
         })),
         timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('[name="timer_name"]').value,
-            duration_seconds: parseInt(row.querySelector('[name="duration"]').value) * 60
+            name: row.querySelector('input[type="text"]').value,
+            duration_seconds: parseInt(row.querySelector('input[type="number"]').value) * 60
         }))
     };
 
