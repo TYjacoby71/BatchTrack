@@ -192,13 +192,13 @@
     <!-- Notes Section -->
     <div class="notes-section mt-4">
         <h4>Batch Notes</h4>
-        <textarea name="notes" rows="4" class="form-control">{{ batch.notes or '' }}</textarea>
+        <textarea name="notes" rows="4" class="form-control">{{ batch.saved_notes or batch.notes or '' }}</textarea>
     </div>
 
     <!-- Tags Section -->
     <div class="form-group mt-3">
         <label for="tags">Tags (comma-separated):</label>
-        <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
+        <input type="text" name="tags" value="{{ batch.saved_tags or batch.tags or '' }}" class="form-control">
     </div>
 
 

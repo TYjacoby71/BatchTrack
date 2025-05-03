@@ -167,15 +167,30 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
-    # Get existing batch data
+    # Get existing batch data and saved form data
     ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
     containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
     timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
+    
+    # Load saved form data from recipe_snapshot if it exists
+    saved_form_data = batch.recipe_snapshot.get('form_data', {}) if batch.recipe_snapshot else {}
+    
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
+    
     recipe = Recipe.query.get_or_404(batch.recipe_id)
     batch.recipe_name = recipe.name  # Add recipe name to batch object
+    
+    # Add saved form data to batch object
+    batch.saved_notes = saved_form_data.get('notes', batch.notes)
+    batch.saved_tags = saved_form_data.get('tags', batch.tags)
+    batch.saved_yield_amount = saved_form_data.get('yield_amount')
+    batch.saved_yield_unit = saved_form_data.get('yield_unit')
+    batch.saved_final_quantity = saved_form_data.get('final_quantity')
+    batch.saved_output_unit = saved_form_data.get('output_unit')
+    batch.saved_product_id = saved_form_data.get('product_id')
+    batch.saved_variant_id = saved_form_data.get('variant_id')
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
