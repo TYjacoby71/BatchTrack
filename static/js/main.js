@@ -538,20 +538,41 @@ function updateStockCheckTable(data) {
 }
 
 
-function saveBatch(event) {
+// Remove duplicate function declarations and use object methods directly
+window.addContainer = function(container) {
+    batchSnapshot.addContainer(container);
+};
+
+window.addIngredient = function(ingredient) {
+    batchSnapshot.addIngredient(ingredient);
+};
+
+window.saveBatch = function(event) {
     batchForm.save(event);
-}
+};
 
-function cancelBatch() {
-    cancelBatch();
-}
+window.cancelBatch = function() {
+    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/batches/cancel/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            } else {
+                alert('Error cancelling batch');
+            }
+        });
+    }
+};
 
-function addToSnapshot(type, data) {
-    batchSnapshot.addIngredient(data);
-}
-
-function updateBatchSummary() {
-    batchSnapshot.updateUI();
-}
+window.showCompleteBatchModal = function() {
+    const modal = new bootstrap.Modal(document.getElementById('completeBatchModal'));
+    modal.show();
+};
 
 // Density Reference Functionality
