@@ -355,6 +355,48 @@ function addTimerRow() {
 }
 
 // Helper functions for other batch operations
+function saveBatch(event) {
+    event.preventDefault();
+    const batchId = window.location.pathname.split('/').pop();
+    
+    // Collect form data
+    const formData = {
+        notes: document.querySelector('textarea[name="notes"]')?.value || '',
+        tags: document.querySelector('input[name="tags"]')?.value || '',
+        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+            id: row.querySelector('select[name*="ingredient"]')?.value,
+            amount: parseFloat(row.querySelector('input[type="number"]')?.value || '0'),
+            unit: row.querySelector('select[name*="unit"]')?.value
+        })).filter(ing => ing.id),
+        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
+            id: row.querySelector('select[name*="container"]')?.value,
+            qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+            cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+        })).filter(cont => cont.id)
+    };
+
+    // Send save request
+    fetch(`/batches/${batchId}/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            window.location.href = '/batches/';
+        }
+    })
+    .catch(error => {
+        console.error('Error saving batch:', error);
+        alert('Error saving batch');
+    });
+}
+
 function finishBatch(action) {
     if (confirm(`Are you sure you want to ${action} this batch?`)) {
         const form = document.getElementById('batchForm');
