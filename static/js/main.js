@@ -248,85 +248,43 @@ function updateStockCheckTable(data) {
   }
 }
 
-// Batch save handler
-function finishBatch(action) {
-    const form = document.getElementById('batchForm');
-    const formData = new FormData(form);
-    formData.append('action', action);
-
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': form.querySelector('input[name="csrf_token"]').value
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        window.location.href = '/batches/';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error finishing batch: ' + error.message);
-    });
-}
-
-function cancelBatch() {
-    if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-        const batchId = window.location.pathname.split('/').pop();
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/batches/cancel/${batchId}`;
-
-        const csrf = document.querySelector('.csrf-token').value;
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrf;
-
-        form.appendChild(csrfInput);
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
+// Save batch data to server
 function saveBatch(event) {
     if (event) {
         event.preventDefault();
     }
 
     const batchId = window.location.pathname.split('/').pop();
-    const form = document.getElementById('batchForm');
-    if (!form) {
-        console.error('Batch form not found');
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+    
+    if (!csrfToken) {
+        console.error('CSRF token not found');
         return;
     }
-
-    const data = {
-        notes: form.querySelector('textarea[name="notes"]')?.value || '',
-        tags: form.querySelector('input[name="tags"]')?.value || '',
-        output_type: form.querySelector('select[name="output_type"]')?.value,
-        product_id: form.querySelector('select[name="product_id"]')?.value,
-        variant_label: form.querySelector('input[name="variant_label"]')?.value,
-        final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
-        output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
-        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
-            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
-            unit: row.querySelector('select[name="units[]"]').value
+    
+    // Collect form data
+    const formData = {
+        notes: document.querySelector('[name="notes"]')?.value || '',
+        tags: document.querySelector('[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value || null,
+        final_quantity: document.querySelector('[name="final_quantity"]')?.value || '0',
+        output_unit: document.querySelector('[name="output_unit"]')?.value || '',
+        product_id: document.querySelector('[name="product_id"]')?.value || null,
+        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+            ingredient_id: row.querySelector('select[name="ingredient_id"]')?.value || null,
+            amount: row.querySelector('input[name="amount"]')?.value || '0',
+            unit: row.querySelector('select[name="unit"]')?.value || 'g'
         })),
-        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="containers[]"]').value),
-            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
+        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
+            container_id: row.querySelector('select')?.value || null,
+            quantity: row.querySelector('input[type="number"]')?.value || '0',
+            cost_each: row.querySelector('input[type="number"]:last-child')?.value || '0'
         })),
-        timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[name="timers[]"]').value,
-            duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
+        timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
+            name: row.querySelector('input[type="text"]')?.value || '',
+            duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
         }))
     };
-
-    const csrfToken = form.querySelector('input[name="csrf_token"]').value;
 
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
@@ -334,23 +292,85 @@ function saveBatch(event) {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(formData)
     })
     .then(response => response.json())
     .then(data => {
         if (data.message) {
-            // Keep form values after save
-            const notesField = form.querySelector('textarea[name="notes"]');
-            const tagsField = form.querySelector('input[name="tags"]');
-            if (notesField) notesField.value = data.notes || notesField.value;
-            if (tagsField) tagsField.value = data.tags || tagsField.value;
-            alert('Batch saved successfully');
+            alert(data.message);
         }
     })
     .catch(error => {
         console.error('Error saving batch:', error);
         alert('Error saving batch');
     });
+}
+
+function cancelBatch() {
+    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/batches/cancel/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            } else {
+                alert('Error cancelling batch');
+            }
+        });
+    }
+}
+
+// Timer management functions
+function addTimerRow() {
+    const container = document.getElementById('timer-list');
+    const div = document.createElement('div');
+    div.className = 'timer-row d-flex gap-2 mb-2';
+
+    div.innerHTML = `
+        <input type="text" name="timers[]" class="form-control me-2" placeholder="Timer Name" required>
+        <input type="number" name="timer_durations[]" class="form-control me-2" placeholder="Duration (seconds)" required>
+        <input type="checkbox" name="timer_completed[]" class="form-check-input me-2 timer-completed">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    container.appendChild(div);
+}
+
+// Helper functions for other batch operations
+function finishBatch(action) {
+    if (confirm(`Are you sure you want to ${action} this batch?`)) {
+        const form = document.getElementById('batchForm');
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'action';
+        input.value = action;
+        form.appendChild(input);
+        form.submit();
+    }
+}
+
+function cancelBatch() {
+    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/batches/cancel/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            } else {
+                alert('Error cancelling batch');
+            }
+        });
+    }
 }
 
 // Density Reference Functionality
