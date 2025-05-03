@@ -255,32 +255,38 @@ function saveBatch(event) {
     }
 
     const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+    
     if (!csrfToken) {
-        console.error('CSRF token not found');
+        console.error('CSRF token input not found');
         alert('CSRF token not found - please refresh the page');
         return;
     }
 
-    // Collect form data
+    // Collect ingredients data
+    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+        id: row.querySelector('select[name*="ingredients"]')?.value,
+        amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
+        unit: row.querySelector('select[name*="unit"]')?.value
+    })).filter(ing => ing.id);
+
+    // Collect containers data  
+    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
+        id: row.querySelector('select[name*="containers"]')?.value,
+        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+    })).filter(cont => cont.id);
+
     const formData = {
-        notes: document.querySelector('[name="notes"]')?.value || '',
-        tags: document.querySelector('[name="tags"]')?.value || '',
-        output_type: document.querySelector('#output_type')?.value || null,
-        final_quantity: document.querySelector('[name="final_quantity"]')?.value || '0',
-        output_unit: document.querySelector('[name="output_unit"]')?.value || '',
-        product_id: document.querySelector('[name="product_id"]')?.value || null,
-        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            ingredient_id: row.querySelector('select[name="ingredient_id"]')?.value || null,
-            amount: row.querySelector('input[name="amount"]')?.value || '0',
-            unit: row.querySelector('select[name="unit"]')?.value || 'g'
-        })),
-        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            container_id: row.querySelector('select')?.value || null,
-            quantity: row.querySelector('input[type="number"]')?.value || '0',
-            cost_each: row.querySelector('input[type="number"]:last-child')?.value || '0'
-        })),
+        notes: document.querySelector('textarea[name="notes"]')?.value || '',
+        tags: document.querySelector('input[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value || 'product',
+        final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
+        output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
+        product_id: document.querySelector('select[name="product_id"]')?.value || null,
+        variant_label: document.querySelector('input[name="variant_label"]')?.value || '',
+        ingredients: ingredients,
+        containers: containers,
         timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
             name: row.querySelector('input[type="text"]')?.value || '',
             duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
@@ -295,15 +301,21 @@ function saveBatch(event) {
         },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.message) {
             alert(data.message);
+            window.location.href = '/batches/';
         }
     })
     .catch(error => {
         console.error('Error saving batch:', error);
-        alert('Error saving batch');
+        alert('Error saving batch. Please check the form and try again.');
     });
 }
 
@@ -343,6 +355,125 @@ function addTimerRow() {
 }
 
 // Helper functions for other batch operations
+function updateBatchSummary() {
+    const summaryTable = document.getElementById('batch-summary');
+    if (!summaryTable) return;
+
+    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+        id: row.querySelector('select[name*="ingredients"]')?.value,
+        name: row.querySelector('select[name*="ingredients"] option:checked')?.text,
+        amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
+        unit: row.querySelector('select[name*="unit"]')?.value
+    })).filter(ing => ing.id);
+
+    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
+        id: row.querySelector('select[name*="containers"]')?.value,
+        name: row.querySelector('select[name*="containers"] option:checked')?.text,
+        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+    })).filter(cont => cont.id);
+
+    // Update summary table HTML
+    const tbody = summaryTable.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    // Add recipe snapshot items
+    const recipeSnapshot = JSON.parse(document.getElementById('recipe-snapshot').value || '[]');
+    recipeSnapshot.forEach(item => {
+        tbody.innerHTML += `
+            <tr class="table-info">
+                <td>${item.name} (from recipe)</td>
+                <td>${item.amount}</td>
+                <td>${item.unit}</td>
+            </tr>
+        `;
+    });
+
+    // Add current ingredients
+    ingredients.forEach(ing => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${ing.name}</td>
+                <td>${ing.amount}</td>
+                <td>${ing.unit}</td>
+            </tr>
+        `;
+    });
+
+    // Add container section
+    containers.forEach(cont => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${cont.name}</td>
+                <td>${cont.qty}</td>
+                <td>count</td>
+                <td>$${cont.cost_each}</td>
+            </tr>
+        `;
+    });
+}
+
+function saveBatch(event) {
+    if (event) {
+        event.preventDefault();
+    }
+    
+    const batchId = window.location.pathname.split('/').pop();
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+
+    // Update summary before saving
+    updateBatchSummary();
+    
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    // Collect current form data
+    const formData = {
+        notes: document.querySelector('textarea[name="notes"]')?.value || '',
+        tags: document.querySelector('input[name="tags"]')?.value || '',
+        output_type: document.querySelector('#output_type')?.value || 'product',
+        final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
+        output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
+        product_id: document.querySelector('select[name="product_id"]')?.value || null,
+        variant_label: document.querySelector('input[name="variant_label"]')?.value || '',
+        // Collect current ingredients including recipe snapshot
+        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+            id: row.querySelector('select[name*="ingredients"]')?.value,
+            amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
+            unit: row.querySelector('select[name*="unit"]')?.value
+        })).filter(ing => ing.id),
+        // Collect current containers
+        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
+            id: row.querySelector('select[name*="containers"]')?.value,
+            qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
+            cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
+        })).filter(cont => cont.id)
+    };
+
+    // Send save request
+    fetch(`/batches/${batchId}/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            window.location.href = '/batches/';
+        }
+    })
+    .catch(error => {
+        console.error('Error saving batch:', error);
+        alert('Error saving batch');
+    });
+}
+
 function finishBatch(action) {
     if (confirm(`Are you sure you want to ${action} this batch?`)) {
         const form = document.getElementById('batchForm');

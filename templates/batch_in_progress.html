@@ -110,10 +110,30 @@
         <button type="button" onclick="addIngredientRow()" class="btn btn-outline-secondary mt-2">+ Add Ingredient</button>
     </div>
 
-    <!-- CONTAINER SECTION -->
-    <div class="mt-4">
-        <h4>Containers Used</h4>
-        <div id="container-list">
+    <!-- Batch Summary Section -->
+<div class="mt-4">
+    <h4>Batch Summary</h4>
+    <table id="batch-summary" class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Amount</th>
+                <th>Unit</th>
+                <th>Cost (if applicable)</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<!-- Recipe Snapshot Data -->
+<input type="hidden" id="recipe-snapshot" value="{{ batch.recipe_snapshot|tojson if batch.recipe_snapshot else '[]' }}">
+
+<!-- CONTAINER SECTION -->
+<div class="mt-4">
+    <h4>Containers Used</h4>
+    <div id="container-list">
             {% for bc in containers %}
             <div class="container-row d-flex gap-2 mb-2">
                 <select name="containers[{{ loop.index0 }}][id]" class="form-select">
@@ -205,8 +225,7 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="button" onclick="saveBatch(event)" class="btn btn-primary me-2">Save</button>
-            <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Exit</a>
+            <button type="button" onclick="saveBatch(event)" class="btn btn-primary me-2">Save & Exit</button>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>

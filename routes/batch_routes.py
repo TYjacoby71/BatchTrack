@@ -173,8 +173,14 @@ def view_batch_in_progress(batch_identifier):
     timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
     
     # Load saved form data from recipe_snapshot if it exists
-    saved_form_data = batch.recipe_snapshot if isinstance(batch.recipe_snapshot, dict) else {}
-    saved_form_data = saved_form_data.get('form_data', {})
+    saved_form_data = {}
+    if isinstance(batch.recipe_snapshot, dict):
+        saved_form_data = batch.recipe_snapshot.get('form_data', {})
+        
+        # Pre-populate fields from snapshot
+        batch.saved_ingredients = saved_form_data.get('ingredients', [])
+        batch.saved_containers = saved_form_data.get('containers', [])
+        batch.saved_timers = saved_form_data.get('timers', [])
     
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
@@ -374,10 +380,24 @@ def mark_batch_failed(batch_id):
 def save_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     if batch.status != 'in_progress':
-        flash("Only in-progress batches can be saved.")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        return jsonify({"error": "Only in-progress batches can be saved"}), 400
 
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    # Compare against current recipe snapshot to detect changes
+    current_ingredients = {bi.ingredient_id: bi.amount_used for bi in batch.ingredients}
+    current_containers = {bc.container_id: bc.quantity_used for bc in batch.containers}
+    
+    new_ingredients = {int(item['id']): float(item['amount']) for item in data.get('ingredients', [])}
+    new_containers = {int(item['id']): int(item['qty']) for item in data.get('containers', [])}
+
+    # Set inventory_logged flag based on changes
+    if (current_ingredients != new_ingredients or current_containers != new_containers):
+        batch.inventory_logged = False
+    if not data:
+        return jsonify({"error": "No JSON data received"}), 400
 
     # Save form data in recipe_snapshot
     batch.recipe_snapshot = {
