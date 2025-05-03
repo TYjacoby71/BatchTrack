@@ -254,70 +254,70 @@ function saveBatch(event) {
 
     const batchId = window.location.pathname.split('/').pop();
     const form = document.getElementById('batchForm');
-    if (!form) {
-        console.error('Batch form not found');
-        return;
-    }
 
-    // Collect all form data
-    const data = {
-        output_type: form.querySelector('#output_type')?.value,
-        notes: form.querySelector('textarea[name="notes"]')?.value,
-        tags: form.querySelector('input[name="tags"]')?.value,
-
-        // Product output fields
-        product_id: form.querySelector('select[name="product_id"]')?.value,
-        variant_label: form.querySelector('input[name="variant_label"]')?.value,
-        output_unit: form.querySelector('select[name="output_unit"]')?.value,
-        final_quantity: form.querySelector('input[name="final_quantity"]')?.value,
-
-        // Ingredient output fields
-        ingredient_unit: form.querySelector('select[name="ingredient_unit"]')?.value,
-        ingredient_quantity: form.querySelector('input[name="ingredient_quantity"]')?.value,
-
-        // Collect ingredients data
-        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select').value,
-            amount: row.querySelector('input[type="number"]').value,
-            unit: row.querySelector('.unit-select').value
+    // Collect form data
+    const formData = {
+        notes: document.querySelector('[name="notes"]')?.value,
+        tags: document.querySelector('[name="tags"]')?.value,
+        yield_amount: document.querySelector('[name="yield_amount"]')?.value,
+        yield_unit: document.querySelector('[name="yield_unit"]')?.value,
+        final_quantity: document.querySelector('[name="final_quantity"]')?.value,
+        output_unit: document.querySelector('[name="output_unit"]')?.value,
+        product_id: document.querySelector('[name="product_id"]')?.value,
+        variant_id: document.querySelector('[name="variant_id"]')?.value,
+        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
+            id: row.querySelector('[name="ingredient_id"]').value,
+            amount: row.querySelector('[name="amount"]').value,
+            unit: row.querySelector('[name="unit"]').value
         })),
-
-        // Collect containers data
-        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('select').value,
-            qty: row.querySelector('input[type="number"]').value,
-            cost_each: row.querySelector('input[name*="cost"]').value
+        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
+            id: row.querySelector('[name="container_id"]').value,
+            qty: row.querySelector('[name="quantity"]').value,
+            cost_each: row.querySelector('[name="cost"]').value
         })),
-
-        // Collect timers data
-        timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[type="text"]').value,
-            duration_seconds: parseInt(row.querySelector('input[type="number"]').value || '0'),
-            completed: row.querySelector('.timer-completed')?.checked || false
+        timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
+            name: row.querySelector('[name="timer_name"]').value,
+            duration_seconds: parseInt(row.querySelector('[name="duration"]').value) * 60
         }))
     };
 
-    // Send data to server
     fetch(`/batches/${batchId}/save`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
+            'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(formData)
     })
     .then(response => response.json())
-    .then(result => {
-        if (result.message) {
-            alert('✓ Batch saved successfully');
-            // Optionally refresh the page to show saved data
-            // window.location.reload();
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
         }
     })
     .catch(error => {
         console.error('Error saving batch:', error);
-        alert('Error saving batch. Please try again.');
+        alert('Error saving batch');
     });
+}
+
+function cancelBatch() {
+    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/batches/cancel/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            } else {
+                alert('Error cancelling batch');
+            }
+        });
+    }
 }
 
 // Timer management functions
@@ -355,7 +355,7 @@ function cancelBatch() {
         fetch(`/batches/cancel/${batchId}`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('.csrf-token').value
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
             }
         })
         .then(response => {
