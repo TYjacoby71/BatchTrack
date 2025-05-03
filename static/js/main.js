@@ -255,6 +255,12 @@ function saveBatch(event) {
     }
 
     const batchId = window.location.pathname.split('/').pop();
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+    
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
     
     // Collect form data
     const formData = {
@@ -284,7 +290,7 @@ function saveBatch(event) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify(formData)
     })
@@ -298,7 +304,6 @@ function saveBatch(event) {
         console.error('Error saving batch:', error);
         alert('Error saving batch');
     });
-}
 }
 
 function cancelBatch() {
