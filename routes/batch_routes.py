@@ -173,7 +173,8 @@ def view_batch_in_progress(batch_identifier):
     timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
     
     # Load saved form data from recipe_snapshot if it exists
-    saved_form_data = batch.recipe_snapshot.get('form_data', {}) if batch.recipe_snapshot else {}
+    saved_form_data = batch.recipe_snapshot if isinstance(batch.recipe_snapshot, dict) else {}
+    saved_form_data = saved_form_data.get('form_data', {})
     
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
