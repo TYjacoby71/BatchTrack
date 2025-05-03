@@ -419,7 +419,7 @@ function updateBatchSummary() {
 
     let html = '';
 
-    // Recipe ingredients
+    // Recipe ingredients (blue)
     if (snapshot.recipe_ingredients) {
         snapshot.recipe_ingredients.forEach(item => {
             html += `<tr class="table-info">
@@ -432,7 +432,7 @@ function updateBatchSummary() {
         });
     }
 
-    // Extra ingredients
+    // Extra ingredients (yellow) 
     if (snapshot.extra_ingredients) {
         snapshot.extra_ingredients.forEach(item => {
             html += `<tr class="table-warning">
@@ -445,7 +445,20 @@ function updateBatchSummary() {
         });
     }
 
-    // Extra containers
+    // Recipe containers (blue)
+    if (snapshot.recipe_containers) {
+        snapshot.recipe_containers.forEach(item => {
+            html += `<tr class="table-info">
+                <td>${item.name} (container)</td>
+                <td>${item.quantity}</td>
+                <td>count</td>
+                <td>$${item.cost || 0}</td>
+                <td>$${(item.quantity * (item.cost || 0)).toFixed(2)}</td>
+            </tr>`;
+        });
+    }
+
+    // Extra containers (red)
     if (snapshot.extra_containers) {
         snapshot.extra_containers.forEach(item => {
             html += `<tr class="table-danger">
@@ -461,57 +474,6 @@ function updateBatchSummary() {
     if (summaryTable) {
         summaryTable.innerHTML = html;
     }
-} = '';
-}
-
-
-function updateBatchSummary() {
-    const snapshotElem = document.getElementById('recipe-snapshot');
-    const snapshot = JSON.parse(snapshotElem.value || '{}');
-    const summaryTable = document.querySelector('.batch-summary table tbody');
-
-    let html = '';
-
-    // Recipe ingredients
-    if (snapshot.recipe_ingredients) {
-        snapshot.recipe_ingredients.forEach(item => {
-            html += `<tr class="table-info">
-                <td>${item.name} (recipe)</td>
-                <td>${item.amount}</td>
-                <td>${item.unit}</td>
-                <td>$${item.cost_per_unit || 0}</td>
-                <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
-            </tr>`;
-        });
-    }
-
-    // Extra ingredients
-    if (snapshot.extra_ingredients) {
-        snapshot.extra_ingredients.forEach(item => {
-            html += `<tr class="table-warning">
-                <td>${item.name} (extra)</td>
-                <td>${item.amount}</td>
-                <td>${item.unit}</td>
-                <td>$${item.cost_per_unit || 0}</td>
-                <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
-            </tr>`;
-        });
-    }
-
-    // Extra containers
-    if (snapshot.extra_containers) {
-        snapshot.extra_containers.forEach(item => {
-            html += `<tr class="table-danger">
-                <td>${item.name} (extra)</td>
-                <td>${item.quantity}</td>
-                <td>count</td>
-                <td>$${item.cost}</td>
-                <td>$${(item.quantity * item.cost).toFixed(2)}</td>
-            </tr>`;
-        });
-    }
-
-    summaryTable.innerHTML = html;
 }
 
 function showCompleteBatchModal() {
