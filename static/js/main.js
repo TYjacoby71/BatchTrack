@@ -1,27 +1,32 @@
-// Add CSRF token to fetch headers
-// Unit mapping now handled by form submit
-
-$(document).ready(function() {
-  // Initialize all global Select2 dropdowns (ingredients page, recipes page, etc.)
+// Consolidated DOMContentLoaded handler
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Select2 dropdowns
   $('select[data-unit-select]').select2({
     placeholder: 'Select a unit',
     allowClear: true,
-    width: '100%'
+    width: '100%',
   });
 
   $('.ingredient-select').select2({
     placeholder: 'Select ingredients',
     allowClear: true,
-    width: '100%'
+    width: '100%',
   });
 
-  // Bootstrap tooltips site-wide
+  $('.container-select:not([x-data])').select2({
+    placeholder: 'Select containers',
+    allowClear: true,
+    multiple: true,
+    width: '100%',
+  });
+
+  // Initialize Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
-  // Quick add modal transitions (for ingredients and units)
+  // Quick add modal transitions
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-    if (unitModal) unitModal.hide();
+    unitModal?.hide();
 
     setTimeout(() => {
       const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
@@ -32,86 +37,75 @@ $(document).ready(function() {
 
   document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-    if (modal) modal.hide();
+    modal?.hide();
   });
-  // Initialize Select2 only for non-Alpine container selects
-  $('.container-select:not([x-data])').select2({
-        placeholder: 'Select containers',
-        allowClear: true,
-        multiple: true,
-        width: '100%'
+
+  // Recipe form container checkbox logic
+  const requiresContainersCheckbox = document.getElementById('requiresContainers');
+  const allowedContainersSection = document.getElementById('allowedContainersSection');
+  if (requiresContainersCheckbox && allowedContainersSection) {
+    requiresContainersCheckbox.addEventListener('change', function () {
+      allowedContainersSection.style.display = this.checked ? 'block' : 'none';
     });
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Only handle container checkbox logic on recipe form
-  if (document.getElementById('recipeForm')) {
-    const requiresContainersCheckbox = document.getElementById('requiresContainers');
-    const allowedContainersSection = document.getElementById('allowedContainersSection');
-
-    if (requiresContainersCheckbox && allowedContainersSection) {
-      requiresContainersCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-          allowedContainersSection.style.display = 'block';
-        } else {
-          allowedContainersSection.style.display = 'none';
-        }
-      });
-    }
   }
 
   // Quick Add Container form handler
-  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
-  if (quickAddContainerForm) {
-    quickAddContainerForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      // Your existing form submission logic here
+  document.getElementById('quickAddContainerForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Form submission logic here
+  });
+
+  // Output type toggle for batch form
+  const outputTypeSelect = document.getElementById('output_type');
+  if (outputTypeSelect) {
+    outputTypeSelect.addEventListener('change', function () {
+      const productFields = document.getElementById('productFields');
+      const ingredientFields = document.getElementById('ingredientFields');
+      productFields.style.display = this.value === 'product' ? 'block' : 'none';
+      ingredientFields.style.display = this.value === 'product' ? 'none' : 'block';
     });
   }
 
-
+  // Initialize Quick Add Unit Handler
+  initQuickAddUnit();
 });
 
-// Unit loading now handled by Jinja templates
-document.addEventListener('DOMContentLoaded', function() {
-  // Quick Add Unit Handler
-  function initQuickAddUnit() {
-    const saveButton = document.getElementById('saveQuickUnit');
-    if (!saveButton) {
-      // Retry after a short delay if button not found
-      setTimeout(initQuickAddUnit, 100);
+// Quick Add Unit Handler
+function initQuickAddUnit() {
+  const saveButton = document.getElementById('saveQuickUnit');
+  if (!saveButton) {
+    setTimeout(initQuickAddUnit, 100);
+    return;
+  }
+
+  saveButton.addEventListener('click', () => {
+    const name = document.getElementById('unitName').value.trim();
+    const type = document.getElementById('unitType').value;
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    if (!name) {
+      alert('Unit name required');
       return;
     }
 
-    saveButton.addEventListener('click', () => {
-      const name = document.getElementById('unitName').value.trim();
-      const type = document.getElementById('unitType').value;
+    console.log(`Creating unit: ${name} (${type})`);
 
-      if (!name) {
-        alert('Unit name required');
-        return;
-      }
-
-      console.log(`Creating unit: ${name} (${type})`);
-
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-      fetch('/quick-add/unit', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({ name, type })
-      })
-      .then(r => r.json())
-      .then(data => {
+    fetch('/quick-add/unit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ name, type }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
         if (data.error) {
-          alert('Error: ' + data.error);
+          alert(`Error: ${data.error}`);
           return;
         }
 
-        // Insert unit into ingredient modal dropdown
+        // Update unit dropdowns
         const unitSelect = document.getElementById('quickIngredientUnit');
         if (unitSelect) {
           const newOption = new Option(data.name, data.name, false, true);
@@ -119,17 +113,14 @@ document.addEventListener('DOMContentLoaded', function() {
           unitSelect.value = data.name;
         }
 
-        // Add to quick ingredient unit dropdown
         const quickUnit = document.getElementById('new-ingredient-unit');
         if (quickUnit) {
           quickUnit.add(new Option(data.name, data.name, false, true));
           quickUnit.value = data.name;
         }
 
-        // Update all other unit dropdowns
-        document.querySelectorAll("select[name='units[]']").forEach(select => {
-          const option = new Option(data.name, data.name);
-          select.add(option);
+        document.querySelectorAll("select[name='units[]']").forEach((select) => {
+          select.add(new Option(data.name, data.name));
         });
 
         // Handle modal transitions
@@ -147,47 +138,23 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('unitName').value = '';
         document.getElementById('unitType').selectedIndex = 0;
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
-        alert("Failed to add unit");
+        alert('Failed to add unit');
       });
-    });
-  }
+  });
+}
 
-  initQuickAddUnit();
-});
-
+// Unit filter
 function filterUnits() {
   const filter = document.getElementById('unitFilter').value;
-  const unitCards = document.querySelectorAll('.card.mb-3');
-
-  unitCards.forEach(card => {
+  document.querySelectorAll('.card.mb-3').forEach((card) => {
     const type = card.querySelector('h5').textContent.toLowerCase();
-    if (filter === 'all' || filter === type) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
+    card.style.display = filter === 'all' || filter === type ? '' : 'none';
   });
 }
 
-// Unit loading now handled by Jinja templates directly
-
-function displayResult(element, text) {
-  element.innerHTML = `
-    <p>${text}</p>
-    <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
-  `;
-}
-
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('Copied to clipboard!');
-  }).catch(err => {
-    console.error('Failed to copy:', err);
-  });
-}
-
+// Unit converter
 function convertUnits() {
   const amount = document.getElementById('amount').value;
   const fromUnit = document.getElementById('fromUnit').value;
@@ -196,17 +163,17 @@ function convertUnits() {
   const resultDiv = document.getElementById('converterResult');
 
   fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.error && data.error.includes("without density")) {
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.error?.includes('without density')) {
         const useDefault = confirm(
           `Heads up! You're converting ${fromUnit} to ${toUnit}, which requires a density.\n` +
-          `This ingredient doesn't have one defined.\n\nWould you like to:\n✅ Use water (1.0 g/mL)\nℹ️ Or go define it manually?`
+            `This ingredient doesn't have one defined.\n\nWould you like to:\n✅ Use water (1.0 g/mL)\nℹ️ Or go define it manually?`
         );
         if (useDefault) {
           fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}&density=1.0`)
-            .then(r => r.json())
-            .then(result => {
+            .then((r) => r.json())
+            .then((result) => {
               displayResult(resultDiv, `${amount} ${fromUnit} = ${result.result} ${result.unit}`);
             });
         } else {
@@ -216,299 +183,274 @@ function convertUnits() {
         displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
       }
     })
-    .catch(err => {
+    .catch((err) => {
       resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
     });
 }
 
-// Stock check functionality is now handled in plan_production.html template
-// Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
+function displayResult(element, text) {
+  element.innerHTML = `
+    <p>${text}</p>
+    <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>
+  `;
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => alert('Copied to clipboard!'))
+    .catch((err) => console.error('Failed to copy:', err));
+}
+
+// Stock check table update
 function updateStockCheckTable(data) {
   const tableBody = document.getElementById('stockCheckTableBody');
   const startBatchBtn = document.getElementById('startBatchBtn');
-
   if (!tableBody) return;
 
-  tableBody.innerHTML = data.stock_check.map(item => {
-    const showUnit = item.type !== 'container';
-    return `
-      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
-        <td>${item.type || 'ingredient'}</td>
-        <td>${item.name}</td>
-        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
-        <td>${showUnit ? item.unit : '-'}</td>
-        <td>${item.status}</td>
-      </tr>
-    `;
-  }).join('');
+  tableBody.innerHTML = data.stock_check
+    .map((item) => {
+      const showUnit = item.type !== 'container';
+      return `
+        <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+          <td>${item.type || 'ingredient'}</td>
+          <td>${item.name}</td>
+          <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+          <td>${showUnit ? item.unit : '-'}</td>
+          <td>${item.status}</td>
+        </tr>
+      `;
+    })
+    .join('');
 
   if (startBatchBtn) {
     startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
   }
 }
 
-// Save batch data to server
+// Snapshot management
+function addToSnapshot(type, data) {
+  const snapshotElem = document.getElementById('recipe-snapshot');
+  let snapshot = JSON.parse(snapshotElem.value || '{}');
+
+  snapshot.extra_ingredients = snapshot.extra_ingredients || [];
+  snapshot.extra_containers = snapshot.extra_containers || [];
+
+  if (type === 'ingredient') {
+    snapshot.extra_ingredients.push(data);
+  } else if (type === 'container') {
+    snapshot.extra_containers.push(data);
+  }
+
+  snapshotElem.value = JSON.stringify(snapshot);
+  updateBatchSummary();
+}
+
+// Batch management
 function saveBatch(event) {
-    if (event) {
-        event.preventDefault();
-    }
+  event?.preventDefault();
 
-    const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+  const batchId = window.location.pathname.split('/').pop();
+  const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
 
-    if (!csrfToken) {
-        console.error('CSRF token input not found');
-        alert('CSRF token not found - please refresh the page');
-        return;
-    }
+  if (!csrfToken) {
+    console.error('CSRF token input not found');
+    alert('CSRF token not found - please refresh the page');
+    return;
+  }
 
-    // Collect ingredients data
-    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-        id: row.querySelector('select[name*="ingredients"]')?.value,
-        amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
-        unit: row.querySelector('select[name*="unit"]')?.value
-    })).filter(ing => ing.id);
+  const formData = {
+    notes: document.querySelector('textarea[name="notes"]')?.value || '',
+    tags: document.querySelector('input[name="tags"]')?.value || '',
+    output_type: document.querySelector('#output_type')?.value || 'product',
+    final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
+    output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
+    product_id: document.querySelector('select[name="product_id"]')?.value || null,
+    variant_id: document.querySelector('input[name="variant_label"]')?.value || '',
+    timers: Array.from(document.querySelectorAll('.timer-row'))
+      .map((row) => ({
+        name: row.querySelector('input[type="text"]')?.value || '',
+        duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60,
+      }))
+      .filter((timer) => timer.name && timer.duration_seconds > 0),
+    recipe_snapshot: JSON.parse(document.getElementById('recipe-snapshot').value || '{}'),
+  };
 
-    // Collect containers data  
-    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
-        id: row.querySelector('select[name*="containers"]')?.value,
-        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
-        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
-    })).filter(cont => cont.id);
-
-    const formData = {
-        notes: document.querySelector('textarea[name="notes"]')?.value || '',
-        tags: document.querySelector('input[name="tags"]')?.value || '',
-        output_type: document.querySelector('#output_type')?.value || 'product',
-        final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
-        output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
-        product_id: document.querySelector('select[name="product_id"]')?.value || null,
-        variant_label: document.querySelector('input[name="variant_label"]')?.value || '',
-        ingredients: ingredients,
-        containers: containers,
-        timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[type="text"]')?.value || '',
-            duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
-        }))
-    };
-
-    fetch(`/batches/${batchId}/save`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify(formData)
+  fetch(`/batches/${batchId}/save`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken,
+    },
+    body: JSON.stringify(formData),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.message) {
+        alert(data.message);
+        window.location.href = '/batches/';
+      }
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.message) {
-            alert(data.message);
-            window.location.href = '/batches/';
-        }
-    })
-    .catch(error => {
-        console.error('Error saving batch:', error);
-        alert('Error saving batch. Please check the form and try again.');
+    .catch((error) => {
+      console.error('Error saving batch:', error);
+      alert('Error saving batch');
     });
 }
 
 function cancelBatch() {
-    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
-        const batchId = window.location.pathname.split('/').pop();
-        fetch(`/batches/cancel/${batchId}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '/batches/';
-            } else {
-                alert('Error cancelling batch');
-            }
-        });
-    }
+  if (!confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) return;
+
+  const batchId = window.location.pathname.split('/').pop();
+  fetch(`/batches/cancel/${batchId}`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name="csrf_token"]').value,
+    },
+  })
+    .then((response) => {
+      if (response.ok) {
+        window.location.href = '/batches/';
+      } else {
+        alert('Error cancelling batch');
+      }
+    });
 }
 
-// Timer management functions
+// Timer management
 function addTimerRow() {
-    const container = document.getElementById('timer-list');
-    const div = document.createElement('div');
-    div.className = 'timer-row d-flex gap-2 mb-2';
-
-    div.innerHTML = `
-        <input type="text" name="timers[]" class="form-control me-2" placeholder="Timer Name" required>
-        <input type="number" name="timer_durations[]" class="form-control me-2" placeholder="Duration (seconds)" required>
-        <input type="checkbox" name="timer_completed[]" class="form-check-input me-2 timer-completed">
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-    `;
-
-    container.appendChild(div);
+  const container = document.getElementById('timer-list');
+  const div = document.createElement('div');
+  div.className = 'timer-row d-flex gap-2 mb-2';
+  div.innerHTML = `
+    <input type="text" name="timers[]" class="form-control me-2" placeholder="Timer Name" required>
+    <input type="number" name="timer_durations[]" class="form-control me-2" placeholder="Duration (seconds)" required>
+    <input type="checkbox" name="timer_completed[]" class="form-check-input me-2 timer-completed">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  container.appendChild(div);
 }
 
-// Helper functions for other batch operations
+// Ingredient and container addition
+function addIngredient() {
+  const select = document.getElementById('newIngredient');
+  const amount = document.getElementById('newIngAmount');
+  const unit = document.getElementById('newIngUnit');
+
+  const data = {
+    id: select.value,
+    name: select.options[select.selectedIndex].text,
+    amount: parseFloat(amount.value),
+    unit: unit.value,
+  };
+
+  addToSnapshot('ingredient', data);
+  amount.value = '';
+}
+
+function addContainer() {
+  const select = document.getElementById('newContainer');
+  const quantity = document.getElementById('newContainerQty');
+  const cost = document.getElementById('newContainerCost');
+
+  if (!select.value || !quantity.value || !cost.value) return;
+
+  const data = {
+    id: select.value,
+    name: select.options[select.selectedIndex].text,
+    quantity: parseInt(quantity.value),
+    cost: parseFloat(cost.value),
+  };
+
+  addToSnapshot('container', data);
+  quantity.value = '';
+  cost.value = '';
+  updateBatchSummary();
+}
+
+// Batch summary update
 function updateBatchSummary() {
-    const summaryTable = document.getElementById('batch-summary');
-    if (!summaryTable) return;
+  const snapshot = JSON.parse(document.getElementById('recipe-snapshot').value || '{}');
+  const summaryTable = document.querySelector('.batch-summary table tbody');
+  if (!summaryTable) return;
 
-    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-        id: row.querySelector('select[name*="ingredients"]')?.value,
-        name: row.querySelector('select[name*="ingredients"] option:checked')?.text,
-        amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
-        unit: row.querySelector('select[name*="unit"]')?.value
-    })).filter(ing => ing.id);
+  let html = '';
 
-    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => ({
-        id: row.querySelector('select[name*="containers"]')?.value,
-        name: row.querySelector('select[name*="containers"] option:checked')?.text,
-        qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
-        cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
-    })).filter(cont => cont.id);
+  // Recipe ingredients (blue)
+  snapshot.recipe_ingredients?.forEach((item) => {
+    html += `<tr class="table-info">
+      <td>${item.name} (recipe)</td>
+      <td>${item.amount}</td>
+      <td>${item.unit}</td>
+      <td>$${item.cost_per_unit || 0}</td>
+      <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
+    </tr>`;
+  });
 
-    // Update summary table HTML
-    const tbody = summaryTable.querySelector('tbody');
-    tbody.innerHTML = '';
+  // Recipe containers (blue)
+  snapshot.recipe_containers?.forEach((item) => {
+    html += `<tr class="table-info">
+      <td>${item.name} (recipe container)</td>
+      <td>${item.quantity}</td>
+      <td>count</td>
+      <td>$${item.cost || 0}</td>
+      <td>$${(item.quantity * (item.cost || 0)).toFixed(2)}</td>
+    </tr>`;
+  });
 
-    // Add recipe snapshot items
-    const recipeSnapshot = JSON.parse(document.getElementById('recipe-snapshot').value || '[]');
-    recipeSnapshot.forEach(item => {
-        tbody.innerHTML += `
-            <tr class="table-info">
-                <td>${item.name} (from recipe)</td>
-                <td>${item.amount}</td>
-                <td>${item.unit}</td>
-            </tr>
-        `;
-    });
+  // Extra ingredients (yellow)
+  snapshot.extra_ingredients?.forEach((item) => {
+    html += `<tr class="table-warning">
+      <td>${item.name} (extra)</td>
+      <td>${item.amount}</td>
+      <td>${item.unit}</td>
+      <td>$${item.cost_per_unit || 0}</td>
+      <td>$${(item.amount * (item.cost_per_unit || 0)).toFixed(2)}</td>
+    </tr>`;
+  });
 
-    // Add current ingredients
-    ingredients.forEach(ing => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${ing.name}</td>
-                <td>${ing.amount}</td>
-                <td>${ing.unit}</td>
-            </tr>
-        `;
-    });
+  // Extra containers (red)
+  snapshot.extra_containers?.forEach((item) => {
+    html += `<tr class="table-danger">
+      <td>${item.name} (extra container)</td>
+      <td>${item.quantity}</td>
+      <td>count</td>
+      <td>$${item.cost}</td>
+      <td>$${(item.quantity * item.cost).toFixed(2)}</td>
+    </tr>`;
+  });
 
-    // Add container section
-    containers.forEach(cont => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${cont.name}</td>
-                <td>${cont.qty}</td>
-                <td>count</td>
-                <td>$${cont.cost_each}</td>
-            </tr>
-        `;
-    });
+  summaryTable.innerHTML = html;
 }
 
-function saveBatch(event) {
-    if (event) {
-        event.preventDefault();
-    }
+// Batch completion
+function showCompleteBatchModal() {
+  new bootstrap.Modal(document.getElementById('completeBatchModal')).show();
+}
 
-    const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+function submitCompleteBatch() {
+  const form = document.getElementById('completeBatchForm');
+  const formData = new FormData(form);
+  const batchId = window.location.pathname.split('/').pop();
 
-    if (!csrfToken) {
-        console.error('CSRF token not found');
-        alert('CSRF token not found - please refresh the page');
-        return;
-    }
-
-    // Collect current form data
-    const formData = {
-        notes: document.querySelector('textarea[name="notes"]')?.value || '',
-        tags: document.querySelector('input[name="tags"]')?.value || '',
-        output_type: document.querySelector('#output_type')?.value || 'product',
-        final_quantity: document.querySelector('input[name="final_quantity"]')?.value || '0',
-        output_unit: document.querySelector('select[name="output_unit"]')?.value || '',
-        product_id: document.querySelector('select[name="product_id"]')?.value || null,
-        variant_id: document.querySelector('input[name="variant_label"]')?.value || '',
-        
-        // Get all ingredients including extras
-        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select[name*="ingredients"]')?.value,
-            amount: parseFloat(row.querySelector('input[name*="amount"]')?.value || '0'),
-            unit: row.querySelector('select[name*="unit"]')?.value
-        })).filter(ing => ing.id && ing.amount > 0),
-
-        // Get all containers
-        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('select[name*="containers"]')?.value,
-            qty: parseInt(row.querySelector('input[name*="qty"]')?.value || '0'),
-            cost_each: parseFloat(row.querySelector('input[name*="cost"]')?.value || '0')
-        })).filter(cont => cont.id && cont.qty > 0),
-
-        // Get all timers
-        timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
-            name: row.querySelector('input[type="text"]')?.value || '',
-            duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
-        })).filter(timer => timer.name && timer.duration_seconds > 0)
-    };
-
-    // Send save request
-    fetch(`/batches/${batchId}/save`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-        },
-        body: JSON.stringify(formData)
+  fetch(`/batches/${batchId}/finish`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value,
+    },
+    body: JSON.stringify(Object.fromEntries(formData)),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        window.location.href = '/batches/';
+      } else {
+        alert(data.error || 'Error completing batch');
+      }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            alert(data.message);
-            window.location.href = '/batches/';
-        }
-    })
-    .catch(error => {
-        console.error('Error saving batch:', error);
-        alert('Error saving batch');
+    .catch((error) => {
+      console.error('Error:', error);
+      alert('Error completing batch');
     });
 }
-
-function finishBatch(action) {
-    if (confirm(`Are you sure you want to ${action} this batch?`)) {
-        const form = document.getElementById('batchForm');
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'action';
-        input.value = action;
-        form.appendChild(input);
-        form.submit();
-    }
-}
-
-function cancelBatch() {
-    if (confirm('Are you sure you want to cancel this batch? This will attempt to restore used inventory.')) {
-        const batchId = window.location.pathname.split('/').pop();
-        fetch(`/batches/cancel/${batchId}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '/batches/';
-            } else {
-                alert('Error cancelling batch');
-            }
-        });
-    }
-}
-
-// Density Reference Functionality

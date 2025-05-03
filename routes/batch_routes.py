@@ -52,8 +52,36 @@ def start_batch():
     db.session.add(new_batch)
     db.session.commit()
 
+    # Store recipe containers snapshot
+    recipe_containers_snapshot = [{
+        'container_id': rc.inventory_item_id,
+        'quantity': rc.amount,
+    } for rc in recipe.recipe_containers] if hasattr(recipe, 'recipe_containers') else []
+
+    # Update snapshot with containers
+    if isinstance(new_batch.recipe_snapshot, dict):
+        new_batch.recipe_snapshot['containers'] = recipe_containers_snapshot
+    else:
+        new_batch.recipe_snapshot = {'ingredients': recipe_snapshot, 'containers': recipe_containers_snapshot}
+
     # Deduct inventory at start of batch
     ingredient_errors = []
+    container_errors = []
+
+    # Deduct containers if recipe requires them
+    if recipe.requires_containers and recipe_containers_snapshot:
+        for container in recipe_containers_snapshot:
+            container_item = InventoryItem.query.get(container['container_id'])
+            if not container_item:
+                continue
+
+            required_quantity = container['quantity'] * scale
+            
+            if container_item.quantity < required_quantity:
+                container_errors.append(f"Not enough {container_item.name} containers in stock.")
+            else:
+                container_item.quantity -= required_quantity
+                db.session.add(container_item)
 
     for assoc in recipe.recipe_ingredients:
         ingredient = assoc.inventory_item
@@ -80,8 +108,13 @@ def start_batch():
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
-    if ingredient_errors:
-        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
+    if ingredient_errors or container_errors:
+        error_messages = []
+        if ingredient_errors:
+            error_messages.append("Ingredients: " + ", ".join(ingredient_errors))
+        if container_errors:
+            error_messages.append("Containers: " + ", ".join(container_errors))
+        flash("Some items were not deducted due to errors: " + "; ".join(error_messages), "warning")
     else:
         flash("Batch started and inventory deducted.", "success")
 
