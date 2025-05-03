@@ -310,6 +310,7 @@ function saveBatch(event) {
     .then(data => {
         if (data.message) {
             alert(data.message);
+            window.location.href = '/batches/';
         }
     })
     .catch(error => {
