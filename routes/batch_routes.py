@@ -46,7 +46,7 @@ def start_batch():
         scale=scale,
         notes=data.get('notes', ''),
         status='in_progress',
-        recipe_ingredients=recipe_snapshot
+        recipe_snapshot=recipe_snapshot
     )
 
     db.session.add(new_batch)
