@@ -265,7 +265,27 @@ function saveBatch(event) {
 
     const csrfToken = csrfTokenInput.value;
 
-    // Collect form data
+    // Collect form data with validation
+    const ingredients = Array.from(document.querySelectorAll('.ingredient-row')).map(row => {
+        const id = row.querySelector('select[name="ingredient_id"]')?.value;
+        if (!id) return null;
+        return {
+            id: parseInt(id),
+            amount: parseFloat(row.querySelector('input[name="amount"]')?.value || '0'),
+            unit: row.querySelector('select[name="unit"]')?.value || 'g'
+        };
+    }).filter(Boolean);
+
+    const containers = Array.from(document.querySelectorAll('.container-row')).map(row => {
+        const id = row.querySelector('select')?.value;
+        if (!id) return null;
+        return {
+            id: parseInt(id),
+            qty: parseInt(row.querySelector('input[type="number"]')?.value || '0'),
+            cost_each: parseFloat(row.querySelector('input[type="number"]:last-child')?.value || '0')
+        };
+    }).filter(Boolean);
+
     const formData = {
         notes: document.querySelector('[name="notes"]')?.value || '',
         tags: document.querySelector('[name="tags"]')?.value || '',
@@ -273,16 +293,8 @@ function saveBatch(event) {
         final_quantity: document.querySelector('[name="final_quantity"]')?.value || '0',
         output_unit: document.querySelector('[name="output_unit"]')?.value || '',
         product_id: document.querySelector('[name="product_id"]')?.value || null,
-        ingredients: Array.from(document.querySelectorAll('.ingredient-row')).map(row => ({
-            id: row.querySelector('select[name="ingredient_id"]')?.value || null,
-            amount: row.querySelector('input[name="amount"]')?.value || '0',
-            unit: row.querySelector('select[name="unit"]')?.value || 'g'
-        })),
-        containers: Array.from(document.querySelectorAll('.container-row')).map(row => ({
-            id: row.querySelector('select')?.value || null,
-            qty: row.querySelector('input[type="number"]')?.value || '0',
-            cost_each: row.querySelector('input[type="number"]:last-child')?.value || '0'
-        })),
+        ingredients: ingredients,
+        containers: containers,
         timers: Array.from(document.querySelectorAll('.timer-row')).map(row => ({
             name: row.querySelector('input[type="text"]')?.value || '',
             duration_seconds: parseInt(row.querySelector('input[type="number"]')?.value || '0') * 60
