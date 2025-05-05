@@ -191,10 +191,13 @@ def view_batch_in_progress(batch_identifier):
     total_cost = 0
     ingredient_costs = []
 
-    for batch_ing in batch.ingredients:
-        ingredient = batch_ing.ingredient
+    # Ensure ingredients are loaded
+    ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
+    
+    for batch_ing in ingredients:
+        ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
         if ingredient:
-            cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
+            cost_per_unit = ingredient.cost_per_unit or 0
             line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
             total_cost += line_cost
 
