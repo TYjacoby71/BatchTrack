@@ -197,12 +197,15 @@ def view_batch_in_progress(batch_identifier):
     batch_cost = round(total_cost, 2) if ingredient_costs else None
 
     inventory_items = InventoryItem.query.all()
-    return render_template('batches/batch_in_progress.html',
+    return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
                          units=units,
+                         products=Product.query.all(),
+                         ingredients=ingredients,
+                         containers=containers,
+                         timers=timers,
                          batch_cost=batch_cost,
-                         product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
