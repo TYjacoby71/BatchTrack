@@ -55,7 +55,9 @@
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Inventory Management -->
-                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    {% if 'inventory.list_inventory' in current_app.view_functions %}
+<li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+{% endif %}
                     <li><a class="dropdown-item" href="{{ url_for('adjust.inventory_adjust') }}">Inventory Adjust</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>

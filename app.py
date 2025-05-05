@@ -87,6 +87,14 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
 app.register_blueprint(expiration_bp, url_prefix='/expiration')
 
+# Debug route printing in development
+@app.before_first_request
+def show_routes():
+    print("\nRegistered Routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"{rule.endpoint}: {rule.rule}")
+    print("\n")
+
 # Register dashboard last since it depends on other blueprints
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)
