@@ -56,11 +56,14 @@ from services.quick_add.quick_add_service import quick_add_bp
 from blueprints.inventory.bulk_stock_routes import bulk_stock_bp
 from blueprints.expiration.routes import expiration_bp
 from blueprints.batches.timer_routes import timers_bp
+from blueprints.faults.routes import faults_bp #Import the faults blueprint
+
 
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
+app.register_blueprint(faults_bp, url_prefix='/faults') #Register the faults blueprint
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(admin_bp, url_prefix='/admin')
