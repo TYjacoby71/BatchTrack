@@ -9,7 +9,7 @@ def get_ingredient_categories():
 
 inventory_bp = Blueprint('inventory', __name__)
 
-@inventory_bp.route('/')
+@inventory_bp.route('/', endpoint='list_inventory')
 @login_required
 def list_inventory():
     items = InventoryItem.query.all()
