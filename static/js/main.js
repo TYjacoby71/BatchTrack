@@ -1,4 +1,5 @@
-// Import using script tags in HTML instead
+
+// Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;
 }
@@ -86,13 +87,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
       console.log(`Creating unit: ${name} (${type})`);
 
-      const csrfToken = getCSRFToken();
-
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify({ name, type })
       })
