@@ -92,13 +92,13 @@
         <div id="ingredient-list">
             {% for bi in ingredients %}
             <div class="ingredient-row d-flex gap-2 mb-2">
-                <select name="ingredients[{{ loop.index0 }}][id]" class="form-select ingredient-select">
+                <select name="ingredients[{{ loop.index0 }}][id]" class="form-select">
                     {% for ing in inventory_items if ing.type == 'ingredient' %}
                     <option value="{{ ing.id }}" {% if bi.ingredient_id == ing.id %}selected{% endif %}>{{ ing.name }}</option>
                     {% endfor %}
                 </select>
-                <input type="number" step="0.01" name="ingredients[{{ loop.index0 }}][amount]" value="{{ bi.amount_used }}" class="form-control ingredient-amount">
-                <select name="ingredients[{{ loop.index0 }}][unit]" class="form-select ingredient-unit">
+                <input type="number" step="0.01" name="ingredients[{{ loop.index0 }}][amount]" value="{{ bi.amount_used }}" class="form-control">
+                <select name="ingredients[{{ loop.index0 }}][unit]" class="form-select">
                     {% for unit in units %}
                     <option value="{{ unit.name }}" {% if unit.name == bi.unit %}selected{% endif %}>{{ unit.name }}</option>
                     {% endfor %}
