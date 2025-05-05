@@ -175,8 +175,29 @@ function filterUnits() {
 
 // Main initialization code
 
-// Stock check functionality is now handled in plan_production.html template
-// Assuming data.stock_check is an array of objects with at least 'type', 'name', 'needed', 'available', 'unit', and 'status' properties.
-// Batch functionality moved to /static/js/batches/batch_form.js
-// Inventory adjustment moved to /static/js/inventory/inventory_adjust.js
-// Density Reference Functionality
+// Global initialization and utility functions
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Select2 dropdowns
+  $('select[data-unit-select]').select2({
+    placeholder: 'Select a unit',
+    allowClear: true,
+    width: '100%'
+  });
+
+  $('.ingredient-select').select2({
+    placeholder: 'Select ingredients',
+    allowClear: true,
+    width: '100%'
+  });
+
+  // Initialize tooltips
+  $('[data-bs-toggle="tooltip"]').tooltip();
+
+  // Initialize non-Alpine container selects
+  $('.container-select:not([x-data])').select2({
+    placeholder: 'Select containers',
+    allowClear: true,
+    multiple: true,
+    width: '100%'
+  });
+});
