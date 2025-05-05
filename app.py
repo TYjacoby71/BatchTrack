@@ -62,11 +62,11 @@ from blueprints.api import init_api
 
 # Register core blueprints first
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
-app.register_blueprint(products_bp, url_prefix='/products')
+app.register_blueprint(products_bp)  # Already has url_prefix in __init__.py
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(batches_bp, url_prefix='/batches')
 
-# Register API blueprints after core blueprints
+# Register API blueprints
 init_api(app)
 
 # Register supporting blueprints
@@ -74,16 +74,18 @@ app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(adjust_bp, url_prefix='/adjust')
+app.register_blueprint(adjust_bp)  # Uses routes defined in route file
 
 # Register utility blueprints
-app.register_blueprint(fifo_bp, url_prefix='/fifo')
-app.register_blueprint(expiration_bp, url_prefix='/expiration')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
+
+# Register moved blueprints last to avoid conflicts
+app.register_blueprint(fifo_bp, url_prefix='/fifo')
+app.register_blueprint(expiration_bp, url_prefix='/expiration')
 
 # Register dashboard last since it depends on other blueprints
 from routes.app_routes import app_routes_bp
