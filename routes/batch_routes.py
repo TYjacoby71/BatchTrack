@@ -187,24 +187,24 @@ def view_batch_in_progress(batch_identifier):
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    # Build cost summary
+    # Build cost summary from actual batch ingredients
     total_cost = 0
     ingredient_costs = []
 
-    for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.inventory_item
-        used_amount = assoc.amount * batch.scale
-        cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
-        line_cost = round(used_amount * cost_per_unit, 2)
-        total_cost += line_cost
+    for batch_ing in batch.ingredients:
+        ingredient = batch_ing.ingredient
+        if ingredient:
+            cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
+            line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
+            total_cost += line_cost
 
-        ingredient_costs.append({
-            'name': ingredient.name,
-            'unit': ingredient.unit,
-            'used': used_amount,
-            'cost_per_unit': cost_per_unit,
-            'line_cost': line_cost
-        })
+            ingredient_costs.append({
+                'name': ingredient.name,
+                'unit': batch_ing.unit,
+                'used': batch_ing.amount_used,
+                'cost_per_unit': cost_per_unit,
+                'line_cost': line_cost
+            })
 
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
