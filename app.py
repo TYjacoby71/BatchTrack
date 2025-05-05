@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -12,11 +13,12 @@ db = SQLAlchemy()
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
+
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
 os.makedirs('static/product_images', exist_ok=True)
-os.chmod(instance_path, 0o777)  # Ensure write permissions
+os.chmod(instance_path, 0o777)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -40,36 +42,26 @@ setup_logging(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Register all blueprints
+# Register blueprints
 from blueprints.batches.routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
-from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.admin.routes import admin_bp
 from blueprints.api import init_api
+from blueprints.conversion.routes import conversion_bp
 from services.quick_add.quick_add_service import quick_add_bp
 
-
-# Register blueprints
-app.register_blueprint(fifo_bp)
-app.register_blueprint(expiration_bp)
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
-app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(product_bp)
-app.register_blueprint(settings_bp, url_prefix='/settings')
-app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
-app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
-app.register_blueprint(adjust_bp, url_prefix='/adjust')
-app.register_blueprint(product_log_bp, url_prefix='/product-logs')
-
+app.register_blueprint(settings_bp, url_prefix='/settings')
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(conversion_bp, url_prefix='/conversion')
+app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 
 # Initialize API routes
 init_api(app)
-
 
 @app.context_processor
 def inject_units():
@@ -88,11 +80,11 @@ def login():
     if request.method == 'POST' and form.validate_on_submit():
         username = request.form.get('username')
         password = request.form.get('password')
-
+        
         if not username or not password:
             flash('Please provide both username and password')
             return render_template('login.html', form=form)
-
+            
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
