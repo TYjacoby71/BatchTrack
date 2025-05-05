@@ -1,5 +1,18 @@
 
 // Batch timer functionality
+function initSelect2(selector, options = {}) {
+  $(selector).select2(options);
+}
+
+function setupTimers() {
+  // Setup timer functionality 
+  $('.timer-control').on('click', function() {
+    const timerId = $(this).data('timer-id');
+    const duration = $(this).data('duration');
+    startTimer(timerId, duration);
+  });
+}
+
 function startTimer(timerId, duration) {
   const timerElement = document.getElementById(`timer-${timerId}`);
   if (!timerElement) return;
