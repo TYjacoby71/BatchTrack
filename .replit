@@ -23,7 +23,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Run Flask App"
+runButton = "Run Flask"
 
 [[workflows.workflow]]
 name = "Run Flask"
@@ -32,7 +32,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask run --host=0.0.0.0 --port=5000"
+args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. python app.py"
 
 [[workflows.workflow]]
 name = "Run Flask App"
@@ -41,7 +41,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. flask run --host=0.0.0.0 --port=5000"
+args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. flask run --host=0.0.0.0 --port=3000"
 
 [[workflows.workflow]]
 name = "Run Tests"
