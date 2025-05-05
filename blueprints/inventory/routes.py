@@ -27,8 +27,28 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
-
-    item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
+    
+    if type == 'container':
+        storage_amount = float(request.form.get('storage_amount'))
+        storage_unit = request.form.get('storage_unit')
+        item = InventoryItem(
+            name=name,
+            quantity=quantity,
+            unit=unit,
+            type=type,
+            cost_per_unit=cost_per_unit,
+            storage_amount=storage_amount,
+            storage_unit=storage_unit
+        )
+    else:
+        item = InventoryItem(
+            name=name, 
+            quantity=quantity,
+            unit=unit,
+            type=type,
+            cost_per_unit=cost_per_unit
+        )
+        
     db.session.add(item)
     db.session.commit()
     flash('Inventory item added successfully.')
@@ -49,22 +69,23 @@ def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
-
+        
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         item.category_id = request.form.get('category_id', None)
-        if not item.category_id:  # Custom category selected
+        if not item.category_id:
             item.density = float(request.form.get('density', 1.0))
         else:
-            item.density = None  # Use category default
+            item.density = None
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_ingredient.html', 
-                         ing=item, 
+    
+    return render_template('edit_ingredient.html',
+                         ing=item,
                          get_ingredient_categories=get_ingredient_categories,
                          get_global_unit_list=get_global_unit_list)
 
@@ -74,7 +95,7 @@ def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'container':
         abort(404)
-
+        
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
@@ -84,4 +105,5 @@ def edit_container(id):
         db.session.commit()
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
+    
     return render_template('edit_container.html', item=item)
