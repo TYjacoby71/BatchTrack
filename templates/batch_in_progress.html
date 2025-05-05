@@ -160,21 +160,17 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><th colspan="5">Ingredients</th></tr>
                 {% if ingredient_costs %}
-                    {% for cost in ingredient_costs %}
-                    <tr>
-                        <td>{{ cost.name }}</td>
-                        <td>{{ "%.2f"|format(cost.used) }}</td>
-                        <td>{{ cost.unit }}</td>
-                        <td>${{ "%.2f"|format(cost.cost_per_unit) }}</td>
-                        <td>${{ "%.2f"|format(cost.line_cost) }}</td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="5" class="text-muted">No ingredients recorded.</td>
-                    </tr>
+                <tr><th colspan="5">Ingredients</th></tr>
+                {% for cost in ingredient_costs %}
+                <tr>
+                    <td>{{ cost.name }}</td>
+                    <td>{{ "%.2f"|format(cost.used) }}</td>
+                    <td>{{ cost.unit }}</td>
+                    <td>${{ "%.2f"|format(cost.cost_per_unit) }}</td>
+                    <td>${{ "%.2f"|format(cost.line_cost) }}</td>
+                </tr>
+                {% endfor %}
                 {% endif %}
 
                 {% if batch.containers %}
