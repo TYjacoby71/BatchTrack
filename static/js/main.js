@@ -1,8 +1,11 @@
 
-// Get CSRF token from meta tag
+// Global utility functions
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;
 }
+
+// Make available globally
+window.getCSRFToken = getCSRFToken;
 
 function handleModalTransition(fromModalId, toModalId, focusElementId) {
   const fromModal = document.getElementById(fromModalId);
