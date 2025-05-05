@@ -89,10 +89,6 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 from routes.app_routes import app_routes_bp
 app.register_blueprint(app_routes_bp)
 
-# Initialize API routes
-init_api(app)
-
-
 @app.context_processor
 def inject_units():
     units = Unit.query.order_by(Unit.type, Unit.name).all()
