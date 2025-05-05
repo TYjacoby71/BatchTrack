@@ -1,7 +1,29 @@
+// Import utilities
+import { getCSRFToken } from './utils/utils.js';
 
 // Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;
+}
+
+// Export shared utilities
+export function handleFormSubmit(event, url, successCallback) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const token = getCSRFToken();
+
+  fetch(url, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': token
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (successCallback) successCallback(data);
+  })
+  .catch(error => console.error('Error:', error));
 }
 
 function handleModalTransition(fromModalId, toModalId, focusElementId) {
@@ -143,8 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const quickAddContainerForm = document.getElementById('quickAddContainerForm');
   if (quickAddContainerForm) {
     quickAddContainerForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      // Your existing form submission logic here
+      handleFormSubmit(e, '/quick-add/container'); // Assuming this is the correct URL
     });
   }
 });
