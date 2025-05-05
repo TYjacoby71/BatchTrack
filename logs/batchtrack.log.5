@@ -1,4 +1,4 @@
-2025-05-05 17:08:43,108 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-05 17:13:26,215 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -28,8 +28,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 62, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 67, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -39,9 +39,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'expiration.alerts'. Did you mean 'conversion_bp.convert' instead?
-2025-05-05 17:09:44,246 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 17:09:44,844 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product_log.view_product' with values ['product_id']. Did you mean 'product.view_product' instead?
+2025-05-05 17:16:31,555 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-05 17:16:32,027 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -71,8 +71,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 66, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 67, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -82,8 +82,8 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'timers.list_timers'. Did you mean 'batches.list_batches' instead?
-2025-05-05 17:09:44,961 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product_log.view_product' with values ['product_id']. Did you mean 'product.view_product' instead?
+2025-05-05 17:16:32,231 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -113,8 +113,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 66, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 67, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -124,5 +124,5 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'timers.list_timers'. Did you mean 'batches.list_batches' instead?
-2025-05-05 17:12:23,820 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product_log.view_product' with values ['product_id']. Did you mean 'product.view_product' instead?
+2025-05-05 17:18:23,151 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
