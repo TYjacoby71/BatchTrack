@@ -429,3 +429,7 @@ function planProduction() {
 }
 </script>
 {% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+{% endblock %}
