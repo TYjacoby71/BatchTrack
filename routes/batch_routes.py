@@ -23,13 +23,6 @@ def start_batch():
         extract('year', Batch.started_at) == current_year
     ).count()
 
-    # Get current year and count of batches for this recipe this year
-    current_year = datetime.now().year
-    year_batches = Batch.query.filter(
-        Batch.recipe_id == recipe.id,
-        extract('year', Batch.started_at) == current_year
-    ).count()
-
     label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
 
     new_batch = Batch(
@@ -44,7 +37,29 @@ def start_batch():
     db.session.add(new_batch)
     db.session.commit()
 
-    # Deduct inventory at start of batch
+    # Handle container deduction first
+    container_errors = []
+    for container in data.get('containers', []):
+        container_id = container.get('id')
+        quantity = container.get('quantity', 0)
+        
+        if container_id and quantity:
+            container_item = InventoryItem.query.get(container_id)
+            if container_item:
+                if container_item.quantity >= quantity:
+                    container_item.quantity -= quantity
+                    # Create batch container record
+                    bc = BatchContainer(
+                        batch_id=new_batch.id,
+                        container_id=container_id,
+                        quantity_used=quantity,
+                        cost_each=container_item.cost_per_unit
+                    )
+                    db.session.add(bc)
+                else:
+                    container_errors.append(f"Not enough {container_item.name} in stock.")
+
+    # Deduct ingredient inventory at start of batch
     ingredient_errors = []
 
     for assoc in recipe.recipe_ingredients:
