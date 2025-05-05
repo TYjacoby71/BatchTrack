@@ -15,15 +15,11 @@ run = ["sh", "-c", "python app.py"]
 deploymentTarget = "cloudrun"
 
 [[ports]]
-localPort = 3000
-externalPort = 3000
-
-[[ports]]
 localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Run Flask"
+runButton = "Run Flask App"
 
 [[workflows.workflow]]
 name = "Run Flask"
@@ -32,7 +28,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. python app.py"
+args = "flask run --host=0.0.0.0 --port=5000"
 
 [[workflows.workflow]]
 name = "Run Flask App"
@@ -41,7 +37,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. flask run --host=0.0.0.0 --port=3000"
+args = "FLASK_APP=app.py FLASK_ENV=development PYTHONPATH=. flask run --host=0.0.0.0 --port=5000"
 
 [[workflows.workflow]]
 name = "Run Tests"
