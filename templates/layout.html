@@ -39,7 +39,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">BTV 8.953 (CSRF Checkpoint)</a>
+            <a class="navbar-brand" href="{{ url_for('index') }}">BTV 8.954 (after js refactor)</a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>
@@ -55,9 +55,7 @@
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Inventory Management -->
-                    {% if 'inventory.list_inventory' in current_app.view_functions %}
-<li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-{% endif %}
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('adjust.inventory_adjust') }}">Inventory Adjust</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>
@@ -112,7 +110,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom scripts -->
     <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
     <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>

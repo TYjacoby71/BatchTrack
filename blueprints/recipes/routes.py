@@ -1,9 +1,11 @@
-from flask import render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required
 from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
-from . import recipes_bp
+
+
+recipes_bp = Blueprint('recipes', __name__)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -28,15 +30,7 @@ def new_recipe():
             amounts = request.form.getlist('amounts[]')
             units = request.form.getlist('units[]')
 
-            if len(ingredient_ids) != len(amounts) or len(amounts) != len(units):
-                flash('Mismatched ingredient data', 'error')
-                return render_template('recipe_form.html', recipe=recipe, all_ingredients=InventoryItem.query.all(), inventory_units=get_global_unit_list())
-
-            valid_units = {u.name for u in Unit.query.all()}
             for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
-                if unit not in valid_units:
-                    flash(f"Invalid unit: {unit}", 'error')
-                    continue
                 if ing_id and amt and unit:
                     try:
                         recipe_ingredient = RecipeIngredient(
@@ -73,7 +67,7 @@ def new_recipe():
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
-    recipes = Recipe.query.all()
+    recipes = Recipe.query.filter_by(parent_id=None).all()
     inventory_units = get_global_unit_list()
     return render_template('recipe_list.html', recipes=recipes, inventory_units=inventory_units)
 
@@ -112,9 +106,9 @@ def plan_production(recipe_id):
         }
         for c in InventoryItem.query.filter_by(type='container').all()
     ] if recipe.requires_containers else []
-
+    
     inventory_units = get_global_unit_list()
-
+    
     return render_template('plan_production.html', 
                          recipe=recipe,
                          base_recipe=base_recipe,
@@ -160,15 +154,7 @@ def create_variation(recipe_id):
             amounts = request.form.getlist('amounts[]')
             units = request.form.getlist('units[]')
 
-            if len(ingredient_ids) != len(amounts) or len(amounts) != len(units):
-                flash('Mismatched ingredient data', 'error')
-                return render_template('recipe_form.html', recipe=new_variation, all_ingredients=InventoryItem.query.order_by(InventoryItem.name).all(), inventory_units=get_global_unit_list(), is_variation=True, parent_recipe=parent)
-
-            valid_units = {u.name for u in Unit.query.all()}
             for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
-                if unit not in valid_units:
-                    flash(f"Invalid unit: {unit}", 'error')
-                    continue
                 if ing_id and amt and unit:
                     try:
                         recipe_ingredient = RecipeIngredient(
@@ -209,6 +195,7 @@ def create_variation(recipe_id):
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
 
 
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
@@ -261,7 +248,7 @@ def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
         ingredients = [(ri.inventory_item_id, ri.amount, ri.unit) for ri in original.recipe_ingredients]
-
+        
         # Create new recipe without ingredients first
         new_recipe = Recipe(
             name=f"Copy of {original.name}",
@@ -272,7 +259,7 @@ def clone_recipe(recipe_id):
             requires_containers=original.requires_containers,
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
-
+            
         return render_template('recipe_form.html',
                             recipe=new_recipe,
                             all_ingredients=InventoryItem.query.all(),
@@ -354,15 +341,7 @@ def edit_recipe(recipe_id):
             amounts = request.form.getlist('amounts[]')
             units = request.form.getlist('units[]')
 
-            if len(ingredient_ids) != len(amounts) or len(amounts) != len(units):
-                flash('Mismatched ingredient data', 'error')
-                return render_template('recipe_form.html', recipe=recipe, all_ingredients=all_ingredients, inventory_units=inventory_units, edit_mode=True)
-
-            valid_units = {u.name for u in Unit.query.all()}
             for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
-                if unit not in valid_units:
-                    flash(f"Invalid unit: {unit}", 'error')
-                    continue
                 if ing_id and amt and unit:
                     try:
                         assoc = RecipeIngredient(

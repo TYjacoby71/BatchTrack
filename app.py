@@ -41,63 +41,48 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Register all blueprints
-from blueprints.inventory import inventory_bp
-from blueprints.recipes import recipes_bp
-from blueprints.conversion import conversion_bp
-from blueprints.settings import settings_bp
-from blueprints.products import products_bp
-from blueprints.batches import batches_bp
-from blueprints.quick_add import quick_add_bp
-from blueprints.fifo import fifo_bp
-from blueprints.expiration import expiration_bp
-from blueprints.admin import admin_bp
-from blueprints.timers import timers_bp
+from routes.batch_routes import batches_bp
+from blueprints.inventory.routes import inventory_bp
+from blueprints.recipes.routes import recipes_bp
+from blueprints.conversion.routes import conversion_bp
+from blueprints.settings.routes import settings_bp
+from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
+from routes.product_routes import product_bp
+from routes.timer_routes import timers_bp
+from routes.fifo_routes import fifo_bp
+from routes.expiration_routes import expiration_bp
+from routes.admin_routes import admin_bp
+from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 
 
-# Register core blueprints first
-app.register_blueprint(inventory_bp, url_prefix='/inventory')
-app.register_blueprint(products_bp)  # Already has url_prefix in __init__.py
-app.register_blueprint(recipes_bp, url_prefix='/recipes')
-app.register_blueprint(batches_bp, url_prefix='/batches')
-
-# Register API blueprints
-init_api(app)
-
-# Register supporting blueprints
-app.register_blueprint(settings_bp, url_prefix='/settings')
+# Register blueprints
+app.register_blueprint(fifo_bp)
+app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(adjust_bp)  # Uses routes defined in route file
-
-# Register utility blueprints
+app.register_blueprint(product_bp)
+app.register_blueprint(settings_bp, url_prefix='/settings')
+app.register_blueprint(app_routes_bp)
+app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
+app.register_blueprint(recipes_bp, url_prefix='/recipes')
+app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
+app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
+app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 
-# Register moved blueprints last to avoid conflicts
-app.register_blueprint(fifo_bp, url_prefix='/fifo')
-app.register_blueprint(expiration_bp, url_prefix='/expiration')
+# Initialize API routes
+init_api(app)
 
-# Debug route printing in development
-@app.before_first_request
-def show_routes():
-    print("\nRegistered Routes:")
-    for rule in app.url_map.iter_rules():
-        print(f"{rule.endpoint}: {rule.rule}")
-    print("\n")
-
-# Register dashboard last since it depends on other blueprints
-from routes.app_routes import app_routes_bp
-app.register_blueprint(app_routes_bp)
 
 @app.context_processor
 def inject_units():

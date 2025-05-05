@@ -23,13 +23,6 @@ def start_batch():
         extract('year', Batch.started_at) == current_year
     ).count()
 
-    # Get current year and count of batches for this recipe this year
-    current_year = datetime.now().year
-    year_batches = Batch.query.filter(
-        Batch.recipe_id == recipe.id,
-        extract('year', Batch.started_at) == current_year
-    ).count()
-
     label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
 
     new_batch = Batch(
@@ -44,7 +37,29 @@ def start_batch():
     db.session.add(new_batch)
     db.session.commit()
 
-    # Deduct inventory at start of batch
+    # Handle container deduction first
+    container_errors = []
+    for container in data.get('containers', []):
+        container_id = container.get('id')
+        quantity = container.get('quantity', 0)
+        
+        if container_id and quantity:
+            container_item = InventoryItem.query.get(container_id)
+            if container_item:
+                if container_item.quantity >= quantity:
+                    container_item.quantity -= quantity
+                    # Create batch container record
+                    bc = BatchContainer(
+                        batch_id=new_batch.id,
+                        container_id=container_id,
+                        quantity_used=quantity,
+                        cost_each=container_item.cost_per_unit
+                    )
+                    db.session.add(bc)
+                else:
+                    container_errors.append(f"Not enough {container_item.name} in stock.")
+
+    # Deduct ingredient inventory at start of batch
     ingredient_errors = []
 
     for assoc in recipe.recipe_ingredients:
@@ -172,21 +187,20 @@ def view_batch_in_progress(batch_identifier):
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    # Build cost summary
+    # Build cost summary from actual batch ingredients
     total_cost = 0
     ingredient_costs = []
 
-    for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.inventory_item
-        used_amount = assoc.amount * batch.scale
+    for batch_ing in batch.ingredients:
+        ingredient = batch_ing.ingredient
         cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
-        line_cost = round(used_amount * cost_per_unit, 2)
+        line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
         total_cost += line_cost
 
         ingredient_costs.append({
-            'name': ingredient.name,
-            'unit': ingredient.unit,
-            'used': used_amount,
+            'name': ingredient.name if ingredient else f"Deleted ({batch_ing.ingredient_id})",
+            'unit': batch_ing.unit,
+            'used': batch_ing.amount_used,
             'cost_per_unit': cost_per_unit,
             'line_cost': line_cost
         })
@@ -289,20 +303,15 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Get recipe ingredients to know original amounts
-        recipe = Recipe.query.get(batch.recipe_id)
-        
-        for recipe_ing in recipe.recipe_ingredients:
-            ingredient = recipe_ing.inventory_item
+        # Restore ingredients using the actual deducted amounts from BatchIngredient records
+        for batch_ing in batch.ingredients:
+            ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Calculate amount to restore based on recipe and batch scale
-                    amount_to_restore = recipe_ing.amount * batch.scale
-                    
-                    # Convert back to inventory unit
+                    # Convert from batch unit back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
-                        amount_to_restore,
-                        recipe_ing.unit,
+                        batch_ing.amount_used,
+                        batch_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
