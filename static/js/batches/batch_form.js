@@ -48,6 +48,67 @@ function cancelBatch() {
     }
 }
 
+function toggleOutputFields() {
+    const outputType = document.getElementById('output_type').value;
+    const productFields = document.getElementById('productFields');
+    const ingredientFields = document.getElementById('ingredientFields');
+    
+    if (outputType === 'product') {
+        productFields.style.display = 'block';
+        ingredientFields.style.display = 'none';
+    } else {
+        productFields.style.display = 'none';
+        ingredientFields.style.display = 'block';
+    }
+}
+
+function addIngredientRow() {
+    const template = `
+        <div class="ingredient-row d-flex gap-2 mb-2">
+            <select name="ingredients[][id]" class="form-select ingredient-select">
+                {% for ing in inventory_items if ing.type == 'ingredient' %}
+                <option value="{{ ing.id }}">{{ ing.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" step="0.01" name="ingredients[][amount]" class="form-control ingredient-amount">
+            <select name="ingredients[][unit]" class="form-select ingredient-unit">
+                {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.getElementById('ingredient-list').insertAdjacentHTML('beforeend', template);
+}
+
+function addContainerRow() {
+    const template = `
+        <div class="container-row d-flex gap-2 mb-2">
+            <select name="containers[]" class="form-select">
+                {% for item in inventory_items if item.type == 'container' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="container_amounts[]" class="form-control" placeholder="Quantity">
+            <input type="number" step="0.01" name="container_costs[]" class="form-control" placeholder="Cost Each">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.getElementById('container-list').insertAdjacentHTML('beforeend', template);
+}
+
+function addTimerRow() {
+    const template = `
+        <div class="timer-row d-flex gap-2 mb-2">
+            <input type="text" name="timers[]" class="form-control" placeholder="Timer Name">
+            <input type="number" name="timer_durations[]" class="form-control" placeholder="Duration (seconds)">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.getElementById('timer-list').insertAdjacentHTML('beforeend', template);
+}
+
 function saveBatch(event) {
     if (event) {
         event.preventDefault();
