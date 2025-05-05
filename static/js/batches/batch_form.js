@@ -24,27 +24,20 @@ function finishBatch(action) {
 
 function cancelBatch() {
     if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-        try {
-            const path = window.location.pathname;
-            const batchId = path.match(/\/batches\/in-progress\/(\d+)/)[1];
-            
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/batches/cancel/${batchId}`;
+        const batchId = window.location.pathname.split('/').pop();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/batches/cancel/${batchId}`;
 
-            const csrf = document.querySelector('.csrf-token').value;
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = csrf;
+        const csrf = document.querySelector('.csrf-token').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrf;
 
-            form.appendChild(csrfInput);
-            document.body.appendChild(form);
-            form.submit();
-        } catch (error) {
-            console.error('Error cancelling batch:', error);
-            alert('Error cancelling batch. Please try again.');
-        }
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

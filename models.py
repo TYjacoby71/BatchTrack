@@ -127,6 +127,7 @@ class BatchIngredient(db.Model):
     ingredient_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     amount_used = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
+    cost_per_unit = db.Column(db.Float, nullable=True)  # Store historical cost
     ingredient = db.relationship('InventoryItem', backref='batch_ingredients')
 
 class BatchContainer(db.Model):
