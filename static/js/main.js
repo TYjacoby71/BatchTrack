@@ -1,4 +1,26 @@
-// Add CSRF token to fetch headers
+
+// Get CSRF token from meta tag
+function getCSRFToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content;
+}
+
+function handleModalTransition(fromModalId, toModalId, focusElementId) {
+  const fromModal = document.getElementById(fromModalId);
+  const bootstrapFromModal = bootstrap.Modal.getInstance(fromModal);
+  bootstrapFromModal?.hide();
+
+  if (toModalId) {
+    const toModal = document.getElementById(toModalId);
+    const bootstrapToModal = new bootstrap.Modal(toModal);
+    bootstrapToModal.show();
+    if (focusElementId) {
+      toModal.addEventListener('shown.bs.modal', function () {
+        document.getElementById(focusElementId)?.focus();
+      });
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize all Select2 dropdowns
   const select2Config = {
@@ -26,23 +48,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
-  // Modal transitions
-  function handleModalTransition(closeModalId, openModalId, focusElementId = null) {
-    const closeModal = bootstrap.Modal.getInstance(document.getElementById(closeModalId));
-    if (closeModal) {
-      closeModal.hide();
-      if (openModalId) {
-        setTimeout(() => {
-          const openModal = new bootstrap.Modal(document.getElementById(openModalId));
-          openModal.show();
-          if (focusElementId) {
-            document.getElementById(focusElementId)?.focus();
-          }
-        }, 300);
-      }
-    }
-  }
-
   // Quick add modal transitions
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
     handleModalTransition('quickAddUnitModal', 'quickAddIngredientModal', 'ingredientName');
@@ -56,7 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('recipeForm')) {
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
     const allowedContainersSection = document.getElementById('allowedContainersSection');
-
     if (requiresContainersCheckbox && allowedContainersSection) {
       requiresContainersCheckbox.addEventListener('change', function() {
         allowedContainersSection.style.display = this.checked ? 'block' : 'none';
@@ -83,13 +87,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
       console.log(`Creating unit: ${name} (${type})`);
 
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
       fetch('/quick-add/unit', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify({ name, type })
       })
@@ -148,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Unit filtering function (kept separate as it's called from HTML)
-function filterUnits() {
+window.filterUnits = function() {
   const filter = document.getElementById('unitFilter').value;
   const unitCards = document.querySelectorAll('.card.mb-3');
 
