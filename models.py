@@ -84,7 +84,6 @@ class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
     label_code = db.Column(db.String(32), unique=True)
-    recipe_snapshot = db.Column(db.JSON)  # Store recipe ingredients at batch start
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
     yield_amount = db.Column(db.Float)
     yield_unit = db.Column(db.String(50))
@@ -103,7 +102,6 @@ class Batch(db.Model):
     failed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
     inventory_credited = db.Column(db.Boolean, default=False)  # Track if inventory was returned
-    inventory_logged = db.Column(db.Boolean, default=False)  # Track if current changes are logged
 
     @property
     def status_display(self):

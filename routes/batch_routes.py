@@ -16,13 +16,6 @@ def start_batch():
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     scale = float(data['scale'])
 
-    # Store recipe ingredients snapshot
-    recipe_snapshot = [{
-        'ingredient_id': ri.inventory_item_id,
-        'amount': ri.amount,
-        'unit': ri.unit
-    } for ri in recipe.recipe_ingredients]
-
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
     year_batches = Batch.query.filter(
@@ -45,43 +38,14 @@ def start_batch():
         batch_type='product',
         scale=scale,
         notes=data.get('notes', ''),
-        status='in_progress',
-        recipe_snapshot=recipe_snapshot
+        status='in_progress'
     )
 
     db.session.add(new_batch)
     db.session.commit()
 
-    # Store recipe containers snapshot
-    recipe_containers_snapshot = [{
-        'container_id': rc.inventory_item_id,
-        'quantity': rc.amount,
-    } for rc in recipe.recipe_containers] if hasattr(recipe, 'recipe_containers') else []
-
-    # Update snapshot with containers
-    if isinstance(new_batch.recipe_snapshot, dict):
-        new_batch.recipe_snapshot['containers'] = recipe_containers_snapshot
-    else:
-        new_batch.recipe_snapshot = {'ingredients': recipe_snapshot, 'containers': recipe_containers_snapshot}
-
     # Deduct inventory at start of batch
     ingredient_errors = []
-    container_errors = []
-
-    # Deduct containers if recipe requires them
-    if recipe.requires_containers and recipe_containers_snapshot:
-        for container in recipe_containers_snapshot:
-            container_item = InventoryItem.query.get(container['container_id'])
-            if not container_item:
-                continue
-
-            required_quantity = container['quantity'] * scale
-            
-            if container_item.quantity < required_quantity:
-                container_errors.append(f"Not enough {container_item.name} containers in stock.")
-            else:
-                container_item.quantity -= required_quantity
-                db.session.add(container_item)
 
     for assoc in recipe.recipe_ingredients:
         ingredient = assoc.inventory_item
@@ -99,7 +63,7 @@ def start_batch():
                 density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
             )
             required_converted = conversion_result['converted_value']
-
+            
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
             else:
@@ -108,13 +72,8 @@ def start_batch():
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
-    if ingredient_errors or container_errors:
-        error_messages = []
-        if ingredient_errors:
-            error_messages.append("Ingredients: " + ", ".join(ingredient_errors))
-        if container_errors:
-            error_messages.append("Containers: " + ", ".join(container_errors))
-        flash("Some items were not deducted due to errors: " + "; ".join(error_messages), "warning")
+    if ingredient_errors:
+        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
     else:
         flash("Batch started and inventory deducted.", "success")
 
@@ -191,46 +150,24 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_identifier)
-
+    
     if batch.status != 'in_progress':
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
-
+    
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
 
-    # Get existing batch data and saved form data
+    # Get existing batch data
     ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
     containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
     timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
-    
-    # Load saved form data from recipe_snapshot if it exists
-    saved_form_data = {}
-    if isinstance(batch.recipe_snapshot, dict):
-        saved_form_data = batch.recipe_snapshot.get('form_data', {})
-        
-        # Pre-populate fields from snapshot
-        batch.saved_ingredients = saved_form_data.get('ingredients', [])
-        batch.saved_containers = saved_form_data.get('containers', [])
-        batch.saved_timers = saved_form_data.get('timers', [])
-    
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
-    
     recipe = Recipe.query.get_or_404(batch.recipe_id)
     batch.recipe_name = recipe.name  # Add recipe name to batch object
-    
-    # Add saved form data to batch object
-    batch.saved_notes = saved_form_data.get('notes', batch.notes)
-    batch.saved_tags = saved_form_data.get('tags', batch.tags)
-    batch.saved_yield_amount = saved_form_data.get('yield_amount')
-    batch.saved_yield_unit = saved_form_data.get('yield_unit')
-    batch.saved_final_quantity = saved_form_data.get('final_quantity')
-    batch.saved_output_unit = saved_form_data.get('output_unit')
-    batch.saved_product_id = saved_form_data.get('product_id')
-    batch.saved_variant_id = saved_form_data.get('variant_id')
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
@@ -310,7 +247,7 @@ def finish_batch(batch_id, force=False):
                 )
                 db.session.add(product_inv)
                 batch.inventory_credited = True
-
+            
             # Update batch completion status
             batch.status = 'completed'
             batch.completed_at = datetime.utcnow()
@@ -352,18 +289,20 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Use the stored recipe ingredients from the batch record
-        for recipe_ing in batch.recipe_ingredients:
-            ingredient = InventoryItem.query.get(recipe_ing['ingredient_id'])
+        # Get recipe ingredients to know original amounts
+        recipe = Recipe.query.get(batch.recipe_id)
+        
+        for recipe_ing in recipe.recipe_ingredients:
+            ingredient = recipe_ing.inventory_item
             if ingredient:
                 try:
                     # Calculate amount to restore based on recipe and batch scale
-                    amount_to_restore = recipe_ing['amount'] * batch.scale
-
+                    amount_to_restore = recipe_ing.amount * batch.scale
+                    
                     # Convert back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
                         amount_to_restore,
-                        recipe_ing['unit'],
+                        recipe_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
@@ -413,50 +352,20 @@ def mark_batch_failed(batch_id):
 def save_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     if batch.status != 'in_progress':
-        return jsonify({"error": "Only in-progress batches can be saved"}), 400
+        flash("Only in-progress batches can be saved.")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data received"}), 400
 
-    # Get current snapshot or initialize empty
-    current_snapshot = batch.recipe_snapshot or {}
-    
-    # Update snapshot with new form data
-    new_snapshot = {
-        'form_data': {
-            'notes': data.get('notes'),
-            'tags': data.get('tags'),
-            'output_type': data.get('output_type'),
-            'final_quantity': data.get('final_quantity'),
-            'output_unit': data.get('output_unit'),
-            'product_id': data.get('product_id'),
-            'variant_id': data.get('variant_id')
-        },
-        'ingredients': data.get('ingredients', []),
-        'containers': data.get('containers', []),
-        'timers': data.get('timers', []),
-        'inventory_logged': False
-    }
-
-    # Check if ingredients or containers changed
-    if (str(current_snapshot.get('ingredients')) != str(new_snapshot['ingredients']) or 
-        str(current_snapshot.get('containers')) != str(new_snapshot['containers'])):
-        batch.inventory_logged = False
-    
-    # Update batch fields
-    batch.notes = data.get('notes', '')
-    batch.tags = data.get('tags', '')
-    batch.recipe_snapshot = new_snapshot
-    
-    try:
-        # Adjust inventory based on changes
-        adjust_inventory_deltas(batch_id, data.get('ingredients', []), data.get('containers', []))
-        db.session.commit()
-        return jsonify({"message": "Batch saved successfully"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    # Save basic metadata
+    batch.notes = data.get("notes")
+    batch.tags = data.get("tags")
+    batch.yield_amount = data.get("yield_amount")
+    batch.yield_unit = data.get("yield_unit")
+    batch.final_quantity = data.get("final_quantity")
+    batch.output_unit = data.get("output_unit")
+    batch.product_id = data.get("product_id")
+    batch.variant_id = data.get("variant_id")
 
     # Track and adjust inventory deltas
     adjust_inventory_deltas(
@@ -626,7 +535,7 @@ def adjust_inventory_deltas(batch_id, new_ingredients, new_containers):
         if inventory:
             stock_unit = inventory.unit
             try:
-                converted_delta = ConversionEngine.convert_units(abs(delta), unit_used, stock_unit, density=inventory.category.default_density if inventory.category else None)
+                converted_delta = ConversionEngine.convert(abs(delta), unit_used, stock_unit, density=inventory.category.default_density)
                 if delta < 0:
                     inventory.quantity += converted_delta
                 else:
