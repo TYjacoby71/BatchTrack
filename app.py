@@ -59,7 +59,7 @@ from blueprints.inventory import inventory_bp
 from blueprints.recipes import recipes_bp
 from blueprints.settings import settings_bp
 from blueprints.conversion import conversion_bp
-from blueprints.quick_add import quick_add_bp
+
 
 # Register core blueprints
 app.register_blueprint(products_bp, url_prefix='/products')
