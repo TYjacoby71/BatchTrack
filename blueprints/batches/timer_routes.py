@@ -9,7 +9,7 @@ timers_bp = Blueprint('timers', __name__, url_prefix='/timers')
 @login_required
 def list_timers():
     timers = BatchTimer.query.all()
-    return render_template('timer_list.html', timers=timers)
+    return render_template('batches/timer/timer_list.html', timers=timers)
 
 @timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
 @login_required
