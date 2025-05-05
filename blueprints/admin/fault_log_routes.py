@@ -1,1 +1,0 @@
-# This file is now deprecated. Fault log routes are handled in blueprints/faults/routes.py

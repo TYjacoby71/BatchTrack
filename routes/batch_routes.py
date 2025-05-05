@@ -201,11 +201,8 @@ def view_batch_in_progress(batch_identifier):
                          batch=batch,
                          recipe=recipe,
                          units=units,
-                         products=Product.query.all(),
-                         ingredients=ingredients,
-                         containers=containers,
-                         timers=timers,
                          batch_cost=batch_cost,
+                         product_quantity=product_quantity,
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 

@@ -12,12 +12,11 @@ db = SQLAlchemy()
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-
 # Ensure directories exist with proper permissions
 instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
 os.makedirs(instance_path, exist_ok=True)
 os.makedirs('static/product_images', exist_ok=True)
-os.chmod(instance_path, 0o777)
+os.chmod(instance_path, 0o777)  # Ensure write permissions
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -41,42 +40,49 @@ setup_logging(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Register blueprints
-from blueprints.batches.routes import batches_bp
+# Register all blueprints
+from routes.batch_routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
-from blueprints.settings.routes import settings_bp
-from blueprints.admin.routes import admin_bp
-from blueprints.api import init_api
 from blueprints.conversion.routes import conversion_bp
-from blueprints.fifo.routes import fifo_bp
+from blueprints.settings.routes import settings_bp
+from blueprints.quick_add.routes import quick_add_bp
+from routes.bulk_stock_routes import bulk_stock_bp
+from routes.inventory_adjust_routes import adjust_bp
+from routes.fault_log_routes import faults_bp
+from routes.product_log_routes import product_log_bp
+from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
-from blueprints.dashboard.routes import dashboard_bp
-from services.quick_add.quick_add_service import quick_add_bp
-from blueprints.inventory.bulk_stock_routes import bulk_stock_bp
-from blueprints.expiration.routes import expiration_bp
-from blueprints.batches.timer_routes import timers_bp
-from blueprints.faults.routes import faults_bp #Consolidated fault routes
-from blueprints.settings.tag_manager_routes import tag_bp
+from routes.timer_routes import timers_bp
+from routes.fifo_routes import fifo_bp
+from routes.expiration_routes import expiration_bp
+from routes.admin_routes import admin_bp
+from routes.app_routes import app_routes_bp
+from blueprints.api import init_api
 
-app.register_blueprint(dashboard_bp)
-app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(batches_bp, url_prefix='/batches')
-app.register_blueprint(inventory_bp, url_prefix='/inventory')
-app.register_blueprint(faults_bp, url_prefix='/faults')
-app.register_blueprint(recipes_bp, url_prefix='/recipes')
-app.register_blueprint(settings_bp, url_prefix='/settings')
-app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(tag_bp, url_prefix='/tags')
+
+# Register blueprints
+app.register_blueprint(fifo_bp)
+app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(fifo_bp, url_prefix='/fifo')
+app.register_blueprint(product_bp)
+app.register_blueprint(settings_bp, url_prefix='/settings')
+app.register_blueprint(app_routes_bp)
+app.register_blueprint(batches_bp, url_prefix='/batches')
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
+app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(product_bp, url_prefix='/products')
-app.register_blueprint(expiration_bp, url_prefix='/expiration')
+app.register_blueprint(adjust_bp, url_prefix='/adjust')
+app.register_blueprint(faults_bp, url_prefix='/logs')
+app.register_blueprint(product_log_bp, url_prefix='/product-logs')
+app.register_blueprint(tag_bp, url_prefix='/tags')
+app.register_blueprint(timers_bp, url_prefix='/timers')
 
 # Initialize API routes
 init_api(app)
+
 
 @app.context_processor
 def inject_units():
