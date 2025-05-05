@@ -1,4 +1,4 @@
-2025-05-02 21:50:58,087 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-02 21:48:47,107 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -77,4 +77,8 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: unit
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.multiplier_to_base AS unit_multiplier_to_base, unit.user_id AS unit_user_id, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped 
 FROM unit ORDER BY unit.type, unit.name]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-05-02 21:54:37,975 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 21:49:53,917 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 21:50:04,988 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 21:50:21,775 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 21:50:23,952 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 21:50:27,957 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]

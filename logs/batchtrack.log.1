@@ -1,10 +1,10 @@
-2025-05-05 22:55:17,188 ERROR: Exception on /batches/in-progress/16 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-02 22:12:07,668 ERROR: Exception on /login [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: batch_ingredient.cost_per_unit
+sqlite3.OperationalError: no such column: unit.is_mapped
 
 The above exception was the direct cause of the following exception:
 
@@ -21,12 +21,20 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/batch_routes.py", line 178, in view_batch_in_progress
-    ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app.py", line 114, in login
+    return render_template('login.html', form=form)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
+    app.update_template_context(context)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 530, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app.py", line 89, in inject_units
+    units = Unit.query.order_by(Unit.type, Unit.name).all()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
     return self._iter().all()  # type: ignore
            ^^^^^^^^^^^^
@@ -62,22 +70,19 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: batch_ingredient.cost_per_unit
-[SQL: SELECT batch_ingredient.id AS batch_ingredient_id, batch_ingredient.batch_id AS batch_ingredient_batch_id, batch_ingredient.ingredient_id AS batch_ingredient_ingredient_id, batch_ingredient.amount_used AS batch_ingredient_amount_used, batch_ingredient.unit AS batch_ingredient_unit, batch_ingredient.cost_per_unit AS batch_ingredient_cost_per_unit 
-FROM batch_ingredient 
-WHERE batch_ingredient.batch_id = ?]
-[parameters: (16,)]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: unit.is_mapped
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.multiplier_to_base AS unit_multiplier_to_base, unit.user_id AS unit_user_id, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped 
+FROM unit ORDER BY unit.type, unit.name]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-05-05 22:56:16,744 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 22:56:20,048 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 22:56:30,586 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 22:56:32,128 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 22:57:30,357 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 22:57:31,776 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:03:25,281 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:03:34,230 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:03:57,957 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:04:10,444 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:04:12,541 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:04:15,652 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 23:04:50,827 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:13:09,697 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:14:15,872 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:14:17,449 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:21:35,035 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:22:05,030 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:23:36,882 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:24:42,463 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:25:25,615 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:25:30,430 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:28:57,024 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:30:21,829 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:31:19,290 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
