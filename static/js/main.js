@@ -1,8 +1,6 @@
 // Add CSRF token to fetch headers
-// Unit mapping now handled by form submit
-
-$(document).ready(function() {
-  // Initialize all global Select2 dropdowns (ingredients page, recipes page, etc.)
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Select2 dropdowns
   $('select[data-unit-select]').select2({
     placeholder: 'Select a unit',
     allowClear: true,
@@ -17,6 +15,14 @@ $(document).ready(function() {
 
   // Bootstrap tooltips site-wide
   $('[data-bs-toggle="tooltip"]').tooltip();
+
+  // Initialize non-Alpine container selects
+  $('.container-select:not([x-data])').select2({
+    placeholder: 'Select containers',
+    allowClear: true,
+    multiple: true,
+    width: '100%'
+  });
 
   // Quick add modal transitions (for ingredients and units)
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
@@ -34,17 +40,8 @@ $(document).ready(function() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
     if (modal) modal.hide();
   });
-  // Initialize Select2 only for non-Alpine container selects
-  $('.container-select:not([x-data])').select2({
-        placeholder: 'Select containers',
-        allowClear: true,
-        multiple: true,
-        width: '100%'
-    });
-});
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Only handle container checkbox logic on recipe form
+  // Container checkbox logic on recipe form
   if (document.getElementById('recipeForm')) {
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
     const allowedContainersSection = document.getElementById('allowedContainersSection');
@@ -60,25 +57,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Quick Add Container form handler
-  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
-  if (quickAddContainerForm) {
-    quickAddContainerForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      // Your existing form submission logic here
-    });
-  }
-
-
-});
-
-// Unit loading now handled by Jinja templates
-document.addEventListener('DOMContentLoaded', function() {
   // Quick Add Unit Handler
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
-      // Retry after a short delay if button not found
       setTimeout(initQuickAddUnit, 100);
       return;
     }
@@ -155,6 +137,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   initQuickAddUnit();
+
+  // Quick Add Container form handler
+  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
+  if (quickAddContainerForm) {
+    quickAddContainerForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      // Your existing form submission logic here
+    });
+  }
 });
 
 function filterUnits() {
@@ -170,59 +161,3 @@ function filterUnits() {
     }
   });
 }
-
-// Unit loading now handled by Jinja templates directly
-
-// Main initialization code
-
-// Global initialization and utility functions
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Select2 dropdowns
-  $('select[data-unit-select]').select2({
-    placeholder: 'Select a unit',
-    allowClear: true,
-    width: '100%'
-  });
-
-  $('.ingredient-select').select2({
-    placeholder: 'Select ingredients',
-    allowClear: true,
-    width: '100%'
-  });
-
-  // Initialize tooltips
-  $('[data-bs-toggle="tooltip"]').tooltip();
-
-  // Initialize non-Alpine container selects
-  $('.container-select:not([x-data])').select2({
-    placeholder: 'Select containers',
-    allowClear: true,
-    multiple: true,
-    width: '100%'
-  });
-
-  // Only handle container checkbox logic on recipe form
-  if (document.getElementById('recipeForm')) {
-    const requiresContainersCheckbox = document.getElementById('requiresContainers');
-    const allowedContainersSection = document.getElementById('allowedContainersSection');
-
-    if (requiresContainersCheckbox && allowedContainersSection) {
-      requiresContainersCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-          allowedContainersSection.style.display = 'block';
-        } else {
-          allowedContainersSection.style.display = 'none';
-        }
-      });
-    }
-  }
-
-  // Quick Add Container form handler
-  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
-  if (quickAddContainerForm) {
-    quickAddContainerForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      // Your existing form submission logic here
-    });
-  }
-});
