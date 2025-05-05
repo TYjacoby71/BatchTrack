@@ -59,7 +59,6 @@ from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
-from blueprints.batches import batches_bp
 
 
 # Register blueprints
@@ -83,7 +82,6 @@ app.register_blueprint(timers_bp, url_prefix='/timers')
 
 # Initialize API routes
 init_api(app)
-app.register_blueprint(batches_bp)
 
 
 @app.context_processor
