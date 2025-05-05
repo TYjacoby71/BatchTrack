@@ -172,6 +172,10 @@
                     </tr>
                     {% endfor %}
                 {% else %}
+                    <tr>
+                        <td colspan="5" class="text-muted">No ingredients recorded.</td>
+                    </tr>
+                {% endif %}
 
                 {% if batch.containers %}
                 <tr><th colspan="5">Containers</th></tr>
