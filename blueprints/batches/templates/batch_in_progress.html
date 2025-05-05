@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Batch In Progress</h2>
@@ -24,6 +25,7 @@
 
 <form id="batchForm" method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
+    
     <!-- Output Type Selection -->
     <div class="form-group">
         <label for="output_type">Batch Type:</label>
@@ -36,7 +38,7 @@
         </div>
     </div>
 
-    <!-- Product Yield Section (Refined) -->
+    <!-- Product Yield Section -->
     <div id="productFields" class="form-group mt-4">
         <h4>Product Output</h4>
 
@@ -85,8 +87,7 @@
         <input type="number" name="ingredient_quantity" value="1" min="1" class="form-control" required>
     </div>
 
-
-    <!-- INGREDIENT SECTION -->
+    <!-- Ingredient Section -->
     <div class="mt-4">
         <h4>Ingredients Used</h4>
         <div id="ingredient-list">
@@ -110,7 +111,7 @@
         <button type="button" onclick="addIngredientRow()" class="btn btn-outline-secondary mt-2">+ Add Ingredient</button>
     </div>
 
-    <!-- CONTAINER SECTION -->
+    <!-- Container Section -->
     <div class="mt-4">
         <h4>Containers Used</h4>
         <div id="container-list">
@@ -130,7 +131,7 @@
         <button type="button" onclick="addContainerRow()" class="btn btn-outline-secondary mt-2">+ Add Container</button>
     </div>
 
-    <!-- TIMER SECTION -->
+    <!-- Timer Section -->
     <div class="mt-4">
         <h4>Timers</h4>
         <div id="timer-list">
@@ -188,7 +189,6 @@
         </table>
     </div>
 
-
     <!-- Notes Section -->
     <div class="notes-section mt-4">
         <h4>Batch Notes</h4>
@@ -200,7 +200,6 @@
         <label for="tags">Tags (comma-separated):</label>
         <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
     </div>
-
 
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
@@ -226,7 +225,5 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
-
 {% endblock %}
