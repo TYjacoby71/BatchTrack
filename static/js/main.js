@@ -1,4 +1,24 @@
-import { getCSRFToken, handleModalTransition } from './utils/utils.js';
+// Import using script tags in HTML instead
+function getCSRFToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content;
+}
+
+function handleModalTransition(fromModalId, toModalId, focusElementId) {
+  const fromModal = document.getElementById(fromModalId);
+  const bootstrapFromModal = bootstrap.Modal.getInstance(fromModal);
+  bootstrapFromModal?.hide();
+
+  if (toModalId) {
+    const toModal = document.getElementById(toModalId);
+    const bootstrapToModal = new bootstrap.Modal(toModal);
+    bootstrapToModal.show();
+    if (focusElementId) {
+      toModal.addEventListener('shown.bs.modal', function () {
+        document.getElementById(focusElementId)?.focus();
+      });
+    }
+  }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize all Select2 dropdowns

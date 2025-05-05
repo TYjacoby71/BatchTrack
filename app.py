@@ -58,8 +58,7 @@ from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
-from blueprints.api.routes import api_bp
-from blueprints.api.container_routes import container_api_bp
+from blueprints.api import init_api
 
 
 # Register blueprints
@@ -80,8 +79,9 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(api_bp) # Registered stock check API blueprint
-app.register_blueprint(container_api_bp) # Registered container API blueprint
+
+# Initialize API routes
+init_api(app)
 
 
 @app.context_processor
