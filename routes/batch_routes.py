@@ -304,20 +304,15 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Get recipe ingredients to know original amounts
-        recipe = Recipe.query.get(batch.recipe_id)
-        
-        for recipe_ing in recipe.recipe_ingredients:
-            ingredient = recipe_ing.inventory_item
+        # Restore ingredients using the actual deducted amounts from BatchIngredient records
+        for batch_ing in batch.ingredients:
+            ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Calculate amount to restore based on recipe and batch scale
-                    amount_to_restore = recipe_ing.amount * batch.scale
-                    
-                    # Convert back to inventory unit
+                    # Convert from batch unit back to inventory unit
                     conversion_result = ConversionEngine.convert_units(
-                        amount_to_restore,
-                        recipe_ing.unit,
+                        batch_ing.amount_used,
+                        batch_ing.unit,
                         ingredient.unit,
                         ingredient_id=ingredient.id,
                         density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
