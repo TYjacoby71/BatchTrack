@@ -4,7 +4,6 @@ from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
 
-
 recipes_bp = Blueprint('recipes', __name__)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
@@ -67,7 +66,7 @@ def new_recipe():
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
-    recipes = Recipe.query.filter_by(parent_id=None).all()
+    recipes = Recipe.query.all()
     inventory_units = get_global_unit_list()
     return render_template('recipe_list.html', recipes=recipes, inventory_units=inventory_units)
 
@@ -195,7 +194,6 @@ def create_variation(recipe_id):
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-
 
 
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
