@@ -3,7 +3,7 @@ from models import db, InventoryItem, Unit
 
 quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 
-@quick_add_bp.route('/container', methods=['POST'])
+@quick_add_bp.route('/container', methods=['POST'], endpoint='quick_add_container_endpoint')
 def quick_add_container():
     try:
         data = request.get_json()
@@ -31,7 +31,7 @@ def quick_add_container():
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
-@quick_add_bp.route('/unit', methods=['POST'])
+@quick_add_bp.route('/unit', methods=['POST'], endpoint='quick_add_unit_endpoint')
 def quick_add_unit():
     try:
         data = request.get_json()
@@ -83,7 +83,7 @@ def quick_add_unit():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@quick_add_bp.route('/ingredient', methods=['POST'])
+@quick_add_bp.route('/ingredient', methods=['POST'], endpoint='quick_add_ingredient_endpoint')
 def quick_add_ingredient():
     data = request.get_json()
     name = data.get('name', '').strip()
@@ -112,7 +112,7 @@ def quick_add_ingredient():
     else:
         new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
         message = "Added successfully."
-        
+
     db.session.add(new_item)
     db.session.commit()
 
