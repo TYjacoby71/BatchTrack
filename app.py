@@ -50,6 +50,7 @@ from blueprints.settings.routes import settings_bp
 from blueprints.admin.routes import admin_bp
 from blueprints.api import init_api
 from blueprints.conversion.routes import conversion_bp
+from blueprints.fifo.routes import fifo_bp
 from services.quick_add.quick_add_service import quick_add_bp
 
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -59,6 +60,7 @@ app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
+app.register_blueprint(fifo_bp, url_prefix='/fifo')
 
 # Initialize API routes
 init_api(app)
