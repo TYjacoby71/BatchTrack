@@ -1,4 +1,4 @@
-2025-05-05 18:53:01,318 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-05 18:57:26,889 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -31,8 +31,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/templates/dashboard.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 52, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+  File "/home/runner/workspace/templates/layout.html", line 58, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -42,9 +42,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.list_recipes'. Did you mean 'timers.list_timers' instead?
-2025-05-05 18:55:32,828 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 18:55:33,361 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'inventory.list_inventory'. Did you mean 'fifo.inventory_view' instead?
+2025-05-05 18:59:01,349 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-05 18:59:01,989 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -77,8 +77,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/templates/dashboard.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 54, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
+  File "/home/runner/workspace/templates/layout.html", line 58, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -88,5 +88,5 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'bulk_stock.bulk_stock_check'. Did you mean 'recipes.lock_recipe' instead?
-2025-05-05 18:57:26,250 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'inventory.list_inventory'. Did you mean 'fifo.inventory_view' instead?
+2025-05-05 19:01:12,936 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
