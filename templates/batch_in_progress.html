@@ -172,10 +172,10 @@
                 </tr>
                 {% endfor %}
                 {% endif %}
-                
-                {% if containers %}
+
+                {% if batch.containers %}
                 <tr><th colspan="5">Containers</th></tr>
-                {% for container in containers %}
+                {% for container in batch.containers %}
                 <tr>
                     <td>{{ container.container.name }} ({{ container.container_id }})</td>
                     <td>{{ container.quantity_used }}</td>
