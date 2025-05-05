@@ -41,24 +41,20 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Register all blueprints
-# Legacy batch routes removed - now using blueprint
 from blueprints.inventory import inventory_bp
 from blueprints.recipes import recipes_bp
-from blueprints.conversion.routes import conversion_bp
-from blueprints.settings.routes import settings_bp
-from blueprints.quick_add.routes import quick_add_bp
+from blueprints.conversion import conversion_bp
+from blueprints.settings import settings_bp
+from blueprints.products import products_bp
+from blueprints.batches import batches_bp
+from blueprints.quick_add import quick_add_bp
+from blueprints.fifo import fifo_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from blueprints.api import init_api
-from blueprints.products import products_bp
-from blueprints.batches import batches_bp
-from blueprints.inventory import inventory_bp
-from blueprints.recipes import recipes_bp
-from blueprints.settings import settings_bp
-from blueprints.conversion import conversion_bp
 
 
 # Register core blueprints
