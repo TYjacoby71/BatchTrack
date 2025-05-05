@@ -1,6 +1,4 @@
 
-// All logic moved to Alpine.js component in plan_production.html template
-
 function downloadCSV(stockResults) {
   if (!stockResults?.length) return;
 
@@ -15,3 +13,6 @@ function downloadCSV(stockResults) {
   link.download = 'stock_check_report.csv';
   link.click();
 }
+
+// Make functions globally available
+window.downloadCSV = downloadCSV;
