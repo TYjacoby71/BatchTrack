@@ -160,6 +160,8 @@
                 </tr>
             </thead>
             <tbody>
+                {% if ingredient_costs %}
+                <tr><th colspan="5">Ingredients</th></tr>
                 {% for cost in ingredient_costs %}
                 <tr>
                     <td>{{ cost.name }}</td>
@@ -169,15 +171,20 @@
                     <td>${{ "%.2f"|format(cost.line_cost) }}</td>
                 </tr>
                 {% endfor %}
+                {% endif %}
+                
+                {% if containers %}
+                <tr><th colspan="5">Containers</th></tr>
                 {% for container in containers %}
                 <tr>
-                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.container.name }} ({{ container.container_id }})</td>
                     <td>{{ container.quantity_used }}</td>
                     <td>count</td>
                     <td>${{ "%.2f"|format(container.cost_each) }}</td>
                     <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                 </tr>
                 {% endfor %}
+                {% endif %}
             </tbody>
             <tfoot>
                 <tr>
