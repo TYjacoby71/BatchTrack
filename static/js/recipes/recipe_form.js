@@ -1,8 +1,7 @@
-
 // Recipe form handling
 document.addEventListener('DOMContentLoaded', function() {
   const recipeForm = document.getElementById('recipeForm');
-  
+
   if (recipeForm) {
     // Container handling
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
