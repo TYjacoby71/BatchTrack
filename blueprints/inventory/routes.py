@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
+from utils.unit_utils import get_global_unit_list
 
 def get_ingredient_categories():
     return IngredientCategory.query.order_by(IngredientCategory.name).all()
@@ -32,8 +34,6 @@ def add_inventory():
     flash('Inventory item added successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
-from utils.unit_utils import get_global_unit_list
-
 @inventory_bp.route('/delete/<int:id>')
 @login_required
 def delete_inventory(id):
@@ -63,7 +63,6 @@ def edit_ingredient(id):
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    from utils.unit_utils import get_global_unit_list
     return render_template('edit_ingredient.html', 
                          ing=item, 
                          get_ingredient_categories=get_ingredient_categories,
@@ -86,5 +85,3 @@ def edit_container(id):
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
     return render_template('edit_container.html', item=item)
-
-from flask import abort
