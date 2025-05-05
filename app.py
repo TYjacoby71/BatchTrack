@@ -60,7 +60,10 @@ from routes.tag_manager_routes import tag_bp
 from blueprints.api import init_api
 
 
-# Register core blueprints first
+# Register API blueprints first
+init_api(app)
+
+# Register core blueprints
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
@@ -71,6 +74,7 @@ app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
+app.register_blueprint(adjust_bp, url_prefix='/adjust')
 
 # Register utility blueprints
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
@@ -79,6 +83,7 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
+app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 
 # Register dashboard last since it depends on other blueprints
 from routes.app_routes import app_routes_bp
