@@ -56,7 +56,7 @@ from services.quick_add.quick_add_service import quick_add_bp
 from blueprints.inventory.bulk_stock_routes import bulk_stock_bp
 from blueprints.expiration.routes import expiration_bp
 from blueprints.batches.timer_routes import timers_bp
-from blueprints.faults.routes import faults_bp
+from blueprints.faults.routes import faults_bp #Consolidated fault routes
 from blueprints.settings.tag_manager_routes import tag_bp
 
 app.register_blueprint(dashboard_bp)
