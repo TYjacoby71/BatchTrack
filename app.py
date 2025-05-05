@@ -42,7 +42,7 @@ login_manager.login_view = 'login'
 
 # Register all blueprints
 # Legacy batch routes removed - now using blueprint
-from blueprints.inventory.routes import inventory_bp
+from blueprints.inventory import inventory_bp
 from blueprints.recipes.routes import recipes_bp
 from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
