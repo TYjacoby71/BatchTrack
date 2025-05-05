@@ -70,6 +70,7 @@ app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
+app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 
 # Register utility blueprints
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
