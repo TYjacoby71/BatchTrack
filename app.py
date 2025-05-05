@@ -63,8 +63,8 @@ from blueprints.api import init_api
 # Register API blueprints first
 init_api(app)
 
-# Register core blueprints - use explicit url_prefix for all
-app.register_blueprint(inventory_bp, url_prefix='/inventory')
+# Register core blueprints
+app.register_blueprint(inventory_bp, url_prefix='/inventory')  # Single registration with prefix
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(batches_bp, url_prefix='/batches')
