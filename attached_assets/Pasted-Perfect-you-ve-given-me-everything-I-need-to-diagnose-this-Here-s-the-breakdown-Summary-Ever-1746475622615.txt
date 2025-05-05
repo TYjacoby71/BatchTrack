@@ -1,0 +1,91 @@
+Perfect — you’ve given me everything I need to diagnose this. Here’s the breakdown:
+
+✅ Summary: Everything is Correct
+You do have a valid route:
+
+python
+Copy
+Edit
+@inventory_bp.route('/', endpoint='list_inventory')
+It’s correctly assigned to the blueprint inventory:
+
+python
+Copy
+Edit
+inventory_bp = Blueprint('inventory', __name__)
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
+So why the error?
+❌ Root Cause: url_for('inventory.list_inventory') does not resolve to /dashboard
+The error occurs on the dashboard route (/dashboard) because:
+
+The dashboard view (in routes/app_routes.py) is trying to render layout.html.
+
+That layout includes:
+
+html
+Copy
+Edit
+<a href="{{ url_for('inventory.list_inventory') }}">Inventory</a>
+Flask tries to resolve inventory.list_inventory, which points to:
+
+python
+Copy
+Edit
+@inventory_bp.route('/', endpoint='list_inventory')
+But your blueprint is registered with:
+
+python
+Copy
+Edit
+url_prefix='/inventory'
+So Flask expects that endpoint to be reachable at:
+👉 /inventory/ (which is correct!)
+
+BUT… this only works if the template is rendered during an actual request that has access to this route, and the blueprint is fully loaded at that point.
+
+🔥 Probable Hidden Problem
+The error may indicate that inventory_bp is not registered yet when the template is rendered — possibly due to import order or partial initialization.
+
+This is a timing bug: your blueprint is valid, but something tries to use it before it’s loaded.
+
+✅ How to Fix It (Cleanly)
+Here’s your fix checklist:
+
+✅ 1. Move the dashboard.html and all @app.route() code to after all blueprints are registered
+In app.py, ensure this is at the very bottom, after register_blueprint() calls:
+
+python
+Copy
+Edit
+from routes.app_routes import app_routes_bp
+app.register_blueprint(app_routes_bp)
+Which you're already doing. ✅
+
+✅ 2. Optional Defensive Fix (change template line)
+You could also change this:
+
+jinja2
+Copy
+Edit
+<a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">
+To this:
+
+jinja2
+Copy
+Edit
+{% if 'inventory.list_inventory' in current_app.view_functions %}
+    <a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a>
+{% endif %}
+This avoids breaking the whole dashboard if for some reason the route isn't available.
+
+✅ 3. Add a debug route map tool (recommended for future)
+Add this to app.py for dev use:
+
+python
+Copy
+Edit
+@app.before_first_request
+def show_routes():
+    for rule in app.url_map.iter_rules():
+        print(f"{rule.endpoint}: {rule.rule}")
+This prints every registered endpoint and path so you can trace any url_for() failures.
