@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -53,6 +52,7 @@ from blueprints.conversion.routes import conversion_bp
 from blueprints.fifo.routes import fifo_bp
 from blueprints.dashboard.routes import dashboard_bp
 from services.quick_add.quick_add_service import quick_add_bp
+from blueprints.inventory.bulk_stock_routes import bulk_stock_bp
 
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -63,6 +63,7 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
+app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 
 # Initialize API routes
 init_api(app)
@@ -84,11 +85,11 @@ def login():
     if request.method == 'POST' and form.validate_on_submit():
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         if not username or not password:
             flash('Please provide both username and password')
             return render_template('login.html', form=form)
-            
+
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
             login_user(u)
