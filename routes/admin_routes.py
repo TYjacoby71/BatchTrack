@@ -1,21 +1,21 @@
-
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, redirect, url_for
 from flask_login import login_required
-from models import ProductInventory, db
 
-admin_bp = Blueprint('admin', __name__, template_folder='templates')
+admin_bp = Blueprint('admin', __name__)
 
-@admin_bp.route('/units')
+@admin_bp.route('/admin/units')
 @login_required
 def unit_manager():
-    return redirect(url_for('conversion.manage_units'))
+    return redirect(url_for('conversion_bp.manage_units'))
+from models import ProductInventory, db
+from flask import flash
 
-@admin_bp.route('/tools/cleanup')
+@admin_bp.route('/admin/tools/cleanup')
 @login_required
 def cleanup_tools():
     return render_template('admin/cleanup_tools.html')
 
-@admin_bp.route('/tools/archive_zeroed', methods=['POST'])
+@admin_bp.route('/admin/tools/archive_zeroed', methods=['POST'])
 @login_required
 def archive_zeroed_inventory():
     try:

@@ -1,27 +1,12 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, InventoryItem, Unit, Recipe
-
-inventory_bp = Blueprint('inventory', __name__)
-
-@inventory_bp.route('/adjust', methods=['GET', 'POST'])
-@login_required
-def adjust():
-    ingredients = InventoryItem.query.all()
-    if request.method == 'POST':
-        ing_id = int(request.form.get('ingredient_id'))
-        amount = float(request.form.get('adjustment'))
-        reason = request.form.get('reason', 'Manual')
-        ing = InventoryItem.query.get(ing_id)
-        if ing:
-            ing.quantity += amount
-            db.session.commit()
-            flash(f"Adjusted {ing.name} by {amount} ({reason}).")
-        return redirect(url_for('inventory.adjust'))
-    return render_template('inventory/adjust.html', ingredients=ingredients)
+from models import db, InventoryItem, Unit, IngredientCategory
 
 def get_ingredient_categories():
     return IngredientCategory.query.order_by(IngredientCategory.name).all()
+
+inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -102,6 +87,3 @@ def edit_container(id):
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
     return render_template('edit_container.html', item=item)
-
-from flask import abort
-from models import IngredientCategory
