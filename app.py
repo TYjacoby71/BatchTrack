@@ -86,6 +86,7 @@ app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 # Register moved blueprints last to avoid conflicts
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
 app.register_blueprint(expiration_bp, url_prefix='/expiration')
+app.register_blueprint(inventory_bp)
 
 def show_routes():
     print("\n=== ROUTE MAP ===")
