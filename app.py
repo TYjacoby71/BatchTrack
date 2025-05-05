@@ -51,8 +51,10 @@ from blueprints.admin.routes import admin_bp
 from blueprints.api import init_api
 from blueprints.conversion.routes import conversion_bp
 from blueprints.fifo.routes import fifo_bp
+from blueprints.dashboard.routes import dashboard_bp
 from services.quick_add.quick_add_service import quick_add_bp
 
+app.register_blueprint(dashboard_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
