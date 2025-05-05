@@ -130,9 +130,9 @@ function saveBatch(event) {
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
         ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name^="ingredients"][name$="[id]"]').value),
-            amount: parseFloat(row.querySelector('input[name^="ingredients"][name$="[amount]"]').value),
-            unit: row.querySelector('select[name^="ingredients"][name$="[unit]"]').value
+            id: parseInt(row.querySelector('.ingredient-select').value),
+            amount: parseFloat(row.querySelector('.ingredient-amount').value),
+            unit: row.querySelector('.ingredient-unit').value
         })),
         containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
             id: parseInt(row.querySelector('select[name="containers[]"]').value),
