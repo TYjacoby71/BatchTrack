@@ -1,4 +1,4 @@
-2025-05-05 17:23:54,976 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-05 17:27:11,050 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -28,8 +28,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 68, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 73, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -39,9 +39,8 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'faults.view_fault_log'. Did you mean 'batches.view_batch' instead?
-2025-05-05 17:24:05,059 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 17:24:05,532 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'tags.manage_tags'. Did you mean 'settings.save_settings' instead?
+2025-05-05 17:27:11,237 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -71,8 +70,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 68, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 73, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -82,8 +81,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'faults.view_fault_log'. Did you mean 'batches.view_batch' instead?
-2025-05-05 17:24:05,657 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'tags.manage_tags'. Did you mean 'settings.save_settings' instead?
+2025-05-05 17:31:12,557 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-05 17:31:13,103 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -113,18 +113,12 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 68, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 102, in top-level template code
+    {% include 'components/modals/unit_converter_modal.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'faults.view_fault_log'. Did you mean 'batches.view_batch' instead?
-2025-05-05 17:26:05,023 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 17:27:09,156 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 17:27:10,422 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: components/modals/unit_converter_modal.html
