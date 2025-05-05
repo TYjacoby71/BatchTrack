@@ -60,14 +60,14 @@ from routes.tag_manager_routes import tag_bp
 from blueprints.api import init_api
 
 
-# Register API blueprints first
-init_api(app)
-
-# Register core blueprints
-app.register_blueprint(inventory_bp, url_prefix='/inventory')  # Single registration with prefix
+# Register core blueprints first
+app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(batches_bp, url_prefix='/batches')
+
+# Register API blueprints after core blueprints
+init_api(app)
 
 # Register supporting blueprints
 app.register_blueprint(settings_bp, url_prefix='/settings')
