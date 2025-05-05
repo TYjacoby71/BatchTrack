@@ -1,58 +1,65 @@
 // Add CSRF token to fetch headers
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Select2 dropdowns
-  $('select[data-unit-select]').select2({
-    placeholder: 'Select a unit',
+  // Initialize all Select2 dropdowns
+  const select2Config = {
+    placeholder: 'Select...',
     allowClear: true,
     width: '100%'
+  };
+
+  $('select[data-unit-select]').select2({
+    ...select2Config,
+    placeholder: 'Select a unit'
   });
 
   $('.ingredient-select').select2({
-    placeholder: 'Select ingredients',
-    allowClear: true,
-    width: '100%'
+    ...select2Config,
+    placeholder: 'Select ingredients'
   });
 
-  // Bootstrap tooltips site-wide
+  $('.container-select:not([x-data])').select2({
+    ...select2Config,
+    placeholder: 'Select containers',
+    multiple: true
+  });
+
+  // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
-  // Initialize non-Alpine container selects
-  $('.container-select:not([x-data])').select2({
-    placeholder: 'Select containers',
-    allowClear: true,
-    multiple: true,
-    width: '100%'
-  });
+  // Modal transitions
+  function handleModalTransition(closeModalId, openModalId, focusElementId = null) {
+    const closeModal = bootstrap.Modal.getInstance(document.getElementById(closeModalId));
+    if (closeModal) {
+      closeModal.hide();
+      if (openModalId) {
+        setTimeout(() => {
+          const openModal = new bootstrap.Modal(document.getElementById(openModalId));
+          openModal.show();
+          if (focusElementId) {
+            document.getElementById(focusElementId)?.focus();
+          }
+        }, 300);
+      }
+    }
+  }
 
-  // Quick add modal transitions (for ingredients and units)
+  // Quick add modal transitions
   document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
-    const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-    if (unitModal) unitModal.hide();
-
-    setTimeout(() => {
-      const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-      ingredientModal.show();
-      document.getElementById('ingredientName')?.focus();
-    }, 300);
+    handleModalTransition('quickAddUnitModal', 'quickAddIngredientModal', 'ingredientName');
   });
 
   document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-    if (modal) modal.hide();
+    handleModalTransition('quickAddIngredientModal');
   });
 
-  // Container checkbox logic on recipe form
+  // Container form logic
   if (document.getElementById('recipeForm')) {
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
     const allowedContainersSection = document.getElementById('allowedContainersSection');
 
     if (requiresContainersCheckbox && allowedContainersSection) {
       requiresContainersCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-          allowedContainersSection.style.display = 'block';
-        } else {
-          allowedContainersSection.style.display = 'none';
-        }
+        allowedContainersSection.style.display = this.checked ? 'block' : 'none';
       });
     }
   }
@@ -115,15 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Handle modal transitions
-        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-        if (unitModal) {
-          unitModal.hide();
-          setTimeout(() => {
-            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
-            ingredientModal.show();
-            document.getElementById('ingredientName')?.focus();
-          }, 300);
-        }
+        handleModalTransition('quickAddUnitModal', 'quickAddIngredientModal', 'ingredientName');
 
         // Reset form
         document.getElementById('unitName').value = '';
@@ -148,16 +147,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Unit filtering function (kept separate as it's called from HTML)
 function filterUnits() {
   const filter = document.getElementById('unitFilter').value;
   const unitCards = document.querySelectorAll('.card.mb-3');
 
   unitCards.forEach(card => {
     const type = card.querySelector('h5').textContent.toLowerCase();
-    if (filter === 'all' || filter === type) {
-      card.style.display = '';
-    } else {
-      card.style.display = 'none';
-    }
+    card.style.display = filter === 'all' || filter === type ? '' : 'none';
   });
 }
