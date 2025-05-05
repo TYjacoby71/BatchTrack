@@ -1,4 +1,3 @@
-
 function downloadCSV(stockResults) {
   if (!stockResults?.length) return;
 

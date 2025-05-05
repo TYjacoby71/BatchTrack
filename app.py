@@ -50,6 +50,7 @@ from blueprints.admin.routes import admin_bp
 from blueprints.api import init_api
 from blueprints.conversion.routes import conversion_bp
 from blueprints.fifo.routes import fifo_bp
+from routes.product_routes import product_bp
 from blueprints.dashboard.routes import dashboard_bp
 from services.quick_add.quick_add_service import quick_add_bp
 from blueprints.inventory.bulk_stock_routes import bulk_stock_bp
@@ -64,6 +65,7 @@ app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
+app.register_blueprint(product_bp, url_prefix='/products')
 
 # Initialize API routes
 init_api(app)
