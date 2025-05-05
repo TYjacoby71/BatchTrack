@@ -193,18 +193,17 @@ def view_batch_in_progress(batch_identifier):
 
     for batch_ing in batch.ingredients:
         ingredient = batch_ing.ingredient
-        if ingredient:
-            cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
-            line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
-            total_cost += line_cost
+        cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
+        line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
+        total_cost += line_cost
 
-            ingredient_costs.append({
-                'name': ingredient.name,
-                'unit': batch_ing.unit,
-                'used': batch_ing.amount_used,
-                'cost_per_unit': cost_per_unit,
-                'line_cost': line_cost
-            })
+        ingredient_costs.append({
+            'name': ingredient.name if ingredient else f"Deleted ({batch_ing.ingredient_id})",
+            'unit': batch_ing.unit,
+            'used': batch_ing.amount_used,
+            'cost_per_unit': cost_per_unit,
+            'line_cost': line_cost
+        })
 
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
