@@ -49,6 +49,7 @@ from blueprints.products import products_bp
 from blueprints.batches import batches_bp
 from blueprints.quick_add import quick_add_bp
 from blueprints.fifo import fifo_bp
+from blueprints.expiration import expiration_bp
 from routes.bulk_stock_routes import bulk_stock_bp
 from routes.inventory_adjust_routes import adjust_bp
 from routes.fault_log_routes import faults_bp
