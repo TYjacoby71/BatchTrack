@@ -327,16 +327,21 @@ def cancel_batch(batch_id):
                 except Exception as e:
                     flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
 
-        # Restore containers
-        for bc in batch.containers:
-            container = bc.container
-            if container:
-                container.quantity += bc.quantity_used
-                db.session.add(container)
-
+        # Save the containers to restore before we delete them
+        containers_to_restore = [(bc.container_id, bc.quantity_used) for bc in batch.containers]
+        
+        # Update batch status first
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
+        
+        # Now restore container quantities
+        for container_id, qty_used in containers_to_restore:
+            container = InventoryItem.query.get(container_id)
+            if container:
+                container.quantity += qty_used
+                db.session.add(container)
+        
         db.session.commit()
 
         flash("Batch cancelled and inventory restored successfully.", "success")
