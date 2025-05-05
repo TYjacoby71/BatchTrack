@@ -61,6 +61,8 @@ from blueprints.api import init_api
 
 
 # Register core blueprints
+from routes.app_routes import app_routes_bp
+app.register_blueprint(app_routes_bp)
 app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
