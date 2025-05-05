@@ -13,5 +13,11 @@ function downloadCSV(stockResults) {
   link.click();
 }
 
+// Production planning specific functionality
+function setupPlanProduction() {
+  // Implementation details for production planning
+}
+
 // Make functions globally available
 window.downloadCSV = downloadCSV;
+window.setupPlanProduction = setupPlanProduction;
