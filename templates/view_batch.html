@@ -10,6 +10,32 @@
     <p><strong>Status:</strong> <span class="badge {% if batch.status == 'completed' %}bg-success{% elif batch.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">{{ batch.status_display }}</span></p>
     <p><strong>Total Cost:</strong> ${{ batch.total_cost or 'N/A' }}</p>
 
+    {% if batch.containers %}
+    <h4 class="mt-3">Containers Used:</h4>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Container</th>
+                <th>Quantity</th>
+                <th>Cost Each</th>
+                <th>Total Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for container in batch.containers %}
+            <tr>
+                <td>{{ container.container.name }} ({{ container.container_id }})</td>
+                <td>{{ container.quantity_used }}</td>
+                <td>${{ "%.2f"|format(container.cost_each or 0) }}</td>
+                <td>${{ "%.2f"|format((container.quantity_used * container.cost_each) or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><strong>Containers:</strong> 0 containers used</p>
+    {% endif %}
+
     {% if batch.product_id %}
         <p><strong>Output Type:</strong> Product</p>
         <p><strong>Product Name:</strong> {{ batch.product.name }}</p>
