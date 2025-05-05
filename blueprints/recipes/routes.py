@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required
 from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
-
-recipes_bp = Blueprint('recipes', __name__)
+from . import recipes_bp
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
