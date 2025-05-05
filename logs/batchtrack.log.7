@@ -1,4 +1,4 @@
-2025-05-05 17:06:41,845 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-05 17:07:59,914 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -28,8 +28,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 59, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('inventory.adjust') }}">Inventory Adjust</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 61, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -39,9 +39,8 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'adjust.inventory_adjust'. Did you mean 'inventory.add_inventory' instead?
-2025-05-05 17:06:44,588 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-05 17:06:45,043 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'fifo.inventory_view'. Did you mean 'inventory.add_inventory' instead?
+2025-05-05 17:08:00,039 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -71,8 +70,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 60, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 61, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('fifo.inventory_view') }}">FIFO Tracking</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -82,8 +81,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product.list_products'. Did you mean 'recipes.plan_production' instead?
-2025-05-05 17:06:45,157 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'fifo.inventory_view'. Did you mean 'inventory.add_inventory' instead?
+2025-05-05 17:08:42,488 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-05 17:08:42,973 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -113,8 +113,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'shared/layouts/base.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/shared/layouts/base.html", line 60, in top-level template code
-    <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
+  File "/home/runner/workspace/templates/shared/layouts/base.html", line 62, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -124,5 +124,4 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product.list_products'. Did you mean 'recipes.plan_production' instead?
-2025-05-05 17:07:59,499 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'expiration.alerts'. Did you mean 'conversion_bp.convert' instead?
