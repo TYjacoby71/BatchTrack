@@ -210,6 +210,7 @@ def view_batch_in_progress(batch_identifier):
     
 
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
+    inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
     return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
