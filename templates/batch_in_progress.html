@@ -114,7 +114,7 @@
                     <td>{{ "%.2f"|format(ing.amount_used) }}</td>
                     <td>{{ ing.unit }}</td>
                     <td>${{ "%.2f"|format(ing.ingredient.cost_per_unit or 0) }}</td>
-                    <td>${{ "%.2f"|format(ing.amount_used * (ing.ingredient.cost_per_unit or 0)) }}</td>
+                    <td>${{ "%.2f"|format(ing.amount_used * (ing.ingredient.cost_per_unit or 0))|default('0.00') }}</td>
                 </tr>
                 {% endfor %}
                 {% endif %}
@@ -127,7 +127,7 @@
                     <td>{{ container.quantity_used }}</td>
                     <td>{{ container.container.unit or 'count' }}</td>
                     <td>${{ "%.2f"|format(container.cost_each or 0) }}</td>
-                    <td>${{ "%.2f"|format((container.quantity_used * (container.cost_each or 0))) }}</td>
+                    <td>${{ "%.2f"|format((container.quantity_used * (container.cost_each or 0)))|default('0.00') }}</td>
                 </tr>
                 {% endfor %}
                 {% endif %}
@@ -136,8 +136,8 @@
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
                     <td><strong>${{ "%.2f"|format(
-                        batch.ingredients|sum(attribute='amount_used') +
-                        batch.containers|sum(attribute='quantity_used')
+                        (sum(ing.amount_used * (ing.ingredient.cost_per_unit or 0) for ing in batch.ingredients) +
+                         sum(cont.quantity_used * (cont.cost_each or 0) for cont in batch.containers))|default(0.00)
                     ) }}</strong></td>
                 </tr>
             </tfoot>
