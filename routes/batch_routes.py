@@ -6,6 +6,7 @@ from sqlalchemy import extract
 import uuid, os
 from werkzeug.utils import secure_filename
 from services.unit_conversion import ConversionEngine
+from utils import get_setting
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
