@@ -38,24 +38,16 @@ function toggleOutputFields() {
 function markBatchFailed() {
     if (confirm('Are you sure you want to mark this batch as failed?')) {
         const batchId = window.location.pathname.split('/').pop();
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/batches/${batchId}/finish`;
-
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = 'fail';
-
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = document.querySelector('.csrf-token').value;
-
-        form.appendChild(actionInput);
-        form.appendChild(csrfInput);
-        document.body.appendChild(form);
-        form.submit();
+        fetch(`/batches/fail/${batchId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('.csrf-token').value
+            }
+        }).then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            }
+        });
     }
 }
 
