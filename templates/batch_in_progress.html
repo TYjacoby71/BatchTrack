@@ -32,13 +32,13 @@
     <div class="extra-row d-flex gap-2 mb-2">
         <select class="form-select ingredient-select select2-input" style="width: 200px;">
             {% for ing in all_ingredients if ing.type == 'ingredient' %}
-            <option value="{{ ing.id }}" data-default-unit="{{ ing.unit }}">{{ ing.name }}</option>
+            <option value="{{ ing.id }}">{{ ing.name }}</option>
             {% endfor %}
         </select>
         <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
         <select class="form-select unit select2-input" style="width: 120px;">
             {% for unit in units %}
-            <option value="{{ unit.name }}" selected="{{ loop.first }}">{{ unit.name }}</option>
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
         </select>
         <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" />

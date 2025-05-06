@@ -104,23 +104,9 @@ function addExtraIngredientRow() {
 
     // Initialize Select2 on the new row's selects
     const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
-    const ingredientSelect = newRow.querySelector('.ingredient-select');
-    const unitSelect = newRow.querySelector('.unit');
-
-    // Initialize Select2
     $(newRow).find('.select2-input').select2({
         width: 'resolve',
         dropdownAutoWidth: true
-    });
-
-    // Handle ingredient selection change
-    $(ingredientSelect).on('select2:select', function(e) {
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        const defaultUnit = selectedOption.getAttribute('data-default-unit');
-        
-        if (defaultUnit) {
-            $(unitSelect).val(defaultUnit).trigger('change');
-        }
     });
 }
 
