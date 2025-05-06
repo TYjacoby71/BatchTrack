@@ -1,4 +1,3 @@
-
 // Batch form functionality
 function showFinishBatchModal() {
     const modal = new bootstrap.Modal(document.getElementById('finishBatchModal'));
@@ -10,10 +9,10 @@ function toggleOutputFields() {
     const type = document.getElementById('output_type').value;
     const productFields = document.getElementById('productFields');
     const ingredientFields = document.getElementById('ingredientFields');
-    
+
     productFields.style.display = type === 'product' ? 'block' : 'none';
     ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
-    
+
     // Update required attributes
     const productSelect = productFields.querySelector('select[name="product_id"]');
     if (productSelect) {
@@ -55,9 +54,9 @@ function submitFinishBatch(action) {
     const form = document.getElementById('finishBatchForm');
     const formData = new FormData(form);
     formData.append('action', action);
-    
+
     const batchId = window.location.pathname.split('/').pop();
-    
+
     fetch(`/batches/${batchId}/finish`, {
         method: 'POST',
         body: formData,
@@ -114,16 +113,6 @@ function saveBatch(event) {
         variant_label: form.querySelector('input[name="variant_label"]')?.value,
         final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
         output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
-        ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
-            amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
-            unit: row.querySelector('select[name="units[]"]').value
-        })),
-        containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
-            id: parseInt(row.querySelector('select[name="containers[]"]').value),
-            qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
-            cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
-        })),
         timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
             name: row.querySelector('input[name="timers[]"]').value,
             duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
