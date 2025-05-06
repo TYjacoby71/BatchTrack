@@ -322,8 +322,12 @@ def cancel_batch(batch_id):
         for batch_ing in batch.ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
-                # No unit snapshot yet, so just assume match and refund raw
-                ingredient.quantity += batch_ing.amount_used
+                if batch_ing.unit == ingredient.unit:
+                    # Direct credit if units match
+                    ingredient.quantity += batch_ing.amount_used
+                else:
+                    # Credit using original deducted amount from inventory
+                    ingredient.quantity += batch_ing.amount_used
                 db.session.add(ingredient)
 
         # Credit containers back to inventory
