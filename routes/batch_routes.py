@@ -357,15 +357,16 @@ def cancel_batch(batch_id):
 
         # Show appropriate message
         settings = get_setting('alerts', {})
-        if settings.get('show_inventory_refund', True) and restoration_summary:
+        if settings.get('show_inventory_refund', True):
             restored_items = ", ".join(restoration_summary)
             flash(f"Batch cancelled. Restored items: {restored_items}", "success")
         else:
             flash("Batch cancelled successfully", "success")
 
         # Verify inventory restoration
-        for ingredient in InventoryItem.query.filter_by(type='ingredient').all():
-            if ingredient.quantity < 0:
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient and ingredient.quantity < 0:
                 flash(f"Warning: {ingredient.name} has negative quantity after restoration!", "error")
 
     except Exception as e:
