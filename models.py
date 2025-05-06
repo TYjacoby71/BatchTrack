@@ -146,6 +146,17 @@ class BatchTimer(db.Model):
     end_time = db.Column(db.DateTime)
     status = db.Column(db.String(32), default='pending')
 
+class ExtraBatchIngredient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    cost_per_unit = db.Column(db.Float, nullable=True)
+
+    batch = db.relationship('Batch', backref='extra_ingredients')
+    ingredient = db.relationship('InventoryItem')
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)

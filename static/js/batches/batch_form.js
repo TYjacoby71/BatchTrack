@@ -97,6 +97,50 @@ function saveBatchAndExit() {
     });
 }
 
+function addExtraIngredientRow() {
+    const row = document.createElement('div');
+    row.classList.add('extra-row', 'd-flex', 'gap-2', 'mb-2');
+    row.innerHTML = `
+        <select class="form-select ingredient-select">
+            ${Array.from(document.querySelectorAll('#ingredient-list select:first-child option')).map(opt => 
+                `<option value="${opt.value}">${opt.text}</option>`
+            ).join('')}
+        </select>
+        <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
+        <select class="form-select unit">
+            ${Array.from(document.querySelectorAll('#ingredient-list select:last-child option')).map(opt => 
+                `<option value="${opt.value}">${opt.text}</option>`
+            ).join('')}
+        </select>
+        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" />
+        <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+    `;
+    document.getElementById("extra-ingredients-container").appendChild(row);
+}
+
+function saveExtras() {
+    const rows = document.querySelectorAll(".extra-row");
+    const extras = Array.from(rows).map(row => ({
+        ingredient_id: row.querySelector(".ingredient-select").value,
+        quantity: parseFloat(row.querySelector(".qty").value) || 0,
+        unit: row.querySelector(".unit").value,
+        cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0
+    }));
+
+    const batchId = window.location.pathname.split('/').pop();
+    fetch(`/batches/extras/${batchId}`, {
+        method: "POST",
+        headers: { 
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify({ extras })
+    })
+    .then(res => res.json())
+    .then(data => alert("Extra ingredients saved successfully"))
+    .catch(err => console.error(err));
+}
+
 function cancelBatch() {
     if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
         const batchId = window.location.pathname.split('/').pop();

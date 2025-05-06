@@ -64,6 +64,34 @@
         </table>
     </div>
     {% endif %}
+
+    {% if batch.extra_ingredients %}
+    <div class="mt-4">
+        <h4>Extra Ingredients Used</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                    <th>Cost/Unit</th>
+                    <th>Total Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for extra in batch.extra_ingredients %}
+                <tr>
+                    <td>{{ extra.ingredient.name }}</td>
+                    <td>{{ "%.2f"|format(extra.quantity) }}</td>
+                    <td>{{ extra.unit }}</td>
+                    <td>${{ "%.2f"|format(extra.cost_per_unit) }}</td>
+                    <td>${{ "%.2f"|format(extra.quantity * extra.cost_per_unit) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </div>
 
 <hr>
