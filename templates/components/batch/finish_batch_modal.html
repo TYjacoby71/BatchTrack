@@ -16,10 +16,10 @@
             </select>
           </div>
 
-          <div id="productFields">
+          <div id="productFields" style="display: none;">
             <div class="mb-3">
               <label for="product_id">Product</label>
-              <select name="product_id" class="form-select" required>
+              <select name="product_id" class="form-select">
                 {% for product in products %}
                   <option value="{{ product.id }}">{{ product.name }}</option>
                 {% endfor %}
@@ -32,7 +32,7 @@
             </div>
           </div>
 
-          <div id="ingredientFields" style="display:none;">
+          <div id="ingredientFields" style="display: none;">
             <div class="mb-3">
               <label>Projected Yield: <span id="projectedYield"></span></label>
             </div>

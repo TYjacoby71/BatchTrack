@@ -3,7 +3,31 @@
 function showFinishBatchModal() {
     const modal = new bootstrap.Modal(document.getElementById('finishBatchModal'));
     modal.show();
+    toggleOutputFields(); // Set initial field visibility
 }
+
+function toggleOutputFields() {
+    const type = document.getElementById('output_type').value;
+    const productFields = document.getElementById('productFields');
+    const ingredientFields = document.getElementById('ingredientFields');
+    
+    productFields.style.display = type === 'product' ? 'block' : 'none';
+    ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
+    
+    // Update required attributes
+    const productSelect = productFields.querySelector('select[name="product_id"]');
+    if (productSelect) {
+        productSelect.required = type === 'product';
+    }
+}
+
+// Add event listener when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    const outputTypeSelect = document.getElementById('output_type');
+    if (outputTypeSelect) {
+        outputTypeSelect.addEventListener('change', toggleOutputFields);
+    }
+});
 
 function toggleOutputFields() {
     const type = document.getElementById('output_type').value;
