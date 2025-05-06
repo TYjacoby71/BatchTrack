@@ -161,10 +161,11 @@ def view_batch(batch_identifier):
 @login_required
 def update_batch_notes(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    batch.notes = request.form.get('notes', '')
+    data = request.get_json() if request.is_json else request.form
+    batch.notes = data.get('notes', '')
+    batch.tags = data.get('tags', '')
     db.session.commit()
-    flash('Batch notes updated.')
-    return redirect(url_for('batches.list_batches'))
+    return jsonify({'message': 'Batch updated successfully'})
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required

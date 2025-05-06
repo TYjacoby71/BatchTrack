@@ -74,6 +74,29 @@ function submitFinishBatch(action) {
     });
 }
 
+function saveBatchAndExit() {
+    const batchId = window.location.pathname.split('/').pop();
+    const notes = document.querySelector('textarea[name="notes"]').value;
+    const tags = document.querySelector('input[name="tags"]').value;
+    
+    fetch(`/batches/${batchId}/update-notes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('.csrf-token').value
+        },
+        body: JSON.stringify({
+            notes: notes,
+            tags: tags
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/batches/';
+        }
+    });
+}
+
 function cancelBatch() {
     if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
         const batchId = window.location.pathname.split('/').pop();
