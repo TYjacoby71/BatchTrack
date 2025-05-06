@@ -98,24 +98,16 @@ function saveBatchAndExit() {
 }
 
 function addExtraIngredientRow() {
-    const row = document.createElement('div');
-    row.classList.add('extra-row', 'd-flex', 'gap-2', 'mb-2');
-    row.innerHTML = `
-        <select class="form-select ingredient-select">
-            ${Array.from(document.querySelectorAll('#ingredient-list .ingredient-select option')).map(opt => 
-                `<option value="${opt.value}">${opt.text}</option>`
-            ).join('')}
-        </select>
-        <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
-        <select class="form-select unit">
-            ${Array.from(document.querySelectorAll('#ingredient-list select:last-child option')).map(opt => 
-                `<option value="${opt.value}">${opt.text}</option>`
-            ).join('')}
-        </select>
-        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" />
-        <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-    `;
-    document.getElementById("extra-ingredients-container").appendChild(row);
+    const template = document.getElementById('extra-ingredient-template');
+    const clone = template.content.cloneNode(true);
+    document.getElementById('extra-ingredients-container').appendChild(clone);
+
+    // Initialize Select2 on the new row's selects
+    const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
+    $(newRow).find('.select2-input').select2({
+        width: 'resolve',
+        dropdownAutoWidth: true
+    });
 }
 
 function saveExtras() {
