@@ -24,65 +24,11 @@
 
 <form id="batchForm" method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
-    <!-- Output Type Selection -->
-    <div class="form-group">
-        <label for="output_type">Batch Type:</label>
-        <div class="d-flex align-items-center gap-2">
-            <select name="output_type" id="output_type" class="form-select" onchange="toggleOutputFields()" required>
-                <option value="product">Product</option>
-                <option value="ingredient">Ingredient</option>
-            </select>
-            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="What unit is this batch stored in? ex. 15 oz or 25 ml">?</button>
-        </div>
-    </div>
-
-    <!-- Product Yield Section (Refined) -->
-    <div id="productFields" class="form-group mt-4">
-        <h4>Product Output</h4>
-
-        <div class="mb-3">
-            <label for="product_id" class="form-label">Link to Product</label>
-            <select name="product_id" class="form-select" required>
-                {% for product in products %}
-                    <option value="{{ product.id }}">{{ product.name }}{% if product.variant %} ({{ product.variant }}){% endif %}</option>
-                {% endfor %}
-            </select>
-            <a href="/products/new" class="btn btn-link">+ Add New Product</a>
-        </div>
-
-        <div class="mb-3">
-            <label for="variant_label" class="form-label">Variant (optional)</label>
-            <input type="text" class="form-control" name="variant_label" placeholder="e.g., 4 oz, Citrus">
-        </div>
-
-        <div class="mb-3">
-            <label for="output_unit" class="form-label">Output Unit</label>
-            <select name="output_unit" class="form-select" required>
-                {% for unit in units %}
-                    <option value="{{ unit.name }}">{{ unit.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label for="final_quantity" class="form-label">Final Quantity Produced</label>
-            <input type="number" step="1" class="form-control" name="final_quantity" required>
-        </div>
-    </div>
-
-    <!-- Ingredient Yield Section -->
-    <div id="ingredientFields" class="form-group mt-4" style="display:none;">
+    <!-- Yield info will be handled in modal -->
+    <div class="form-group mt-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <label for="ingredient_unit" class="form-label mb-0">Unit Type:</label>
             <span class="text-muted">Projected yield: {{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</span>
         </div>
-        <select name="ingredient_unit" class="form-select mb-3" required>
-            {% for unit in units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-        </select>
-        <label for="ingredient_quantity">Ingredient Yield:</label>
-        <input type="number" name="ingredient_quantity" value="1" min="1" class="form-control" required>
     </div>
 
 
