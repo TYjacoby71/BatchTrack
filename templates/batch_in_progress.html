@@ -136,10 +136,8 @@
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
                     <td><strong>${{ "%.2f"|format(
-                        (batch.ingredients|sum(attribute='amount_used', default=0) * 
-                         batch.ingredients|map(attribute='ingredient.cost_per_unit')|sum(default=0)) +
-                        (batch.containers|sum(attribute='quantity_used', default=0) * 
-                         batch.containers|map(attribute='cost_each')|sum(default=0))
+                        sum(ing.amount_used * (ing.ingredient.cost_per_unit or 0) for ing in batch.ingredients) +
+                        sum(cont.quantity_used * (cont.cost_each or 0) for cont in batch.containers)
                     ) }}</strong></td>
                 </tr>
             </tfoot>
