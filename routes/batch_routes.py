@@ -318,42 +318,24 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Track restoration status
-        restoration_errors = []
-
-        # Restore ingredients using direct query to ensure data consistency
-        batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
-        for batch_ing in batch_ingredients:
-            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+        # Credit batch ingredients back to inventory
+        for batch_ing in batch.ingredients:
+            ingredient = batch_ing.ingredient
             if ingredient:
-                try:
-                    # Convert from batch unit back to inventory unit
-                    if batch_ing.unit != ingredient.unit:
-                        conversion_result = ConversionEngine.convert_units(
-                            batch_ing.amount_used,
-                            batch_ing.unit,
-                            ingredient.unit,
-                            ingredient_id=ingredient.id,
-                            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                        )
-                        restore_amount = conversion_result['converted_value']
-                    else:
-                        restore_amount = batch_ing.amount_used
+                if batch_ing.unit == ingredient.unit:
+                    # Direct credit if units match
+                    ingredient.quantity += batch_ing.amount_used
+                else:
+                    # Credit using original deducted amount from inventory
+                    ingredient.quantity += batch_ing.amount_used
+                db.session.add(ingredient)
 
-                    ingredient.quantity += restore_amount
-                    db.session.add(ingredient)
-                except Exception as e:
-                    flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
-
-        # Restore containers
-        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+        # Credit containers back to inventory
+        for batch_container in batch.containers:
             container = batch_container.container
             if container:
-                try:
-                    container.quantity += batch_container.quantity_used
-                    db.session.add(container)
-                except Exception as e:
-                    restoration_errors.append(f"Error restoring container {container.name}: {str(e)}")
+                container.quantity += batch_container.quantity_used
+                db.session.add(container)
 
         # Update batch status
         batch.status = 'cancelled'
