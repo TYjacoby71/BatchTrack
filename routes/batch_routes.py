@@ -363,11 +363,33 @@ def cancel_batch(batch_id):
         # Commit all changes
         db.session.commit()
 
+        # Build restoration summary
+        restoration_summary = []
+        
+        # Check ingredients
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient:
+                restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
+        
+        # Check containers
+        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+            container = batch_container.container
+            if container:
+                restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+
         # Show appropriate message
         if restoration_errors:
             flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
         else:
-            flash("Batch cancelled and all inventory restored successfully.", "success")
+            restored_items = ", ".join(restoration_summary)
+            flash(f"Batch cancelled. Restored items: {restored_items}", "success")
+            
+        # Verify inventory restoration
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient and ingredient.quantity < 0:
+                flash(f"Warning: {ingredient.name} has negative quantity after restoration!", "error")
 
     except Exception as e:
         db.session.rollback()
