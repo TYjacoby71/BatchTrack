@@ -122,9 +122,9 @@ function saveExtras() {
     const rows = document.querySelectorAll(".extra-row");
     const extras = Array.from(rows).map(row => ({
         ingredient_id: row.querySelector(".ingredient-select").value,
-        quantity: parseFloat(row.querySelector(".qty").value),
+        quantity: parseFloat(row.querySelector(".qty").value) || 0,
         unit: row.querySelector(".unit").value,
-        cost_per_unit: parseFloat(row.querySelector(".cost").value)
+        cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0
     }));
 
     const batchId = window.location.pathname.split('/').pop();
@@ -132,7 +132,7 @@ function saveExtras() {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
-            "X-CSRFToken": document.querySelector('.csrf-token').value
+            "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
         },
         body: JSON.stringify({ extras })
     })
