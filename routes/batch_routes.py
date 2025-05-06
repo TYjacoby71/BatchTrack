@@ -461,6 +461,29 @@ def confirm_finish_with_timers(batch_id):
         return redirect(url_for('batches.finish_batch_force', batch_id=batch.id))
     return render_template('confirm_finish_with_timers.html', batch=batch)
 
+@batches_bp.route('/extras/<int:batch_id>', methods=['POST'])
+@login_required
+def save_extra_ingredients(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    extras = request.get_json().get("extras", [])
+    
+    # Clear previous extras
+    ExtraBatchIngredient.query.filter_by(batch_id=batch.id).delete()
+
+    # Add new ones
+    for item in extras:
+        new_extra = ExtraBatchIngredient(
+            batch_id=batch.id,
+            inventory_item_id=item["ingredient_id"],
+            quantity=item["quantity"],
+            unit=item["unit"],
+            cost_per_unit=item.get("cost_per_unit", 0.0)
+        )
+        db.session.add(new_extra)
+
+    db.session.commit()
+    return jsonify({"status": "success"})
+
 @batches_bp.route('/force-finish/<int:batch_id>')
 @login_required
 def force_finish_batch(batch_id):
