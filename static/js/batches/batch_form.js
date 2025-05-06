@@ -90,9 +90,10 @@ function saveBatchAndExit() {
             tags: tags
         })
     })
-    .then(response => {
-        if (response.ok) {
-            window.location.href = '/batches/';
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            window.location.reload();
         }
     });
 }
