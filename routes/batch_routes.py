@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer
 from datetime import datetime
-from ..utils import get_setting
+from utils import get_setting
 from sqlalchemy import extract
 import uuid, os
 from werkzeug.utils import secure_filename
