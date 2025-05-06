@@ -6,7 +6,6 @@ from sqlalchemy import extract
 import uuid, os
 from werkzeug.utils import secure_filename
 from services.unit_conversion import ConversionEngine
-from utils import get_setting
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
@@ -319,82 +318,49 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Track restoration status
-        restoration_errors = []
+        # Credit batch ingredients back to inventory
+        for batch_ing in batch.ingredients:
+            ingredient = batch_ing.ingredient
+            if ingredient:
+                if batch_ing.unit == ingredient.unit:
+                    # Direct credit if units match
+                    ingredient.quantity += batch_ing.amount_used
+                else:
+                    # Credit using original deducted amount from inventory
+                    ingredient.quantity += batch_ing.amount_used
+                db.session.add(ingredient)
+
+        # Credit containers back to inventory
+        for batch_container in batch.containers:
+            container = batch_container.container
+            if container:
+                container.quantity += batch_container.quantity_used
+                db.session.add(container)
+
+        # Update batch status
+        batch.status = 'cancelled'
+        batch.cancelled_at = datetime.utcnow()
+        db.session.add(batch)
+
+        # Commit all changes
+        db.session.commit()
+
+        # Build restoration summary
         restoration_summary = []
         
-        # Start transaction
-        db.session.begin_nested()
+        # Check ingredients
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient:
+                restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
         
-        try:
-            # Restore ingredients
-            for batch_ing in BatchIngredient.query.filter_by(batch_id=batch.id).all():
-                ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
-                if ingredient:
-                    try:
-                        # Convert from batch unit back to inventory unit if needed
-                        restore_amount = batch_ing.amount_used
-                        if batch_ing.unit != ingredient.unit:
-                            from services.unit_conversion import ConversionEngine
-                            conversion_result = ConversionEngine.convert_units(
-                                batch_ing.amount_used,
-                                batch_ing.unit,
-                                ingredient.unit,
-                                ingredient_id=ingredient.id,
-                                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                            )
-                            restore_amount = conversion_result['converted_value']
-                        except Exception as e:
-                            restoration_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
-                            continue
+        # Check containers
+        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+            container = batch_container.container
+            if container:
+                restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
 
-                    ingredient.quantity += restore_amount
-                    restoration_summary.append(f"{restore_amount} {ingredient.unit} of {ingredient.name}")
-                    restore_amount = conversion_result['converted_value']
-                        
-                        ingredient.quantity += restore_amount
-                        restoration_summary.append(f"{restore_amount} {ingredient.unit} of {ingredient.name}")
-                        db.session.add(ingredient)
-                    except Exception as e:
-                        restoration_errors.append(f"Error restoring {ingredient.name}: {str(e)}")
-                        raise
-
-            # Restore containers
-            for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
-                container = InventoryItem.query.get(batch_container.container_id)
-                if container:
-                    try:
-                        container.quantity += batch_container.quantity_used
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
-                        db.session.add(container)
-                    except Exception as e:
-                        restoration_errors.append(f"Error restoring container {container.name}: {str(e)}")
-                        raise
-
-            # Update batch status
-            batch.status = 'cancelled'
-            batch.cancelled_at = datetime.utcnow()
-            batch.inventory_credited = True
-            db.session.add(batch)
-
-            # Commit all changes if no errors occurred
-            db.session.commit()
-
-            # Show appropriate message based on settings
-            settings = get_setting('alerts', {})
-            if settings.get('show_inventory_refund', True):
-                restored_items = ", ".join(restoration_summary)
-                flash(f"Batch cancelled. Restored items: {restored_items}", "success")
-            else:
-                flash("Batch cancelled successfully", "success")
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Error cancelling batch: {str(e)}", "error")
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-        # Verify inventory restoration
+        # Show appropriate message
         if restoration_errors:
             flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
         else:
