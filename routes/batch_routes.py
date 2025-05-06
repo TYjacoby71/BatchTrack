@@ -165,7 +165,9 @@ def update_batch_notes(batch_id):
     batch.notes = data.get('notes', '')
     batch.tags = data.get('tags', '')
     db.session.commit()
-    return jsonify({'message': 'Batch updated successfully'})
+    if request.is_json:
+        return jsonify({'message': 'Batch updated successfully', 'redirect': url_for('batches.list_batches')})
+    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
