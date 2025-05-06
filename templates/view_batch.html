@@ -40,6 +40,7 @@
                     <th>Item</th>
                     <th>Amount</th>
                     <th>Unit</th>
+                    <th>Type</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,6 +49,15 @@
                     <td>{{ ingredient.ingredient.name }}</td>
                     <td>{{ ingredient.amount_used }}</td>
                     <td>{{ ingredient.unit }}</td>
+                    <td>Ingredient</td>
+                </tr>
+                {% endfor %}
+                {% for container in batch.containers %}
+                <tr>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.quantity_used }}</td>
+                    <td>{{ container.container.unit }}</td>
+                    <td>Container</td>
                 </tr>
                 {% endfor %}
             </tbody>
