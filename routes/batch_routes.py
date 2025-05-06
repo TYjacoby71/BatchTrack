@@ -82,8 +82,18 @@ def start_batch():
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
             else:
+                # Deduct from inventory
                 ingredient.quantity -= required_converted
                 db.session.add(ingredient)
+                
+                # Create BatchIngredient record
+                batch_ingredient = BatchIngredient(
+                    batch_id=new_batch.id,
+                    ingredient_id=ingredient.id,
+                    amount_used=required_converted,
+                    unit=ingredient.unit
+                )
+                db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
