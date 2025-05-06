@@ -187,29 +187,17 @@ def view_batch_in_progress(batch_identifier):
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    # Build cost summary
-    total_cost = 0
-    ingredient_costs = []
+    # Build cost summary-deleted and fixed in template screenshot taken of original code at 5-6-25 11:02 am
+    # Recalculate batch cost from frozen batch records
+    ingredient_total = sum((ing.amount_used or 0) * (ing.ingredient.cost_per_unit or 0) for ing in batch.ingredients)
+    container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
+    batch_cost = round(ingredient_total + container_total, 2)
 
-    for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.inventory_item
-        used_amount = assoc.amount * batch.scale
-        cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
-        line_cost = round(used_amount * cost_per_unit, 2)
-        total_cost += line_cost
-
-        ingredient_costs.append({
-            'name': ingredient.name,
-            'unit': ingredient.unit,
-            'used': used_amount,
-            'cost_per_unit': cost_per_unit,
-            'line_cost': line_cost
-        })
 
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
     # Only pass batch_cost if ingredients are used
-    batch_cost = round(total_cost, 2) if ingredient_costs else None
+    
 
     inventory_items = InventoryItem.query.all()
     return render_template('batch_in_progress.html',
@@ -217,8 +205,7 @@ def view_batch_in_progress(batch_identifier):
                          recipe=recipe,
                          units=units,
                          batch_cost=batch_cost,
-                         product_quantity=product_quantity,
-                         ingredient_costs=ingredient_costs,
+                         product_quantity=product_quantity,       
                          inventory_items=inventory_items)
 
 @batches_bp.route('/<int:batch_id>/finish', methods=['POST'])

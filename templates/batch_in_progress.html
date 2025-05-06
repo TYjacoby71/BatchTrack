@@ -9,18 +9,6 @@
     <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
 </div>
 
-{% if batch.containers %}
-<div class="mt-4">
-    <h4>Containers Planned:</h4>
-    <ul class="list-group">
-        {% for container in batch.containers %}
-        <li class="list-group-item">
-            Container ID: {{ container.id }} | Quantity: {{ container.quantity }}
-        </li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
 
 <form id="batchForm" method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
@@ -102,32 +90,33 @@
                 </tr>
             </thead>
             <tbody>
-                {% if ingredient_costs %}
+              {% if batch.ingredients %}
                 <tr><th colspan="5">Ingredients</th></tr>
-                {% for cost in ingredient_costs %}
-                <tr>
-                    <td>{{ cost.name }}</td>
-                    <td>{{ "%.2f"|format(cost.used) }}</td>
-                    <td>{{ cost.unit }}</td>
-                    <td>${{ "%.2f"|format(cost.cost_per_unit) }}</td>
-                    <td>${{ "%.2f"|format(cost.line_cost) }}</td>
-                </tr>
+                {% for ing in batch.ingredients %}
+                  <tr>
+                    <td>{{ ing.ingredient.name }}</td>
+                    <td>{{ "%.2f"|format(ing.amount_used) }}</td>
+                    <td>{{ ing.unit }}</td>
+                    <td>{{ "%.2f"|format(ing.ingredient.cost_per_unit or 0) }}</td>
+                    <td>{{ "%.2f"|format((ing.amount_used or 0) * (ing.ingredient.cost_per_unit or 0)) }}</td>
+                  </tr>
                 {% endfor %}
-                {% endif %}
+              {% endif %}
 
-                {% if batch.containers %}
+              {% if batch.containers %}
                 <tr><th colspan="5">Containers</th></tr>
                 {% for container in batch.containers %}
-                <tr>
+                  <tr>
                     <td>{{ container.container.name }} ({{ container.container_id }})</td>
                     <td>{{ container.quantity_used }}</td>
-                    <td>count</td>
-                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
-                    <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
-                </tr>
+                    <td></td>
+                    <td>{{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>{{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
+                  </tr>
                 {% endfor %}
-                {% endif %}
+              {% endif %}
             </tbody>
+
             <tfoot>
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
