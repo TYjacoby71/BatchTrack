@@ -27,7 +27,7 @@
             {% for bi in ingredients %}
             <div class="ingredient-row d-flex gap-2 mb-2">
                 <select name="ingredients[{{ loop.index0 }}][id]" class="form-select" disabled>
-                    {% for ing in get_ingredient_list() if ing.type == 'ingredient' %}
+                    {% for ing in inventory_items %}
                     <option value="{{ ing.id }}" {% if bi.ingredient_id == ing.id %}selected{% endif %}>{{ ing.name }}</option>
                     {% endfor %}
                 </select>

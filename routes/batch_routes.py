@@ -209,14 +209,17 @@ def view_batch_in_progress(batch_identifier):
     # Only pass batch_cost if ingredients are used
     
 
-    inventory_items = InventoryItem.query.all()
+    inventory_items = InventoryItem.query.filter_by(type='ingredient').all()
     return render_template('batch_in_progress.html',
                          batch=batch,
                          recipe=recipe,
                          units=units,
                          batch_cost=batch_cost,
                          product_quantity=product_quantity,       
-                         inventory_items=inventory_items)
+                         inventory_items=inventory_items,
+                         ingredients=batch.ingredients,
+                         containers=batch.containers,
+                         timers=batch.timers)
 
 @batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required
