@@ -42,7 +42,7 @@ def start_batch():
     for container in data.get('containers', []):
         container_id = container.get('id')
         quantity = container.get('quantity', 0)
-        
+
         if container_id and quantity:
             container_item = InventoryItem.query.get(container_id)
             if container_item:
@@ -78,7 +78,7 @@ def start_batch():
                 density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
             )
             required_converted = conversion_result['converted_value']
-            
+
             if ingredient.quantity < required_converted:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
             else:
@@ -165,11 +165,11 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
     batch = Batch.query.get_or_404(batch_identifier)
-    
+
     if batch.status != 'in_progress':
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
-    
+
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
@@ -187,24 +187,24 @@ def view_batch_in_progress(batch_identifier):
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    # Build cost summary from actual batch ingredients
+    # Build cost summary
     total_cost = 0
     ingredient_costs = []
 
-    for batch_ing in batch.ingredients:
-        ingredient = batch_ing.ingredient
-        if ingredient:
-            cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
-            line_cost = round(batch_ing.amount_used * cost_per_unit, 2)
-            total_cost += line_cost
+    for assoc in recipe.recipe_ingredients:
+        ingredient = assoc.inventory_item
+        used_amount = assoc.amount * batch.scale
+        cost_per_unit = getattr(ingredient, 'cost_per_unit', 0) or 0
+        line_cost = round(used_amount * cost_per_unit, 2)
+        total_cost += line_cost
 
-            ingredient_costs.append({
-                'name': ingredient.name,
-                'unit': batch_ing.unit,
-                'used': batch_ing.amount_used,
-                'cost_per_unit': cost_per_unit,
-                'line_cost': line_cost
-            })
+        ingredient_costs.append({
+            'name': ingredient.name,
+            'unit': ingredient.unit,
+            'used': used_amount,
+            'cost_per_unit': cost_per_unit,
+            'line_cost': line_cost
+        })
 
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
@@ -221,11 +221,25 @@ def view_batch_in_progress(batch_identifier):
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
-@batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required
-def finish_batch(batch_id, force=False):
+def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     action = request.form.get('action', 'finish')
+    output_type = request.form.get('output_type')
+    final_quantity = float(request.form.get('final_quantity', 0))
+    output_unit = request.form.get('output_unit')
+    notes = request.form.get('notes')
+
+    # Update batch details
+    batch.batch_type = output_type
+    batch.final_quantity = final_quantity
+    batch.output_unit = output_unit
+    batch.notes = notes
+
+    if output_type == 'product':
+        batch.product_id = request.form.get('product_id')
+        batch.variant_label = request.form.get('variant_label')
 
     try:
         # Verify batch can be finished
@@ -262,7 +276,7 @@ def finish_batch(batch_id, force=False):
                 )
                 db.session.add(product_inv)
                 batch.inventory_credited = True
-            
+
             # Update batch completion status
             batch.status = 'completed'
             batch.completed_at = datetime.utcnow()
@@ -304,37 +318,84 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Restore ingredients using the actual deducted amounts from BatchIngredient records
-        for batch_ing in batch.ingredients:
-            ingredient = batch_ing.ingredient
+        # Track restoration status
+        restoration_errors = []
+
+        # Restore ingredients using direct query to ensure data consistency
+        batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
             if ingredient:
                 try:
                     # Convert from batch unit back to inventory unit
-                    conversion_result = ConversionEngine.convert_units(
-                        batch_ing.amount_used,
-                        batch_ing.unit,
-                        ingredient.unit,
-                        ingredient_id=ingredient.id,
-                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                    )
-                    ingredient.quantity += conversion_result['converted_value']
+                    if batch_ing.unit != ingredient.unit:
+                        conversion_result = ConversionEngine.convert_units(
+                            batch_ing.amount_used,
+                            batch_ing.unit,
+                            ingredient.unit,
+                            ingredient_id=ingredient.id,
+                            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                        )
+                        restore_amount = conversion_result['converted_value']
+                    else:
+                        restore_amount = batch_ing.amount_used
+
+                    ingredient.quantity += restore_amount
                     db.session.add(ingredient)
                 except Exception as e:
                     flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
 
         # Restore containers
-        for bc in batch.containers:
-            container = bc.container
+        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+            container = batch_container.container
             if container:
-                container.quantity += bc.quantity_used
-                db.session.add(container)
+                try:
+                    container.quantity += batch_container.quantity_used
+                    db.session.add(container)
+                except Exception as e:
+                    restoration_errors.append(f"Error restoring container {container.name}: {str(e)}")
 
+        # Update batch status
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
+
+        # Commit all changes
         db.session.commit()
 
-        flash("Batch cancelled and inventory restored successfully.", "success")
+        # Build restoration summary
+        restoration_summary = []
+        
+        # Check ingredients
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient:
+                restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
+        
+        # Check containers
+        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+            container = batch_container.container
+            if container:
+                restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+
+        # Show appropriate message
+        if restoration_errors:
+            flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
+        else:
+            # Check settings for alert detail preference
+            settings = get_setting('alerts', {})
+            if settings.get('show_inventory_refund', True):
+                restored_items = ", ".join(restoration_summary)
+                flash(f"Batch cancelled. Restored items: {restored_items}", "success")
+            else:
+                flash("Batch cancelled successfully", "success")
+            
+        # Verify inventory restoration
+        for batch_ing in batch_ingredients:
+            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            if ingredient and ingredient.quantity < 0:
+                flash(f"Warning: {ingredient.name} has negative quantity after restoration!", "error")
+
     except Exception as e:
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
