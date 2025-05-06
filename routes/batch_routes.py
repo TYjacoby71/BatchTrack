@@ -310,25 +310,28 @@ def finish_batch(batch_id):
 @login_required
 def cancel_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
+
     if batch.status != 'in_progress':
         flash("Only in-progress batches can be cancelled.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
+        # Fetch batch ingredients and containers
+        batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
+        batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
+
         # Credit batch ingredients back to inventory
-        for batch_ing in batch.ingredients:
+        for batch_ing in batch_ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
                 if batch_ing.unit == ingredient.unit:
-                    # Direct credit if units match
                     ingredient.quantity += batch_ing.amount_used
                 else:
-                    # Credit using original deducted amount from inventory
-                    ingredient.quantity += batch_ing.amount_used
+                    ingredient.quantity += batch_ing.amount_used  # You may still want unit conversion logic here
                 db.session.add(ingredient)
 
         # Credit containers back to inventory
-        for batch_container in batch.containers:
+        for batch_container in batch_containers:
             container = batch_container.container
             if container:
                 container.quantity += batch_container.quantity_used
@@ -338,37 +341,28 @@ def cancel_batch(batch_id):
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
-
-        # Commit all changes
         db.session.commit()
 
         # Build restoration summary
         restoration_summary = []
-        
-        # Check ingredients
         for batch_ing in batch_ingredients:
             ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
             if ingredient:
                 restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
-        
-        # Check containers
-        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+
+        for batch_container in batch_containers:
             container = batch_container.container
             if container:
                 restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
 
         # Show appropriate message
-        if restoration_errors:
-            flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
+        settings = get_setting('alerts', {})
+        if settings.get('show_inventory_refund', True):
+            restored_items = ", ".join(restoration_summary)
+            flash(f"Batch cancelled. Restored items: {restored_items}", "success")
         else:
-            # Check settings for alert detail preference
-            settings = get_setting('alerts', {})
-            if settings.get('show_inventory_refund', True):
-                restored_items = ", ".join(restoration_summary)
-                flash(f"Batch cancelled. Restored items: {restored_items}", "success")
-            else:
-                flash("Batch cancelled successfully", "success")
-            
+            flash("Batch cancelled successfully", "success")
+
         # Verify inventory restoration
         for batch_ing in batch_ingredients:
             ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
@@ -381,6 +375,7 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
     return redirect(url_for('batches.list_batches'))
+
 
 @batches_bp.route('/fail/<int:batch_id>', methods=['POST'])
 @login_required
