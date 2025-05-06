@@ -164,11 +164,7 @@ def update_batch_notes(batch_id):
     batch.notes = request.form.get('notes', '')
     db.session.commit()
     flash('Batch notes updated.')
-
-    # Redirect based on batch status
-    if batch.status == 'in_progress':
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-    return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
+    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
