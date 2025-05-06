@@ -107,7 +107,7 @@
                 <tr><th colspan="5">Containers</th></tr>
                 {% for container in batch.containers %}
                   <tr>
-                    <td>{{ container.container.name }} ({{ container.container_id }})</td>
+                    <td>{{ container.container.name }}</td>
                     <td>{{ container.quantity_used }}</td>
                     <td></td>
                     <td>{{ "%.2f"|format(container.cost_each) }}</td>
@@ -143,8 +143,7 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="button" onclick="saveBatch(event)" class="btn btn-primary me-2">Save</button>
-            <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Exit</a>
+            <button type="button" onclick="saveBatchAndExit()" class="btn btn-secondary">Save and Exit</button>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>
