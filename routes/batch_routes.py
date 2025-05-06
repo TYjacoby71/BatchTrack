@@ -318,37 +318,56 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Restore ingredients using the actual deducted amounts from BatchIngredient records
-        for batch_ing in batch.ingredients:
+        # Track restoration status
+        restoration_errors = []
+        
+        # Restore ingredients
+        for batch_ing in BatchIngredient.query.filter_by(batch_id=batch_id).all():
             ingredient = batch_ing.ingredient
             if ingredient:
                 try:
-                    # Convert from batch unit back to inventory unit
-                    conversion_result = ConversionEngine.convert_units(
-                        batch_ing.amount_used,
-                        batch_ing.unit,
-                        ingredient.unit,
-                        ingredient_id=ingredient.id,
-                        density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-                    )
-                    ingredient.quantity += conversion_result['converted_value']
+                    # Convert from batch unit back to inventory unit if needed
+                    if batch_ing.unit != ingredient.unit:
+                        conversion_result = ConversionEngine.convert_units(
+                            batch_ing.amount_used,
+                            batch_ing.unit,
+                            ingredient.unit,
+                            ingredient_id=ingredient.id,
+                            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+                        )
+                        restore_amount = conversion_result['converted_value']
+                    else:
+                        restore_amount = batch_ing.amount_used
+                        
+                    ingredient.quantity += restore_amount
                     db.session.add(ingredient)
                 except Exception as e:
-                    flash(f"Error restoring {ingredient.name}: {str(e)}", "error")
+                    restoration_errors.append(f"Error restoring {ingredient.name}: {str(e)}")
 
         # Restore containers
-        for bc in batch.containers:
-            container = bc.container
+        for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
+            container = batch_container.container
             if container:
-                container.quantity += bc.quantity_used
-                db.session.add(container)
+                try:
+                    container.quantity += batch_container.quantity_used
+                    db.session.add(container)
+                except Exception as e:
+                    restoration_errors.append(f"Error restoring container {container.name}: {str(e)}")
 
+        # Update batch status
         batch.status = 'cancelled'
         batch.cancelled_at = datetime.utcnow()
         db.session.add(batch)
+        
+        # Commit all changes
         db.session.commit()
 
-        flash("Batch cancelled and inventory restored successfully.", "success")
+        # Show appropriate message
+        if restoration_errors:
+            flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
+        else:
+            flash("Batch cancelled and all inventory restored successfully.", "success")
+            
     except Exception as e:
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
