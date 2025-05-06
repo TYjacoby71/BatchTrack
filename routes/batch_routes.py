@@ -350,14 +350,11 @@ def cancel_batch(batch_id):
 
                     ingredient.quantity += restore_amount
                     restoration_summary.append(f"{restore_amount} {ingredient.unit} of {ingredient.name}")
-                    restore_amount = conversion_result['converted_value']
-                        
-                        ingredient.quantity += restore_amount
-                        restoration_summary.append(f"{restore_amount} {ingredient.unit} of {ingredient.name}")
-                        db.session.add(ingredient)
-                    except Exception as e:
-                        restoration_errors.append(f"Error restoring {ingredient.name}: {str(e)}")
-                        raise
+                    ingredient.quantity += restore_amount
+                    db.session.add(ingredient)
+                except Exception as e:
+                    restoration_errors.append(f"Error restoring {ingredient.name}: {str(e)}")
+                    raise
 
             # Restore containers
             for batch_container in BatchContainer.query.filter_by(batch_id=batch_id).all():
@@ -365,8 +362,7 @@ def cancel_batch(batch_id):
                 if container:
                     try:
                         container.quantity += batch_container.quantity_used
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+                        restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
                         db.session.add(container)
                     except Exception as e:
                         restoration_errors.append(f"Error restoring container {container.name}: {str(e)}")
