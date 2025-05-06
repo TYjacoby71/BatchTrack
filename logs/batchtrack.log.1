@@ -1,4 +1,13 @@
-2025-05-06 16:39:04,669 ERROR: Exception on /batches/in-progress/11 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-02 22:12:07,668 ERROR: Exception on /login [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: unit.is_mapped
+
+The above exception was the direct cause of the following exception:
+
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -12,135 +21,68 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/batch_routes.py", line 215, in view_batch_in_progress
-    return render_template('batch_in_progress.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app.py", line 114, in login
+    return render_template('login.html', form=form)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 138, in block 'content'
-    <td><strong>${{ "%.2f"|format(
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/async_utils.py", line 48, in wrapper
-    return normal_func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: sync_do_sum() got an unexpected keyword argument 'default'
-2025-05-06 16:39:06,821 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 16:39:08,723 ERROR: Exception on /batches/in-progress/11 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/batch_routes.py", line 215, in view_batch_in_progress
-    return render_template('batch_in_progress.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 138, in block 'content'
-    <td><strong>${{ "%.2f"|format(
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/async_utils.py", line 48, in wrapper
-    return normal_func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: sync_do_sum() got an unexpected keyword argument 'default'
-2025-05-06 16:39:32,008 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 16:39:35,809 ERROR: Exception on /batches/in-progress/11 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/routes/batch_routes.py", line 215, in view_batch_in_progress
-    return render_template('batch_in_progress.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 99, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/batch_in_progress.html", line 138, in block 'content'
-    <td><strong>${{ "%.2f"|format(
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/async_utils.py", line 48, in wrapper
-    return normal_func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1336, in sync_do_sum
-    return sum(iterable, start)  # type: ignore[no-any-return, call-overload]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1503, in sync_do_map
-    yield func(item)
-          ^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1745, in func
-    return context.environment.call_filter(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 569, in call_filter
-    return self._filter_test_common(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 526, in _filter_test_common
-    raise TemplateRuntimeError(msg)
-jinja2.exceptions.TemplateRuntimeError: No filter named 'mul'.
-2025-05-06 16:40:51,225 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
+    app.update_template_context(context)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 530, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app.py", line 89, in inject_units
+    units = Unit.query.order_by(Unit.type, Unit.name).all()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: unit.is_mapped
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.multiplier_to_base AS unit_multiplier_to_base, unit.user_id AS unit_user_id, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped 
+FROM unit ORDER BY unit.type, unit.name]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-05-02 22:13:09,697 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:14:15,872 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:14:17,449 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:21:35,035 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:22:05,030 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:23:36,882 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:24:42,463 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:25:25,615 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:25:30,430 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:28:57,024 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:30:21,829 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-02 22:31:19,290 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
