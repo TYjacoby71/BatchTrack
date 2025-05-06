@@ -1,4 +1,4 @@
-2025-05-06 22:02:21,795 ERROR: Exception on /batches/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-06 22:00:09,095 ERROR: Exception on /batches/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -115,11 +115,5 @@ Traceback (most recent call last):
 sqlalchemy.exc.OperationalError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
 (sqlite3.OperationalError) table batch_ingredient has no column named cost_per_unit
 [SQL: INSERT INTO batch_ingredient (batch_id, ingredient_id, amount_used, unit, cost_per_unit) VALUES (?, ?, ?, ?, ?)]
-[parameters: (32, 2, 5.0, 'count', None)]
+[parameters: (31, 2, 5.0, 'count', None)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-05-06 22:03:12,704 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 22:03:14,223 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 22:03:28,352 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 22:24:18,175 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 22:24:22,351 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-06 22:25:53,518 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
