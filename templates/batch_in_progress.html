@@ -20,35 +20,31 @@
     </div>
 
 
-    <!-- INGREDIENT SECTION -->
-    <div class="mt-4">
-        <h4>Ingredients Used</h4>
-        <div id="ingredient-list">
-            {% for bi in ingredients %}
-            <div class="ingredient-row d-flex gap-2 mb-2">
-                <select name="ingredients[{{ loop.index0 }}][id]" class="form-select" disabled>
-                    {% for ing in get_ingredient_list() if ing.type == 'ingredient' %}
-                    <option value="{{ ing.id }}" {% if bi.ingredient_id == ing.id %}selected{% endif %}>{{ ing.name }}</option>
-                    {% endfor %}
-                </select>
-                <input type="number" step="0.01" name="ingredients[{{ loop.index0 }}][amount]" value="{{ bi.amount_used }}" class="form-control" disabled>
-                <select name="ingredients[{{ loop.index0 }}][unit]" class="form-select" disabled>
-                    {% for unit in units %}
-                    <option value="{{ unit.name }}" {% if unit.name == bi.unit %}selected{% endif %}>{{ unit.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+<!-- EXTRA INGREDIENTS SECTION -->
+<div class="mt-4">
+    <h4>Extra Ingredients Used</h4>
+    <div id="extra-ingredients-container"></div>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
+    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
+</div>
 
-    <!-- EXTRA INGREDIENTS SECTION -->
-    <div class="mt-4">
-        <h4>Extra Ingredients Used</h4>
-        <div id="extra-ingredients-container"></div>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
-        <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
+<template id="extra-ingredient-template">
+    <div class="extra-row d-flex gap-2 mb-2">
+        <select class="form-select ingredient-select">
+            {% for ing in all_ingredients if ing.type == 'ingredient' %}
+            <option value="{{ ing.id }}">{{ ing.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
+        <select class="form-select unit">
+            {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" />
+        <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✖</button>
     </div>
+</template>
 
     <!-- CONTAINER SECTION -->
     <div class="mt-4">
