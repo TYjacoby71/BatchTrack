@@ -1,6 +1,10 @@
-
 {
   "low_stock_threshold": 5,
   "per_page": 20,
-  "enable_csv_export": true
+  "enable_csv_export": true,
+  "alerts": {
+        "low_stock_threshold": 5,
+        "notification_type": "dashboard",
+        "show_inventory_refund": true
+    }
 }

@@ -382,8 +382,13 @@ def cancel_batch(batch_id):
         if restoration_errors:
             flash("Batch cancelled with some restoration errors: " + "; ".join(restoration_errors), "warning")
         else:
-            restored_items = ", ".join(restoration_summary)
-            flash(f"Batch cancelled. Restored items: {restored_items}", "success")
+            # Check settings for alert detail preference
+            settings = get_setting('alerts', {})
+            if settings.get('show_inventory_refund', True):
+                restored_items = ", ".join(restoration_summary)
+                flash(f"Batch cancelled. Restored items: {restored_items}", "success")
+            else:
+                flash("Batch cancelled successfully", "success")
             
         # Verify inventory restoration
         for batch_ing in batch_ingredients:

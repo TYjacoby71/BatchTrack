@@ -7,6 +7,23 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">System Settings</h5>
+
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6>Alerts</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
+                                       {% if settings.alerts.show_inventory_refund %}checked{% endif %}
+                                       onchange="updateSetting('alerts.show_inventory_refund', this.checked)">
+                                <label class="form-check-label" for="showInventoryRefund">
+                                    Show inventory refund details
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <ul class="list-group">
                         <li class="list-group-item">
                             <a href="{{ url_for('conversion.manage_units') }}">Unit Management</a>
