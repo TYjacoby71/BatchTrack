@@ -71,16 +71,11 @@
 <h3>Batch Notes</h3>
 <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <textarea name="notes" rows="4" class="form-control">{{ batch.notes or '' }}</textarea>
-    <button type="submit" class="btn btn-secondary mt-2">Update Notes</button>
+    <textarea name="notes" rows="4" class="form-control mb-3">{{ batch.notes or '' }}</textarea>
+    {% if batch.tags %}
+        <h3 class="mt-4">Tags</h3>
+        <p>{{ batch.tags }}</p>
+    {% endif %}
+    <button type="submit" class="btn btn-secondary">Save and Return to Batch List</button>
 </form>
-
-{% if batch.tags %}
-    <h3 class="mt-4">Tags</h3>
-    <p>{{ batch.tags }}</p>
-{% endif %}
-
-<div class="mt-3">
-    <a href="{{ url_for('batches.list_batches') }}" class="btn btn-secondary">Back to Batch List</a>
-</div>
 {% endblock %}
