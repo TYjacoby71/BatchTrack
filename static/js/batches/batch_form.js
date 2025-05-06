@@ -152,18 +152,3 @@ function cancelBatch() {
     }
 }
 
-function addTimerRow() {
-  const container = document.getElementById('timer-list');
-  const index = container.children.length;
-  
-  const div = document.createElement('div');
-  div.className = 'timer-row d-flex gap-2 mb-2';
-  div.innerHTML = `
-    <input type="text" name="timers[${index}][name]" class="form-control" placeholder="Timer Name">
-    <input type="number" name="timers[${index}][duration_seconds]" class="form-control" placeholder="Duration (seconds)">
-    <span class="text-muted align-self-center">(Not started)</span>
-    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-  `;
-  
-  container.appendChild(div);
-}
