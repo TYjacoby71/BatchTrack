@@ -55,3 +55,13 @@ def delete_inventory(id):
     db.session.commit()
     flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
+
+@inventory_bp.route('/inventory/reset-quantities', methods=['POST'])
+@login_required
+def reset_quantities():
+    items = InventoryItem.query.all()
+    for item in items:
+        item.quantity = 100.0
+    db.session.commit()
+    flash('All inventory quantities have been set to 100')
+    return redirect(url_for('inventory.list_inventory'))

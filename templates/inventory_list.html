@@ -2,6 +2,14 @@
 {% block content %}
 <h2>Inventory Management</h2>
 
+<div class="d-flex gap-2 mb-3">
+    <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-primary">+ New Item</a>
+    <form action="{{ url_for('inventory.reset_quantities') }}" method="POST" onsubmit="return confirm('Are you sure you want to set all quantities to 100?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-warning">Reset All to 100</button>
+    </form>
+</div>
+
 <div class="inventory-sections">
   <div class="section">
     <h3>Ingredients</h3>
