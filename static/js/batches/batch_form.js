@@ -1,15 +1,28 @@
 
 // Batch form functionality
-function finishBatch(action) {
-    const form = document.getElementById('batchForm');
+function showFinishBatchModal() {
+    const modal = new bootstrap.Modal(document.getElementById('finishBatchModal'));
+    modal.show();
+}
+
+function toggleOutputFields() {
+    const type = document.getElementById('output_type').value;
+    document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
+    document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
+}
+
+function submitFinishBatch(action) {
+    const form = document.getElementById('finishBatchForm');
     const formData = new FormData(form);
     formData.append('action', action);
-
-    fetch(form.action, {
+    
+    const batchId = window.location.pathname.split('/').pop();
+    
+    fetch(`/batches/${batchId}/finish`, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': form.querySelector('input[name="csrf_token"]').value
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
         }
     })
     .then(response => {

@@ -221,11 +221,25 @@ def view_batch_in_progress(batch_identifier):
                          ingredient_costs=ingredient_costs,
                          inventory_items=inventory_items)
 
-@batches_bp.route('/finish/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required
-def finish_batch(batch_id, force=False):
+def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     action = request.form.get('action', 'finish')
+    output_type = request.form.get('output_type')
+    final_quantity = float(request.form.get('final_quantity', 0))
+    output_unit = request.form.get('output_unit')
+    notes = request.form.get('notes')
+
+    # Update batch details
+    batch.batch_type = output_type
+    batch.final_quantity = final_quantity
+    batch.output_unit = output_unit
+    batch.notes = notes
+
+    if output_type == 'product':
+        batch.product_id = request.form.get('product_id')
+        batch.variant_label = request.form.get('variant_label')
 
     try:
         # Verify batch can be finished
