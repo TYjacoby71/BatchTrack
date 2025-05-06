@@ -107,7 +107,7 @@
                 <tr><th colspan="5">Containers</th></tr>
                 {% for container in batch.containers %}
                   <tr>
-                    <td>{{ container.container.name }} ({{ container.container_id }})</td>
+                    <td>{{ container.container.name }}</td>
                     <td>{{ container.quantity_used }}</td>
                     <td></td>
                     <td>{{ "%.2f"|format(container.cost_each) }}</td>
