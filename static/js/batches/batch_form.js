@@ -102,7 +102,7 @@ function addExtraIngredientRow() {
     row.classList.add('extra-row', 'd-flex', 'gap-2', 'mb-2');
     row.innerHTML = `
         <select class="form-select ingredient-select">
-            ${Array.from(document.querySelectorAll('#ingredient-list select:first-child option')).map(opt => 
+            ${Array.from(document.querySelectorAll('#ingredient-list .ingredient-select option')).map(opt => 
                 `<option value="${opt.value}">${opt.text}</option>`
             ).join('')}
         </select>
