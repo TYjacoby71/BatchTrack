@@ -107,20 +107,20 @@ function addExtraIngredientRow() {
     const ingredientSelect = newRow.querySelector('.ingredient-select');
     const unitSelect = newRow.querySelector('.unit');
 
-    // Handle ingredient selection change
-    ingredientSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const defaultUnit = selectedOption.getAttribute('data-default-unit');
-        
-        if (defaultUnit && unitSelect) {
-            // Update Select2 value
-            $(unitSelect).val(defaultUnit).trigger('change');
-        }
-    });
-
+    // Initialize Select2
     $(newRow).find('.select2-input').select2({
         width: 'resolve',
         dropdownAutoWidth: true
+    });
+
+    // Handle ingredient selection change
+    $(ingredientSelect).on('select2:select', function(e) {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const defaultUnit = selectedOption.getAttribute('data-default-unit');
+        
+        if (defaultUnit) {
+            $(unitSelect).val(defaultUnit).trigger('change');
+        }
     });
 }
 
