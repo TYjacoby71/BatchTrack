@@ -363,6 +363,10 @@ def cancel_batch(batch_id):
             if ingredient:
                 restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
 
+        for extra_ing in extra_ingredients:
+            if extra_ing.ingredient:
+                restoration_summary.append(f"{extra_ing.quantity} {extra_ing.unit} of {extra_ing.ingredient.name}")
+
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
