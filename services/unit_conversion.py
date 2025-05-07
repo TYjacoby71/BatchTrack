@@ -5,7 +5,7 @@ from models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, Con
 
 class ConversionEngine:
     @staticmethod
-    def round_value(value, decimals=2):
+    def round_value(value, decimals=3):
         return round(value, decimals)
 
     @staticmethod
