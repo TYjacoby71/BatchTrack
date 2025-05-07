@@ -117,14 +117,24 @@ def set_column_visibility():
 @batches_bp.route('/')
 @login_required
 def list_batches():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
     query = Batch.query.order_by(Batch.started_at.desc())
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
-    status = request.args.get('status')
-    recipe_id = request.args.get('recipe_id')
-    start = request.args.get('start')
-    end = request.args.get('end')
+    # Get filters from request args or session
+    status = request.args.get('status') or session.get('batch_filter_status')
+    recipe_id = request.args.get('recipe_id') or session.get('batch_filter_recipe')
+    start = request.args.get('start') or session.get('batch_filter_start')
+    end = request.args.get('end') or session.get('batch_filter_end')
+    
+    # Store current filters in session
+    session['batch_filter_status'] = status
+    session['batch_filter_recipe'] = recipe_id
+    session['batch_filter_start'] = start 
+    session['batch_filter_end'] = end
 
     if status:
         query = query.filter_by(status=status)
@@ -136,7 +146,8 @@ def list_batches():
     if end:
         query = query.filter(Batch.timestamp <= end)
 
-    batches = query.all()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    batches = pagination.items
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     return render_template('batches_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
 
