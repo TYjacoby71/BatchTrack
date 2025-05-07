@@ -110,6 +110,62 @@ function addExtraIngredientRow() {
     });
 }
 
+function addExtraContainerRow() {
+    const template = document.getElementById('extra-container-template');
+    const clone = template.content.cloneNode(true);
+    document.getElementById('extra-containers-container').appendChild(clone);
+
+    // Initialize Select2 on the new row's selects
+    const newRow = document.getElementById('extra-containers-container').lastElementChild;
+    $(newRow).find('.select2-input').select2({
+        width: 'resolve',
+        dropdownAutoWidth: true
+    });
+}
+
+function saveExtraContainers() {
+    const rows = document.querySelectorAll(".extra-container-row");
+    const extras = Array.from(rows).map(row => ({
+        container_id: row.querySelector(".container-select").value,
+        quantity: parseInt(row.querySelector(".qty").value) || 0,
+        cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
+        container_name: row.querySelector(".container-select option:checked").text
+    }));
+
+    const batchId = window.location.pathname.split('/').pop();
+    fetch(`/batches/extra-containers/${batchId}`, {
+        method: "POST",
+        headers: { 
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify({ extras })
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.json().then(err => {
+                throw new Error(err.error || 'Failed to save extra containers');
+            });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.errors) {
+            const errorMsg = data.errors.map(err => 
+                `${err.container}: ${err.message} (Available: ${err.available})`
+            ).join('\n');
+            alert("Cannot save extra containers:\n" + errorMsg);
+        } else {
+            alert("Extra containers saved successfully");
+            window.location.reload();
+        }
+    })
+    .catch(err => {
+        alert(err.message);
+        console.error(err);
+    });
+}
+
 function saveExtras() {
     const rows = document.querySelectorAll(".extra-row");
     const extras = Array.from(rows).map(row => ({
