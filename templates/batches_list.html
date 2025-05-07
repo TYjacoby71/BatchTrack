@@ -130,10 +130,10 @@
                 <td>{{ batch.tags if batch.tags else '—' }}</td>
                 {% endif %}
                 <td>
-                    {% if batch.total_cost is none %}
+                    {% if batch.status == 'in_progress' %}
                         <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
                     {% else %}
-                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-primary">View</a>
                     {% endif %}
                 </td>
             </tr>
@@ -193,7 +193,7 @@
       {% if batch.status == 'in_progress' %}
           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
       {% else %}
-          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-primary">View</a>
       {% endif %}
                 </div>
             </div>
