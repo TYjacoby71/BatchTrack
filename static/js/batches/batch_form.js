@@ -195,13 +195,13 @@ function saveExtras() {
     })
     .then(data => {
         if (data.errors) {
+            const errorMsg = data.errors.map(err => 
+                `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
+            ).join('\n');
             function displayErrors(errors) {
-                const message = errors.map(err => {
-                    if (err.available !== undefined) {
-                        return `❌ ${err.ingredient}: ${err.message}\nAvailable: ${err.available} ${err.available_unit}`;
-                    }
-                    return `❌ ${err.ingredient}: ${err.message}`;
-                }).join("\n\n");
+                const message = errors.map(err =>
+                    `❌ ${err.ingredient}: ${err.message}`
+                ).join("\n\n");
                 
                 alert("Save failed:\n\n" + message);
             }
