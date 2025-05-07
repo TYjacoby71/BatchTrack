@@ -149,7 +149,11 @@ def list_batches():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     batches = pagination.items
     all_recipes = Recipe.query.order_by(Recipe.name).all()
-    return render_template('batches_list.html', batches=batches, all_recipes=all_recipes, visible_columns=visible_columns)
+    return render_template('batches_list.html', 
+                         batches=batches, 
+                         pagination=pagination,
+                         all_recipes=all_recipes, 
+                         visible_columns=visible_columns)
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
