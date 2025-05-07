@@ -124,10 +124,17 @@ def list_batches():
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
-    status = request.args.get('status')
-    recipe_id = request.args.get('recipe_id')
-    start = request.args.get('start')
-    end = request.args.get('end')
+    # Get filters from request args or session
+    status = request.args.get('status') or session.get('batch_filter_status')
+    recipe_id = request.args.get('recipe_id') or session.get('batch_filter_recipe')
+    start = request.args.get('start') or session.get('batch_filter_start')
+    end = request.args.get('end') or session.get('batch_filter_end')
+    
+    # Store current filters in session
+    session['batch_filter_status'] = status
+    session['batch_filter_recipe'] = recipe_id
+    session['batch_filter_start'] = start 
+    session['batch_filter_end'] = end
 
     if status:
         query = query.filter_by(status=status)
