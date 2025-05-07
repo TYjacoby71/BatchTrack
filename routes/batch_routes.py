@@ -478,6 +478,68 @@ def confirm_finish_with_timers(batch_id):
         return redirect(url_for('batches.finish_batch_force', batch_id=batch.id))
     return render_template('confirm_finish_with_timers.html', batch=batch)
 
+@batches_bp.route('/extra-containers/<int:batch_id>', methods=['POST'])
+@login_required
+def save_extra_containers(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    extras = request.get_json().get("extras", [])
+    errors = []
+    
+    # First check stock for all containers
+    for item in extras:
+        container = InventoryItem.query.get(item["container_id"])
+        if not container:
+            continue
+
+        # Get current used amount for this container
+        existing = BatchContainer.query.filter_by(
+            batch_id=batch.id,
+            container_id=item["container_id"]
+        ).first()
+        current_used = existing.quantity_used if existing else 0
+        needed_amount = item["quantity"]
+        
+        # Add to current used amount
+        total_needed = needed_amount + current_used
+
+        # Check if we have enough
+        if total_needed > container.quantity:
+            errors.append({
+                "container": container.name,
+                "message": f"Not enough in stock",
+                "available": container.quantity,
+                "needed": total_needed
+            })
+
+    # If any errors, return them
+    if errors:
+        return jsonify({"status": "error", "errors": errors}), 400
+
+    # If all good, save the extras
+    for item in extras:
+        existing = BatchContainer.query.filter_by(
+            batch_id=batch.id,
+            container_id=item["container_id"]
+        ).first()
+        
+        container = InventoryItem.query.get(item["container_id"])
+        if existing:
+            container.quantity -= item["quantity"]
+            existing.quantity_used += item["quantity"]
+            existing.cost_each = item.get("cost_per_unit", 0.0)
+        else:
+            new_extra = BatchContainer(
+                batch_id=batch.id,
+                container_id=item["container_id"],
+                quantity_used=item["quantity"],
+                cost_each=item.get("cost_per_unit", 0.0)
+            )
+            db.session.add(new_extra)
+            container.quantity -= item["quantity"]
+
+    db.session.commit()
+    return jsonify({"status": "success"})
+
 @batches_bp.route('/extras/<int:batch_id>', methods=['POST'])
 @login_required
 def save_extra_ingredients(batch_id):
