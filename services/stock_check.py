@@ -52,7 +52,10 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 'status': status
             })
 
-        except Exception as e:
+        except ValueError as e:
+            error_msg = f"Cannot convert {recipe_unit} to {stock_unit}"
+            if "density" in str(e).lower():
+                error_msg = f"Please Add Density to {ingredient.name}"
             results.append({
                 'type': 'ingredient',
                 'name': ingredient.name,
