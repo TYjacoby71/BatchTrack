@@ -201,7 +201,7 @@ def view_batch_in_progress(batch_identifier):
     # Recalculate batch cost from frozen batch records
     ingredient_total = sum((ing.amount_used or 0) * (ing.ingredient.cost_per_unit or 0) for ing in batch.ingredients)
     container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
-    batch_cost = round(ingredient_total + container_total, 2)
+    batch_cost = round(ingredient_total + container_total, 3)
 
 
     # Only pass product_quantity if it exists in the batch
