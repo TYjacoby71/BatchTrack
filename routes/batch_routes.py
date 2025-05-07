@@ -468,27 +468,86 @@ def confirm_finish_with_timers(batch_id):
 def save_extra_ingredients(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     extras = request.get_json().get("extras", [])
+    errors = []
     
+    # First check stock for all ingredients
     for item in extras:
-        # Check if ingredient already exists
+        ingredient = InventoryItem.query.get(item["ingredient_id"])
+        if not ingredient:
+            continue
+
+        # Get current used amount for this ingredient
+        existing = ExtraBatchIngredient.query.filter_by(
+            batch_id=batch.id,
+            inventory_item_id=item["ingredient_id"]
+        ).first()
+        current_used = existing.quantity if existing else 0
+
+        try:
+            # Convert requested amount to inventory unit
+            conversion_result = ConversionEngine.convert_units(
+                item["quantity"],
+                item["unit"],
+                ingredient.unit,
+                ingredient_id=ingredient.id,
+                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            )
+            needed_amount = conversion_result['converted_value']
+            
+            # Add to current used amount
+            total_needed = needed_amount + current_used
+
+            # Check if we have enough
+            if total_needed > ingredient.quantity:
+                errors.append({
+                    "ingredient": ingredient.name,
+                    "message": f"Not enough in stock",
+                    "available": ingredient.quantity,
+                    "available_unit": ingredient.unit,
+                    "needed": total_needed,
+                    "needed_unit": ingredient.unit
+                })
+
+        except ValueError as e:
+            errors.append({
+                "ingredient": ingredient.name,
+                "message": str(e)
+            })
+
+    # If any errors, return them
+    if errors:
+        return jsonify({"status": "error", "errors": errors}), 400
+
+    # If all good, save the extras
+    for item in extras:
         existing = ExtraBatchIngredient.query.filter_by(
             batch_id=batch.id,
             inventory_item_id=item["ingredient_id"]
         ).first()
         
+        ingredient = InventoryItem.query.get(item["ingredient_id"])
+        conversion_result = ConversionEngine.convert_units(
+            item["quantity"],
+            item["unit"],
+            ingredient.unit,
+            ingredient_id=ingredient.id,
+            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+        )
+        converted_qty = conversion_result['converted_value']
+        
         if existing:
-            # Add quantities for same ingredient
-            existing.quantity += item["quantity"]
+            existing.quantity += converted_qty
+            ingredient.quantity -= converted_qty
         else:
-            # Create new record
             new_extra = ExtraBatchIngredient(
                 batch_id=batch.id,
                 inventory_item_id=item["ingredient_id"],
-                quantity=item["quantity"],
-                unit=item["unit"],
+                quantity=converted_qty,
+                unit=ingredient.unit,
                 cost_per_unit=item.get("cost_per_unit", 0.0)
             )
             db.session.add(new_extra)
+            ingredient.quantity -= converted_qty
 
     db.session.commit()
     return jsonify({"status": "success"})
