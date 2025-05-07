@@ -117,7 +117,7 @@ function saveExtras() {
         quantity: parseFloat(row.querySelector(".qty").value) || 0,
         unit: row.querySelector(".unit").value,
         cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-        is_new: true  // Flag to indicate this is a new row
+        ingredient_name: row.querySelector(".ingredient-select option:checked").text
     }));
 
     const batchId = window.location.pathname.split('/').pop();
@@ -129,12 +129,29 @@ function saveExtras() {
         },
         body: JSON.stringify({ extras })
     })
-    .then(res => res.json())
-    .then(data => {
-        alert("Extra ingredients saved successfully");
-        window.location.reload();
+    .then(res => {
+        if (!res.ok) {
+            return res.json().then(err => {
+                throw new Error(err.error || 'Failed to save extras');
+            });
+        }
+        return res.json();
     })
-    .catch(err => console.error(err));
+    .then(data => {
+        if (data.errors) {
+            const errorMsg = data.errors.map(err => 
+                `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
+            ).join('\n');
+            alert("Cannot save extras:\n" + errorMsg);
+        } else {
+            alert("Extra ingredients saved successfully");
+            window.location.reload();
+        }
+    })
+    .catch(err => {
+        alert(err.message);
+        console.error(err);
+    });
 }
 
 function cancelBatch() {
