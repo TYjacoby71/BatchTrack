@@ -86,7 +86,7 @@ def start_batch():
                 # Deduct from inventory
                 ingredient.quantity -= required_converted
                 db.session.add(ingredient)
-                
+
                 # Create BatchIngredient record
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
@@ -119,7 +119,7 @@ def set_column_visibility():
 def list_batches():
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    
+
     query = Batch.query.order_by(Batch.started_at.desc())
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
@@ -129,7 +129,7 @@ def list_batches():
     recipe_id = request.args.get('recipe_id') or session.get('batch_filter_recipe')
     start = request.args.get('start') or session.get('batch_filter_start')
     end = request.args.get('end') or session.get('batch_filter_end')
-    
+
     # Store current filters in session
     session['batch_filter_status'] = status
     session['batch_filter_recipe'] = recipe_id
@@ -222,7 +222,7 @@ def view_batch_in_progress(batch_identifier):
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
     # Only pass batch_cost if ingredients are used
-    
+
 
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
@@ -499,7 +499,7 @@ def save_extra_containers(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     extras = request.get_json().get("extras", [])
     errors = []
-    
+
     # First check stock for all containers
     for item in extras:
         container = InventoryItem.query.get(item["container_id"])
@@ -513,7 +513,7 @@ def save_extra_containers(batch_id):
         ).first()
         current_used = existing.quantity_used if existing else 0
         needed_amount = item["quantity"]
-        
+
         # Add to current used amount
         total_needed = needed_amount + current_used
 
@@ -536,7 +536,7 @@ def save_extra_containers(batch_id):
             batch_id=batch.id,
             container_id=item["container_id"]
         ).first()
-        
+
         container = InventoryItem.query.get(item["container_id"])
         if existing:
             container.quantity -= item["quantity"]
@@ -547,7 +547,8 @@ def save_extra_containers(batch_id):
                 batch_id=batch.id,
                 container_id=item["container_id"],
                 quantity_used=item["quantity"],
-                cost_each=item.get("cost_per_unit", 0.0)
+                cost_each=item.get("cost_per_unit", 0.0),
+                is_extra=True
             )
             db.session.add(new_extra)
             container.quantity -= item["quantity"]
@@ -561,7 +562,7 @@ def save_extra_ingredients(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     extras = request.get_json().get("extras", [])
     errors = []
-    
+
     # First check stock for all ingredients
     for item in extras:
         ingredient = InventoryItem.query.get(item["ingredient_id"])
@@ -578,7 +579,7 @@ def save_extra_ingredients(batch_id):
         try:
             # Convert requested amount to inventory unit
             from services.conversion_wrapper import safe_convert
-            
+
             conversion = safe_convert(
                 item["quantity"],
                 item["unit"],
@@ -586,7 +587,7 @@ def save_extra_ingredients(batch_id):
                 ingredient_id=ingredient.id,
                 density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
             )
-            
+
             if not conversion["ok"]:
                 errors.append({
                     "ingredient": ingredient.name,
@@ -594,9 +595,9 @@ def save_extra_ingredients(batch_id):
                     "type": "conversion"
                 })
                 continue
-                
+
             needed_amount = conversion["result"]["converted_value"]
-            
+
             # Add to current used amount
             total_needed = needed_amount + current_used
 
@@ -627,7 +628,7 @@ def save_extra_ingredients(batch_id):
             batch_id=batch.id,
             inventory_item_id=item["ingredient_id"]
         ).first()
-        
+
         ingredient = InventoryItem.query.get(item["ingredient_id"])
         conversion_result = ConversionEngine.convert_units(
             item["quantity"],
@@ -637,7 +638,7 @@ def save_extra_ingredients(batch_id):
             density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
         )
         converted_qty = conversion_result['converted_value']
-        
+
         if existing:
             existing.quantity += converted_qty
             ingredient.quantity -= converted_qty
