@@ -198,7 +198,15 @@ function saveExtras() {
             const errorMsg = data.errors.map(err => 
                 `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
             ).join('\n');
-            alert("Cannot save extras:\n" + errorMsg);
+            function displayErrors(errors) {
+                const message = errors.map(err =>
+                    `❌ ${err.ingredient}: ${err.message}`
+                ).join("\n\n");
+                
+                alert("Save failed:\n\n" + message);
+            }
+            
+            displayErrors(data.errors);
         } else {
             alert("Extra ingredients saved successfully");
             window.location.reload();
