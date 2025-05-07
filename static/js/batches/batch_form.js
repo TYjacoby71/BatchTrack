@@ -129,7 +129,10 @@ function saveExtras() {
         body: JSON.stringify({ extras })
     })
     .then(res => res.json())
-    .then(data => alert("Extra ingredients saved successfully"))
+    .then(data => {
+        alert("Extra ingredients saved successfully");
+        window.location.reload();
+    })
     .catch(err => console.error(err));
 }
 
