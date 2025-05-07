@@ -493,7 +493,7 @@ def confirm_finish_with_timers(batch_id):
         return redirect(url_for('batches.finish_batch_force', batch_id=batch.id))
     return render_template('confirm_finish_with_timers.html', batch=batch)
 
-@batches_bp.route('/extra-containers/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/extras-containers/<int:batch_id>', methods=['POST'])
 @login_required
 def save_extra_containers(batch_id):
     batch = Batch.query.get_or_404(batch_id)

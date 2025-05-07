@@ -134,7 +134,7 @@ function saveExtraContainers() {
     }));
 
     const batchId = window.location.pathname.split('/').pop();
-    fetch(`/batches/extra-containers/${batchId}`, {
+    fetch(`/batches/extras-containers/${batchId}`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
