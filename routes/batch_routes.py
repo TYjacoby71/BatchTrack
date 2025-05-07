@@ -318,9 +318,10 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
     try:
-        # Fetch batch ingredients and containers
+        # Fetch batch ingredients, containers, and extra ingredients
         batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
         batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
+        extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
 
         # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
@@ -330,6 +331,16 @@ def cancel_batch(batch_id):
                     ingredient.quantity += batch_ing.amount_used
                 else:
                     ingredient.quantity += batch_ing.amount_used  # You may still want unit conversion logic here
+                db.session.add(ingredient)
+
+        # Credit extra ingredients back to inventory
+        for extra_ing in extra_ingredients:
+            ingredient = extra_ing.ingredient
+            if ingredient:
+                if extra_ing.unit == ingredient.unit:
+                    ingredient.quantity += extra_ing.quantity
+                else:
+                    ingredient.quantity += extra_ing.quantity  # Using same unit handling as regular ingredients
                 db.session.add(ingredient)
 
         # Credit containers back to inventory
