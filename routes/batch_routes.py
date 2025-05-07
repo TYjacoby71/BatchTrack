@@ -562,14 +562,25 @@ def save_extra_ingredients(batch_id):
 
         try:
             # Convert requested amount to inventory unit
-            conversion_result = ConversionEngine.convert_units(
+            from services.conversion_wrapper import safe_convert
+            
+            conversion = safe_convert(
                 item["quantity"],
                 item["unit"],
                 ingredient.unit,
                 ingredient_id=ingredient.id,
                 density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
             )
-            needed_amount = conversion_result['converted_value']
+            
+            if not conversion["ok"]:
+                errors.append({
+                    "ingredient": ingredient.name,
+                    "message": conversion["error"],
+                    "type": "conversion"
+                })
+                continue
+                
+            needed_amount = conversion["result"]["converted_value"]
             
             # Add to current used amount
             total_needed = needed_amount + current_used
