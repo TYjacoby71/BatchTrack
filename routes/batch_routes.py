@@ -469,19 +469,26 @@ def save_extra_ingredients(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     extras = request.get_json().get("extras", [])
     
-    # Clear previous extras
-    ExtraBatchIngredient.query.filter_by(batch_id=batch.id).delete()
-
-    # Add new ones
     for item in extras:
-        new_extra = ExtraBatchIngredient(
+        # Check if ingredient already exists
+        existing = ExtraBatchIngredient.query.filter_by(
             batch_id=batch.id,
-            inventory_item_id=item["ingredient_id"],
-            quantity=item["quantity"],
-            unit=item["unit"],
-            cost_per_unit=item.get("cost_per_unit", 0.0)
-        )
-        db.session.add(new_extra)
+            inventory_item_id=item["ingredient_id"]
+        ).first()
+        
+        if existing:
+            # Add quantities for same ingredient
+            existing.quantity += item["quantity"]
+        else:
+            # Create new record
+            new_extra = ExtraBatchIngredient(
+                batch_id=batch.id,
+                inventory_item_id=item["ingredient_id"],
+                quantity=item["quantity"],
+                unit=item["unit"],
+                cost_per_unit=item.get("cost_per_unit", 0.0)
+            )
+            db.session.add(new_extra)
 
     db.session.commit()
     return jsonify({"status": "success"})

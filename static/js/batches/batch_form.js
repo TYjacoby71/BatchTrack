@@ -116,7 +116,8 @@ function saveExtras() {
         ingredient_id: row.querySelector(".ingredient-select").value,
         quantity: parseFloat(row.querySelector(".qty").value) || 0,
         unit: row.querySelector(".unit").value,
-        cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0
+        cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
+        is_new: true  // Flag to indicate this is a new row
     }));
 
     const batchId = window.location.pathname.split('/').pop();
@@ -129,7 +130,10 @@ function saveExtras() {
         body: JSON.stringify({ extras })
     })
     .then(res => res.json())
-    .then(data => alert("Extra ingredients saved successfully"))
+    .then(data => {
+        alert("Extra ingredients saved successfully");
+        window.location.reload();
+    })
     .catch(err => console.error(err));
 }
 
