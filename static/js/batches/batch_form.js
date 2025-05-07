@@ -129,12 +129,11 @@ function saveExtraContainers() {
         container_id: row.querySelector(".container-select").value,
         quantity: parseInt(row.querySelector(".qty").value) || 0,
         cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-        container_name: row.querySelector(".container-select option:checked").text,
-        is_extra: true
+        container_name: row.querySelector(".container-select option:checked").text
     }));
 
     const batchId = window.location.pathname.split('/').pop();
-    fetch(`/batches/extras-containers/${batchId}`, {
+    fetch(`/batches/extra-containers/${batchId}`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
