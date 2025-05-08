@@ -23,7 +23,7 @@
                             {% elif batch.status == 'failed' %}bg-danger
                             {% elif batch.status == 'cancelled' %}bg-secondary
                             {% else %}bg-warning{% endif %}">
-                    {{ batch.status_display }}
+                    {{ batch.status|title }}
                 </span>
             </p>
         </div>
