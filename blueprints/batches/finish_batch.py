@@ -3,9 +3,14 @@ from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
-from routes.batch_routes import batches_bp
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
+
+@finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
+@login_required
+def mark_batch_failed(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    return finish_batch_handler(batch, action='fail')
 
 @batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required

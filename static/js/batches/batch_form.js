@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function markBatchFailed() {
     if (confirm('Are you sure you want to mark this batch as failed?')) {
         const batchId = window.location.pathname.split('/').pop();
-        fetch(`/batches/${batchId}/fail`, {
+        fetch(`/finish-batch/${batchId}/fail`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value

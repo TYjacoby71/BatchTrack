@@ -80,7 +80,7 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(finish_batch_bp, url_prefix='/batches')
+app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 
 # Initialize API routes
 init_api(app)
