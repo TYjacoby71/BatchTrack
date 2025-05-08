@@ -1,5 +1,14 @@
 {% extends 'layout.html' %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+{% endblock %}
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+    <h2>Batch Details</h2>
+    <button onclick="window.print()" class="btn btn-secondary">
+        <i class="fas fa-print"></i> Print Batch Details
+    </button>
+</div>
 <!-- Section 1: Basic Batch Info (Always Visible) -->
 <div class="batch-header mb-4">
     <h2>Batch Details</h2>

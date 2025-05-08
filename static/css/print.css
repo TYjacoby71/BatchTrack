@@ -1,0 +1,31 @@
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .card {
+    border: none;
+    box-shadow: none;
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table th, .table td {
+    border: 1px solid #ddd;
+  }
+}
