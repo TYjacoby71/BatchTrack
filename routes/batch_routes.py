@@ -397,6 +397,11 @@ def cancel_batch(batch_id):
             if container:
                 restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
 
+        for extra_container in extra_containers:
+            container = extra_container.container
+            if container:
+                restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
+
         # Show appropriate message
         settings = get_setting('alerts', {})
         if settings.get('show_inventory_refund', True):
@@ -550,13 +555,13 @@ def save_extra_containers(batch_id):
         container = InventoryItem.query.get(item["container_id"])
         new_quantity = item["quantity"]
         new_cost = item.get("cost_per_unit", 0.0)
-        
+
         if existing:
             # Calculate weighted average cost
             total_quantity = existing.quantity_used + new_quantity
             total_cost = (existing.quantity_used * existing.cost_each) + (new_quantity * new_cost)
             average_cost = total_cost / total_quantity if total_quantity > 0 else 0
-            
+
             container.quantity -= new_quantity  # Deduct new quantity
             existing.quantity_used += new_quantity  # Add to existing
             existing.cost_each = average_cost  # Update to weighted average cost
@@ -657,13 +662,13 @@ def save_extra_ingredients(batch_id):
         converted_qty = conversion_result['converted_value']
 
         new_cost = item.get("cost_per_unit", 0.0)
-        
+
         if existing:
             # Calculate weighted average cost
             total_quantity = existing.quantity + converted_qty
             total_cost = (existing.quantity * existing.cost_per_unit) + (converted_qty * new_cost)
             average_cost = total_cost / total_quantity if total_quantity > 0 else 0
-            
+
             existing.quantity += converted_qty
             existing.cost_per_unit = average_cost
             ingredient.quantity -= converted_qty
