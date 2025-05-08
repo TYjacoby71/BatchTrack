@@ -118,8 +118,8 @@ class Batch(db.Model):
 
     recipe = db.relationship('Recipe', backref='batches')
     ingredients = db.relationship('BatchIngredient', backref='batch', cascade="all, delete-orphan")
-    containers = db.relationship('BatchContainer', backref='batch', cascade="all, delete-orphan", primaryjoin="and_(Batch.id==BatchContainer.batch_id, BatchContainer.is_extra!=True)")
-    extra_containers = db.relationship('BatchContainer', backref='batch_extra', cascade="all, delete-orphan", primaryjoin="and_(Batch.id==BatchContainer.batch_id, BatchContainer.is_extra==True)")
+    containers = db.relationship('BatchContainer', backref='batch', cascade="all, delete-orphan")
+    extra_containers = db.relationship('ExtraBatchContainer', backref='batch', cascade="all, delete-orphan")
     timers = db.relationship('BatchTimer', backref='batch', cascade="all, delete-orphan")
 
 class BatchIngredient(db.Model):
@@ -137,8 +137,15 @@ class BatchContainer(db.Model):
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     quantity_used = db.Column(db.Integer, nullable=False)
     cost_each = db.Column(db.Float)
-    is_extra = db.Column(db.Boolean, default=False)
     container = db.relationship('InventoryItem', backref='batch_containers')
+
+class ExtraBatchContainer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity_used = db.Column(db.Integer, nullable=False)
+    cost_each = db.Column(db.Float)
+    container = db.relationship('InventoryItem', backref='extra_batch_containers')
 
 class BatchTimer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
