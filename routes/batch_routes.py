@@ -513,10 +513,11 @@ def save_extra_containers(batch_id):
             is_extra=True
         ).first()
 
-        # Get current used amount for this container
+        # Only check existing extra containers
         existing = BatchContainer.query.filter_by(
             batch_id=batch.id,
-            container_id=item["container_id"]
+            container_id=item["container_id"],
+            is_extra=True
         ).first()
         current_used = existing.quantity_used if existing else 0
         needed_amount = item["quantity"]
