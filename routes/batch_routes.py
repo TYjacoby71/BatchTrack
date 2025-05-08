@@ -339,7 +339,6 @@ def cancel_batch(batch_id):
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
     return redirect(url_for('batches.list_batches'))
 
 
@@ -357,67 +356,6 @@ def mark_batch_failed(batch_id):
 
     flash("Batch marked as failed. Inventory remains deducted.")
     return redirect(url_for('batches.list_batches'))
-
-
-
-    data = request.get_json()
-
-    # Save basic batch data
-    batch.notes = data.get("notes", batch.notes)
-    batch.tags = data.get("tags", batch.tags)
-    batch.yield_amount = data.get("yield_amount", batch.yield_amount)
-    batch.yield_unit = data.get("yield_unit", batch.yield_unit)
-
-    # Handle ingredients with delta tracking
-    existing_ingredients = {bi.ingredient_id: bi for bi in batch.ingredients}
-    new_ingredients = data.get("ingredients", [])
-
-    for item in new_ingredients:
-        ing_id = item['id']
-        new_amt = float(item['amount'])
-        new_unit = item['unit']
-
-        if ing_id in existing_ingredients:
-            existing = existing_ingredients[ing_id]
-            delta = new_amt - existing.amount_used
-            existing.amount_used = new_amt
-            existing.unit = new_unit
-        else:
-            delta = new_amt
-            bi = BatchIngredient(batch_id=batch.id, ingredient_id=ing_id, amount_used=new_amt, unit=new_unit)
-            db.session.add(bi)
-
-        inventory = InventoryItem.query.get(ing_id)
-        if inventory:
-            inventory.quantity -= delta
-            db.session.add(inventory)
-
-    # Handle containers with inventory sync
-    existing_containers = {bc.container_id: bc for bc in batch.containers}
-    new_containers = data.get("containers", [])
-
-    for item in new_containers:
-        cid = item['id']
-        qty = int(item['qty'])
-        cost_each = float(item.get('cost_each', 0.0))
-
-        if cid in existing_containers:
-            existing = existing_containers[cid]
-            delta = qty - existing.quantity_used
-            existing.quantity_used = qty
-            existing.cost_each = cost_each
-        else:
-            delta = qty
-            bc = BatchContainer(batch_id=batch.id, container_id=cid, quantity_used=qty, cost_each=cost_each)
-            db.session.add(bc)
-
-        container_item = InventoryItem.query.get(cid)
-        if container_item:
-            container_item.quantity -= delta
-            db.session.add(container_item)
-
-    db.session.commit()
-    return jsonify({"message": "Batch saved successfully."})
 
 @batches_bp.route('/extras-containers/<int:batch_id>', methods=['POST'])
 @login_required
