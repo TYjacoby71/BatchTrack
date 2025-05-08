@@ -1,8 +1,10 @@
 
-from flask import request, redirect, url_for, flash
+from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
+
+finish_batch_bp = Blueprint('finish_batch', __name__)
 
 @batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required
