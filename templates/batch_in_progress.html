@@ -32,7 +32,7 @@
     <div class="extra-row d-flex gap-2 mb-2">
         <select class="form-select ingredient-select select2-input" style="width: 200px;">
             {% for ing in all_ingredients if ing.type == 'ingredient' %}
-            <option value="{{ ing.id }}">{{ ing.name }}</option>
+            <option value="{{ ing.id }}" data-cost="{{ ing.cost_per_unit }}">{{ ing.name }}</option>
             {% endfor %}
         </select>
         <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
@@ -58,7 +58,7 @@
     <div class="extra-container-row d-flex gap-2 mb-2">
         <select class="form-select container-select select2-input" style="width: 200px;">
             {% for cont in inventory_items if cont.type == 'container' %}
-            <option value="{{ cont.id }}">{{ cont.name }}</option>
+            <option value="{{ cont.id }}" data-cost="{{ cont.cost_per_unit }}">{{ cont.name }}</option>
             {% endfor %}
         </select>
         <input type="number" class="form-control qty" placeholder="Quantity" step="1" min="1" />
