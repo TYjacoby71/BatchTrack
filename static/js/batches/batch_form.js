@@ -97,8 +97,7 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const modal = document.getElementById('finishBatchModal');
-    const form = modal.querySelector('#finishBatchForm');
+    const form = document.getElementById('finishBatchForm');
     if (!form) {
         console.error('Finish batch form not found');
         return;
