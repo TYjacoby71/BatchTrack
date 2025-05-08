@@ -1,38 +1,56 @@
-
 {% extends 'layout.html' %}
 {% block content %}
-<h2>View Batch</h2>
+<!-- Section 1: Basic Batch Info (Always Visible) -->
+<div class="batch-header mb-4">
+    <h2>Batch Details</h2>
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+            <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+            <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+            <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            <p><strong>Status:</strong> 
+                <span class="badge {% if batch.status == 'completed' %}bg-success
+                            {% elif batch.status == 'failed' %}bg-danger
+                            {% elif batch.status == 'cancelled' %}bg-secondary
+                            {% else %}bg-warning{% endif %}">
+                    {{ batch.status_display }}
+                </span>
+            </p>
+        </div>
+    </div>
+</div>
 
-<div class="batch-details">
-    <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-    <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-    <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
-    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
-    <p><strong>Status:</strong> <span class="badge {% if batch.status == 'completed' %}bg-success{% elif batch.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">{{ batch.status_display }}</span></p>
-    
-    {% if batch.status not in ['cancelled'] %}
-        <p><strong>Total Cost:</strong> ${{ batch.total_cost or 'N/A' }}</p>
+<!-- Section 2: Output Info (Hidden if Cancelled) -->
+{% if batch.status != 'cancelled' %}
+<div class="batch-output mb-4">
+    <h3>Output Details</h3>
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Output Type:</strong> {{ batch.batch_type|title }}</p>
 
-        {% if batch.product_id %}
-            <p><strong>Output Type:</strong> Product</p>
-            <p><strong>Product Name:</strong> {{ batch.product.name }}</p>
-            {% if batch.variant %}
-                <p><strong>Variant:</strong> {{ batch.variant }}</p>
+            {% if batch.batch_type == 'product' and batch.product %}
+                <p><strong>Product:</strong> <a href="{{ url_for('products.view_product', product_id=batch.product.id) }}">{{ batch.product.name }}</a></p>
+                {% if batch.variant %}
+                    <p><strong>Variant:</strong> {{ batch.variant }}</p>
+                {% endif %}
             {% endif %}
-            <p><strong>Quantity Produced:</strong> {{ batch.product_quantity }}</p>
-            <p><strong>Output Unit:</strong> {{ batch.product_unit }}</p>
-            {% if batch.total_cost and batch.product_quantity %}
-                <p><strong>Unit Cost:</strong> ${{ (batch.total_cost / batch.product_quantity) | round(2) }}</p>
-            {% endif %}
-        {% else %}
-            <p><strong>Output Type:</strong> Ingredient</p>
-            <p><strong>Quantity Produced:</strong> {{ batch.product_quantity or 'N/A' }}</p>
-            <p><strong>Unit:</strong> {{ batch.product_unit or 'N/A' }}</p>
-        {% endif %}
 
-        <!-- Show ingredients used -->
-        <div class="mt-4">
-            <h4>Ingredients Used</h4>
+            <p><strong>Quantity Produced:</strong> {{ batch.final_quantity or 'N/A' }} {{ batch.output_unit or '' }}</p>
+            <p><strong>Projected Yield:</strong> {{ batch.scale * batch.recipe.predicted_yield }} {{ batch.recipe.predicted_yield_unit }}</p>
+            {% if batch.total_cost %}
+                <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Section 3: Batch Summary -->
+<div class="batch-summary mb-4">
+    <h3>{% if batch.status == 'cancelled' %}Inventory Refunded{% else %}Inventory Used{% endif %}</h3>
+    <div class="card">
+        <div class="card-body">
             <table class="table">
                 <thead>
                     <tr>
@@ -44,61 +62,34 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% if batch.ingredients %}
+                    <tr><th colspan="5">Ingredients</th></tr>
                     {% for ingredient in batch.ingredients %}
                     <tr>
                         <td>{{ ingredient.ingredient.name }}</td>
                         <td>{{ "%.2f"|format(ingredient.amount_used) }}</td>
                         <td>{{ ingredient.unit }}</td>
-                        <td>${{ "%.2f"|format(ingredient.ingredient.cost_per_unit or 0) }}</td>
-                        <td>${{ "%.2f"|format((ingredient.amount_used or 0) * (ingredient.ingredient.cost_per_unit or 0)) }}</td>
+                        <td>${{ "%.2f"|format(ingredient.cost_per_unit or 0) }}</td>
+                        <td>${{ "%.2f"|format((ingredient.amount_used or 0) * (ingredient.cost_per_unit or 0)) }}</td>
                     </tr>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                    {% endif %}
 
-        <!-- Show containers used -->
-        {% if batch.containers %}
-        <div class="mt-4">
-            <h4>Containers Used</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Quantity</th>
-                        <th>Cost Each</th>
-                        <th>Total Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
+                    {% if batch.containers %}
+                    <tr><th colspan="5">Containers</th></tr>
                     {% for container in batch.containers %}
                     <tr>
                         <td>{{ container.container.name }}</td>
                         <td>{{ container.quantity_used }}</td>
+                        <td>{{ container.container.unit }}</td>
                         <td>${{ "%.2f"|format(container.cost_each) }}</td>
                         <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                     </tr>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
+                    {% endif %}
 
-        <!-- Show extra ingredients if any -->
-        {% if batch.extra_ingredients %}
-        <div class="mt-4">
-            <h4>Extra Ingredients Used</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Quantity</th>
-                        <th>Unit</th>
-                        <th>Cost/Unit</th>
-                        <th>Total Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
+                    {% if batch.extra_ingredients %}
+                    <tr><th colspan="5">Extra Ingredients</th></tr>
                     {% for extra in batch.extra_ingredients %}
                     <tr>
                         <td>{{ extra.ingredient.name }}</td>
@@ -108,93 +99,39 @@
                         <td>${{ "%.2f"|format(extra.quantity * extra.cost_per_unit) }}</td>
                     </tr>
                     {% endfor %}
+                    {% endif %}
+
+                    {% if batch.extra_containers %}
+                    <tr><th colspan="5">Extra Containers</th></tr>
+                    {% for container in batch.extra_containers %}
+                    <tr>
+                        <td>{{ container.container.name }}</td>
+                        <td>{{ container.quantity_used }}</td>
+                        <td>{{ container.container.unit }}</td>
+                        <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                        <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-        {% endif %}
-    {% endif %}
-
-    {% if batch.status == 'cancelled' %}
-    <div class="mt-4">
-        <h4>Inventory Refunded</h4>
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Amount</th>
-                    <th>Unit</th>
-                    <th>Type</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ingredient in batch.ingredients %}
-                <tr>
-                    <td>{{ ingredient.ingredient.name }}</td>
-                    <td>{{ ingredient.amount_used }}</td>
-                    <td>{{ ingredient.unit }}</td>
-                    <td>Ingredient</td>
-                </tr>
-                {% endfor %}
-                {% for container in batch.containers %}
-                <tr>
-                    <td>{{ container.container.name }}</td>
-                    <td>{{ container.quantity_used }}</td>
-                    <td>{{ container.container.unit }}</td>
-                    <td>Container</td>
-                </tr>
-                {% endfor %}
-                {% for extra_container in batch.extra_containers %}
-                <tr>
-                    <td>{{ extra_container.container.name }}</td>
-                    <td>{{ extra_container.quantity_used }}</td>
-                    <td>{{ extra_container.container.unit }}</td>
-                    <td>Extra Container</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    {% endif %}
-
-    {% if batch.extra_ingredients %}
-    <div class="mt-4">
-        <h4>Extra Ingredients Used</h4>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Quantity</th>
-                    <th>Unit</th>
-                    <th>Cost/Unit</th>
-                    <th>Total Cost</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for extra in batch.extra_ingredients %}
-                <tr>
-                    <td>{{ extra.ingredient.name }}</td>
-                    <td>{{ "%.2f"|format(extra.quantity) }}</td>
-                    <td>{{ extra.unit }}</td>
-                    <td>${{ "%.2f"|format(extra.cost_per_unit) }}</td>
-                    <td>${{ "%.2f"|format(extra.quantity * extra.cost_per_unit) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
 </div>
 
-<hr>
-
-<h3>Batch Notes</h3>
-<form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <textarea name="notes" rows="4" class="form-control mb-3">{{ batch.notes or '' }}</textarea>
-    {% if batch.tags %}
-        <h3 class="mt-4">Tags</h3>
-        <p>{{ batch.tags }}</p>
-    {% endif %}
-    <button type="submit" class="btn btn-secondary">Save and Return to Batch List</button>
-</form>
+<!-- Notes and Tags Section -->
+<div class="notes-section">
+    <h3>Batch Notes</h3>
+    <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <textarea name="notes" rows="4" class="form-control mb-3">{{ batch.notes or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="tags" class="form-label">Tags</label>
+            <input type="text" name="tags" class="form-control" value="{{ batch.tags or '' }}">
+        </div>
+        <button type="submit" class="btn btn-secondary">Save and Return to Batch List</button>
+    </form>
+</div>
 {% endblock %}
