@@ -236,13 +236,6 @@ def view_batch_in_progress(batch_identifier):
                          inventory_items=inventory_items,
                          all_ingredients=all_ingredients)
 
-@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
-@login_required
-def finish_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    from blueprints.batches.finish_batch import finish_batch_handler
-    return finish_batch_handler(batch)
-
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
 def cancel_batch(batch_id):

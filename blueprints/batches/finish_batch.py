@@ -1,7 +1,14 @@
 
 from flask import request, redirect, url_for, flash
-from models import db, BatchTimer, InventoryItem, ProductInventory
+from flask_login import login_required
+from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
+
+@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
+@login_required
+def finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    return finish_batch_handler(batch)
 
 def finish_batch_handler(batch, force=False):
     """Handle batch completion logic"""
