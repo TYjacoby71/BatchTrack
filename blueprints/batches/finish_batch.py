@@ -18,9 +18,8 @@ def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     return finish_batch_handler(batch)
 
-def finish_batch_handler(batch, force=False):
+def finish_batch_handler(batch, action='finish', force=False):
     """Handle batch completion logic"""
-    action = request.form.get('action', 'finish')
     
     # Handle fail action
     if action == 'fail':
