@@ -506,6 +506,13 @@ def save_extra_containers(batch_id):
         if not container:
             continue
 
+        # Explicitly handle as extra container
+        existing = BatchContainer.query.filter_by(
+            batch_id=batch.id,
+            container_id=item["container_id"],
+            is_extra=True
+        ).first()
+
         # Get current used amount for this container
         existing = BatchContainer.query.filter_by(
             batch_id=batch.id,
@@ -539,10 +546,13 @@ def save_extra_containers(batch_id):
 
         container = InventoryItem.query.get(item["container_id"])
         if existing:
-            container.quantity -= item["quantity"]
-            existing.quantity_used += item["quantity"]
+            # Update existing extra container
+            delta = item["quantity"] - existing.quantity_used
+            container.quantity -= delta
+            existing.quantity_used = item["quantity"]
             existing.cost_each = item.get("cost_per_unit", 0.0)
         else:
+            # Create new extra container
             new_extra = BatchContainer(
                 batch_id=batch.id,
                 container_id=item["container_id"],
@@ -550,6 +560,7 @@ def save_extra_containers(batch_id):
                 cost_each=item.get("cost_per_unit", 0.0),
                 is_extra=True
             )
+            container.quantity -= item["quantity"]
             db.session.add(new_extra)
             container.quantity -= item["quantity"]
 
