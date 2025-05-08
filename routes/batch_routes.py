@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient
+from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
@@ -507,10 +507,9 @@ def save_extra_containers(batch_id):
             continue
 
         # Get current used amount for this container
-        existing = BatchContainer.query.filter_by(
+        existing = ExtraBatchContainer.query.filter_by(
             batch_id=batch.id,
-            container_id=item["container_id"],
-            is_extra=True
+            container_id=item["container_id"]
         ).first()
         current_used = existing.quantity_used if existing else 0
         needed_amount = item["quantity"]
@@ -533,7 +532,7 @@ def save_extra_containers(batch_id):
 
     # If all good, save the extras
     for item in extras:
-        existing = BatchContainer.query.filter_by(
+        existing = ExtraBatchContainer.query.filter_by(
             batch_id=batch.id,
             container_id=item["container_id"]
         ).first()
@@ -545,12 +544,11 @@ def save_extra_containers(batch_id):
             existing.quantity_used = item["quantity"]
             existing.cost_each = item.get("cost_per_unit", 0.0)
         else:
-            new_extra = BatchContainer(
+            new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=item["container_id"],
                 quantity_used=item["quantity"],
-                cost_each=item.get("cost_per_unit", 0.0),
-                is_extra=True
+                cost_each=item.get("cost_per_unit", 0.0)
             )
             container.quantity -= item["quantity"]
             db.session.add(new_extra)
