@@ -97,7 +97,8 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const form = document.getElementById('finishBatchForm');
+    const modal = document.getElementById('finishBatchModal');
+    const form = modal.querySelector('#finishBatchForm');
     if (!form) {
         console.error('Finish batch form not found');
         return;
@@ -105,20 +106,15 @@ function submitFinishBatch(action) {
 
     const formData = new FormData(form);
     formData.append('action', action);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
 
     const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
-
-    if (!csrfToken) {
-        console.error('CSRF token not found');
-        return;
-    }
 
     fetch(`/batches/${batchId}/finish`, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
         }
     })
     .then(response => {
