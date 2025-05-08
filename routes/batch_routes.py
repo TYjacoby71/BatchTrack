@@ -359,11 +359,19 @@ def cancel_batch(batch_id):
                     ingredient.quantity += extra_ing.quantity  # Using same unit handling as regular ingredients
                 db.session.add(ingredient)
 
-        # Credit containers back to inventory
+        # Credit regular containers back to inventory
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
                 container.quantity += batch_container.quantity_used
+                db.session.add(container)
+
+        # Credit extra containers back to inventory
+        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
+        for extra_container in extra_containers:
+            container = extra_container.container
+            if container:
+                container.quantity += extra_container.quantity_used
                 db.session.add(container)
 
         # Update batch status
