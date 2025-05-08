@@ -3,6 +3,7 @@ from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
+from routes.batch_routes import batches_bp
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
 
