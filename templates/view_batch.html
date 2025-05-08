@@ -143,6 +143,14 @@
                     <td>Container</td>
                 </tr>
                 {% endfor %}
+                {% for extra_container in batch.extra_containers %}
+                <tr>
+                    <td>{{ extra_container.container.name }}</td>
+                    <td>{{ extra_container.quantity_used }}</td>
+                    <td>{{ extra_container.container.unit }}</td>
+                    <td>Extra Container</td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>

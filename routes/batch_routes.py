@@ -367,8 +367,8 @@ def cancel_batch(batch_id):
                 db.session.add(container)
 
         # Credit extra containers back to inventory
-        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
-        for extra_container in extra_containers:
+        batch_extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
+        for extra_container in batch_extra_containers:
             container = extra_container.container
             if container:
                 container.quantity += extra_container.quantity_used
