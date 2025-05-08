@@ -78,7 +78,7 @@ function saveBatchAndExit() {
     const batchId = window.location.pathname.split('/').pop();
     const notes = document.querySelector('textarea[name="notes"]').value;
     const tags = document.querySelector('input[name="tags"]').value;
-    
+
     fetch(`/batches/${batchId}/update-notes`, {
         method: 'POST',
         headers: {
@@ -134,7 +134,7 @@ function saveExtraContainers() {
     }));
 
     const batchId = window.location.pathname.split('/').pop();
-    fetch(`/batches/extra-containers/${batchId}`, {
+    fetch(`/batches/extras-containers/${batchId}`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
@@ -203,10 +203,10 @@ function saveExtras() {
                 const message = errors.map(err =>
                     `❌ ${err.ingredient}: ${err.message}`
                 ).join("\n\n");
-                
+
                 alert("Save failed:\n\n" + message);
             }
-            
+
             displayErrors(data.errors);
         } else {
             alert("Extra ingredients saved successfully");
@@ -237,4 +237,3 @@ function cancelBatch() {
         form.submit();
     }
 }
-
