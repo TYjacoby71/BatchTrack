@@ -87,12 +87,13 @@ def start_batch():
                 ingredient.quantity -= required_converted
                 db.session.add(ingredient)
 
-                # Create BatchIngredient record
+                # Create BatchIngredient record with frozen cost
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
                     ingredient_id=ingredient.id,
                     amount_used=required_converted,
-                    unit=ingredient.unit
+                    unit=ingredient.unit,
+                    cost_per_unit=ingredient.cost_per_unit
                 )
                 db.session.add(batch_ingredient)
         except ValueError as e:
