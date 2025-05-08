@@ -338,6 +338,7 @@ def cancel_batch(batch_id):
         batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
         batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
+        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
         # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
