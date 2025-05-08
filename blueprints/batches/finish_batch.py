@@ -6,6 +6,21 @@ from datetime import datetime
 def finish_batch_handler(batch, force=False):
     """Handle batch completion logic"""
     action = request.form.get('action', 'finish')
+    
+    # Handle fail action
+    if action == 'fail':
+        if batch.status != 'in_progress':
+            flash("Only in-progress batches can be marked as failed.")
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+        batch.status = 'failed'
+        batch.completed_at = datetime.utcnow()
+        db.session.commit()
+
+        flash("Batch marked as failed. Inventory remains deducted.")
+        return redirect(url_for('batches.list_batches'))
+
+    # Handle finish action
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
     output_unit = request.form.get('output_unit')
