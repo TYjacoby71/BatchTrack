@@ -8,18 +8,21 @@
       </div>
       <div class="modal-body">
         <form id="finishBatchForm">
-          <div class="form-group">
+          <!-- Batch Type Selection -->
+          <div class="form-group mb-3">
             <label for="output_type">Batch Type:</label>
-            <select name="output_type" id="output_type" class="form-select" required>
+            <select name="output_type" id="output_type" class="form-select" required onchange="toggleBatchTypeFields()">
               <option value="product">Product</option>
               <option value="ingredient">Ingredient</option>
             </select>
           </div>
 
-          <div id="productFields" style="display: none;">
+          <!-- Product Fields -->
+          <div id="productFields">
             <div class="mb-3">
               <label for="product_id">Product</label>
-              <select name="product_id" class="form-select">
+              <select name="product_id" id="product_id" class="form-select" onchange="loadProductVariants()">
+                <option value="">Select Product...</option>
                 {% for product in products %}
                   <option value="{{ product.id }}">{{ product.name }}</option>
                 {% endfor %}
@@ -28,24 +31,33 @@
             
             <div class="mb-3">
               <label for="variant_label">Variant</label>
-              <input type="text" class="form-control" name="variant_label">
+              <select name="variant_label" id="variant_label" class="form-select">
+                <option value="">No variants available</option>
+              </select>
             </div>
           </div>
 
-          <div id="ingredientFields" style="display: none;">
-            <div class="mb-3">
-              <label>Projected Yield: <span id="projectedYield"></span></label>
-            </div>
-          </div>
-
+          <!-- Batch Yield Section -->
           <div class="mb-3">
-            <label for="final_quantity">Final Quantity</label>
-            <input type="number" class="form-control" name="final_quantity" required>
+            <label for="final_quantity" class="d-flex align-items-center">
+              Batch Yield
+              <i class="fas fa-question-circle ms-2" 
+                 data-bs-toggle="tooltip" 
+                 title="How much product or intermediate ingredient did your batch make?"></i>
+            </label>
+            <input type="number" 
+                   class="form-control" 
+                   name="final_quantity" 
+                   id="final_quantity"
+                   required>
+            <div class="form-text">
+              Projected yield: <span id="projectedYield">{{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</span>
+            </div>
           </div>
 
           <div class="mb-3">
             <label for="output_unit">Unit</label>
-            <select name="output_unit" class="form-select" required>
+            <select name="output_unit" id="output_unit" class="form-select" required>
               {% for unit in units %}
                 <option value="{{ unit.name }}">{{ unit.name }}</option>
               {% endfor %}
@@ -54,7 +66,7 @@
 
           <div class="notes-section">
             <label for="notes">Notes</label>
-            <textarea name="notes" class="form-control" rows="3"></textarea>
+            <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
           </div>
         </form>
       </div>

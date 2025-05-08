@@ -28,11 +28,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function toggleOutputFields() {
+function toggleBatchTypeFields() {
     const type = document.getElementById('output_type').value;
-    document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
-    document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
+    const productFields = document.getElementById('productFields');
+    
+    if (type === 'product') {
+        productFields.style.display = 'block';
+        document.getElementById('product_id').required = true;
+    } else {
+        productFields.style.display = 'none';
+        document.getElementById('product_id').required = false;
+    }
 }
+
+async function loadProductVariants() {
+    const productId = document.getElementById('product_id').value;
+    const variantSelect = document.getElementById('variant_label');
+    
+    if (!productId) {
+        variantSelect.innerHTML = '<option value="">Select a product first</option>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/products/${productId}/variants`);
+        const variants = await response.json();
+        
+        if (variants.length > 0) {
+            variantSelect.innerHTML = variants.map(v => 
+                `<option value="${v.name}">${v.name}</option>`
+            ).join('');
+        } else {
+            variantSelect.innerHTML = '<option value="">No variants available</option>';
+        }
+    } catch (error) {
+        console.error('Error loading variants:', error);
+        variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+    }
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    toggleBatchTypeFields();
+    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function (tooltip) {
+        return new bootstrap.Tooltip(tooltip);
+    });
+});
 
 function markBatchFailed() {
     if (confirm('Are you sure you want to mark this batch as failed?')) {
