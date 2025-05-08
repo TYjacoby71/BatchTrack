@@ -338,6 +338,7 @@ def cancel_batch(batch_id):
         batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
         batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
+        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
         # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
@@ -395,6 +396,11 @@ def cancel_batch(batch_id):
             container = batch_container.container
             if container:
                 restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+
+        for extra_container in extra_containers:
+            container = extra_container.container
+            if container:
+                restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
         # Show appropriate message
         settings = get_setting('alerts', {})
@@ -549,13 +555,13 @@ def save_extra_containers(batch_id):
         container = InventoryItem.query.get(item["container_id"])
         new_quantity = item["quantity"]
         new_cost = item.get("cost_per_unit", 0.0)
-        
+
         if existing:
             # Calculate weighted average cost
             total_quantity = existing.quantity_used + new_quantity
             total_cost = (existing.quantity_used * existing.cost_each) + (new_quantity * new_cost)
             average_cost = total_cost / total_quantity if total_quantity > 0 else 0
-            
+
             container.quantity -= new_quantity  # Deduct new quantity
             existing.quantity_used += new_quantity  # Add to existing
             existing.cost_each = average_cost  # Update to weighted average cost
@@ -656,13 +662,13 @@ def save_extra_ingredients(batch_id):
         converted_qty = conversion_result['converted_value']
 
         new_cost = item.get("cost_per_unit", 0.0)
-        
+
         if existing:
             # Calculate weighted average cost
             total_quantity = existing.quantity + converted_qty
             total_cost = (existing.quantity * existing.cost_per_unit) + (converted_qty * new_cost)
             average_cost = total_cost / total_quantity if total_quantity > 0 else 0
-            
+
             existing.quantity += converted_qty
             existing.cost_per_unit = average_cost
             ingredient.quantity -= converted_qty
