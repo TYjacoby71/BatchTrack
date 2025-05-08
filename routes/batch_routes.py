@@ -539,10 +539,10 @@ def save_extra_containers(batch_id):
 
         container = InventoryItem.query.get(item["container_id"])
         if existing:
-            delta = item["quantity"] - existing.quantity_used
-            container.quantity -= delta
-            existing.quantity_used = item["quantity"]
-            existing.cost_each = item.get("cost_per_unit", 0.0)
+            # Add to existing quantity instead of replacing
+            container.quantity -= item["quantity"]  # Deduct new quantity
+            existing.quantity_used += item["quantity"]  # Add to existing
+            existing.cost_each = item.get("cost_per_unit", 0.0)  # Update cost
         else:
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
