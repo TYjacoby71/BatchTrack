@@ -339,7 +339,6 @@ def cancel_batch(batch_id):
         db.session.rollback()
         flash(f"Error cancelling batch: {str(e)}", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
     return redirect(url_for('batches.list_batches'))
 
 
