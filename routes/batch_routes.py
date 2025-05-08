@@ -266,18 +266,32 @@ def finish_batch(batch_id):
         if action == "finish":
             if batch.batch_type == 'ingredient':
                 # Credit produced ingredient to inventory
-                ingredient = InventoryItem.query.filter_by(name=batch.recipe.name).first()
+                # Calculate unit cost for this batch
+                batch_unit_cost = batch.total_cost / batch.final_quantity if batch.final_quantity > 0 else 0
+
+                # Create new or update existing intermediate ingredient
+                ingredient = InventoryItem.query.filter_by(name=batch.recipe.name, type='ingredient', intermediate=True).first()
                 if not ingredient:
-                    # Create new intermediate ingredient
                     ingredient = InventoryItem(
                         name=batch.recipe.name,
                         quantity=batch.final_quantity,
                         unit=batch.output_unit,
                         type='ingredient',
-                        intermediate=True
+                        intermediate=True,
+                        cost_per_unit=batch_unit_cost
                     )
                 else:
+                    # Calculate weighted average cost
+                    total_old_cost = ingredient.quantity * ingredient.cost_per_unit
+                    total_new_cost = batch.final_quantity * batch_unit_cost
+                    total_quantity = ingredient.quantity + batch.final_quantity
+
+                    if total_quantity > 0:
+                        weighted_avg_cost = (total_old_cost + total_new_cost) / total_quantity
+                        ingredient.cost_per_unit = weighted_avg_cost
+
                     ingredient.quantity += batch.final_quantity
+
                 db.session.add(ingredient)
                 batch.inventory_credited = True
             elif batch.batch_type == 'product':
