@@ -96,8 +96,9 @@ async function saveBatchAndExit() {
         })
     });
     
-    if (response.ok) {
-        window.location.href = '/batches/';
+    const data = await response.json();
+    if (response.ok && data.redirect) {
+        window.location.href = data.redirect;
     }
 }
 
