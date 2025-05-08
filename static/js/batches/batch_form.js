@@ -97,6 +97,12 @@ function saveBatchAndExit() {
     });
 }
 
+function updateRowCost(selectElement) {
+    const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
+    const costInput = selectElement.parentElement.querySelector('.cost');
+    costInput.value = cost;
+}
+
 function addExtraIngredientRow() {
     const template = document.getElementById('extra-ingredient-template');
     const clone = template.content.cloneNode(true);
@@ -108,6 +114,10 @@ function addExtraIngredientRow() {
         width: 'resolve',
         dropdownAutoWidth: true
     });
+    
+    // Set initial cost
+    const select = newRow.querySelector('.ingredient-select');
+    updateRowCost(select);
 }
 
 function addExtraContainerRow() {
