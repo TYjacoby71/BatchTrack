@@ -133,4 +133,4 @@ def finish_batch_handler(batch, action='finish', force=False):
     except Exception as e:
         db.session.rollback()
         flash(f"Error completing batch: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
