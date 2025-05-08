@@ -598,24 +598,7 @@ def save_extra_ingredients(batch_id):
     return jsonify({"status": "success"})
 
 
-@batches_bp.route("/by_product/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>")
-@login_required
-def view_batches_by_variant(product_id, variant, size, unit):
-    """View FIFO-ordered batches for a specific product variant"""
-    batches = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant_label=variant,
-        size_label=size,
-        unit=unit
-    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
 
-    return render_template(
-        "batches/by_variant.html",
-        batches=batches,
-        variant=variant,
-        size=size,
-        unit=unit
-    )
 
 def adjust_inventory_deltas(batch_id, new_ingredients, new_containers):
     existing_ings = {bi.ingredient_id: bi for bi in BatchIngredient.query.filter_by(batch_id=batch_id)}
