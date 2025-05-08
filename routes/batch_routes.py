@@ -530,7 +530,7 @@ def save_extra_containers(batch_id):
     if errors:
         return jsonify({"status": "error", "errors": errors}), 400
 
-    # If all good, save the extras
+    # If all good, save the extras with cost averaging
     for item in extras:
         existing = ExtraBatchContainer.query.filter_by(
             batch_id=batch.id,
@@ -538,19 +538,26 @@ def save_extra_containers(batch_id):
         ).first()
 
         container = InventoryItem.query.get(item["container_id"])
+        new_quantity = item["quantity"]
+        new_cost = item.get("cost_per_unit", 0.0)
+        
         if existing:
-            # Add to existing quantity instead of replacing
-            container.quantity -= item["quantity"]  # Deduct new quantity
-            existing.quantity_used += item["quantity"]  # Add to existing
-            existing.cost_each = item.get("cost_per_unit", 0.0)  # Update cost
+            # Calculate weighted average cost
+            total_quantity = existing.quantity_used + new_quantity
+            total_cost = (existing.quantity_used * existing.cost_each) + (new_quantity * new_cost)
+            average_cost = total_cost / total_quantity if total_quantity > 0 else 0
+            
+            container.quantity -= new_quantity  # Deduct new quantity
+            existing.quantity_used += new_quantity  # Add to existing
+            existing.cost_each = average_cost  # Update to weighted average cost
         else:
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=item["container_id"],
-                quantity_used=item["quantity"],
-                cost_each=item.get("cost_per_unit", 0.0)
+                quantity_used=new_quantity,
+                cost_each=new_cost
             )
-            container.quantity -= item["quantity"]
+            container.quantity -= new_quantity
             db.session.add(new_extra)
 
     db.session.commit()
