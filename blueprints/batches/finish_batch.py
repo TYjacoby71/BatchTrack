@@ -32,7 +32,7 @@ def finish_batch_handler(batch, action='finish', force=False):
         db.session.commit()
 
         flash("Batch marked as failed. Inventory remains deducted.")
-        return redirect(url_for('batches.list_batches'))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     # Handle finish action
     output_type = request.form.get('output_type')
