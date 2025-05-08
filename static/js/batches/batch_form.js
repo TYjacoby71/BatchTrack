@@ -1,9 +1,13 @@
 // Batch form functionality
-function showFinishBatchModal() {
-    const modal = new bootstrap.Modal(document.getElementById('finishBatchModal'));
-    modal.show();
-    toggleOutputFields(); // Set initial field visibility
-}
+// Listen for modal open to initialize fields
+document.addEventListener('DOMContentLoaded', function() {
+    const finishModal = document.getElementById('finishBatchModal');
+    if (finishModal) {
+        finishModal.addEventListener('shown.bs.modal', function () {
+            toggleOutputFields();
+        });
+    }
+});
 
 function toggleOutputFields() {
     const type = document.getElementById('output_type').value;

@@ -204,7 +204,7 @@
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>
             <button type="button" class="btn btn-danger" onclick="markBatchFailed()">⚠️ Mark Failed</button>
-            <button type="button" onclick="showFinishBatchModal()" class="btn btn-success">✓ Complete Batch</button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishBatchModal">✓ Complete Batch</button>
             {% include 'components/batch/finish_batch_modal.html' %}
             {% if has_active_timers %}
                 <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">Force Finish</a>
