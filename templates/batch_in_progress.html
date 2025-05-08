@@ -10,7 +10,7 @@
 </div>
 
 
-<form id="batchForm" method="post" action="{{ url_for('batches.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
+<form id="batchForm" method="post" action="{{ url_for('finish_batch.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
     <!-- Yield info will be handled in modal -->
     <div class="form-group mt-4">
