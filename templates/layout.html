@@ -13,6 +13,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% block head %}{% endblock %}
     <style>
         input[name="csrf_token"],
         input[type="hidden"][name="csrf_token"],
@@ -43,7 +44,14 @@
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>
-            <div class="dropdown">
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                        🧮 Converter
+                    </a>
+                </li>
+            </ul>
+            <div class="dropdown ms-auto">
                 <button class="btn btn-light dropdown-toggle" type="button" id="directoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-bars"></i> Menu
                 </button>
@@ -76,13 +84,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                  <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
-                    🧮 Converter
-                  </a>
-                </li>
-            </ul>
+            
             {% endif %}
         </div>
     </nav>
