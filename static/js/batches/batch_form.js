@@ -1,9 +1,13 @@
 // Batch form functionality
-function showFinishBatchModal() {
-    const modal = new bootstrap.Modal(document.getElementById('finishBatchModal'));
-    modal.show();
-    toggleOutputFields(); // Set initial field visibility
-}
+// Listen for modal open to initialize fields
+document.addEventListener('DOMContentLoaded', function() {
+    const finishModal = document.getElementById('finishBatchModal');
+    if (finishModal) {
+        finishModal.addEventListener('shown.bs.modal', function () {
+            toggleOutputFields();
+        });
+    }
+});
 
 function toggleOutputFields() {
     const type = document.getElementById('output_type').value;
@@ -28,11 +32,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function toggleOutputFields() {
+function toggleBatchTypeFields() {
     const type = document.getElementById('output_type').value;
-    document.getElementById('productFields').style.display = type === 'product' ? 'block' : 'none';
-    document.getElementById('ingredientFields').style.display = type === 'ingredient' ? 'block' : 'none';
+    const productFields = document.getElementById('productFields');
+    
+    if (type === 'product') {
+        productFields.style.display = 'block';
+        document.getElementById('product_id').required = true;
+    } else {
+        productFields.style.display = 'none';
+        document.getElementById('product_id').required = false;
+    }
 }
+
+async function loadProductVariants() {
+    const productId = document.getElementById('product_id').value;
+    const variantSelect = document.getElementById('variant_label');
+    
+    if (!productId) {
+        variantSelect.innerHTML = '<option value="">Select a product first</option>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/products/${productId}/variants`);
+        const variants = await response.json();
+        
+        if (variants.length > 0) {
+            variantSelect.innerHTML = variants.map(v => 
+                `<option value="${v.name}">${v.name}</option>`
+            ).join('');
+        } else {
+            variantSelect.innerHTML = '<option value="">No variants available</option>';
+        }
+    } catch (error) {
+        console.error('Error loading variants:', error);
+        variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+    }
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    toggleBatchTypeFields();
+    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function (tooltip) {
+        return new bootstrap.Tooltip(tooltip);
+    });
+});
 
 function markBatchFailed() {
     if (confirm('Are you sure you want to mark this batch as failed?')) {
@@ -51,9 +97,35 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const form = document.getElementById('finishBatchForm');
-    const formData = new FormData(form);
+    const modalForm = document.getElementById('finishBatchModalForm');
+    const mainForm = document.getElementById('batchForm');
+    
+    if (!modalForm || !mainForm) {
+        console.error('Required forms not found');
+        return;
+    }
+
+    const formData = new FormData();
+    
+    // Add data from modal form
+    const modalInputs = modalForm.querySelectorAll('input, select, textarea');
+    modalInputs.forEach(input => {
+        if (input.name) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
+    // Add data from main form
+    const mainInputs = mainForm.querySelectorAll('input, select, textarea');
+    mainInputs.forEach(input => {
+        if (input.name && !formData.has(input.name)) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
     formData.append('action', action);
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
 
     const batchId = window.location.pathname.split('/').pop();
 
@@ -65,7 +137,11 @@ function submitFinishBatch(action) {
         }
     })
     .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to finish batch');
+            });
+        }
         window.location.href = '/batches/';
     })
     .catch(error => {
