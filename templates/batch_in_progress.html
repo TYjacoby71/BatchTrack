@@ -206,9 +206,7 @@
             <button type="button" class="btn btn-danger" onclick="markBatchFailed()">⚠️ Mark Failed</button>
             <button type="button" onclick="showFinishBatchModal()" class="btn btn-success">✓ Complete Batch</button>
             {% include 'components/batch/finish_batch_modal.html' %}
-            {% set has_active_timers = batch.timers and batch.timers|selectattr('completed', 'equalto', False)|list|length > 0 %}
             {% if has_active_timers %}
-                <button type="button" class="btn btn-success" disabled>✓ Complete Batch</button>
                 <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">Force Finish</a>
             {% endif %}
         </div>

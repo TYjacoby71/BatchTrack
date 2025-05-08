@@ -94,20 +94,35 @@ function markBatchFailed() {
 
 function submitFinishBatch(action) {
     const form = document.getElementById('finishBatchForm');
+    if (!form) {
+        console.error('Finish batch form not found');
+        return;
+    }
+
     const formData = new FormData(form);
     formData.append('action', action);
 
     const batchId = window.location.pathname.split('/').pop();
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
 
     fetch(`/batches/${batchId}/finish`, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            'X-CSRFToken': csrfToken
         }
     })
     .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to finish batch');
+            });
+        }
         window.location.href = '/batches/';
     })
     .catch(error => {
