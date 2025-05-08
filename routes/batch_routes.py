@@ -646,8 +646,16 @@ def save_extra_ingredients(batch_id):
         )
         converted_qty = conversion_result['converted_value']
 
+        new_cost = item.get("cost_per_unit", 0.0)
+        
         if existing:
+            # Calculate weighted average cost
+            total_quantity = existing.quantity + converted_qty
+            total_cost = (existing.quantity * existing.cost_per_unit) + (converted_qty * new_cost)
+            average_cost = total_cost / total_quantity if total_quantity > 0 else 0
+            
             existing.quantity += converted_qty
+            existing.cost_per_unit = average_cost
             ingredient.quantity -= converted_qty
         else:
             new_extra = ExtraBatchIngredient(
@@ -655,7 +663,7 @@ def save_extra_ingredients(batch_id):
                 inventory_item_id=item["ingredient_id"],
                 quantity=converted_qty,
                 unit=ingredient.unit,
-                cost_per_unit=item.get("cost_per_unit", 0.0)
+                cost_per_unit=new_cost
             )
             db.session.add(new_extra)
             ingredient.quantity -= converted_qty
