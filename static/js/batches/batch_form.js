@@ -74,12 +74,17 @@ function submitFinishBatch(action) {
     });
 }
 
-function saveBatchAndExit() {
+async function saveBatchAndExit() {
+    // Save extras and containers first
+    await saveExtras();
+    await saveExtraContainers();
+    
+    // Then save notes and exit
     const batchId = window.location.pathname.split('/').pop();
     const notes = document.querySelector('textarea[name="notes"]').value;
     const tags = document.querySelector('input[name="tags"]').value;
 
-    fetch(`/batches/${batchId}/update-notes`, {
+    const response = await fetch(`/batches/${batchId}/update-notes`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -89,12 +94,11 @@ function saveBatchAndExit() {
             notes: notes,
             tags: tags
         })
-    })
-    .then(response => {
-        if (response.ok) {
-            window.location.href = '/batches/';
-        }
     });
+    
+    if (response.ok) {
+        window.location.href = '/batches/';
+    }
 }
 
 function updateRowCost(selectElement) {
