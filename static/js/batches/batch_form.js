@@ -97,15 +97,35 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const form = document.getElementById('finishBatchForm');
-    if (!form) {
-        console.error('Finish batch form not found');
+    const modalForm = document.getElementById('finishBatchModalForm');
+    const mainForm = document.getElementById('batchForm');
+    
+    if (!modalForm || !mainForm) {
+        console.error('Required forms not found');
         return;
     }
 
-    const formData = new FormData(form);
+    const formData = new FormData();
+    
+    // Add data from modal form
+    const modalInputs = modalForm.querySelectorAll('input, select, textarea');
+    modalInputs.forEach(input => {
+        if (input.name) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
+    // Add data from main form
+    const mainInputs = mainForm.querySelectorAll('input, select, textarea');
+    mainInputs.forEach(input => {
+        if (input.name && !formData.has(input.name)) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
     formData.append('action', action);
-    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
 
     const batchId = window.location.pathname.split('/').pop();
 
