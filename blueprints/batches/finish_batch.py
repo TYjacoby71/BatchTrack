@@ -12,7 +12,7 @@ def mark_batch_failed(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     return finish_batch_handler(batch, action='fail')
 
-@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
+@finish_batch_bp.route('/<int:batch_id>/finish', methods=['POST'])
 @login_required
 def finish_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
