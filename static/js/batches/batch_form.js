@@ -129,11 +129,12 @@ function submitFinishBatch(action) {
 
     const batchId = window.location.pathname.split('/').pop();
 
-    fetch(`/batches/${batchId}/finish`, {
+    // Use the correct endpoint from finish_batch blueprint
+    fetch(`/finish-batch/${batchId}/finish`, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            'X-CSRFToken': csrfToken
         }
     })
     .then(response => {
