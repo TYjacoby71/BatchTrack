@@ -98,10 +98,9 @@ function markBatchFailed() {
 
 function submitFinishBatch(action) {
     const modalForm = document.getElementById('finishBatchModalForm');
-    const mainForm = document.getElementById('batchForm');
     
-    if (!modalForm || !mainForm) {
-        console.error('Required forms not found');
+    if (!modalForm) {
+        console.error('Modal form not found');
         return;
     }
 
@@ -115,13 +114,8 @@ function submitFinishBatch(action) {
         }
     });
     
-    // Add data from main form
-    const mainInputs = mainForm.querySelectorAll('input, select, textarea');
-    mainInputs.forEach(input => {
-        if (input.name && !formData.has(input.name)) {
-            formData.append(input.name, input.value);
-        }
-    });
+    // Add csrf token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     
     formData.append('action', action);
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
