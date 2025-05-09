@@ -81,8 +81,9 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const modalForm = document.getElementById('finishBatchModalForm');
-
+    const modal = document.getElementById('finishBatchModal');
+    const modalForm = modal.querySelector('form');
+    
     if (!modalForm) {
         console.error('Modal form not found');
         return;
@@ -100,7 +101,6 @@ function submitFinishBatch(action) {
     });
 
     formData.append('action', action);
-    formData.append('csrf_token', csrfToken);
 
     const batchId = window.location.pathname.split('/').pop();
 
