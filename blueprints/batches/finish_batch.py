@@ -1,15 +1,57 @@
 
-from flask import request, redirect, url_for, flash
-from models import db, BatchTimer, InventoryItem, ProductInventory
+from flask import Blueprint, request, redirect, url_for, flash
+from flask_login import login_required
+from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
 
-def finish_batch_handler(batch, force=False):
+finish_batch_bp = Blueprint('finish_batch', __name__)
+
+@finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
+@login_required
+def mark_batch_failed(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    return finish_batch_handler(batch, action='fail')
+
+@finish_batch_bp.route('/<int:batch_id>/finish', methods=['POST'])
+@login_required
+def finish_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    return finish_batch_handler(batch)
+
+def finish_batch_handler(batch, action='finish', force=False):
     """Handle batch completion logic"""
-    action = request.form.get('action', 'finish')
+    
+    # Handle fail action
+    if action == 'fail':
+        if batch.status != 'in_progress':
+            flash("Only in-progress batches can be marked as failed.")
+            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+        batch.status = 'failed'
+        batch.completed_at = datetime.utcnow()
+        db.session.commit()
+
+        flash("Batch marked as failed. Inventory remains deducted.")
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
+    # Handle finish action
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
     output_unit = request.form.get('output_unit')
     notes = request.form.get('notes')
+
+    # Validate required fields
+    if not output_type:
+        flash("Output type is required", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+    
+    if not final_quantity or final_quantity <= 0:
+        flash("Final quantity must be greater than 0", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
+    if not output_unit:
+        flash("Output unit is required", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
     # Update batch details
     batch.batch_type = output_type
@@ -30,8 +72,16 @@ def finish_batch_handler(batch, force=False):
         # Handle inventory crediting based on batch type
         if action == "finish":
             if batch.batch_type == 'ingredient':
-                # Credit produced ingredient to inventory
-                batch_unit_cost = batch.total_cost / batch.final_quantity if batch.final_quantity > 0 else 0
+                # Calculate total batch cost from ingredients and containers
+                ingredient_cost = sum((ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
+                container_cost = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
+                extra_ing_cost = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
+                extra_cont_cost = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
+                
+                total_cost = ingredient_cost + container_cost + extra_ing_cost + extra_cont_cost
+                batch_unit_cost = total_cost / final_quantity if final_quantity > 0 else 0
+
+                # Find or create intermediate ingredient
                 ingredient = InventoryItem.query.filter_by(
                     name=batch.recipe.name, 
                     type='ingredient', 
@@ -41,24 +91,26 @@ def finish_batch_handler(batch, force=False):
                 if not ingredient:
                     ingredient = InventoryItem(
                         name=batch.recipe.name,
-                        quantity=batch.final_quantity,
-                        unit=batch.output_unit,
+                        quantity=final_quantity,
+                        unit=output_unit,
                         type='ingredient',
                         intermediate=True,
                         cost_per_unit=batch_unit_cost
                     )
                 else:
+                    # Calculate weighted average cost
                     total_old_cost = ingredient.quantity * ingredient.cost_per_unit
-                    total_new_cost = batch.final_quantity * batch_unit_cost
-                    total_quantity = ingredient.quantity + batch.final_quantity
+                    total_new_cost = final_quantity * batch_unit_cost
+                    total_quantity = ingredient.quantity + final_quantity
 
                     if total_quantity > 0:
                         weighted_avg_cost = (total_old_cost + total_new_cost) / total_quantity
                         ingredient.cost_per_unit = weighted_avg_cost
-                    ingredient.quantity += batch.final_quantity
+                    ingredient.quantity += final_quantity
 
                 db.session.add(ingredient)
                 batch.inventory_credited = True
+                flash(f"✅ Added {final_quantity} {output_unit} of {ingredient.name} to inventory", "success")
 
             elif batch.batch_type == 'product':
                 product_inv = ProductInventory(
@@ -104,4 +156,4 @@ def finish_batch_handler(batch, force=False):
     except Exception as e:
         db.session.rollback()
         flash(f"Error completing batch: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))

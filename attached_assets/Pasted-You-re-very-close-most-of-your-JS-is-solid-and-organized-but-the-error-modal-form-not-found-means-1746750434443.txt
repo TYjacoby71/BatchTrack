@@ -1,0 +1,99 @@
+You're very close — most of your JS is solid and organized, but the error modal form not found means this line is failing:
+
+js
+Copy
+Edit
+const modalForm = modal.querySelector('form');
+✅ Problem Diagnosis
+This line runs:
+
+js
+Copy
+Edit
+const modal = document.getElementById('finishBatchModal');
+const modalForm = modal.querySelector('form');
+And modalForm is null.
+
+This means your modal exists, but there’s no <form> inside it at the time this code runs.
+
+🛠 Likely Causes
+1. Your <form> is not inside the modal
+Check your HTML:
+
+html
+Copy
+Edit
+<div class="modal" id="finishBatchModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <!-- Form should be inside modal-content -->
+      <form method="post">
+        ...
+      </form>
+    </div>
+  </div>
+</div>
+✅ Make sure the <form> is nested inside #finishBatchModal.
+❌ If it's outside the modal or injected after DOM load, querySelector('form') will fail.
+
+2. Modal loads dynamically (e.g., via AJAX or innerHTML)
+If you render the modal content dynamically or after DOMContentLoaded, the querySelector will run before the form exists.
+
+✅ In that case, move this logic inside the modal show event:
+
+js
+Copy
+Edit
+finishModal.addEventListener('shown.bs.modal', function () {
+    toggleOutputFields();
+
+    const modalForm = finishModal.querySelector('form');
+    if (!modalForm) {
+        console.error('Modal form not found after modal opened');
+    }
+});
+✅ Best Practice Fix
+Update your submitFinishBatch() like this:
+
+js
+Copy
+Edit
+function submitFinishBatch(action) {
+    const modal = document.getElementById('finishBatchModal');
+    if (!modal) {
+        console.error('Modal not found');
+        return;
+    }
+
+    const modalForm = modal.querySelector('form');
+    if (!modalForm) {
+        console.error('Modal form not found inside #finishBatchModal');
+        return;
+    }
+
+    ...
+}
+And ensure in your HTML that your modal includes a form like:
+
+html
+Copy
+Edit
+<div class="modal" id="finishBatchModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post">
+        <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+        ...
+      </form>
+    </div>
+  </div>
+</div>
+🔍 Final Suggestion
+If you’re still stuck, throw this in a devtools console:
+
+js
+Copy
+Edit
+console.log(document.getElementById('finishBatchModal').innerHTML);
+That will show if the form is even in there.
+

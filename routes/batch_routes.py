@@ -236,13 +236,6 @@ def view_batch_in_progress(batch_identifier):
                          inventory_items=inventory_items,
                          all_ingredients=all_ingredients)
 
-@batches_bp.route('/<int:batch_id>/finish', methods=['POST'])
-@login_required
-def finish_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    from blueprints.batches.finish_batch import finish_batch_handler
-    return finish_batch_handler(batch)
-
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
 def cancel_batch(batch_id):
@@ -341,21 +334,6 @@ def cancel_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
     return redirect(url_for('batches.list_batches'))
 
-
-@batches_bp.route('/fail/<int:batch_id>', methods=['POST'])
-@login_required
-def mark_batch_failed(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    if batch.status != 'in_progress':
-        flash("Only in-progress batches can be marked as failed.")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
-
-    batch.status = 'failed'
-    batch.completed_at = datetime.utcnow()
-    db.session.commit()
-
-    flash("Batch marked as failed. Inventory remains deducted.")
-    return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/extras-containers/<int:batch_id>', methods=['POST'])
 @login_required
