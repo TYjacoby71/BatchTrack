@@ -165,7 +165,7 @@ function addExtraIngredientRow() {
         width: 'resolve',
         dropdownAutoWidth: true
     });
-    
+
     // Set initial cost
     const select = newRow.querySelector('.ingredient-select');
     updateRowCost(select);
