@@ -1,11 +1,21 @@
 // Batch form functionality
-// Listen for modal open to initialize fields
 document.addEventListener('DOMContentLoaded', function() {
     const finishModal = document.getElementById('finishBatchModal');
     if (finishModal) {
         finishModal.addEventListener('shown.bs.modal', function () {
             toggleOutputFields();
         });
+    }
+
+    // Initialize tooltips
+    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function (tooltip) {
+        return new bootstrap.Tooltip(tooltip);
+    });
+
+    const outputTypeSelect = document.getElementById('output_type');
+    if (outputTypeSelect) {
+        outputTypeSelect.addEventListener('change', toggleOutputFields);
     }
 });
 
@@ -14,41 +24,24 @@ function toggleOutputFields() {
     const productFields = document.getElementById('productFields');
     const ingredientFields = document.getElementById('ingredientFields');
 
-    productFields.style.display = type === 'product' ? 'block' : 'none';
-    ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
+    if (productFields) {
+        productFields.style.display = type === 'product' ? 'block' : 'none';
+    }
+    if (ingredientFields) {
+        ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
+    }
 
     // Update required attributes
-    const productSelect = productFields.querySelector('select[name="product_id"]');
+    const productSelect = productFields?.querySelector('select[name="product_id"]');
     if (productSelect) {
         productSelect.required = type === 'product';
-    }
-}
-
-// Add event listener when document loads
-document.addEventListener('DOMContentLoaded', function() {
-    const outputTypeSelect = document.getElementById('output_type');
-    if (outputTypeSelect) {
-        outputTypeSelect.addEventListener('change', toggleOutputFields);
-    }
-});
-
-function toggleBatchTypeFields() {
-    const type = document.getElementById('output_type').value;
-    const productFields = document.getElementById('productFields');
-    
-    if (type === 'product') {
-        productFields.style.display = 'block';
-        document.getElementById('product_id').required = true;
-    } else {
-        productFields.style.display = 'none';
-        document.getElementById('product_id').required = false;
     }
 }
 
 async function loadProductVariants() {
     const productId = document.getElementById('product_id').value;
     const variantSelect = document.getElementById('variant_label');
-    
+
     if (!productId) {
         variantSelect.innerHTML = '<option value="">Select a product first</option>';
         return;
@@ -57,7 +50,7 @@ async function loadProductVariants() {
     try {
         const response = await fetch(`/api/products/${productId}/variants`);
         const variants = await response.json();
-        
+
         if (variants.length > 0) {
             variantSelect.innerHTML = variants.map(v => 
                 `<option value="${v.name}">${v.name}</option>`
@@ -70,15 +63,6 @@ async function loadProductVariants() {
         variantSelect.innerHTML = '<option value="">Error loading variants</option>';
     }
 }
-
-// Initialize tooltips
-document.addEventListener('DOMContentLoaded', function() {
-    toggleBatchTypeFields();
-    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltips.map(function (tooltip) {
-        return new bootstrap.Tooltip(tooltip);
-    });
-});
 
 function markBatchFailed() {
     if (confirm('Are you sure you want to mark this batch as failed?')) {
@@ -98,14 +82,15 @@ function markBatchFailed() {
 
 function submitFinishBatch(action) {
     const modalForm = document.getElementById('finishBatchModalForm');
-    
+
     if (!modalForm) {
         console.error('Modal form not found');
         return;
     }
 
     const formData = new FormData();
-    
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
     // Add data from modal form
     const modalInputs = modalForm.querySelectorAll('input, select, textarea');
     modalInputs.forEach(input => {
@@ -113,17 +98,12 @@ function submitFinishBatch(action) {
             formData.append(input.name, input.value);
         }
     });
-    
-    // Add csrf token
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    
+
     formData.append('action', action);
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     formData.append('csrf_token', csrfToken);
 
     const batchId = window.location.pathname.split('/').pop();
 
-    // Use the correct endpoint from finish_batch blueprint
     fetch(`/finish-batch/${batchId}/finish`, {
         method: 'POST',
         body: formData,
