@@ -90,7 +90,7 @@ function submitFinishBatch(action) {
 
     const formData = new FormData(modalForm);
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
+    
     formData.append('action', action);
 
     const batchId = window.location.pathname.split('/').pop();
@@ -99,7 +99,8 @@ function submitFinishBatch(action) {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': csrfToken,
+            'Accept': 'application/json'
         }
     })
     .then(response => {
