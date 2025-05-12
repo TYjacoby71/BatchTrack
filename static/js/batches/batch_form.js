@@ -81,24 +81,15 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const modal = document.getElementById('finishBatchModal');
-    const modalForm = modal.querySelector('form');
+    const modalForm = document.getElementById('finishBatchModalForm');
     
     if (!modalForm) {
         console.error('Modal form not found');
         return;
     }
 
-    const formData = new FormData();
+    const formData = new FormData(modalForm);
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-    // Add data from modal form
-    const modalInputs = modalForm.querySelectorAll('input, select, textarea');
-    modalInputs.forEach(input => {
-        if (input.name) {
-            formData.append(input.name, input.value);
-        }
-    });
 
     formData.append('action', action);
 
