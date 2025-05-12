@@ -1,0 +1,87 @@
+Thanks for your patience — here's the root cause and exact fix.
+
+❌ The Problem
+In your JavaScript, you're doing this:
+
+js
+Copy
+Edit
+const modalForm = modal.querySelector('form');
+But your actual modal template uses:
+
+html
+Copy
+Edit
+<form id="finishBatchModalForm">
+So querySelector('form') does not match, because:
+
+It’s not a plain <form> (which would match querySelector('form'))
+
+It’s a specifically named ID, and you're not referencing it directly
+
+✅ Two Fix Options
+🔧 Option A (Quick Fix): Update the JS to match your existing modal
+Update your JS like this:
+
+js
+Copy
+Edit
+const modalForm = document.getElementById('finishBatchModalForm');
+This is the easiest and best fix. It directly matches the form in the modal.
+
+OR
+
+🔧 Option B: Change the HTML to work with the existing JS
+Change this line in the modal:
+
+html
+Copy
+Edit
+<form id="finishBatchModalForm">
+To:
+
+html
+Copy
+Edit
+<form>
+This would let the existing JS modal.querySelector('form') work.
+
+✅ Recommendation
+Use Option A so your modal form retains its id, which may be useful later (e.g., for validation or testing). That means you update your submitFinishBatch() function like so:
+
+js
+Copy
+Edit
+function submitFinishBatch(action) {
+    const modalForm = document.getElementById('finishBatchModalForm');
+    if (!modalForm) {
+        console.error('Modal form not found');
+        return;
+    }
+
+    const formData = new FormData(modalForm);
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('action', action);
+
+    const batchId = window.location.pathname.split('/').pop();
+
+    fetch(`/finish-batch/${batchId}/finish`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to finish batch');
+            });
+        }
+        window.location.href = '/batches/';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error finishing batch: ' + error.message);
+    });
+}
