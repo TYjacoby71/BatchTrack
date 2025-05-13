@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
@@ -20,7 +19,7 @@ def mark_batch_complete(batch_id):
 
 def finish_batch_handler(batch, action='complete', force=False):
     """Handle batch completion logic"""
-    
+
     if batch.status != 'in_progress':
         flash("Only in-progress batches can be modified.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
@@ -29,7 +28,7 @@ def finish_batch_handler(batch, action='complete', force=False):
         batch.status = 'failed'
         batch.failed_at = datetime.utcnow()
         db.session.commit()
-        
+
         flash("Batch marked as failed. Inventory remains deducted.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
@@ -43,7 +42,7 @@ def finish_batch_handler(batch, action='complete', force=False):
     if not output_type:
         flash("Output type is required", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-    
+
     if not final_quantity or final_quantity <= 0:
         flash("Final quantity must be greater than 0", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
@@ -76,7 +75,7 @@ def finish_batch_handler(batch, action='complete', force=False):
                 container_cost = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
                 extra_ing_cost = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
                 extra_cont_cost = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
-                
+
                 total_cost = ingredient_cost + container_cost + extra_ing_cost + extra_cont_cost
                 batch_unit_cost = total_cost / final_quantity if final_quantity > 0 else 0
 
@@ -86,7 +85,7 @@ def finish_batch_handler(batch, action='complete', force=False):
                     type='ingredient', 
                     intermediate=True
                 ).first()
-                
+
                 if not ingredient:
                     ingredient = InventoryItem(
                         name=batch.recipe.name,
