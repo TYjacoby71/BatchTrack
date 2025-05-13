@@ -21,7 +21,7 @@
           <td>{{ timer.batch_id }}</td>
           <td>{{ timer.label }}</td>
           <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td>{{ timer.end_time.strftime('%Y-%m-%d %H:%M') if timer.end_time else '-' }}</td>
+          <td>{{ timer.due_at.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>
             {% if timer.completed %}
             <span class="badge bg-success">Completed</span>
@@ -31,7 +31,7 @@
           </td>
           <td>
             {% if not timer.completed %}
-            <form method="POST" action="{{ url_for('timers.complete', timer_id=timer.id) }}" style="display:inline;">
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" style="display:inline;">
               <button type="submit" class="btn btn-sm btn-success">Complete</button>
             </form>
             {% endif %}
