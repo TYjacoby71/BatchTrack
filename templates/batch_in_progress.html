@@ -71,13 +71,19 @@
     <!-- TIMER SECTION -->
     <div class="mt-4" x-data="{ 
       timers: {{ timers|tojson }},
+      timerName: '',
+      timerDuration: null,
       addTimer() {
-        this.timers.push({
-          name: '',
-          duration_seconds: null,
-          start_time: null,
-          status: 'pending'
-        });
+        if (this.timerName && this.timerDuration) {
+          this.timers.push({
+            name: this.timerName,
+            duration_seconds: this.timerDuration,
+            start_time: null,
+            status: 'pending'
+          });
+          this.timerName = '';
+          this.timerDuration = null;
+        }
       },
       removeTimer(index) {
         this.timers.splice(index, 1);
@@ -102,34 +108,31 @@
       }
     }">
         <h4>Timers</h4>
-        <!-- New Timer Form -->
-        <div class="timer-row d-flex gap-2 mb-4">
-            <input type="text" x-model="newTimer" class="form-control" placeholder="Timer Name">
-            <input type="number" x-model="newDuration" class="form-control" placeholder="Duration (seconds)">
+        <!-- Add Timer Button -->
+        <div class="d-flex gap-2 mb-4">
+            <input type="text" x-model="timerName" class="form-control" placeholder="Timer Name">
+            <input type="number" x-model="timerDuration" class="form-control" placeholder="Duration (seconds)">
             <button type="button" @click="addTimer()" class="btn btn-outline-secondary">+ Add Timer</button>
         </div>
 
-        <!-- Active Timers -->
+        <!-- Unstarted and Running Timers -->
         <div class="mb-4">
-            <h5>Running Timers</h5>
-            <template x-for="(timer, index) in timers.filter(t => t.status === 'running')" :key="index">
-                <div class="timer-row d-flex gap-2 mb-2">
-                    <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" readonly>
-                    <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" readonly>
-                    <span class="text-muted align-self-center" x-text="'Started: ' + new Date(timer.start_time).toLocaleString()"></span>
-                    <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
-                </div>
-            </template>
-        </div>
-
-        <!-- Pending Timers -->
-        <div class="mb-4">
-            <h5>Pending Timers</h5>
+            <h5>Timers</h5>
+            <!-- Unstarted Timers -->
             <template x-for="(timer, index) in timers.filter(t => !t.start_time)" :key="index">
                 <div class="timer-row d-flex gap-2 mb-2">
                     <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" placeholder="Timer Name">
                     <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" placeholder="Duration (seconds)">
                     <button type="button" class="btn btn-success btn-sm" @click="startTimer(index, timer.id)">Start</button>
+                    <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
+                </div>
+            </template>
+            <!-- Running Timers -->
+            <template x-for="(timer, index) in timers.filter(t => t.status === 'running')" :key="index">
+                <div class="timer-row d-flex gap-2 mb-2">
+                    <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" readonly>
+                    <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" readonly>
+                    <span class="text-muted align-self-center" x-text="'Started: ' + new Date(timer.start_time).toLocaleString()"></span>
                     <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
                 </div>
             </template>
