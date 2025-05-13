@@ -66,15 +66,6 @@ function submitBatchCompletion() {
     }
     console.log('Submitting batch...');
     form.submit();
-                throw new Error(err.error || 'Failed to complete batch');
-            });
-        }
-        window.location.href = '/batches/';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error completing batch: ' + error.message);
-    });
 }
 
 function cancelBatch() {
