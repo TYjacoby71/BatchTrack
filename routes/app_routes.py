@@ -12,11 +12,7 @@ from services.expiration_alerts import get_expired_inventory
 @login_required
 def dashboard():
     recipes = Recipe.query.all()
-    # Get active batch and ensure proper serialization 
     active_batch = Batch.query.filter_by(status='in_progress').first()
-    if active_batch:
-        # Force evaluation of timers before template render
-        active_batch.timer_list = [timer.to_dict() for timer in active_batch.timers]
     low_stock_items = get_low_stock_ingredients()
     expired = get_expired_inventory()
     stock_check = None
