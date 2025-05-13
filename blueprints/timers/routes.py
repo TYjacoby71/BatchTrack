@@ -69,9 +69,16 @@ def complete_timer(timer_id):
 def update_timer_status(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
     data = request.get_json()
-    if data.get('status') in ['active', 'completed']:
-        timer.status = data['status']
-        if timer.status == 'completed':
-            timer.end_time = datetime.utcnow()
+    now = datetime.utcnow()
+    
+    if data.get('status') == 'completed':
+        timer.status = 'completed'
+        timer.end_time = now
         db.session.commit()
-    return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'end_time': now.isoformat()})
+    elif data.get('status') == 'active':
+        timer.status = 'active'
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    
+    return jsonify({'status': 'error', 'message': 'Invalid status'})
