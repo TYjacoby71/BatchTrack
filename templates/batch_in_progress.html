@@ -21,18 +21,11 @@
 
 
 <!-- EXTRA INGREDIENTS SECTION -->
-<div class="mt-4" x-data="{ showExtras: false }">
-    <div class="d-flex justify-content-between align-items-center">
-        <h4>Extra Ingredients Used</h4>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @click="showExtras = !showExtras">
-            <span x-text="showExtras ? '🔼 Hide' : '🔽 Show'"></span>
-        </button>
-    </div>
-    <div x-show="showExtras">
-        <div id="extra-ingredients-container"></div>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
-        <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
-    </div>
+<div class="mt-4">
+    <h4>Extra Ingredients Used</h4>
+    <div id="extra-ingredients-container"></div>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
+    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
 </div>
 
 <template id="extra-ingredient-template">
@@ -54,18 +47,11 @@
 </template>
 
     <!-- EXTRA CONTAINERS SECTION -->
-<div class="mt-4" x-data="{ showContainers: false }">
-    <div class="d-flex justify-content-between align-items-center">
-        <h4>Extra Containers Used</h4>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @click="showContainers = !showContainers">
-            <span x-text="showContainers ? '🔼 Hide' : '🔽 Show'"></span>
-        </button>
-    </div>
-    <div x-show="showContainers">
-        <div id="extra-containers-container"></div>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraContainerRow()">➕ Add Extra Container</button>
-        <button type="button" class="btn btn-primary" onclick="saveExtraContainers()">💾 Save Extra Containers</button>
-    </div>
+<div class="mt-4">
+    <h4>Extra Containers Used</h4>
+    <div id="extra-containers-container"></div>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraContainerRow()">➕ Add Extra Container</button>
+    <button type="button" class="btn btn-primary" onclick="saveExtraContainers()">💾 Save Extra Containers</button>
 </div>
 
 <template id="extra-container-template">
@@ -82,130 +68,21 @@
 </template>
 
 
-<!-- Timer Section -->
-    <div class="mt-4" x-data="{ 
-      timers: [],
-      newTimerName: '',
-      newTimerDuration: '',
-      addingTimer: false,
-      timerCounter: 0,
-      init() {
-        this.timers = {{ batch.timers|map(attribute='to_dict')|list|tojson|safe }};
-        this.updateTimers();
-      },
-      updateTimers() {
-        this.timers = this.timers.map(timer => ({
-          ...timer,
-          timeLeft: this.calculateTimeLeft(timer),
-          status: this.getTimerStatus(timer)
-        }));
-        setTimeout(() => this.updateTimers(), 1000);
-      },
-      calculateTimeLeft(timer) {
-        if (!timer.start_time) return 'Not Started';
-        const start = new Date(timer.start_time);
-        const now = new Date();
-        const duration = timer.duration_seconds * 1000;
-        const diff = (start.getTime() + duration) - now.getTime();
-        if (diff <= 0) return 'Expired';
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        return `${minutes}m ${seconds}s`;
-      },
-      getTimerStatus(timer) {
-        if (timer.completed) return 'completed';
-        if (!timer.start_time) return 'pending';
-        const timeLeft = this.calculateTimeLeft(timer);
-        return timeLeft === 'Expired' ? 'expired' : 'active';
-      },
-      async saveTimers() {
-        try {
-          const response = await fetch(`/timers/batch/${this.timers[0].batch_id}/save`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-              timers: this.timers.filter(t => !t.temp_id)
-            })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            this.timers = data.timers;
-          }
-        } catch (error) {
-          console.error('Error saving timers:', error);
-        }
-      }
-
-    }">
-    <h4>Timers</h4>
-    <template x-if="timers.length === 0">
-        <p>No timers are currently running.</p>
-    </template>
-    
-    <table class="table" x-show="timers.length > 0">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Duration</th>
-                <th>Time Left</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <template x-for="timer in timers" :key="timer.id">
-                <tr :class="{
-                    'table-danger': timer.status === 'expired',
-                    'table-success': timer.status === 'completed',
-                    'table-warning': timer.status === 'pending'
-                }">
-                    <td x-text="timer.name"></td>
-                    <td x-text="timer.duration_string"></td>
-                    <td>
-                        <span x-text="timer.timeLeft"></span>
-                        <span x-show="timer.status === 'expired'" class="badge bg-danger ms-2">⏰ Expired</span>
-                    </td>
-                    <td class="d-flex gap-2">
-                        <button class="btn btn-sm btn-success" 
-                                x-show="!timer.completed && timer.status !== 'expired'"
-                                @click="timer.completed = true; saveTimers()">Complete</button>
-                        <button class="btn btn-sm btn-danger" 
-                                @click="timers = timers.filter(t => t.id !== timer.id)">Remove</button>
-                    </td>
-                </tr>
-            </template>
-        </tbody>
-    </table>
-
-    <div x-show="addingTimer">
-        <input type="text" x-model="newTimerName" placeholder="Timer Name" class="form-control mb-2">
-        <input type="text" x-model="newTimerDuration" placeholder="Duration (e.g., 1h30m)" class="form-control mb-2">
-        <button class="btn btn-sm btn-success" @click="
-            const durationSeconds = parseDuration(newTimerDuration);
-            if (isNaN(durationSeconds)) {
-                alert('Invalid duration format. Please use formats like 1h30m or 30m.');
-                return;
-            }
-            timers.push({
-                id: Math.random(), // Temporary ID
-                name: newTimerName,
-                duration_seconds: durationSeconds,
-                duration_string: newTimerDuration,
-                start_time: new Date().toISOString(),
-                timeLeft: 'Calculating...'
-            });
-            newTimerName = '';
-            newTimerDuration = '';
-            addingTimer = false;
-            updateTimers();
-        ">Add Timer</button>
-        <button class="btn btn-sm btn-secondary" @click="addingTimer = false">Cancel</button>
+    <!-- TIMER SECTION -->
+    <div class="mt-4">
+        <h4>Timers</h4>
+        <div id="timer-list">
+            {% for t in timers %}
+            <div class="timer-row d-flex gap-2 mb-2">
+                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
+                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
+                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
-
-    <button class="btn btn-sm btn-primary" x-show="!addingTimer" @click="addingTimer = true">➕ Add New Timer</button>
-</div>
 
     <!-- Batch Cost Summary -->
     <!-- Batch Cost Summary -->
@@ -336,28 +213,14 @@
     </div>
 </form>
 
+{# Finish Batch Modal - include only once #}
+{% include 'components/batch/finish_batch_modal.html' %}
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
-
-<script>
-    function parseDuration(durationString) {
-        const regex = /(\d+h)?(\d+m)?(\d+s)?/;
-        const matches = durationString.match(regex);
-
-        if (!matches) {
-            return NaN;
-        }
-
-        let hours = matches[1] ? parseInt(matches[1]) : 0;
-        let minutes = matches[2] ? parseInt(matches[2]) : 0;
-        let seconds = matches[3] ? parseInt(matches[3]) : 0;
-
-        return hours * 3600 + minutes * 60 + seconds;
-    }
-</script>
 
 {% endblock %}
