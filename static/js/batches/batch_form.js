@@ -22,40 +22,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function toggleOutputFields() {
-  const outputType = document.getElementById('output_type').value;
+  const type = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
-  const outputUnit = document.getElementById('output_unit');
-  const unitWarning = document.getElementById('unit-warning');
 
-  if (outputType === 'product') {
-    productFields.style.display = 'block';
-    unitWarning.style.display = 'none';
-  } else {
-    productFields.style.display = 'none';
-    const batchId = window.location.pathname.split('/').pop();
-    // Query for existing intermediate ingredient
-    fetch(`/api/ingredients/intermediate/${batchId}/recipe-name`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.exists) {
-          // Store original unit
-          outputUnit.dataset.originalUnit = data.unit;
-          // Select matching unit
-          outputUnit.value = data.unit;
-        }
-      });
-  }
+  if (productFields) {
+    productFields.style.display = type === 'product' ? 'block' : 'none';
 
-  // Add change listener for unit selection
-  outputUnit.onchange = function() {
-    if (outputType === 'ingredient' && outputUnit.dataset.originalUnit) {
-      if (outputUnit.value !== outputUnit.dataset.originalUnit) {
-        unitWarning.style.display = 'block';
-      } else {
-        unitWarning.style.display = 'none';
-      }
+    // Update required attributes
+    const productSelect = productFields.querySelector('select[name="product_id"]');
+    if (productSelect) {
+      productSelect.required = type === 'product';
     }
-  };
+  }
 }
 
 function submitFinishBatch() {
@@ -96,7 +74,7 @@ function submitFinishBatch() {
 function toggleBatchTypeFields() {
     const type = document.getElementById('output_type').value;
     const productFields = document.getElementById('productFields');
-
+    
     if (type === 'product') {
         productFields.style.display = 'block';
         document.getElementById('product_id').required = true;
@@ -109,7 +87,7 @@ function toggleBatchTypeFields() {
 async function loadProductVariants() {
     const productId = document.getElementById('product_id').value;
     const variantSelect = document.getElementById('variant_label');
-
+    
     if (!productId) {
         variantSelect.innerHTML = '<option value="">Select a product first</option>';
         return;
@@ -118,7 +96,7 @@ async function loadProductVariants() {
     try {
         const response = await fetch(`/api/products/${productId}/variants`);
         const variants = await response.json();
-
+        
         if (variants.length > 0) {
             variantSelect.innerHTML = variants.map(v => 
                 `<option value="${v.name}">${v.name}</option>`
@@ -197,7 +175,7 @@ function addExtraIngredientRow() {
         width: 'resolve',
         dropdownAutoWidth: true
     });
-
+    
     // Set initial cost
     const select = newRow.querySelector('.ingredient-select');
     updateRowCost(select);

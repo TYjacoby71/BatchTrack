@@ -27,16 +27,11 @@
 
           <div class="form-group mb-3">
             <label for="output_unit">Output Unit</label>
-            <select name="output_unit" id="output_unit" class="form-select" required 
-                    data-original-unit="">
+            <select name="output_unit" id="output_unit" class="form-select" required>
               {% for unit in units %}
-                <option value="{{ unit.name }}" 
-                        data-unit-type="{{ unit.type }}">{{ unit.name }}</option>
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
               {% endfor %}
             </select>
-            <div class="form-text text-danger" id="unit-warning" style="display:none">
-              Warning: Changing units may affect inventory tracking
-            </div>
           </div>
 
           <div class="form-group mb-3">

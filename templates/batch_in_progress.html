@@ -102,10 +102,7 @@
                     <td>${{ "%.2f"|format((ing.amount_used or 0) * (ing.cost_per_unit or 0)) }}</td>
                 </tr>
                 {% endfor %}
-                {% set ingredient_total = 0 %}
-                {% for ing in batch.ingredients %}
-                    {% set ingredient_total = ingredient_total + (ing.amount_used * ing.cost_per_unit) %}
-                {% endfor %}
+                {% set ingredient_total = (batch.ingredients|sum(attribute='amount_used') or 0) * (batch.ingredients|sum(attribute='ingredient.cost_per_unit') or 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
                     <td>${{ "%.2f"|format(ingredient_total) }}</td>
@@ -123,10 +120,7 @@
                     <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                 </tr>
                 {% endfor %}
-                {% set container_total = 0 %}
-                {% for container in batch.containers %}
-                    {% set container_total = container_total + (container.quantity_used * container.cost_each) %}
-                {% endfor %}
+                {% set container_total = (batch.containers|sum(attribute='quantity_used') or 0) * (batch.containers|sum(attribute='cost_each') or 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
                     <td>${{ "%.2f"|format(container_total) }}</td>
@@ -144,10 +138,7 @@
                     <td>${{ "%.2f"|format((extra.quantity or 0) * (extra.cost_per_unit or 0)) }}</td>
                 </tr>
                 {% endfor %}
-                {% set extras_total = 0 %}
-                {% for extra in batch.extra_ingredients %}
-                    {% set extras_total = extras_total + (extra.quantity * extra.cost_per_unit) %}
-                {% endfor %}
+                {% set extras_total = (batch.extra_ingredients|sum(attribute='quantity') or 0) * (batch.extra_ingredients|sum(attribute='cost_per_unit') or 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
                     <td>${{ "%.2f"|format(extras_total) }}</td>
@@ -165,21 +156,18 @@
                     <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                 </tr>
                 {% endfor %}
-                {% set extra_container_total = 0 %}
-                {% for container in batch.extra_containers %}
-                    {% set extra_container_total = extra_container_total + (container.quantity_used * container.cost_each) %}
-                {% endfor %}
+                {% set extra_container_total = (batch.extra_containers|sum(attribute='quantity_used') or 0) * (batch.extra_containers|sum(attribute='cost_each') or 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
                     <td>${{ "%.2f"|format(extra_container_total) }}</td>
                 </tr>
                 {% endif %}
             </tbody>
+
             <tfoot>
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                    {% set total = ingredient_total + container_total + extras_total + extra_container_total %}
-                    <td><strong>${{ "%.2f"|format(total) }}</strong></td>
+                    <td><strong>${{ "%.2f"|format(batch_cost) if batch_cost else '0.00' }}</strong></td>
                 </tr>
             </tfoot>
         </table>
