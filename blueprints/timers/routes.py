@@ -1,9 +1,8 @@
 
-from flask import Blueprint, redirect, url_for, flash, render_template
+from flask import render_template, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer
-
-timers_bp = Blueprint('timers', __name__, url_prefix='/timers')
+from . import timers_bp
 
 @timers_bp.route('/list')
 @login_required
