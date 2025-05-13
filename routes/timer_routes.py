@@ -53,4 +53,5 @@ def complete_timer(timer_id):
     timer.status = 'completed'
     timer.end_time = datetime.utcnow()
     db.session.commit()
-    return jsonify({'status': 'success'})
+    flash('Timer completed successfully', 'success')
+    return redirect(url_for('timers.list_timers'))
