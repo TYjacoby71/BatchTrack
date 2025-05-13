@@ -162,7 +162,7 @@ document.addEventListener('alpine:init', () => {
           ...this.newTimer,
           id: result.timer_id,
           start_time: new Date().toISOString(),
-          status: 'pending'
+          status: 'active'
         });
         this.newTimer.name = '';
         this.newTimer.duration_seconds = '';
