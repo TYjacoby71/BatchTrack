@@ -75,7 +75,7 @@
       newTimerDuration: '',
       addingTimer: false,
       init() {
-        const initialTimers = {{ [timer.to_dict() for timer in batch.timers]|safe|tojson }};
+        const initialTimers = {{ batch.timers|map(attribute='to_dict')|list|tojson|safe }};
         this.timers = initialTimers || [];
         this.updateTimers();
       },
