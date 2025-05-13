@@ -133,11 +133,8 @@ function submitFinishBatch(action) {
     const batchId = window.location.pathname.split('/').pop();
 
     // Required: Batch yield (final quantity)
-    // Get form values
-    const outputType = modalForm.querySelector('#output_type').value;
-    const batchYield = modalForm.querySelector('input[name="batch_yield"]').value;
-    
-    if (!batchYield || parseFloat(batchYield) <= 0) {
+    const batchYieldInput = modalForm.querySelector('#batch_yield');
+    if (!batchYieldInput || !batchYieldInput.value || parseFloat(batchYieldInput.value) <= 0) {
         alert('Please enter the batch yield');
         return;
     }
