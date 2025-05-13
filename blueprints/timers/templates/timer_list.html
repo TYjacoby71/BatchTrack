@@ -229,6 +229,11 @@ document.addEventListener('alpine:init', () => {
     },
 
     init() {
+      this.timers = this.timers.map(timer => ({
+        ...timer,
+        duration_seconds: timer.original_duration
+      }));
+      
       setInterval(() => {
         this.timers = this.timers.map(timer => ({
           ...timer,
