@@ -34,10 +34,10 @@
             </td>
             <td>
               <button 
-                x-show="timer.status === 'active' || timer.status === 'pending'"
+                x-show="timer.status !== 'completed'"
                 @click="completeTimer(timer.id)" 
                 class="btn btn-sm btn-primary">
-                Complete
+                Mark Complete
               </button>
             </td>
           </tr>

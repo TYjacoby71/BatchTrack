@@ -37,7 +37,20 @@ def create_timer():
 @login_required
 def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
-    timer.status = 'completed'
-    timer.end_time = datetime.utcnow()
-    db.session.commit()
+    if timer.status != 'completed':
+        timer.status = 'completed'
+        timer.end_time = datetime.utcnow()
+        db.session.commit()
+    return jsonify({'status': 'success'})
+
+@timers_bp.route('/status/<int:timer_id>', methods=['POST'])
+@login_required
+def update_timer_status(timer_id):
+    timer = BatchTimer.query.get_or_404(timer_id)
+    data = request.get_json()
+    if data.get('status') in ['active', 'pending', 'completed']:
+        timer.status = data['status']
+        if timer.status == 'completed':
+            timer.end_time = datetime.utcnow()
+        db.session.commit()
     return jsonify({'status': 'success'})
