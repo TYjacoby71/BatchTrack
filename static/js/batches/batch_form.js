@@ -32,8 +32,9 @@ function toggleOutputFields() {
     unitWarning.style.display = 'none';
   } else {
     productFields.style.display = 'none';
+    const batchId = window.location.pathname.split('/').pop();
     // Query for existing intermediate ingredient
-    fetch(`/api/ingredients/intermediate/${recipeName}`)
+    fetch(`/api/ingredients/intermediate/${batchId}/recipe-name`)
       .then(response => response.json())
       .then(data => {
         if (data.exists) {

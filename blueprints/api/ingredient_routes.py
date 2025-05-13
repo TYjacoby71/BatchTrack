@@ -40,3 +40,20 @@ def get_intermediate(name):
             'unit': ingredient.unit
         })
     return jsonify({'exists': False})
+
+@api_ingredients_bp.route('/intermediate/<batch_id>/recipe-name')
+def get_recipe_name_for_batch(batch_id):
+    from models import Batch
+    batch = Batch.query.get_or_404(batch_id)
+    ingredient = InventoryItem.query.filter_by(
+        name=batch.recipe.name,
+        type='ingredient',
+        intermediate=True
+    ).first()
+    
+    if ingredient:
+        return jsonify({
+            'exists': True,
+            'unit': ingredient.unit
+        })
+    return jsonify({'exists': False})
