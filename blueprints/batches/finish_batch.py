@@ -134,7 +134,7 @@ def finish_batch_handler(batch, action='finish', force=False):
 
             # Update batch status
             if action == "finish":
-                batch.status = 'complete'
+                batch.status = 'completed'
                 batch.completed_at = datetime.utcnow()
                 flash("✅ Batch completed successfully.")
             else:
