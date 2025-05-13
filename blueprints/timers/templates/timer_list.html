@@ -100,6 +100,32 @@ document.addEventListener('alpine:init', () => {
       duration_seconds: '',
       batch_id: ''
     },
+    async createTimer() {
+      const response = await fetch('/timers/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(this.newTimer)
+      });
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        this.timers.push({
+          ...this.newTimer,
+          id: result.timer_id,
+          start_time: new Date().toISOString(),
+          status: 'active'
+        });
+        this.newTimer = {
+          name: '',
+          duration_seconds: '',
+          batch_id: ''
+        };
+        this.addingTimer = false;
+      }
+    },
 
     calculateTimeLeft(timer) {
       if (!timer.start_time) return 'Not Started';

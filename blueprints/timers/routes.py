@@ -36,6 +36,7 @@ def create_timer():
     timer = BatchTimer(
         name=data.get('name'),
         duration_seconds=int(data.get('duration_seconds')),
+        batch_id=int(data.get('batch_id')),
         start_time=datetime.utcnow(),
         status='active'
     )
