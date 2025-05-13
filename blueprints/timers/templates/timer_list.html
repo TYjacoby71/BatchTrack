@@ -185,13 +185,14 @@ document.addEventListener('alpine:init', () => {
 
       const result = await response.json();
       if (result.status === 'success') {
-        this.timers.push({
+        const timer = {
           ...timerData,
           id: result.timer_id,
           start_time: new Date().toISOString(),
           status: 'active',
-          original_duration: totalSeconds
-        });
+          duration_seconds: totalSeconds
+        };
+        this.timers.push(timer);
 
         // Reset form
         this.newTimer.name = '';
