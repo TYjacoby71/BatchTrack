@@ -97,6 +97,17 @@ document.addEventListener('alpine:init', () => {
       duration_seconds: '',
       batch_id: ''
     },
+    init() {
+      setInterval(() => {
+        this.timers = this.timers.map(timer => {
+          const currentTimer = {...timer};
+          if (currentTimer.status === 'completed') {
+            return currentTimer;
+          }
+          return currentTimer;
+        });
+      }, 1000);
+    },
     async createTimer() {
       const response = await fetch('/timers/create', {
         method: 'POST',
@@ -180,11 +191,16 @@ document.addEventListener('alpine:init', () => {
 
       if (response.ok) {
         const result = await response.json();
-        const timer = this.timers.find(t => t.id === timerId);
-        if (timer) {
-          timer.status = 'completed';
-          timer.end_time = result.end_time;
-        }
+        this.timers = this.timers.map(timer => {
+          if (timer.id === timerId) {
+            return {
+              ...timer,
+              status: 'completed',
+              end_time: result.end_time
+            };
+          }
+          return timer;
+        });
       }
     },
 
