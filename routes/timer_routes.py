@@ -52,5 +52,4 @@ def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
     timer.status = 'completed'
     db.session.commit()
-    flash('Timer completed successfully', 'success')
-    return redirect(url_for('timers.list_timers'))
+    return jsonify({'status': 'success'})

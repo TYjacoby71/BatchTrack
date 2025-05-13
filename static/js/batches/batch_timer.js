@@ -120,3 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+function completeTimer(timerId) {
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  
+  fetch(`/timers/complete/${timerId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      window.location.reload();
+    }
+  })
+  .catch(error => {
+    console.error('Error completing timer:', error);
+    alert('Failed to complete timer');
+  });
+}
