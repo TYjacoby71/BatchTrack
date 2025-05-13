@@ -132,10 +132,24 @@ function submitFinishBatch(action) {
 
     const batchId = window.location.pathname.split('/').pop();
 
-    // Required: Batch yield (final quantity)
-    const batchYieldInput = modalForm.querySelector('#batch_yield');
-    if (!batchYieldInput || !batchYieldInput.value || parseFloat(batchYieldInput.value) <= 0) {
-        alert('Please enter the batch yield');
+    // Required: Final quantity
+    const finalQuantityInput = modalForm.querySelector('#final_quantity');
+    if (!finalQuantityInput || !finalQuantityInput.value || parseFloat(finalQuantityInput.value) <= 0) {
+        alert('Please enter the final quantity');
+        return;
+    }
+
+    // Required: Output unit
+    const outputUnitInput = modalForm.querySelector('#output_unit');
+    if (!outputUnitInput || !outputUnitInput.value) {
+        alert('Please select an output unit');
+        return;
+    }
+
+    // Required: Batch type
+    const batchTypeInput = modalForm.querySelector('#batch_type');
+    if (!batchTypeInput || !batchTypeInput.value) {
+        alert('Please select a batch type');
         return;
     }
 

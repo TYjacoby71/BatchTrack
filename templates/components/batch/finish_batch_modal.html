@@ -10,7 +10,23 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.mark_batch_complete', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="batch_id" value="{{ batch.id }}">
-          <!-- Batch Type Selection -->
+          <!-- Final Quantity -->
+          <div class="form-group mb-3">
+            <label for="final_quantity">Final Quantity:</label>
+            <input type="number" name="final_quantity" id="final_quantity" class="form-control" required step="0.01" min="0">
+          </div>
+
+          <!-- Output Unit -->
+          <div class="form-group mb-3">
+            <label for="output_unit">Output Unit:</label>
+            <select name="output_unit" id="output_unit" class="form-select" required>
+              {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Batch Type -->
           <div class="form-group mb-3">
             <label for="batch_type">Batch Type:</label>
             <select name="batch_type" id="batch_type" class="form-select" required onchange="toggleOutputFields()">
