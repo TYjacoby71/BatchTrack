@@ -69,43 +69,11 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4" x-data="{
-      timerName: '',
-      duration: '',
-      async startNewTimer() {
-        if (!this.timerName || !this.duration) {
-          alert('Please fill in both timer name and duration');
-          return;
-        }
-        try {
-          const response = await fetch(`/timers/start/{{ batch.id }}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-              name: this.timerName,
-              duration_seconds: this.duration * 60
-            })
-          });
-          const data = await response.json();
-          if (data.status === 'success') {
-            window.location.reload();
-          }
-        } catch (error) {
-          console.error('Error starting timer:', error);
-          alert('Failed to start timer');
-        }
-      }
-    }">
+    <div class="mt-4">
         <h4>Timers</h4>
-        <div class="mb-3">
-          <input type="text" x-model="timerName" class="form-control mb-2" placeholder="Timer Name">
-          <input type="number" x-model="duration" class="form-control mb-2" placeholder="Duration (minutes)" min="1">
-          <button type="button" @click="startNewTimer()" class="btn btn-outline-secondary">+ Add Timer</button>
-          <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">View All Timers</a>
-        </div>
+        <div id="timer-list"></div>
+        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">View All Timers</a>
     </div>
 
     <!-- Timer Scripts -->
