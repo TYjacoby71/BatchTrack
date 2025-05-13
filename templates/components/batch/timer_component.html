@@ -75,6 +75,7 @@
           </tr>
         </thead>
         <tbody>
+          {% from datetime import timedelta %}
           {% for timer in timers %}
           {% if timer.batch_id == batch.id and timer.status in ['active', 'completed'] %}
           <tr>

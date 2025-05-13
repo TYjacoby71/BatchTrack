@@ -1,5 +1,6 @@
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
+from datetime import datetime, timedelta
 from flask_login import login_required
 from models import db, BatchTimer, Batch
 from datetime import datetime
@@ -28,7 +29,8 @@ def list_timers():
     
     return render_template('timer_list.html', 
                          timers=timer_data,
-                         active_batches=active_batch_data)
+                         active_batches=active_batch_data,
+                         now=datetime.utcnow())
 
 @timers_bp.route('/create', methods=['POST'])
 @login_required
