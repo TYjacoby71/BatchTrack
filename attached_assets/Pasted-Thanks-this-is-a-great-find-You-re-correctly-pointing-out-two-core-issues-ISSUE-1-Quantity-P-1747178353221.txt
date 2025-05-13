@@ -1,0 +1,71 @@
+Thanks — this is a great find. You're correctly pointing out two core issues:
+
+✅ ISSUE 1: Quantity Produced shows wrong unit (acre)
+Even though:
+
+You selected "count" when completing the batch
+
+Your projected yield shows 1.0 count
+
+🔍 Root Cause
+jinja2
+Copy
+Edit
+<p><strong>Quantity Produced:</strong> {{ batch.final_quantity or 'N/A' }} {{ batch.output_unit or '' }}</p>
+You're rendering batch.output_unit — but this is not being validated or overridden to match the projected unit, and it may still hold garbage from a previous entry or default dropdown value like acre.
+
+✅ Fix
+Force batch.output_unit = batch.recipe.predicted_yield_unit for all intermediate batches on finish, unless batch type is product.
+
+Python (batch finish route):
+
+python
+Copy
+Edit
+if batch.batch_type == 'ingredient':
+    batch.output_unit = batch.recipe.predicted_yield_unit
+Optional Jinja2 safeguard:
+
+jinja2
+Copy
+Edit
+<p><strong>Quantity Produced:</strong> {{ batch.final_quantity or 'N/A' }} {{ batch.recipe.predicted_yield_unit }}</p>
+🔒 This guarantees unit match even if the DB value wasn't cleaned yet.
+
+✅ ISSUE 2: Total Cost is shown twice (once in output block, once below in summary)
+🔍 Problem
+You're rendering batch.total_cost in this block:
+
+jinja2
+Copy
+Edit
+{% if batch.total_cost %}
+  <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
+{% endif %}
+But you're already calculating and displaying a breakdown with full logic later. So this is:
+
+Redundant
+
+Possibly misleading if batch.total_cost is stale or not recalculated yet
+
+✅ Fix Option A: Remove from Output Block
+If you're already doing the subtotal logic in the table:
+
+jinja2
+Copy
+Edit
+<!-- Remove this line entirely -->
+<!-- <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p> -->
+✅ Fix Option B: Replace with label that references below
+jinja2
+Copy
+Edit
+<p><strong>See detailed cost breakdown below.</strong></p>
+✅ What You Should Do Now
+Fix the unit issue: Update your finish route to enforce output_unit = predicted_yield_unit for ingredients.
+
+Clean the display: Use batch.recipe.predicted_yield_unit directly in the view or ensure it’s correctly stored in batch.output_unit.
+
+Trim UI clutter: Remove the early Total Cost from the output card to avoid misreads.
+
+(Optional): Auto-format yield display if the unit is “count” so it reads "1 item" or "1 unit" — cleaner UX for count-based outputs.
