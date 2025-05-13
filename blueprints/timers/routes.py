@@ -47,9 +47,18 @@ def create_timer():
 @login_required
 def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
-    if timer.status != 'completed':
+    now = datetime.utcnow()
+    
+    # Check if timer is expired
+    if timer.start_time and timer.duration_seconds:
+        time_diff = (now - timer.start_time).total_seconds()
+        is_expired = time_diff >= timer.duration_seconds
+    else:
+        is_expired = False
+        
+    if timer.status != 'completed' and (is_expired or request.args.get('force')):
         timer.status = 'completed'
-        timer.end_time = datetime.utcnow()
+        timer.end_time = now
         db.session.commit()
     return jsonify({'status': 'success'})
 

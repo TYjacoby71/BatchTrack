@@ -108,7 +108,12 @@ document.addEventListener('alpine:init', () => {
       const duration = timer.duration_seconds * 1000;
       const diff = (start.getTime() + duration) - now.getTime();
       
-      if (diff <= 0) return 'Expired';
+      if (diff <= 0) {
+        if (timer.status !== 'completed') {
+          this.completeTimer(timer.id);
+        }
+        return 'Expired';
+      }
       
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
