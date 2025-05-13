@@ -136,7 +136,7 @@ document.addEventListener('alpine:init', () => {
     },
 
     calculateTimeLeft(timer) {
-        if (timer.status === 'completed') return 'User Ended';
+        if (timer.status === 'completed' && !this.isExpired(timer)) return 'User Ended';
         if (!timer.start_time) return 'Not Started';
 
         const start = new Date(timer.start_time + 'Z');
@@ -145,14 +145,23 @@ document.addEventListener('alpine:init', () => {
         const elapsedSeconds = Math.floor((now - start) / 1000);
         const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 
-      if (remainingSeconds <= 0) {
-        if (timer.status === 'active') {
-          this.completeTimer(timer.id);
+        if (remainingSeconds <= 0) {
+            if (timer.status === 'active') {
+                this.completeTimer(timer.id);
+            }
+            return 'Expired';
         }
-        return 'Expired';
-      }
 
-      return this.formatDuration(remainingSeconds);
+        return this.formatDuration(remainingSeconds);
+    },
+
+    isExpired(timer) {
+        if (!timer.start_time) return false;
+        const start = new Date(timer.start_time + 'Z');
+        const now = new Date();
+        const totalSeconds = parseInt(timer.duration_seconds);
+        const elapsedSeconds = Math.floor((now - start) / 1000);
+        return elapsedSeconds >= totalSeconds;
     },
 
     calculateTotalSeconds() {
