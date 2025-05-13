@@ -51,5 +51,6 @@ def cancel_timer(timer_id):
 def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
     timer.status = 'completed'
+    timer.end_time = datetime.utcnow()
     db.session.commit()
     return jsonify({'status': 'success'})

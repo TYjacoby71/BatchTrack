@@ -31,7 +31,10 @@
           </td>
           <td>
             {% if not timer.completed %}
-            <button onclick="completeTimer({{ timer.id }})" class="btn btn-sm btn-success">Complete</button>
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-success">Complete</button>
+            </form>
             {% endif %}
           </td>
         </tr>
