@@ -19,21 +19,21 @@
         {% for timer in timers %}
         <tr>
           <td>{{ timer.batch_id }}</td>
-          <td>{{ timer.name }}</td>
+          <td>{{ timer.label }}</td>
           <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td>{{ timer.end_time.strftime('%Y-%m-%d %H:%M') if timer.end_time else '-' }}</td>
+          <td>{{ timer.due_at.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>
-            {% if timer.status == 'completed' %}
+            {% if timer.completed %}
             <span class="badge bg-success">Completed</span>
-            {% elif timer.status == 'running' %}
-            <span class="badge bg-warning">Active</span>
             {% else %}
-            <span class="badge bg-secondary">Pending</span>
+            <span class="badge bg-warning">Active</span>
             {% endif %}
           </td>
           <td>
-            {% if timer.status != 'completed' %}
-            <button type="button" class="btn btn-sm btn-primary" onclick="completeTimer({{ timer.id }})">Complete</button>
+            {% if not timer.completed %}
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-success">Complete</button>
+            </form>
             {% endif %}
           </td>
         </tr>
@@ -42,29 +42,4 @@
     </table>
   </div>
 </div>
-
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<script>
-function completeTimer(timerId) {
-  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-  
-  fetch(`/timers/complete/${timerId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.status === 'success') {
-      window.location.reload();
-    }
-  })
-  .catch(error => {
-    console.error('Error completing timer:', error);
-    alert('Failed to complete timer');
-  });
-}
-</script>
 {% endblock %}

@@ -69,52 +69,19 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4" x-data="{
-      showForm: false,
-      timerName: '',
-      duration: '',
-      async startNewTimer() {
-        if (!this.timerName || !this.duration) {
-          alert('Please fill in both timer name and duration');
-          return;
-        }
-        try {
-          const response = await fetch(`/timers/start/{{ batch.id }}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-              name: this.timerName,
-              duration_seconds: this.duration * 60
-            })
-          });
-          const data = await response.json();
-          if (data.status === 'success') {
-            this.showForm = false;
-            this.timerName = '';
-            this.duration = '';
-            window.location.href = '{{ url_for('timers.list_timers', batch_id=batch.id) }}';
-          }
-        } catch (error) {
-          console.error('Error starting timer:', error);
-        }
-      }
-    }">
+    <div class="mt-4">
         <h4>Timers</h4>
-        <div class="mb-3">
-          <button x-show="!showForm" type="button" @click="showForm = true" class="btn btn-outline-secondary">+ Add Timer</button>
-          <div x-show="showForm" class="card p-3 mt-2">
-            <input type="text" x-model="timerName" class="form-control mb-2" placeholder="Timer Name">
-            <input type="number" x-model="duration" class="form-control mb-2" placeholder="Duration (minutes)" min="1">
-            <div class="d-flex gap-2">
-              <button type="button" @click="startNewTimer()" class="btn btn-primary">Start Timer</button>
-              <button type="button" @click="showForm = false" class="btn btn-danger">Cancel</button>
+        <div id="timer-list">
+            {% for t in timers %}
+            <div class="timer-row d-flex gap-2 mb-2">
+                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
+                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
+                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
             </div>
-          </div>
-          <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary mt-2">View All Timers</a>
+            {% endfor %}
         </div>
+        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
 
     <!-- Batch Cost Summary -->
@@ -143,13 +110,10 @@
                     <td>${{ "%.2f"|format((ing.amount_used or 0) * (ing.cost_per_unit or 0)) }}</td>
                 </tr>
                 {% endfor %}
-                {% set ingredient_total = namespace(value=0) %}
-                {% for ing in batch.ingredients %}
-                    {% set ingredient_total.value = ingredient_total.value + ((ing.amount_used or 0) * (ing.cost_per_unit or 0)) %}
-                {% endfor %}
+                {% set ingredient_total = (batch.ingredients|sum(attribute='amount_used') or 0) * (batch.ingredients|sum(attribute='ingredient.cost_per_unit') or 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
-                    <td>${{ "%.2f"|format(ingredient_total.value) }}</td>
+                    <td>${{ "%.2f"|format(ingredient_total) }}</td>
                 </tr>
                 {% endif %}
 
