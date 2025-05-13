@@ -76,7 +76,7 @@
             <div class="active-timer-row d-flex gap-2 mb-2 align-items-center" id="timer-{{ t.id }}">
                 <span class="timer-name">{{ t.name }}</span>
                 <span class="timer-countdown badge bg-primary"></span>
-                <span class="timer-end">Ends: {{ t.end_time.strftime('%I:%M %p') }}</span>
+                <span class="timer-end">Ends: {{ t.end_time.isoformat() }}</span>
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelTimer({{ t.id }})">⊗</button>
             </div>
             {% endfor %}

@@ -110,7 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const activeTimers = document.querySelectorAll('.active-timer-row');
   activeTimers.forEach(timer => {
     const timerId = timer.id.split('-')[1];
-    const endTimeStr = timer.querySelector('.timer-end').textContent.split(': ')[1];
-    updateTimerCountdown(timerId, new Date(endTimeStr));
+    const endTimeElement = timer.querySelector('.timer-end');
+    const endTimeStr = endTimeElement.textContent.split(': ')[1];
+    const endTime = new Date(endTimeStr);
+    
+    // Only initialize if timer hasn't ended
+    if (endTime > new Date()) {
+      updateTimerCountdown(timerId, endTime);
+    }
   });
 });
