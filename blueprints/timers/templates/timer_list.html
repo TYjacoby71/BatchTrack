@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container" x-data="timerManager">
@@ -129,7 +128,7 @@ document.addEventListener('alpine:init', () => {
       const hours = Math.floor(seconds / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
       const remainingSeconds = seconds % 60;
-      
+
       if (hours > 0) {
         return `${hours}h ${minutes}m ${remainingSeconds}s`;
       }
@@ -137,14 +136,14 @@ document.addEventListener('alpine:init', () => {
     },
 
     calculateTimeLeft(timer) {
-      if (timer.status === 'completed') return 'User Ended';
-      if (!timer.start_time) return 'Not Started';
+        if (timer.status === 'completed') return 'User Ended';
+        if (!timer.start_time) return 'Not Started';
 
-      const start = new Date(timer.start_time);
-      const now = new Date();
-      const totalSeconds = parseInt(timer.duration_seconds);
-      const elapsedSeconds = Math.floor((now - start) / 1000);
-      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+        const start = new Date(timer.start_time + 'Z');
+        const now = new Date();
+        const totalSeconds = parseInt(timer.duration_seconds);
+        const elapsedSeconds = Math.floor((now - start) / 1000);
+        const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 
       if (remainingSeconds <= 0) {
         if (timer.status === 'active') {
@@ -193,7 +192,7 @@ document.addEventListener('alpine:init', () => {
           status: 'active',
           original_duration: totalSeconds
         });
-        
+
         // Reset form
         this.newTimer.name = '';
         this.newTimer.batch_id = '';
