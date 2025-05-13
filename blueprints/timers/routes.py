@@ -1,7 +1,7 @@
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
-from models import db, BatchTimer
+from models import db, BatchTimer, Batch
 from datetime import datetime
 from . import timers_bp
 
@@ -9,6 +9,8 @@ from . import timers_bp
 @login_required
 def list_timers():
     timers = BatchTimer.query.all()
+    active_batches = Batch.query.filter_by(status='in_progress').all()
+    
     timer_data = [{
         'id': t.id,
         'batch_id': t.batch_id,
@@ -17,7 +19,15 @@ def list_timers():
         'start_time': t.start_time.isoformat() if t.start_time else None,
         'status': t.status
     } for t in timers]
-    return render_template('timer_list.html', timers=timer_data)
+    
+    active_batch_data = [{
+        'id': b.id,
+        'recipe_name': b.recipe.name if b.recipe else None
+    } for b in active_batches]
+    
+    return render_template('timer_list.html', 
+                         timers=timer_data,
+                         active_batches=active_batch_data)
 
 @timers_bp.route('/create', methods=['POST'])
 @login_required
@@ -37,7 +47,29 @@ def create_timer():
 @login_required
 def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
-    timer.status = 'completed'
-    timer.end_time = datetime.utcnow()
-    db.session.commit()
+    now = datetime.utcnow()
+    
+    # Check if timer is expired
+    if timer.start_time and timer.duration_seconds:
+        time_diff = (now - timer.start_time).total_seconds()
+        is_expired = time_diff >= timer.duration_seconds
+    else:
+        is_expired = False
+        
+    if timer.status != 'completed' and (is_expired or request.args.get('force')):
+        timer.status = 'completed'
+        timer.end_time = now
+        db.session.commit()
+    return jsonify({'status': 'success'})
+
+@timers_bp.route('/status/<int:timer_id>', methods=['POST'])
+@login_required
+def update_timer_status(timer_id):
+    timer = BatchTimer.query.get_or_404(timer_id)
+    data = request.get_json()
+    if data.get('status') in ['active', 'pending', 'completed']:
+        timer.status = data['status']
+        if timer.status == 'completed':
+            timer.end_time = datetime.utcnow()
+        db.session.commit()
     return jsonify({'status': 'success'})
