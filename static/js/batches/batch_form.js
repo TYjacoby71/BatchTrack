@@ -4,11 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (finishModal) {
         finishModal.addEventListener('shown.bs.modal', function () {
             toggleOutputFields();
-            // Reset form validation state when modal is shown
-            const modalForm = document.getElementById('finishBatchModalForm');
-            if (modalForm) {
-                modalForm.reset();
-            }
         });
     }
 
@@ -32,16 +27,22 @@ function togglePerishableFields() {
     }
 }
 
-function toggleProductFields() {
-    const type = document.getElementById('batch_type').value;
+function toggleOutputFields() {
+    const type = document.getElementById('output_type').value;
     const productFields = document.getElementById('productFields');
-    
+    const ingredientFields = document.getElementById('ingredientFields');
+
     if (productFields) {
         productFields.style.display = type === 'product' ? 'block' : 'none';
-        const productSelect = productFields.querySelector('select[name="product_id"]');
-        if (productSelect) {
-            productSelect.required = type === 'product';
-        }
+    }
+    if (ingredientFields) {
+        ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
+    }
+
+    // Update required attributes
+    const productSelect = productFields?.querySelector('select[name="product_id"]');
+    if (productSelect) {
+        productSelect.required = type === 'product';
     }
 }
 
@@ -114,7 +115,7 @@ function submitFinishBatch(action) {
     const formData = new FormData(modalForm);
     // Using raw CSRF token from <input>, not Flask-WTF
     const csrfTokenInput = modalForm.querySelector('input[name="csrf_token"]');
-
+    
     if (!csrfTokenInput) {
         console.error('CSRF token not found');
         alert('Error: Security token missing. Please refresh the page.');
@@ -126,41 +127,7 @@ function submitFinishBatch(action) {
 
     const batchId = window.location.pathname.split('/').pop();
 
-    // Required: Final quantity
-    const finalQuantityInput = modalForm.querySelector('#final_quantity');
-    if (!finalQuantityInput || !finalQuantityInput.value || parseFloat(finalQuantityInput.value) <= 0) {
-        alert('Please enter the final quantity');
-        return;
-    }
-
-    // Required: Output unit
-    const outputUnitInput = modalForm.querySelector('#output_unit');
-    if (!outputUnitInput || !outputUnitInput.value) {
-        alert('Please select an output unit');
-        return;
-    }
-
-    // Required: Batch type
-    const batchTypeInput = modalForm.querySelector('#batch_type');
-    if (!batchTypeInput || !batchTypeInput.value) {
-        alert('Please select a batch type');
-        return;
-    }
-
-    // Required: Output type and unit
-    const outputType = modalForm.querySelector('#output_type').value;
-    const outputUnit = modalForm.querySelector('#output_unit').value;
-
-    // Only required if output type is 'product'
-    if (outputType === 'product') {
-        const productId = modalForm.querySelector('#product_id').value;
-        if (!productId) {
-            alert('Please select a product');
-            return;
-        }
-    }
-
-    fetch(modalForm.action, {
+    fetch(`/finish_batch/${batchId}/complete`, {
         method: 'POST',
         body: formData,
         headers: {
