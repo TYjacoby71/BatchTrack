@@ -203,7 +203,7 @@ def view_batch_in_progress(batch_identifier):
     # Get existing batch data
     ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
     containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
-    timers = BatchTimer.query.filter_by(batch_id=batch.id).all()
+    timers = BatchTimer.query.filter_by(batch_id=batch.id).order_by(BatchTimer.start_time.desc()).all()
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
