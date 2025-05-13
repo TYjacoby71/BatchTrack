@@ -15,7 +15,6 @@ def list_timers():
         'name': t.name,
         'duration_seconds': t.duration_seconds,
         'start_time': t.start_time.isoformat() if t.start_time else None,
-        'end_time': t.end_time.isoformat() if t.end_time else None,
         'status': t.status
     } for t in timers]
     return render_template('timer_list.html', timers=timer_data)
@@ -28,7 +27,6 @@ def create_timer():
         name=data.get('name'),
         duration_seconds=int(data.get('duration_seconds')),
         start_time=datetime.utcnow(),
-        batch_id=data.get('batch_id'),
         status='pending'
     )
     db.session.add(timer)
@@ -39,7 +37,7 @@ def create_timer():
 @login_required
 def complete_timer(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
-    timer.completed = True
+    timer.status = 'completed'
+    timer.end_time = datetime.utcnow()
     db.session.commit()
-    flash("Timer marked complete.")
-    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=timer.batch_id))
+    return jsonify({'status': 'success'})

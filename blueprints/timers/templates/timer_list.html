@@ -4,20 +4,15 @@
 <div class="container" x-data="timerManager">
   <h2>Timer Management</h2>
 
-  <!-- No timers message -->
-  <div x-show="timers.length === 0" class="alert alert-info">
-    No active timers found.
-  </div>
-
   <!-- Timer List -->
-  <div x-show="timers.length > 0" class="table-responsive">
-    <table class="table">
+  <div class="table-responsive">
+    <table class="table" x-show="timers.length > 0">
       <thead>
         <tr>
           <th>Batch</th>
-          <th>Timer Label</th>
-          <th>Started</th>
-          <th>Due</th>
+          <th>Label</th>
+          <th>Duration</th>
+          <th>Time Left</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -25,26 +20,33 @@
       <tbody>
         <template x-for="timer in timers" :key="timer.id">
           <tr>
-            <td x-text="timer.batch_id"></td>
-            <td x-text="timer.label"></td>
-            <td x-text="formatTime(timer).start"></td>
-            <td x-text="formatTime(timer).due"></td>
+            <td x-text="timer.batch_id || '(Manual)'"></td>
+            <td x-text="timer.name"></td>
+            <td x-text="timer.duration_seconds + ' seconds'"></td>
+            <td x-text="calculateTimeLeft(timer)"></td>
             <td>
-              <span x-show="timer.completed" class="badge bg-success">Completed</span>
-              <span x-show="!timer.completed" class="badge bg-warning">Active</span>
+              <span x-text="timer.status" :class="{
+                'badge bg-success': timer.status === 'completed',
+                'badge bg-warning': timer.status === 'pending',
+                'badge bg-danger': timer.status === 'expired'
+              }"></span>
             </td>
             <td>
-              <template x-if="!timer.completed">
-                <form :action="`/timers/complete/${timer.id}`" method="POST" class="d-inline">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn-sm btn-success">Complete</button>
-                </form>
-              </template>
+              <button 
+                x-show="timer.status === 'pending'"
+                @click="completeTimer(timer.id)" 
+                class="btn btn-sm btn-success">
+                Complete
+              </button>
             </td>
           </tr>
         </template>
       </tbody>
     </table>
+
+    <div x-show="timers.length === 0" class="alert alert-info">
+      No active timers found.
+    </div>
   </div>
 
   <!-- New Timer Form -->
@@ -61,11 +63,11 @@
         <form @submit.prevent="createTimer">
           <div class="mb-3">
             <label class="form-label">Timer Label</label>
-            <input type="text" class="form-control" x-model="newTimerName" required>
+            <input type="text" class="form-control" x-model="newTimer.name" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Duration (seconds)</label>
-            <input type="number" class="form-control" x-model="newTimerDuration" required min="1">
+            <input type="number" class="form-control" x-model="newTimer.duration_seconds" required min="1">
           </div>
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success">Create Timer</button>
@@ -81,31 +83,74 @@
 document.addEventListener('alpine:init', () => {
   Alpine.data('timerManager', () => ({
     timers: {{ timers|tojson|safe }},
-    newTimerName: '',
-    newTimerDuration: '',
     addingTimer: false,
-    
-    formatTime(timer) {
-      const start = new Date(timer.start_time);
-      const due = new Date(timer.due_at);
-      return {
-        start: start.toLocaleString(),
-        due: due.toLocaleString()
-      };
+    newTimer: {
+      name: '',
+      duration_seconds: ''
     },
 
-    createTimer() {
-      this.timers.push({
-        id: Date.now(),
-        batch_id: '(Manual)',
-        label: this.newTimerName,
-        start_time: new Date().toISOString(),
-        due_at: new Date(Date.now() + (this.newTimerDuration * 1000)).toISOString(),
-        completed: false
+    calculateTimeLeft(timer) {
+      if (!timer.start_time) return 'Not Started';
+      const start = new Date(timer.start_time);
+      const now = new Date();
+      const duration = timer.duration_seconds * 1000;
+      const diff = (start.getTime() + duration) - now.getTime();
+      
+      if (diff <= 0) return 'Expired';
+      
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    },
+
+    async createTimer() {
+      const response = await fetch('/timers/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(this.newTimer)
       });
-      this.newTimerName = '';
-      this.newTimerDuration = '';
-      this.addingTimer = false;
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        this.timers.push({
+          ...this.newTimer,
+          id: result.timer_id,
+          start_time: new Date().toISOString(),
+          status: 'pending'
+        });
+        this.newTimer.name = '';
+        this.newTimer.duration_seconds = '';
+        this.addingTimer = false;
+      }
+    },
+
+    async completeTimer(timerId) {
+      const response = await fetch(`/timers/complete/${timerId}`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+      });
+
+      if (response.ok) {
+        const timer = this.timers.find(t => t.id === timerId);
+        if (timer) {
+          timer.status = 'completed';
+        }
+      }
+    },
+
+    init() {
+      setInterval(() => {
+        this.timers = this.timers.map(timer => ({
+          ...timer,
+          status: timer.status === 'pending' && 
+                 this.calculateTimeLeft(timer) === 'Expired' ? 'expired' : timer.status
+        }));
+      }, 1000);
     }
   }));
 });
