@@ -19,3 +19,14 @@ def complete_timer(timer_id):
     db.session.commit()
     flash("Timer marked complete.")
     return redirect(url_for('batches.view_batch_in_progress', batch_identifier=timer.batch_id))
+
+@timers_bp.route('/start/<int:timer_id>', methods=['POST'])
+@login_required
+def start_timer(timer_id):
+    timer = BatchTimer.query.get_or_404(timer_id)
+    timer.start_time = datetime.utcnow()
+    timer.status = 'running'
+    db.session.commit()
+    return jsonify({
+        'start_time': timer.start_time.isoformat()
+    })
