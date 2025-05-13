@@ -69,55 +69,20 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4" x-data="{ 
-        showAllTimers: false,
-        timers: {{ timers|tojson|safe }},
-        currentBatchId: {{ batch.id }}
-     }">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <h4 class="m-0">Timers</h4>
-            <button @click="showAllTimers = !showAllTimers" class="btn btn-sm btn-outline-secondary">
-                🥕 <span x-text="showAllTimers ? 'Show Batch Only' : 'Show All Timers'"></span>
-            </button>
-            {% include 'components/batch/timer_component.html' %}
+    <div class="mt-4">
+        <h4>Timers</h4>
+        {% for timer in timers %}
+        <div class="d-flex gap-2 mb-2 align-items-center">
+            <span class="flex-grow-1">{{ timer.name }}</span>
+            <span>{{ timer.duration_seconds // 60 }}m {{ timer.duration_seconds % 60 }}s</span>
+            <span class="text-muted">(Started: {{ timer.start_time.strftime('%Y-%m-%d %H:%M') if timer.start_time else 'Not started' }})</span>
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-success">Complete</button>
+            </form>
         </div>
-
-        <template x-if="!showAllTimers">
-            <div>
-                <template x-for="timer in timers.filter(t => t.batch_id === currentBatchId)" :key="timer.id">
-                    <div class="d-flex gap-2 mb-2 align-items-center">
-                        <span class="flex-grow-1" x-text="timer.name"></span>
-                        <span x-text="`${Math.floor(timer.duration_seconds / 60)}m ${timer.duration_seconds % 60}s`"></span>
-                        <span class="text-muted" x-text="timer.start_time ? `(Started: ${new Date(timer.start_time).toLocaleString()})` : '(Not started)'"></span>
-                        <form :action="`/timers/complete/${timer.id}`" method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-success">Complete</button>
-                        </form>
-                    </div>
-                </template>
-            </div>
-        </template>
-
-        <template x-if="showAllTimers">
-            <div>
-                <template x-for="timer in timers" :key="timer.id">
-                    <div class="d-flex gap-2 mb-2 align-items-center">
-                        <span class="flex-grow-1">
-                            <span x-text="timer.name"></span>
-                            <template x-if="timer.batch_id !== currentBatchId">
-                                <span class="badge bg-secondary" x-text="`Batch #${timer.batch_id}`"></span>
-                            </template>
-                        </span>
-                        <span x-text="`${Math.floor(timer.duration_seconds / 60)}m ${timer.duration_seconds % 60}s`"></span>
-                        <span class="text-muted" x-text="timer.start_time ? `(Started: ${new Date(timer.start_time).toLocaleString()})` : '(Not started)'"></span>
-                        <form :action="`/timers/complete/${timer.id}`" method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-success">Complete</button>
-                        </form>
-                    </div>
-                </template>
-            </div>
-        </template>
+        {% endfor %}
+        {% include 'components/batch/timer_component.html' %}
     </div>
 
     <!-- Batch Cost Summary -->
