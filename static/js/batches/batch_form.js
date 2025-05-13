@@ -88,20 +88,27 @@ function markBatchFailed() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    // Verify modal form exists on page load
+    const modalForm = document.getElementById('finishBatchModalForm');
+    if (!modalForm) {
+        console.error('Initial modal form check failed - form not found on page load');
+    }
+});
+
 function submitFinishBatch(action) {
     console.log('Submitting batch...');
     const modal = document.getElementById('finishBatchModal');
     const modalForm = document.getElementById('finishBatchModalForm');
 
-    if (!modal) {
-        console.error('Modal not found');
-        alert('Error: Modal not found. Please refresh the page.');
-        return;
-    }
-
-    if (!modalForm) {
-        console.error('Modal form not found');
-        alert('Error: Form not found. Please refresh the page.');
+    // More detailed error logging
+    if (!modal || !modalForm) {
+        console.error('Modal elements check failed:', {
+            modalExists: !!modal,
+            formExists: !!modalForm,
+            formHTML: document.querySelector('#finishBatchModal .modal-body').innerHTML
+        });
+        alert('Error: Form elements not found. Please refresh the page.');
         return;
     }
 
