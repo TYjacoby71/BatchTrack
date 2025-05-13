@@ -15,7 +15,7 @@ def list_timers():
         'id': t.id,
         'batch_id': t.batch_id,
         'name': t.name,
-        'duration_seconds': int(t.duration_seconds) if t.duration_seconds else 0,
+        'duration_seconds': int(t.duration_seconds),
         'start_time': t.start_time.isoformat() if t.start_time else None,
         'end_time': t.end_time.isoformat() if t.end_time else None,
         'status': t.status

@@ -142,8 +142,9 @@ document.addEventListener('alpine:init', () => {
 
       const start = new Date(timer.start_time);
       const now = new Date();
+      const totalSeconds = parseInt(timer.duration_seconds);
       const elapsedSeconds = Math.floor((now - start) / 1000);
-      const remainingSeconds = Math.max(0, timer.duration_seconds - elapsedSeconds);
+      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 
       if (remainingSeconds <= 0) {
         if (timer.status === 'active') {
