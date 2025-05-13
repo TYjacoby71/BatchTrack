@@ -80,7 +80,7 @@
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('timerManager', () => ({
-    timers: JSON.parse('{{ timers|tojson|safe }}'),
+    timers: {{ timers|tojson|safe }},
     newTimerName: '',
     newTimerDuration: '',
     addingTimer: false,
