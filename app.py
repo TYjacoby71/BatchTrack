@@ -68,6 +68,7 @@ from routes.app_routes import app_routes_bp
 # Core blueprints
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(app_routes_bp)
+app.register_blueprint(conversion_bp, url_prefix='/conversion')
 
 # Main feature blueprints
 app.register_blueprint(batches_bp, url_prefix='/batches')
