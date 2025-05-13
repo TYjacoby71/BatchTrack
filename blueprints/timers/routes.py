@@ -64,6 +64,14 @@ def complete_timer(timer_id):
         return jsonify({'status': 'success', 'end_time': now.isoformat()})
     return jsonify({'status': 'error', 'message': 'Timer already completed'})
 
+@timers_bp.route('/delete/<int:timer_id>', methods=['POST'])
+@login_required
+def delete_timer(timer_id):
+    timer = BatchTimer.query.get_or_404(timer_id)
+    db.session.delete(timer)
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
 @timers_bp.route('/status/<int:timer_id>', methods=['POST'])
 @login_required
 def update_timer_status(timer_id):
