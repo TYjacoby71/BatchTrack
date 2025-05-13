@@ -23,10 +23,12 @@
           <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>{{ timer.end_time.strftime('%Y-%m-%d %H:%M') if timer.end_time else '-' }}</td>
           <td>
-            {% if timer.completed %}
+            {% if timer.status == 'completed' %}
             <span class="badge bg-success">Completed</span>
-            {% else %}
+            {% elif timer.status == 'active' %}
             <span class="badge bg-warning">Active</span>
+            {% else %}
+            <span class="badge bg-secondary">Pending</span>
             {% endif %}
           </td>
           <td>
