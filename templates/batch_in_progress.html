@@ -68,7 +68,52 @@
 </template>
 
 
-    <!-- Timer section removed -->
+    <!-- Timer Section -->
+    <div class="mt-4" x-data="{ 
+      timers: {{ batch.timers|tojson }},
+      newTimerName: '',
+      newTimerDuration: '',
+      addingTimer: false
+    }">
+        <h4>Timers</h4>
+        
+        <!-- Timer List -->
+        <div class="timer-list mb-3">
+            <template x-for="timer in timers" :key="timer.id">
+                <div class="border p-2 mb-2 small" x-data="{ 
+                  remaining: timer.expires_at ? new Date(timer.expires_at) - new Date() : 0,
+                  updateTime() {
+                    if (timer.expires_at) {
+                      this.remaining = new Date(timer.expires_at) - new Date();
+                      if (this.remaining > 0) requestAnimationFrame(() => this.updateTime());
+                    }
+                  }
+                }" x-init="updateTime()">
+                    <strong x-text="timer.name"></strong><br>
+                    <span x-show="remaining <= 0">⏰ Expired</span>
+                    <span x-show="remaining > 0">
+                        <span x-text="Math.floor(remaining/60000)"></span>m
+                        <span x-text="Math.floor((remaining%60000)/1000)"></span>s
+                    </span>
+                </div>
+            </template>
+        </div>
+
+        <!-- Add Timer Form -->
+        <button @click="addingTimer = !addingTimer" 
+                class="btn btn-outline-secondary btn-sm mb-2"
+                x-text="addingTimer ? '- Cancel' : '+ Add Timer'"></button>
+
+        <div x-show="addingTimer" class="border p-3 mb-3">
+            <div class="mb-2">
+                <input type="text" x-model="newTimerName" 
+                       class="form-control mb-2" placeholder="Timer Name">
+                <input type="number" x-model="newTimerDuration" 
+                       class="form-control" placeholder="Duration (minutes)">
+            </div>
+            <button @click="saveTimer()" class="btn btn-primary btn-sm">Start Timer</button>
+        </div>
+    </div>
 
     <!-- Batch Cost Summary -->
     <!-- Batch Cost Summary -->
