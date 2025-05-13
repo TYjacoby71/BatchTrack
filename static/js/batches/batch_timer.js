@@ -1,23 +1,16 @@
 
-// Batch timer functionality
-function startTimer(timerId, duration) {
-  const timerElement = document.getElementById(`timer-${timerId}`);
-  if (!timerElement) return;
-
-  const endTime = Date.now() + (duration * 1000);
+// Batch timer functionality 
+function addTimerRow() {
+  const timerList = document.getElementById('timer-list');
+  const timerCount = timerList.children.length;
   
-  const timer = setInterval(() => {
-    const now = Date.now();
-    const remaining = Math.max(0, endTime - now);
-    
-    if (remaining === 0) {
-      clearInterval(timer);
-      timerElement.textContent = 'Timer Complete!';
-      // Alert or notification logic
-    } else {
-      const minutes = Math.floor(remaining / 60000);
-      const seconds = Math.floor((remaining % 60000) / 1000);
-      timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-  }, 1000);
+  const timerRow = document.createElement('div');
+  timerRow.className = 'timer-row d-flex gap-2 mb-2';
+  timerRow.innerHTML = `
+    <input type="text" name="timers[${timerCount}][name]" class="form-control" placeholder="Timer Name">
+    <input type="number" name="timers[${timerCount}][duration_seconds]" class="form-control" placeholder="Duration (seconds)">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  
+  timerList.appendChild(timerRow);
 }
