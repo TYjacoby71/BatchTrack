@@ -51,21 +51,42 @@
 
   <div x-show="showTimerList" class="mt-3" x-transition>
     <div class="table-responsive">
-      <table class="table table-sm">
+      <table class="table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Label</th>
             <th>Duration</th>
+            <th>Time Left</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for timer in timers if timer.batch_id == batch.id %}
+          {% for timer in timers %}
+          {% if timer.batch_id == batch.id and timer.status in ['active', 'completed'] %}
           <tr>
             <td>{{ timer.name }}</td>
             <td>{{ timer.duration_seconds // 60 }}m {{ timer.duration_seconds % 60 }}s</td>
-            <td>{{ timer.status|title }}</td>
+            <td>
+              {% if timer.start_time %}
+                {% if timer.status == 'completed' %}
+                  {% if timer.end_time and (timer.end_time - timer.start_time).total_seconds() < timer.duration_seconds %}
+                    User Ended
+                  {% else %}
+                    Expired
+                  {% endif %}
+                {% else %}
+                  {{ ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int }}s
+                {% endif %}
+              {% else %}
+                Not Started
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge {% if timer.status == 'completed' %}bg-success{% else %}bg-primary{% endif %}">
+                {{ timer.status|title }}
+              </span>
+            </td>
             <td>
               {% if timer.status != 'completed' %}
               <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
@@ -75,6 +96,7 @@
               {% endif %}
             </td>
           </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>
