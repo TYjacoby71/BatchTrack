@@ -32,22 +32,16 @@ function togglePerishableFields() {
     }
 }
 
-function toggleOutputFields() {
-    const type = document.getElementById('output_type').value;
+function toggleProductFields() {
+    const type = document.getElementById('batch_type').value;
     const productFields = document.getElementById('productFields');
-    const ingredientFields = document.getElementById('ingredientFields');
-
+    
     if (productFields) {
         productFields.style.display = type === 'product' ? 'block' : 'none';
-    }
-    if (ingredientFields) {
-        ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
-    }
-
-    // Update required attributes
-    const productSelect = productFields?.querySelector('select[name="product_id"]');
-    if (productSelect) {
-        productSelect.required = type === 'product';
+        const productSelect = productFields.querySelector('select[name="product_id"]');
+        if (productSelect) {
+            productSelect.required = type === 'product';
+        }
     }
 }
 
