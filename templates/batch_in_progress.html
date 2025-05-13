@@ -122,7 +122,8 @@
         <div id="timer-list"></div>
         <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
-    
+    <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-secondary">View Batch Timers</a>
+
     <!-- Timer Scripts -->
     <script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
     <script>

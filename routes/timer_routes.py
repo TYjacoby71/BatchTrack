@@ -9,8 +9,12 @@ timers_bp = Blueprint('timers', __name__, url_prefix='/timers')
 @timers_bp.route('/', methods=['GET'])
 @login_required
 def list_timers():
-    timers = BatchTimer.query.all()
-    return render_template('timer_list.html', timers=timers)
+    batch_id = request.args.get('batch_id', type=int)
+    query = BatchTimer.query
+    if batch_id:
+        query = query.filter_by(batch_id=batch_id)
+    timers = query.all()
+    return render_template('timer_list.html', timers=timers, batch_id=batch_id)
 
 @timers_bp.route('/start/<int:batch_id>', methods=['POST'])
 @login_required
