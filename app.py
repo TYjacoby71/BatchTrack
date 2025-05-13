@@ -65,9 +65,6 @@ from blueprints.api import init_api
 # Get dashboard blueprint from app_routes
 from routes.app_routes import app_routes_bp as dashboard_bp
 
-# Register blueprints
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
-app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 # Core blueprints
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
@@ -88,7 +85,6 @@ app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
 app.register_blueprint(expiration_bp, url_prefix='/expiration')
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 
