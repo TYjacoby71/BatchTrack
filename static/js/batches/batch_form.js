@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (finishModal) {
         finishModal.addEventListener('shown.bs.modal', function () {
             toggleOutputFields();
+            // Reset form validation state when modal is shown
+            const modalForm = document.getElementById('finishBatchModalForm');
+            if (modalForm) {
+                modalForm.reset();
+            }
         });
     }
 
@@ -128,8 +133,8 @@ function submitFinishBatch(action) {
     const batchId = window.location.pathname.split('/').pop();
 
     // Required: Batch yield (final quantity)
-    const batchYield = modalForm.querySelector('#batch_yield').value;
-    if (!batchYield || batchYield <= 0) {
+    const batchYieldInput = modalForm.querySelector('#batch_yield');
+    if (!batchYieldInput || !batchYieldInput.value || parseFloat(batchYieldInput.value) <= 0) {
         alert('Please enter the batch yield');
         return;
     }
