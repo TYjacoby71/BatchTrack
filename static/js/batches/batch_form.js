@@ -64,6 +64,35 @@ function submitBatchCompletion() {
         console.error('Batch completion form not found');
         return;
     }
+
+    const finalQuantityInput = form.querySelector('input[name="final_quantity"]');
+    const outputTypeSelect = form.querySelector('select[name="output_type"]');
+    const outputUnitSelect = form.querySelector('select[name="output_unit"]');
+
+    if (!finalQuantityInput || !outputTypeSelect || !outputUnitSelect) {
+        console.error('Required form fields not found');
+        return;
+    }
+
+    const finalQuantity = finalQuantityInput.value;
+    const outputType = outputTypeSelect.value;
+    const outputUnit = outputUnitSelect.value;
+
+    if (!finalQuantity || parseFloat(finalQuantity) <= 0) {
+        alert('Please enter a valid final quantity greater than 0');
+        return;
+    }
+
+    if (!outputType) {
+        alert('Please select an output type');
+        return;
+    }
+
+    if (!outputUnit) {
+        alert('Please select an output unit');
+        return;
+    }
+
     console.log('Submitting batch...');
     form.submit();
 }
