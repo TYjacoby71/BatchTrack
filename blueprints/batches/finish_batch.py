@@ -12,13 +12,13 @@ def mark_batch_failed(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     return finish_batch_handler(batch, action='fail')
 
-@finish_batch_bp.route('/<int:batch_id>/finish', methods=['POST'])
+@finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
-def finish_batch(batch_id):
+def mark_batch_complete(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    return finish_batch_handler(batch)
+    return finish_batch_handler(batch, action='complete')
 
-def finish_batch_handler(batch, action='finish', force=False):
+def finish_batch_handler(batch, action='complete', force=False):
     """Handle batch completion logic"""
     
     if batch.status != 'in_progress':
@@ -33,7 +33,7 @@ def finish_batch_handler(batch, action='finish', force=False):
         flash("Batch marked as failed. Inventory remains deducted.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
-    # Handle finish action
+    # Handle completion action
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
     output_unit = request.form.get('output_unit')
@@ -65,11 +65,11 @@ def finish_batch_handler(batch, action='finish', force=False):
     try:
         # Verify batch can be finished
         if batch.status != 'in_progress':
-            flash("Only in-progress batches can be finished.")
+            flash("Only in-progress batches can be completed.")
             return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
         # Handle inventory crediting based on batch type
-        if action == "finish":
+        if action == "complete":
             if batch.batch_type == 'ingredient':
                 # Calculate total batch cost from ingredients and containers
                 ingredient_cost = sum((ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
@@ -133,14 +133,9 @@ def finish_batch_handler(batch, action='finish', force=False):
                     return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
             # Update batch status
-            if action == "finish":
-                batch.status = 'complete'
-                batch.completed_at = datetime.utcnow()
-                flash("✅ Batch completed successfully.")
-            else:
-                batch.status = 'failed'
-                batch.failed_at = datetime.utcnow()
-                flash("⚠️ Batch marked as failed.")
+            batch.status = 'completed'
+            batch.completed_at = datetime.utcnow()
+            flash("✅ Batch completed successfully.")
 
         # Save final batch data
         batch.notes = request.form.get("notes", batch.notes)
