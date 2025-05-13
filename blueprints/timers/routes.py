@@ -68,7 +68,7 @@ def complete_timer(timer_id):
 def update_timer_status(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
     data = request.get_json()
-    if data.get('status') in ['active', 'pending', 'completed']:
+    if data.get('status') in ['active', 'completed']:
         timer.status = data['status']
         if timer.status == 'completed':
             timer.end_time = datetime.utcnow()

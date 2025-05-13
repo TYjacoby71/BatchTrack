@@ -26,9 +26,7 @@
             <td>
               <span x-text="timer.status" :class="{
                 'badge bg-success': timer.status === 'completed',
-                'badge bg-primary': timer.status === 'active',
-                'badge bg-warning': timer.status === 'pending',
-                'badge bg-danger': timer.status === 'expired'
+                'badge bg-primary': timer.status === 'active'
               }"></span>
             </td>
             <td>
