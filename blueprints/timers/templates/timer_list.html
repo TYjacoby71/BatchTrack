@@ -1,0 +1,113 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<div class="container" x-data="timerManager">
+  <h2>Timer Management</h2>
+
+  <!-- No timers message -->
+  <div x-show="timers.length === 0" class="alert alert-info">
+    No active timers found.
+  </div>
+
+  <!-- Timer List -->
+  <div x-show="timers.length > 0" class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Batch</th>
+          <th>Timer Label</th>
+          <th>Started</th>
+          <th>Due</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="timer in timers" :key="timer.id">
+          <tr>
+            <td x-text="timer.batch_id"></td>
+            <td x-text="timer.label"></td>
+            <td x-text="formatTime(timer).start"></td>
+            <td x-text="formatTime(timer).due"></td>
+            <td>
+              <span x-show="timer.completed" class="badge bg-success">Completed</span>
+              <span x-show="!timer.completed" class="badge bg-warning">Active</span>
+            </td>
+            <td>
+              <template x-if="!timer.completed">
+                <form :action="`/timers/complete/${timer.id}`" method="POST" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-success">Complete</button>
+                </form>
+              </template>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- New Timer Form -->
+  <div class="mt-4">
+    <button 
+      x-show="!addingTimer"
+      @click="addingTimer = true" 
+      class="btn btn-primary">
+      Add New Timer
+    </button>
+
+    <div x-show="addingTimer" class="card mt-3">
+      <div class="card-body">
+        <form @submit.prevent="createTimer">
+          <div class="mb-3">
+            <label class="form-label">Timer Label</label>
+            <input type="text" class="form-control" x-model="newTimerName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Duration (seconds)</label>
+            <input type="number" class="form-control" x-model="newTimerDuration" required min="1">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Create Timer</button>
+            <button type="button" @click="addingTimer = false" class="btn btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('timerManager', () => ({
+    timers: {{ timers|tojson }},
+    newTimerName: '',
+    newTimerDuration: '',
+    addingTimer: false,
+    
+    formatTime(timer) {
+      const start = new Date(timer.start_time);
+      const due = new Date(timer.due_at);
+      return {
+        start: start.toLocaleString(),
+        due: due.toLocaleString()
+      };
+    },
+
+    createTimer() {
+      this.timers.push({
+        id: Date.now(),
+        batch_id: '(Manual)',
+        label: this.newTimerName,
+        start_time: new Date().toISOString(),
+        due_at: new Date(Date.now() + (this.newTimerDuration * 1000)).toISOString(),
+        completed: false
+      });
+      this.newTimerName = '';
+      this.newTimerDuration = '';
+      this.addingTimer = false;
+    }
+  }));
+});
+</script>
+{% endblock %}
