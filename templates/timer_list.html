@@ -33,7 +33,7 @@
           </td>
           <td>
             {% if timer.status != 'completed' %}
-            <button type="button" class="btn btn-sm btn-success" onclick="completeTimer({{ timer.id }})">Complete</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="completeTimer({{ timer.id }})">Complete</button>
             {% endif %}
           </td>
         </tr>
@@ -42,4 +42,6 @@
     </table>
   </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
 {% endblock %}
