@@ -72,7 +72,9 @@
     <div class="mt-4">
         <h4>Timers</h4>
         <div id="timer-list">
-            {% for t in timers %}
+            <a href="{{ url_for('timers.list_timers') }}" class="btn btn-primary">
+                <i class="fas fa-clock"></i> Manage Timers
+            </a> t in timers %}
             <div class="timer-row d-flex gap-2 mb-2">
                 <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
                 <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
