@@ -82,6 +82,11 @@
             <input type="text" class="form-control" x-model="duration" placeholder="Enter duration">
           </div>
           <div class="d-flex gap-2">
+            <input type="number" class="form-control" x-model="hours" placeholder="H" min="0">
+              <input type="number" class="form-control" x-model="minutes" placeholder="M" min="0">
+              <input type="number" class="form-control" x-model="seconds" placeholder="S" min="0">
+          </div>
+          <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success">Create Timer</button>
             <button type="button" @click="addingTimer = false" class="btn btn-secondary">Cancel</button>
           </div>
@@ -153,12 +158,12 @@ document.addEventListener('alpine:init', () => {
 
     parseTimeInput(input) {
       if (!input) return 0;
-      
+
       // Check if input is just a number (assumed seconds)
       if (/^\d+$/.test(input.toString())) {
         return parseInt(input);
       }
-      
+
       // Try to parse "1h 30m" or "90m" style input
       const matches = input.toString().toLowerCase().match(/(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s?)?/);
       if (matches) {
@@ -167,7 +172,7 @@ document.addEventListener('alpine:init', () => {
         const seconds = parseInt(matches[3] || 0);
         return (hours * 3600) + (minutes * 60) + seconds;
       }
-      
+
       return 0;
     },
 
