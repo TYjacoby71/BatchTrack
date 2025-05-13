@@ -43,5 +43,28 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<script>
+function completeTimer(timerId) {
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  
+  fetch(`/timers/complete/${timerId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      window.location.reload();
+    }
+  })
+  .catch(error => {
+    console.error('Error completing timer:', error);
+    alert('Failed to complete timer');
+  });
+}
+</script>
 {% endblock %}
