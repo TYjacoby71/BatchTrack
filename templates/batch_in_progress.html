@@ -85,12 +85,16 @@
         <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
     
+    <!-- Timer Scripts -->
+    <script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
     <script>
         const batchId = {{ batch.id }};
-        // Initialize existing active timers
-        {% for t in timers if t.status == 'running' %}
-            updateTimerCountdown({{ t.id }}, new Date('{{ t.end_time.isoformat() }}'));
-        {% endfor %}
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize existing active timers
+            {% for t in timers if t.status == 'running' %}
+                updateTimerCountdown({{ t.id }}, new Date('{{ t.end_time.isoformat() }}'));
+            {% endfor %}
+        });
     </script>
 
     <!-- Batch Cost Summary -->
