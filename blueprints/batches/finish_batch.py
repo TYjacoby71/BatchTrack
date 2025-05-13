@@ -28,8 +28,8 @@ def complete_batch(batch_id):
     # Check active timers unless force flag is set
     if not request.form.get('force'):
         active_timers = BatchTimer.query.filter_by(
-            batch_id=batch.id, 
-            completed=False
+            batch_id=batch.id,
+            status='pending'
         ).all()
         if active_timers:
             flash("This batch has active timers. Complete timers or force finish.", "warning")

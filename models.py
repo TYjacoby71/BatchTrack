@@ -150,11 +150,11 @@ class ExtraBatchContainer(db.Model):
 class BatchTimer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
-    name = db.Column(db.String(64))
-    duration_seconds = db.Column(db.Integer)
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    status = db.Column(db.String(32), default='pending')
+    name = db.Column(db.String(64), nullable=True)
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(32), nullable=True, default='pending')
 
 class ExtraBatchIngredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)

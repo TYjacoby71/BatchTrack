@@ -69,19 +69,31 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4">
+    <div class="mt-4" x-data="{ 
+      timers: {{ timers|tojson }},
+      addTimer() {
+        this.timers.push({
+          name: '',
+          duration_seconds: null,
+          start_time: null
+        });
+      },
+      removeTimer(index) {
+        this.timers.splice(index, 1);
+      }
+    }">
         <h4>Timers</h4>
         <div id="timer-list">
-            {% for t in timers %}
-            <div class="timer-row d-flex gap-2 mb-2">
-                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
-                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
-                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-            </div>
-            {% endfor %}
+            <template x-for="(timer, index) in timers" :key="index">
+                <div class="timer-row d-flex gap-2 mb-2">
+                    <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" placeholder="Timer Name">
+                    <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" placeholder="Duration (seconds)">
+                    <span class="text-muted align-self-center" x-text="timer.start_time ? '(Started: ' + new Date(timer.start_time).toLocaleString() + ')' : '(Not started)'"></span>
+                    <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
+                </div>
+            </template>
         </div>
-        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        <button type="button" @click="addTimer()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
 
     <!-- Batch Cost Summary -->
