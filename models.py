@@ -156,23 +156,6 @@ class BatchTimer(db.Model):
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(32), nullable=True, default='pending')
 
-    def to_dict(self):
-        from datetime import timedelta
-        expires_at = None
-        if self.start_time and self.duration_seconds:
-            expires_at = (self.start_time + timedelta(seconds=self.duration_seconds))
-            
-        return {
-            'id': self.id,
-            'batch_id': self.batch_id,
-            'name': self.name,
-            'duration_seconds': self.duration_seconds,
-            'start_time': self.start_time.isoformat() if self.start_time else None,
-            'end_time': self.end_time.isoformat() if self.end_time else None,
-            'expires_at': expires_at.isoformat() if expires_at else None,
-            'status': self.status
-        }
-
 class ExtraBatchIngredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
