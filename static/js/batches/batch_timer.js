@@ -106,20 +106,19 @@ function cancelTimer(timerId) {
 }
 
 // Initialize any existing timers
-document.addEventListener('DOMContentLoaded', () => {
-  const activeTimers = document.querySelectorAll('.active-timer-row');
+function initializeTimers() {
+  const activeTimers = document.querySelectorAll('[id^="timer-"]');
   activeTimers.forEach(timer => {
     const timerId = timer.id.split('-')[1];
     const endTimeElement = timer.querySelector('.timer-end');
-    const endTimeStr = endTimeElement.textContent.split(': ')[1];
-    const endTime = new Date(endTimeStr);
-    
-    // Only initialize if timer hasn't ended
-    if (endTime > new Date()) {
-      updateTimerCountdown(timerId, endTime);
+    if (endTimeElement && endTimeElement.dataset.endTime) {
+      const endTime = new Date(endTimeElement.dataset.endTime);
+      if (endTime > new Date()) {
+        updateTimerCountdown(timerId, endTime);
+      }
     }
   });
-});
+}
 function completeTimer(timerId) {
   const csrfToken = document.querySelector('input[name="csrf_token"]').value;
   

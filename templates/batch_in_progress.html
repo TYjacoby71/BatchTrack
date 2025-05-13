@@ -125,14 +125,7 @@
     <script>
         window.batchId = {{ batch.id }};
         document.addEventListener('DOMContentLoaded', function() {
-            const activeTimers = document.querySelectorAll('.active-timer-row');
-            activeTimers.forEach(timer => {
-                const timerId = timer.id.split('-')[1];
-                const endTimeStr = timer.querySelector('.timer-end').dataset.endTime;
-                if (endTimeStr) {
-                    updateTimerCountdown(timerId, new Date(endTimeStr));
-                }
-            });
+            initializeTimers();
         });
     </script>
 
