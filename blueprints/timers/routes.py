@@ -9,6 +9,8 @@ from . import timers_bp
 @login_required
 def list_timers():
     timers = BatchTimer.query.all()
+    active_batches = Batch.query.filter_by(status='in_progress').all()
+    
     timer_data = [{
         'id': t.id,
         'batch_id': t.batch_id,
@@ -17,7 +19,15 @@ def list_timers():
         'start_time': t.start_time.isoformat() if t.start_time else None,
         'status': t.status
     } for t in timers]
-    return render_template('timer_list.html', timers=timer_data)
+    
+    active_batch_data = [{
+        'id': b.id,
+        'recipe_name': b.recipe.name if b.recipe else None
+    } for b in active_batches]
+    
+    return render_template('timer_list.html', 
+                         timers=timer_data,
+                         active_batches=active_batch_data)
 
 @timers_bp.route('/create', methods=['POST'])
 @login_required
