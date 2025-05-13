@@ -132,6 +132,26 @@ function addExtraContainerRow() {
     });
 }
 
+function updateNotesAndTags(event) {
+    const form = document.getElementById('saveAndExitForm');
+    const notes = document.querySelector('textarea[name="notes"]').value;
+    const tags = document.querySelector('input[name="tags"]').value;
+    
+    // Add the current values as hidden fields
+    const notesInput = document.createElement('input');
+    notesInput.type = 'hidden';
+    notesInput.name = 'notes';
+    notesInput.value = notes;
+    
+    const tagsInput = document.createElement('input');
+    tagsInput.type = 'hidden';
+    tagsInput.name = 'tags';
+    tagsInput.value = tags;
+    
+    form.appendChild(notesInput);
+    form.appendChild(tagsInput);
+}
+
 function saveExtraContainers() {
     const rows = document.querySelectorAll(".extra-container-row");
     const extras = Array.from(rows).map(row => ({
