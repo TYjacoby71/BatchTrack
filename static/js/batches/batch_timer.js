@@ -7,9 +7,8 @@ function addTimerRow() {
   const row = document.createElement('div');
   row.className = 'timer-row d-flex gap-2 mb-2';
   row.innerHTML = `
-    <input type="text" name="timers[${timerCount}][name]" class="form-control" placeholder="Timer Name" required>
-    <input type="number" name="timers[${timerCount}][duration_seconds]" class="form-control" placeholder="Duration (minutes)" required min="1" step="1" 
-           onchange="this.value = Math.floor(this.value * 60)">
+    <input type="text" name="timer_name" class="form-control" placeholder="Timer Name" required>
+    <input type="number" name="duration_minutes" class="form-control" placeholder="Duration (minutes)" required min="1" step="1">
     <button type="button" class="btn btn-primary btn-sm start-timer" onclick="startTimer(this)">▶ Start</button>
     <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
   `;
@@ -18,12 +17,17 @@ function addTimerRow() {
 
 function startTimer(btn) {
   const row = btn.parentElement;
-  const nameInput = row.querySelector('input[name*="[name]"]');
-  const durationInput = row.querySelector('input[name*="[duration_seconds]"]');
+  const nameInput = row.querySelector('input[name="timer_name"]');
+  const durationInput = row.querySelector('input[name="duration_minutes"]');
   
+  if (!nameInput.value || !durationInput.value) {
+    alert('Please fill in both timer name and duration');
+    return;
+  }
+
   const timerData = {
     name: nameInput.value,
-    duration_seconds: parseInt(durationInput.value),
+    duration_seconds: parseInt(durationInput.value) * 60,
     csrf_token: document.querySelector('input[name="csrf_token"]').value
   };
 
@@ -31,13 +35,13 @@ function startTimer(btn) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-CSRFToken': timerData.csrf_token
     },
     body: JSON.stringify(timerData)
   })
   .then(response => response.json())
   .then(data => {
     if (data.status === 'success') {
-      // Move timer to active timers section
       const activeTimers = document.getElementById('active-timers');
       const timerElement = document.createElement('div');
       timerElement.className = 'active-timer-row d-flex gap-2 mb-2 align-items-center';
@@ -51,9 +55,12 @@ function startTimer(btn) {
       activeTimers.appendChild(timerElement);
       row.remove();
       
-      // Start countdown
       updateTimerCountdown(data.timer_id, new Date(data.end_time));
     }
+  })
+  .catch(error => {
+    console.error('Error starting timer:', error);
+    alert('Failed to start timer');
   });
 }
 
@@ -77,11 +84,13 @@ function updateTimerCountdown(timerId, endTime) {
 }
 
 function cancelTimer(timerId) {
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  
   fetch(`/timers/cancel/${timerId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+      'X-CSRFToken': csrfToken
     }
   })
   .then(response => response.json())
@@ -89,5 +98,19 @@ function cancelTimer(timerId) {
     if (data.status === 'success') {
       document.querySelector(`#timer-${timerId}`).remove();
     }
+  })
+  .catch(error => {
+    console.error('Error canceling timer:', error);
+    alert('Failed to cancel timer');
   });
 }
+
+// Initialize any existing timers
+document.addEventListener('DOMContentLoaded', () => {
+  const activeTimers = document.querySelectorAll('.active-timer-row');
+  activeTimers.forEach(timer => {
+    const timerId = timer.id.split('-')[1];
+    const endTimeStr = timer.querySelector('.timer-end').textContent.split(': ')[1];
+    updateTimerCountdown(timerId, new Date(endTimeStr));
+  });
+});
