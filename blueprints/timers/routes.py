@@ -35,12 +35,20 @@ def list_timers():
 @login_required
 def create_timer():
     data = request.get_json()
-    timer = BatchTimer(
-        name=data.get('name'),
-        duration_seconds=int(data.get('duration_seconds')),
-        batch_id=int(data.get('batch_id')),
-        start_time=datetime.utcnow(),
-        status='active'
+    try:
+        duration = int(data.get('duration_seconds', 0))
+        if duration <= 0:
+            return jsonify({'status': 'error', 'message': 'Invalid duration'}), 400
+            
+        batch_id = data.get('batch_id')
+        batch_id = int(batch_id) if batch_id else None
+            
+        timer = BatchTimer(
+            name=data.get('name'),
+            duration_seconds=duration,
+            batch_id=batch_id,
+            start_time=datetime.utcnow(),
+            status='active'
     )
     db.session.add(timer)
     db.session.commit()
