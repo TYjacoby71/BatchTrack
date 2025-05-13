@@ -89,28 +89,15 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const modal = document.getElementById('finishBatchModal');
-    if (!modal) {
-        console.error('Modal not found');
-        return;
-    }
+    const modalForm = document.getElementById('finishBatchModalForm');
 
-    const modalForm = modal.querySelector('#finishBatchModalForm');
     if (!modalForm) {
         console.error('Modal form not found');
         return;
     }
 
     const formData = new FormData(modalForm);
-    const csrfTokenInput = modalForm.querySelector('input[name="csrf_token"]');
-    
-    if (!csrfTokenInput) {
-        console.error('CSRF token not found');
-        alert('Error: Security token missing. Please refresh the page.');
-        return;
-    }
-
-    const csrfToken = csrfTokenInput.value;
+    const csrfToken = modalForm.querySelector('input[name="csrf_token"]').value;
 
     formData.append('action', action);
 
