@@ -35,10 +35,10 @@ def complete_batch(batch_id):
             flash("This batch has active timers. Complete timers or force finish.", "warning")
             return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
-    # Get completion details
+    # Get completion details from batch
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
-    # output_unit = request.form.get('output_unit')
+    yield_unit = batch.recipe.predicted_yield_unit
 
     # Validate required fields
     if not all([output_type, final_quantity > 0]):
