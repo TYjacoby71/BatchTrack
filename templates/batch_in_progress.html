@@ -21,11 +21,18 @@
 
 
 <!-- EXTRA INGREDIENTS SECTION -->
-<div class="mt-4">
-    <h4>Extra Ingredients Used</h4>
-    <div id="extra-ingredients-container"></div>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
-    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
+<div class="mt-4" x-data="{ showExtras: false }">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4>Extra Ingredients Used</h4>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="showExtras = !showExtras">
+            <span x-text="showExtras ? '🔼 Hide' : '🔽 Show'"></span>
+        </button>
+    </div>
+    <div x-show="showExtras">
+        <div id="extra-ingredients-container"></div>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
+        <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
+    </div>
 </div>
 
 <template id="extra-ingredient-template">
@@ -47,11 +54,18 @@
 </template>
 
     <!-- EXTRA CONTAINERS SECTION -->
-<div class="mt-4">
-    <h4>Extra Containers Used</h4>
-    <div id="extra-containers-container"></div>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraContainerRow()">➕ Add Extra Container</button>
-    <button type="button" class="btn btn-primary" onclick="saveExtraContainers()">💾 Save Extra Containers</button>
+<div class="mt-4" x-data="{ showContainers: false }">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4>Extra Containers Used</h4>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="showContainers = !showContainers">
+            <span x-text="showContainers ? '🔼 Hide' : '🔽 Show'"></span>
+        </button>
+    </div>
+    <div x-show="showContainers">
+        <div id="extra-containers-container"></div>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraContainerRow()">➕ Add Extra Container</button>
+        <button type="button" class="btn btn-primary" onclick="saveExtraContainers()">💾 Save Extra Containers</button>
+    </div>
 </div>
 
 <template id="extra-container-template">
