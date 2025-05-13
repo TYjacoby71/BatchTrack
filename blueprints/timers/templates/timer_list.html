@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container" x-data="timerManager">
@@ -133,14 +132,14 @@ document.addEventListener('alpine:init', () => {
       const now = new Date();
       const duration = timer.duration_seconds * 1000;
       const diff = (start.getTime() + duration) - now.getTime();
-      
+
       if (diff <= 0) {
         if (timer.status !== 'completed') {
           this.completeTimer(timer.id);
         }
         return 'Expired';
       }
-      
+
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
       return `${minutes}m ${seconds}s`;

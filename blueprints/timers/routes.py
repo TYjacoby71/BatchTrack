@@ -57,7 +57,7 @@ def complete_timer(timer_id):
     else:
         is_expired = False
         
-    if timer.status != 'completed' and (is_expired or request.args.get('force')):
+    if timer.status == 'active':
         timer.status = 'completed'
         timer.end_time = now
         db.session.commit()
