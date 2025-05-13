@@ -15,9 +15,11 @@ def list_timers():
         'id': t.id,
         'batch_id': t.batch_id,
         'name': t.name,
-        'duration_seconds': t.duration_seconds,
+        'duration_seconds': int(t.duration_seconds) if t.duration_seconds else 0,
         'start_time': t.start_time.isoformat() if t.start_time else None,
-        'status': t.status
+        'end_time': t.end_time.isoformat() if t.end_time else None,
+        'status': t.status,
+        'original_duration': int(t.duration_seconds) if t.duration_seconds else 0
     } for t in timers]
     
     active_batch_data = [{
@@ -36,6 +38,7 @@ def create_timer():
     timer = BatchTimer(
         name=data.get('name'),
         duration_seconds=int(data.get('duration_seconds')),
+        batch_id=int(data.get('batch_id')),
         start_time=datetime.utcnow(),
         status='active'
     )
@@ -56,10 +59,19 @@ def complete_timer(timer_id):
     else:
         is_expired = False
         
-    if timer.status != 'completed' and (is_expired or request.args.get('force')):
+    if timer.status == 'active':
         timer.status = 'completed'
         timer.end_time = now
         db.session.commit()
+        return jsonify({'status': 'success', 'end_time': now.isoformat()})
+    return jsonify({'status': 'error', 'message': 'Timer already completed'})
+
+@timers_bp.route('/delete/<int:timer_id>', methods=['POST'])
+@login_required
+def delete_timer(timer_id):
+    timer = BatchTimer.query.get_or_404(timer_id)
+    db.session.delete(timer)
+    db.session.commit()
     return jsonify({'status': 'success'})
 
 @timers_bp.route('/status/<int:timer_id>', methods=['POST'])
@@ -67,9 +79,16 @@ def complete_timer(timer_id):
 def update_timer_status(timer_id):
     timer = BatchTimer.query.get_or_404(timer_id)
     data = request.get_json()
-    if data.get('status') in ['active', 'pending', 'completed']:
-        timer.status = data['status']
-        if timer.status == 'completed':
-            timer.end_time = datetime.utcnow()
+    now = datetime.utcnow()
+    
+    if data.get('status') == 'completed':
+        timer.status = 'completed'
+        timer.end_time = now
         db.session.commit()
-    return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'end_time': now.isoformat()})
+    elif data.get('status') == 'active':
+        timer.status = 'active'
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    
+    return jsonify({'status': 'error', 'message': 'Invalid status'})
