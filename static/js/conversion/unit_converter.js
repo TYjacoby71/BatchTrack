@@ -1,9 +1,19 @@
 
 // Unit conversion functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const converterForm = document.getElementById('converterForm');
+  if (converterForm) {
+    converterForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      convertUnits();
+    });
+  }
+});
+
 function convertUnits() {
-  const amount = document.getElementById('amount').value;
-  const fromUnit = document.getElementById('fromUnit').value;
-  const toUnit = document.getElementById('toUnit').value;
+  const amount = document.querySelector('#converterForm input[name="amount"]').value;
+  const fromUnit = document.querySelector('#converterForm select[name="from_unit"]').value;
+  const toUnit = document.querySelector('#converterForm select[name="to_unit"]').value;
   const ingredientId = document.getElementById('ingredientId').value;
   const resultDiv = document.getElementById('converterResult');
 

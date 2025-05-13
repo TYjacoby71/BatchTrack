@@ -62,16 +62,12 @@ from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 
 
-# Register blueprints
-app.register_blueprint(fifo_bp)
-app.register_blueprint(expiration_bp)
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
-app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(product_bp)
+# Get app routes blueprint
+from routes.app_routes import app_routes_bp
+
 # Core blueprints
-app.register_blueprint(app_routes_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
-app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+app.register_blueprint(app_routes_bp)
 
 # Main feature blueprints
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -89,7 +85,6 @@ app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(fifo_bp, url_prefix='/fifo')
 app.register_blueprint(expiration_bp, url_prefix='/expiration')
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 

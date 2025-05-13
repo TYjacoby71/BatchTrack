@@ -21,16 +21,15 @@ def finish_batch(batch_id):
 def finish_batch_handler(batch, action='finish', force=False):
     """Handle batch completion logic"""
     
-    # Handle fail action
+    if batch.status != 'in_progress':
+        flash("Only in-progress batches can be modified.")
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+
     if action == 'fail':
-        if batch.status != 'in_progress':
-            flash("Only in-progress batches can be marked as failed.")
-            return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-
         batch.status = 'failed'
-        batch.completed_at = datetime.utcnow()
+        batch.failed_at = datetime.utcnow()
         db.session.commit()
-
+        
         flash("Batch marked as failed. Inventory remains deducted.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
@@ -133,22 +132,19 @@ def finish_batch_handler(batch, action='finish', force=False):
                     flash("This batch has active timers. Complete timers or confirm finish.", "warning")
                     return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
-            # Update batch completion status
-            batch.status = 'completed'
-            batch.completed_at = datetime.utcnow()
+            # Update batch status
+            if action == "finish":
+                batch.status = 'complete'
+                batch.completed_at = datetime.utcnow()
+                flash("✅ Batch completed successfully.")
+            else:
+                batch.status = 'failed'
+                batch.failed_at = datetime.utcnow()
+                flash("⚠️ Batch marked as failed.")
 
         # Save final batch data
         batch.notes = request.form.get("notes", batch.notes)
         batch.tags = request.form.get("tags", batch.tags)
-        batch.completed_at = datetime.utcnow()
-
-        # Set status based on action
-        if action == "finish":
-            batch.status = "completed"
-            flash("✅ Batch marked as completed.")
-        elif action == "fail":
-            batch.status = "failed"
-            flash("⚠️ Batch marked as failed.")
 
         db.session.commit()
         return redirect(url_for('batches.list_batches'))
