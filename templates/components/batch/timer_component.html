@@ -5,6 +5,7 @@
   hours: '',
   minutes: '',
   seconds: '',
+  csrfToken: document.querySelector('input[name=csrf_token]').value,
   calculateTotalSeconds() {
     return (parseInt(this.hours || 0) * 3600) + 
            (parseInt(this.minutes || 0) * 60) + 
@@ -21,7 +22,7 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('meta[name=csrf_token]').content
+        'X-CSRFToken': this.csrfToken
       },
       body: JSON.stringify({
         name: this.name,
@@ -33,6 +34,8 @@
     const result = await response.json();
     if (result.status === 'success') {
       window.location.reload();
+    } else {
+      alert('Failed to create timer');
     }
   }
 }">
