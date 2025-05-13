@@ -80,46 +80,41 @@ function markBatchFailed() {
     }
 }
 
-async function submitFinishBatch(action) {
-    try {
-        // Save extras first
-        await new Promise((resolve, reject) => {
-            saveExtras(() => resolve(), reject);
-        });
-        
-        // Then save containers
-        await new Promise((resolve, reject) => {
-            saveExtraContainers(() => resolve(), reject);
-        });
+function submitFinishBatch(action) {
+    const modalForm = document.getElementById('finishBatchModalForm');
+    
+    if (!modalForm) {
+        console.error('Modal form not found');
+        return;
+    }
 
-        const modalForm = document.getElementById('finishBatchModalForm');
-        if (!modalForm) {
-            throw new Error('Modal form not found');
+    const formData = new FormData(modalForm);
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+    formData.append('action', action);
+
+    const batchId = window.location.pathname.split('/').pop();
+
+    fetch(`/finish-batch/${batchId}/finish`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Accept': 'application/json'
         }
-
-        const formData = new FormData(modalForm);
-        formData.append('action', action);
-        
-        const batchId = window.location.pathname.split('/').pop();
-        const response = await fetch(`/finish-batch/${batchId}/finish`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value,
-                'Accept': 'application/json'
-            }
-        });
-
+    })
+    .then(response => {
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to finish batch');
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to finish batch');
+            });
         }
-
         window.location.href = '/batches/';
-    } catch (error) {
+    })
+    .catch(error => {
         console.error('Error:', error);
         alert('Error finishing batch: ' + error.message);
-    }
+    });
 }
 
 function saveBatchAndExit() {
