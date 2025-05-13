@@ -1,7 +1,11 @@
 
+{% macro csrf_token() %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
+{% endmacro %}
+
 {% macro csrf_form(action='', method='post', classes='') %}
 <form action="{{ action }}" method="{{ method }}" class="{{ classes }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ csrf_token() }}
     {{ caller() }}
 </form>
 {% endmacro %}
