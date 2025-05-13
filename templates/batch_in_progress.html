@@ -93,9 +93,9 @@
           const data = await response.json();
           if (data.status === 'success') {
             this.showForm = false;
+            alert(`Timer "${this.timerName}" started`);
             this.timerName = '';
             this.duration = '';
-            window.location.href = '{{ url_for('timers.list_timers', batch_id=batch.id) }}';
           }
         } catch (error) {
           console.error('Error starting timer:', error);
