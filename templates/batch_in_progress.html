@@ -199,7 +199,12 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="button" onclick="saveBatchAndExit()" class="btn btn-secondary">Save and Exit</button>
+            <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="notes" value="{{ batch.notes or '' }}">
+                <input type="hidden" name="tags" value="{{ batch.tags or '' }}">
+                <button type="submit" class="btn btn-secondary">Save and Exit</button>
+            </form>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>
