@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="finishBatchModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -9,6 +8,7 @@
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="batch_id" value="{{ batch.id }}">
           <!-- Batch Type Selection -->
           <div class="form-group mb-3">
             <label for="output_type">Batch Type:</label>
@@ -29,7 +29,7 @@
                 {% endfor %}
               </select>
             </div>
-            
+
             <div class="mb-3">
               <label for="variant_label">Variant</label>
               <select name="variant_label" id="variant_label" class="form-select">
