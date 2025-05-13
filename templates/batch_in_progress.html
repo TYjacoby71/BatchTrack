@@ -70,86 +70,30 @@
 
     <!-- TIMER SECTION -->
     <div class="mt-4" x-data="{ 
-      timers: [],
-      timerName: '',
-      timerDuration: null,
+      timers: {{ timers|tojson }},
       addTimer() {
-        if (this.timerName && this.timerDuration) {
-          this.timers.push({
-            name: this.timerName,
-            duration_seconds: this.timerDuration,
-            start_time: null,
-            status: 'pending'
-          });
-          this.timerName = '';
-          this.timerDuration = null;
-        }
+        this.timers.push({
+          name: '',
+          duration_seconds: null,
+          start_time: null
+        });
       },
       removeTimer(index) {
         this.timers.splice(index, 1);
-      },
-      async startTimer(index, timerId) {
-        try {
-          const response = await fetch(`/timers/start/${timerId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
-            }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            this.timers[index].start_time = data.start_time;
-            this.timers[index].status = 'running';
-          }
-        } catch (error) {
-          console.error('Error starting timer:', error);
-        }
       }
     }">
         <h4>Timers</h4>
-        <!-- Add Timer Button -->
-        <div class="d-flex gap-2 mb-4">
-            <input type="text" x-model="timerName" class="form-control" placeholder="Timer Name">
-            <input type="number" x-model="timerDuration" class="form-control" placeholder="Duration (seconds)">
-            <button type="button" @click="addTimer()" class="btn btn-outline-secondary">+ Add Timer</button>
-        </div>
-
-        <!-- Unstarted and Running Timers -->
-        <div class="mb-4">
-            <h5>Timers</h5>
-            <!-- Unstarted Timers -->
-            <template x-for="(timer, index) in timers.filter(t => !t.start_time)" :key="index">
+        <div id="timer-list">
+            <template x-for="(timer, index) in timers" :key="index">
                 <div class="timer-row d-flex gap-2 mb-2">
                     <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" placeholder="Timer Name">
                     <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" placeholder="Duration (seconds)">
-                    <button type="button" class="btn btn-success btn-sm" @click="startTimer(index, timer.id)">Start</button>
-                    <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
-                </div>
-            </template>
-            <!-- Running Timers -->
-            <template x-for="(timer, index) in timers.filter(t => t.status === 'running')" :key="index">
-                <div class="timer-row d-flex gap-2 mb-2">
-                    <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" readonly>
-                    <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" readonly>
-                    <span class="text-muted align-self-center" x-text="'Started: ' + new Date(timer.start_time).toLocaleString()"></span>
+                    <span class="text-muted align-self-center" x-text="timer.start_time ? '(Started: ' + new Date(timer.start_time).toLocaleString() + ')' : '(Not started)'"></span>
                     <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
                 </div>
             </template>
         </div>
-
-        <!-- Completed Timers -->
-        <div>
-            <h5>Completed Timers</h5>
-            <template x-for="(timer, index) in timers.filter(t => t.status === 'completed')" :key="index">
-                <div class="timer-row d-flex gap-2 mb-2">
-                    <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" readonly>
-                    <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" readonly>
-                    <span class="text-success align-self-center">✓ Completed</span>
-                    <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
-                </div>
-            </template>
-        </div>
+        <button type="button" @click="addTimer()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
 
     <!-- Batch Cost Summary -->
