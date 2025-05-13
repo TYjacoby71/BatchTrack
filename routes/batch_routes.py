@@ -234,7 +234,8 @@ def view_batch_in_progress(batch_identifier):
                          batch_cost=batch_cost,
                          product_quantity=product_quantity,
                          inventory_items=inventory_items,
-                         all_ingredients=all_ingredients)
+                         all_ingredients=all_ingredients,
+                         timers=[] if not BatchTimer.query.filter_by(batch_id=batch.id).all() else BatchTimer.query.filter_by(batch_id=batch.id).all())
 
 @batches_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
