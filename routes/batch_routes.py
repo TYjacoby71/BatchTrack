@@ -207,6 +207,10 @@ def view_batch_in_progress(batch_identifier):
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
+        
+    # Recipe data comes through the batch relationship
+    recipe = batch.recipe  # Use the relationship
+    
     # Get units for dropdown
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
