@@ -49,9 +49,13 @@ def create_timer():
             batch_id=batch_id,
             start_time=datetime.utcnow(),
             status='active'
-    )
-    db.session.add(timer)
-    db.session.commit()
+        )
+        db.session.add(timer)
+        db.session.commit()
+        return jsonify({'status': 'success', 'timer_id': timer.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
     return jsonify({'status': 'success', 'timer_id': timer.id})
 
 @timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
