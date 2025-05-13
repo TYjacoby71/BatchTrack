@@ -19,6 +19,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function togglePerishableFields() {
+    const isPerishable = document.getElementById('is_perishable').checked;
+    const perishableFields = document.getElementById('perishableFields');
+    if (perishableFields) {
+        perishableFields.style.display = isPerishable ? 'block' : 'none';
+    }
+}
+
 function toggleOutputFields() {
     const type = document.getElementById('output_type').value;
     const productFields = document.getElementById('productFields');
