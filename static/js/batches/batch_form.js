@@ -95,7 +95,7 @@ function submitFinishBatch(action) {
 
     const batchId = window.location.pathname.split('/').pop();
 
-    fetch(`/finish-batch/${batchId}/finish`, {
+    fetch(`/batches/finish/${batchId}`, {
         method: 'POST',
         body: formData,
         headers: {

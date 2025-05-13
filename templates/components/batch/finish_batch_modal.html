@@ -7,7 +7,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="finishBatchModalForm" method="post">
+        <form id="finishBatchModalForm" method="post" action="">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <!-- Batch Type Selection -->
           <div class="form-group mb-3">
