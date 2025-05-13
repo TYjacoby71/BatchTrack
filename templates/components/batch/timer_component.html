@@ -5,6 +5,9 @@
   name: '',
   hours: '',
   minutes: '',
+  statusMessage: '',
+  showStatus: false,
+  statusType: 'success',
   seconds: '',
   csrfToken: document.querySelector('input[name=csrf_token]').value,
   calculateTotalSeconds() {
@@ -34,13 +37,23 @@
 
     const result = await response.json();
     if (result.status === 'success') {
-      window.location.reload();
+      this.statusType = 'success';
+      this.statusMessage = 'Timer created successfully!';
+      this.showStatus = true;
+      setTimeout(() => {
+        this.showStatus = false;
+        window.location.reload();
+      }, 1000);
     } else {
-      alert('Failed to create timer');
+      this.statusType = 'danger';
+      this.statusMessage = 'Failed to create timer';
+      this.showStatus = true;
+      setTimeout(() => this.showStatus = false, 3000);
     }
   }
 }">
-  <div class="d-flex align-items-center gap-2">
+  <div x-show="showStatus" x-transition.duration.500ms class="alert" :class="statusType === 'success' ? 'alert-success' : 'alert-danger'" x-text="statusMessage"></div>
+<div class="d-flex align-items-center gap-2">
     <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary">
       + Add Timer
     </button>
