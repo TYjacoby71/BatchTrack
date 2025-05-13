@@ -1,4 +1,4 @@
-2025-05-13 17:51:35,541 ERROR: Exception on /batches/in-progress/77 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-13 17:58:07,220 ERROR: Exception on /batches/in-progress/77 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -35,7 +35,7 @@ Traceback (most recent call last):
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/templates/batch_in_progress.html", line 73, in block 'content'
-    timers: {{ batch.timers|tojson }},
+    timers: {{ batch.timers|map(attribute='to_dict')|list|tojson }},
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1721, in do_tojson
     return htmlsafe_json_dumps(value, dumps=dumps, **kwargs)
@@ -56,9 +56,9 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/json/provider.py", line 121, in _default
     raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
-TypeError: Object of type BatchTimer is not JSON serializable
-2025-05-13 17:53:31,728 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-13 17:53:38,134 ERROR: Exception on /batches/in-progress/77 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+TypeError: Object of type method is not JSON serializable
+2025-05-13 17:59:00,817 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-13 17:59:06,662 ERROR: Exception on /batches/in-progress/77 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -101,4 +101,4 @@ Traceback (most recent call last):
     timers: {{ [timer.to_dict() for timer in batch.timers]|tojson }},
     ^^^^^^^^^^^^^^^^^^^^^^^^^
 jinja2.exceptions.TemplateSyntaxError: expected token ',', got 'for'
-2025-05-13 17:54:18,463 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-13 18:00:09,537 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
