@@ -159,3 +159,33 @@ window.filterUnits = function() {
     card.style.display = filter === 'all' || filter === type ? '' : 'none';
   });
 }
+// Timer countdown functionality
+function updateTimerCountdowns() {
+  document.querySelectorAll('.timer-countdown').forEach(element => {
+    const endTime = new Date(element.dataset.endTime);
+    const now = new Date();
+    const remaining = endTime - now;
+    
+    if (remaining <= 0) {
+      element.textContent = 'Complete';
+      element.classList.add('text-success');
+      // Optional: Play sound or show notification
+      new Notification('Timer Complete', {
+        body: 'A timer has finished!',
+        icon: '/static/images/timer-icon.png'
+      });
+    } else {
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      element.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  });
+}
+
+// Check for timer updates every second
+setInterval(updateTimerCountdowns, 1000);
+
+// Request notification permission
+if (Notification.permission !== 'granted') {
+  Notification.requestPermission();
+}

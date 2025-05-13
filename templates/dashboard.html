@@ -1,6 +1,25 @@
 {% extends 'layout.html' %}
 {% block content %}
 
+
+{% if active_timers %}
+<div class="alert alert-info mb-3">
+    <strong>⏰ Active Timers:</strong>
+    <ul class="mb-0">
+        {% for timer in active_timers %}
+            <li>
+                <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=timer.batch_id) }}">
+                    {{ timer.name }} (Batch #{{ timer.batch_id }})
+                    <span class="timer-countdown" data-end-time="{{ timer.end_time.isoformat() }}">
+                        Loading...
+                    </span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 
 {% if expired %}
