@@ -22,16 +22,15 @@ def finish_batch_handler(batch, action='finish', force=False):
     """Handle batch completion logic"""
     
     if batch.status != 'in_progress':
-        flash("Only in-progress batches can be finished.")
+        flash("Only in-progress batches can be modified.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     if action == 'fail':
-        batch.status = 'finished'  # Mark as finished
-        batch.failed_at = datetime.utcnow()  # Record fail time
-        batch.status_reason = 'failed'  # Record failure reason
+        batch.status = 'failed'
+        batch.failed_at = datetime.utcnow()
         db.session.commit()
         
-        flash("Batch finished with failed status. Inventory remains deducted.")
+        flash("Batch marked as failed. Inventory remains deducted.")
         return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     # Handle finish action
@@ -134,15 +133,14 @@ def finish_batch_handler(batch, action='finish', force=False):
                     return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
             # Update batch status
-            batch.status = 'finished'
             if action == "finish":
+                batch.status = 'complete'
                 batch.completed_at = datetime.utcnow()
-                batch.status_reason = 'completed'
-                flash("✅ Batch finished successfully.")
+                flash("✅ Batch completed successfully.")
             else:
+                batch.status = 'failed'
                 batch.failed_at = datetime.utcnow()
-                batch.status_reason = 'failed'
-                flash("⚠️ Batch finished with failed status.")
+                flash("⚠️ Batch marked as failed.")
 
         # Save final batch data
         batch.notes = request.form.get("notes", batch.notes)
