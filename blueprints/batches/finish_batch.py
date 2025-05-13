@@ -11,10 +11,6 @@ def mark_batch_failed(batch_id):
     """Mark a batch as failed"""
     batch = Batch.query.get_or_404(batch_id)
 
-    if batch.status != 'in_progress':
-        flash("Only in-progress batches can be marked as failed.", "error")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-
     batch.status = 'failed'
     batch.failed_at = datetime.utcnow()
     batch.status_reason = request.form.get('reason', '')
@@ -28,11 +24,6 @@ def mark_batch_failed(batch_id):
 def complete_batch(batch_id):
     """Complete a successful batch"""
     batch = Batch.query.get_or_404(batch_id)
-
-    # Validate batch state
-    if batch.status != 'in_progress':
-        flash("Only in-progress batches can be completed.", "error")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     # Check active timers unless force flag is set
     if not request.form.get('force'):
