@@ -70,7 +70,7 @@
 
     <!-- Timer Section -->
     <div class="mt-4" x-data="{ 
-      timers: {{ [timer.to_dict() for timer in batch.timers]|tojson }},
+      timers: {{ batch.timers|map(attribute='to_dict')|list|tojson }},
       newTimerName: '',
       newTimerDuration: '',
       addingTimer: false
