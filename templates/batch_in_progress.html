@@ -165,9 +165,10 @@
             </tbody>
 
             <tfoot>
+                {% set total_cost = (ingredient_total if ingredient_total else 0) + (container_total if container_total else 0) + (extras_total if extras_total else 0) + (extra_container_total if extra_container_total else 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                    <td><strong>${{ "%.2f"|format(batch_cost) if batch_cost else '0.00' }}</strong></td>
+                    <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
                 </tr>
             </tfoot>
         </table>
