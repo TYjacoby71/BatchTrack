@@ -3,11 +3,12 @@ from models import Recipe, InventoryItem, Batch
 from services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 
-app_routes_bp = Blueprint('dashboard', __name__)
+app_routes_bp = Blueprint('app', __name__)
 
 from services.inventory_alerts import get_low_stock_ingredients
 from services.expiration_alerts import get_expired_inventory
 
+@app_routes_bp.route("/", methods=["GET", "POST"])
 @app_routes_bp.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
@@ -45,6 +46,9 @@ def dashboard():
                          current_user=current_user,
                          low_stock_items=low_stock_items,
                          expired=expired)
+
+from flask import flash
+from services.container_check import check_container_availability
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
@@ -103,13 +107,3 @@ def check_stock():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
-from flask import Blueprint, render_template, redirect, url_for
-from flask_login import login_required
-
-app_bp = Blueprint('app', __name__)
-
-@app_bp.route('/unit-manager')
-@login_required
-def unit_manager():
-    return redirect(url_for('conversion.manage_units'))

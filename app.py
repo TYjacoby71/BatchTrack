@@ -62,12 +62,12 @@ from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 
 
-# Get dashboard blueprint from app_routes
-from routes.app_routes import app_routes_bp as dashboard_bp
+# Get app routes blueprint
+from routes.app_routes import app_routes_bp
 
 # Core blueprints
 app.register_blueprint(settings_bp, url_prefix='/settings')
-app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+app.register_blueprint(app_routes_bp)
 
 # Main feature blueprints
 app.register_blueprint(batches_bp, url_prefix='/batches')
