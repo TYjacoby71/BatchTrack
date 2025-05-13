@@ -90,14 +90,14 @@
                         <td><strong>{{ t.name }}</strong></td>
                         <td>{{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else '-' }}</td>
                         <td>
-                            {% if t.status == 'running' %}
+                            {% if t.status == 'active' %}
                             <span class="timer-end" data-end-time="{{ t.end_time.isoformat() }}">{{ t.end_time.strftime('%Y-%m-%d %H:%M') }}</span>
                             {% else %}
                             -
                             {% endif %}
                         </td>
                         <td>
-                            {% if t.status == 'running' %}
+                            {% if t.status == 'active' %}
                             <span class="badge bg-warning">Active</span>
                             <span class="timer-countdown badge bg-primary"></span>
                             {% elif t.status == 'completed' %}
