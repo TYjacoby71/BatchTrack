@@ -54,7 +54,7 @@ from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from routes.product_routes import product_bp
-from routes.timer_routes import timers_bp
+
 from routes.fifo_routes import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
