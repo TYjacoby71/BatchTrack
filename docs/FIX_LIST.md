@@ -12,7 +12,7 @@
   - Clarify relationship between Unit table and CustomUnitMapping
   - Ensure consistent conversion path through base units
   - Review unit creation process in conversion routes
-
+  - The custom mapping is not Changing the custom units base multiplyer
 ## Container Management
 - **Container Selection Logic**: Needs improvement
   - Validate container selection uniqueness
