@@ -2,21 +2,22 @@
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   const modalForm = document.getElementById('finishBatchModalForm');
-
-  if (!modalForm) {
-    console.error('Modal form not found.');
-    return;
-  }
+  const outputTypeSelect = document.getElementById('output_type');
 
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      toggleOutputFields();
+      if (outputTypeSelect) {
+        toggleOutputFields();
+      }
     });
   }
 
-  const outputTypeSelect = document.getElementById('output_type');
   if (outputTypeSelect) {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
+  }
+
+  if (!modalForm) {
+    console.warn('Modal form not found on initial load');
   }
 });
 
