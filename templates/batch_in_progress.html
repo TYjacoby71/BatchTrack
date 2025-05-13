@@ -71,58 +71,8 @@
     <!-- TIMER SECTION -->
     <div class="mt-4">
         <h4>Timers</h4>
-        <div id="active-timers">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Batch</th>
-                        <th>Timer Label</th>
-                        <th>Started</th>
-                        <th>Due</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in timers %}
-                    <tr id="timer-{{ t.id }}">
-                        <td>{{ batch.label_code }}</td>
-                        <td><strong>{{ t.name }}</strong></td>
-                        <td>{{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else '-' }}</td>
-                        <td>
-                            {% if t.status == 'active' %}
-                            <span class="timer-end" data-end-time="{{ t.end_time.isoformat() }}">{{ t.end_time.strftime('%Y-%m-%d %H:%M') }}</span>
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if t.status == 'active' %}
-                            <span class="badge bg-warning">Active</span>
-                            <span class="timer-countdown badge bg-primary"></span>
-                            {% elif t.status == 'completed' %}
-                            <span class="badge bg-success">Complete</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Pending</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if t.status == 'running' %}
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelTimer({{ t.id }})">⊗</button>
-                            {% endif %}
-                            {% if not t.completed %}
-                            <button type="submit" class="btn btn-sm btn-success" onclick="completeTimer({{ t.id }})">Complete</button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div id="timer-list"></div>
-        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">Manage Batch Timers</a>
     </div>
-    <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-secondary">View Batch Timers</a>
 
     <!-- Timer Scripts -->
     <script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
