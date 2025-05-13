@@ -1,45 +1,39 @@
 // Batch form functionality
-function submitFinishBatch() {
-  const form = document.getElementById('finishBatchModalForm');
-  if (!form) {
-    console.error('Form not found');
-    return;
-  }
-
-  const finalQty = parseFloat(form.querySelector('#final_quantity').value);
-  if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
-    alert('Please enter a valid final quantity');
-    return;
-  }
-
-  form.submit();
-}
-
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
-  const form = document.getElementById('finishBatchModalForm');
+  const modalForm = document.getElementById('finishBatchModalForm');
+
+  if (!modalForm) {
+    console.error('Modal form not found.');
+    return;
+  }
+
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      toggleOutputFields();
+    });
+  }
+
   const outputTypeSelect = document.getElementById('output_type');
-  const productFields = document.getElementById('productFields');
-
-  if (modal && form && outputTypeSelect && productFields) {
-    // Handle output type changes
-    function updateProductFields() {
-      const isProduct = outputTypeSelect.value === 'product';
-      productFields.style.display = isProduct ? 'block' : 'none';
-      const productSelect = productFields.querySelector('select[name="product_id"]');
-      if (productSelect) {
-        productSelect.required = isProduct;
-      }
-    }
-
-    // Set up event listeners
-    outputTypeSelect.addEventListener('change', updateProductFields);
-    modal.addEventListener('shown.bs.modal', updateProductFields);
-    
-    // Initial state
-    updateProductFields();
+  if (outputTypeSelect) {
+    outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 });
+
+function toggleOutputFields() {
+  const type = document.getElementById('output_type').value;
+  const productFields = document.getElementById('productFields');
+
+  if (productFields) {
+    productFields.style.display = type === 'product' ? 'block' : 'none';
+
+    // Update required attributes
+    const productSelect = productFields.querySelector('select[name="product_id"]');
+    if (productSelect) {
+      productSelect.required = type === 'product';
+    }
+  }
+}
 
 function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
