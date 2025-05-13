@@ -106,6 +106,7 @@ function submitFinishBatch(action) {
     }
 
     const formData = new FormData(modalForm);
+    // Using raw CSRF token from <input>, not Flask-WTF
     const csrfTokenInput = modalForm.querySelector('input[name="csrf_token"]');
     
     if (!csrfTokenInput) {
