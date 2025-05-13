@@ -84,7 +84,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
-            
+
             {% endif %}
         </div>
     </nav>
@@ -101,7 +101,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    
+    {% include 'components/modals/unit_converter_modal.html' %}
 
     <!-- jQuery first -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

@@ -93,6 +93,19 @@ init_api(app)
 
 
 @app.context_processor
+def utility_processor():
+    from utils.unit_utils import get_global_unit_list
+    units = get_global_unit_list()
+    units_by_type = {}
+    for unit in units:
+        if unit.type not in units_by_type:
+            units_by_type[unit.type] = []
+        units_by_type[unit.type].append(unit)
+    return dict(
+        units_by_type=units_by_type,
+    )
+
+@app.context_processor
 def inject_units():
     units = Unit.query.order_by(Unit.type, Unit.name).all()
     categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
