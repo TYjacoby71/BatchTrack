@@ -76,7 +76,7 @@
             <div class="active-timer-row d-flex gap-2 mb-2 align-items-center" id="timer-{{ t.id }}">
                 <span class="timer-name">{{ t.name }}</span>
                 <span class="timer-countdown badge bg-primary"></span>
-                <span class="timer-end">Ends: {{ t.end_time.isoformat() }}</span>
+                <span class="timer-end" data-end-time="{{ t.end_time.isoformat() }}">Ends: {{ t.end_time.strftime('%I:%M %p') }}</span>
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelTimer({{ t.id }})">⊗</button>
             </div>
             {% endfor %}
@@ -88,12 +88,16 @@
     <!-- Timer Scripts -->
     <script src="{{ url_for('static', filename='js/batches/batch_timer.js') }}"></script>
     <script>
-        const batchId = {{ batch.id }};
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize existing active timers
-            {% for t in timers if t.status == 'running' %}
-                updateTimerCountdown({{ t.id }}, new Date('{{ t.end_time.isoformat() }}'));
-            {% endfor %}
+        window.batchId = {{ batch.id }};
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeTimers = document.querySelectorAll('.active-timer-row');
+            activeTimers.forEach(timer => {
+                const timerId = timer.id.split('-')[1];
+                const endTimeStr = timer.querySelector('.timer-end').dataset.endTime;
+                if (endTimeStr) {
+                    updateTimerCountdown(timerId, new Date(endTimeStr));
+                }
+            });
         });
     </script>
 
@@ -123,10 +127,13 @@
                     <td>${{ "%.2f"|format((ing.amount_used or 0) * (ing.cost_per_unit or 0)) }}</td>
                 </tr>
                 {% endfor %}
-                {% set ingredient_total = (batch.ingredients|sum(attribute='amount_used') or 0) * (batch.ingredients|sum(attribute='ingredient.cost_per_unit') or 0) %}
+                {% set ingredient_total = namespace(value=0) %}
+                {% for ing in batch.ingredients %}
+                    {% set ingredient_total.value = ingredient_total.value + ((ing.amount_used or 0) * (ing.cost_per_unit or 0)) %}
+                {% endfor %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
-                    <td>${{ "%.2f"|format(ingredient_total) }}</td>
+                    <td>${{ "%.2f"|format(ingredient_total.value) }}</td>
                 </tr>
                 {% endif %}
 
