@@ -1,3 +1,4 @@
+
 {% extends "layout.html" %}
 {% block content %}
 <div class="container" x-data="timerManager">
@@ -21,7 +22,7 @@
           <tr>
             <td x-text="timer.batch_id || '(Manual)'"></td>
             <td x-text="timer.name"></td>
-            <td x-text="timer.duration_seconds + ' seconds'"></td>
+            <td x-text="formatDuration(timer.duration_seconds)"></td>
             <td x-text="calculateTimeLeft(timer)"></td>
             <td>
               <span x-text="timer.status" :class="{
@@ -66,7 +67,7 @@
         <form @submit.prevent="createTimer">
           <div class="mb-3">
             <label class="form-label">Batch</label>
-            <select class="form-control" x-model="newTimer.batch_id" required>
+            <select class="form-control" x-model="newTimer.batch_id">
               <option value="">Select a batch</option>
               <template x-for="batch in activeBatches" :key="batch.id">
                 <option :value="batch.id" x-text="`Batch #${batch.id} - ${batch.recipe_name || 'No Recipe'}`"></option>
@@ -77,7 +78,6 @@
             <label class="form-label">Timer Label</label>
             <input type="text" class="form-control" x-model="newTimer.name" required>
           </div>
-          <!-- Updated duration input -->
           <div class="mb-3">
             <label class="form-label">Duration (H:M:S)</label>
             <div class="d-flex gap-2">
@@ -107,57 +107,29 @@ document.addEventListener('alpine:init', () => {
     seconds: '',
     newTimer: {
       name: '',
-      duration_seconds: '',
-      batch_id: ''
+      batch_id: '',
+      duration_seconds: null
     },
-    init() {
-      setInterval(() => {
-        this.timers = this.timers.map(timer => {
-          const currentTimer = {...timer};
-          if (currentTimer.status === 'completed') {
-            return currentTimer;
-          }
-          return currentTimer;
-        });
-      }, 1000);
-    },
-    calculateTotalSeconds() {
-      const h = parseInt(this.hours || 0);
-      const m = parseInt(this.minutes || 0);
-      const s = parseInt(this.seconds || 0);
-      return (h * 3600) + (m * 60) + s;
-    },
-    async createTimer() {
-      const totalSeconds = this.calculateTotalSeconds();
-      if (totalSeconds < 1) {
-        alert('Please enter a valid duration');
-        return;
-      }
-      this.newTimer.duration_seconds = totalSeconds;
-      const response = await fetch('/timers/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify(this.newTimer)
-      });
 
-      const result = await response.json();
-      if (result.status === 'success') {
-        this.timers.push({
-          ...this.newTimer,
-          id: result.timer_id,
-          start_time: new Date().toISOString(),
-          status: 'active'
-        });
-        this.newTimer = {
-          name: '',
-          duration_seconds: '',
-          batch_id: ''
-        };
-        this.addingTimer = false;
-      }
+    init() {
+      // Initialize timers with original duration
+      this.timers = this.timers.map(timer => ({
+        ...timer,
+        duration_seconds: timer.original_duration
+      }));
+      
+      // Start update loop
+      this.updateTimers();
+    },
+
+    updateTimers() {
+      setInterval(() => {
+        this.timers = this.timers.map(timer => ({
+          ...timer,
+          status: timer.status === 'active' && 
+                 this.calculateTimeLeft(timer) === 'Expired' ? 'expired' : timer.status
+        }));
+      }, 1000);
     },
 
     formatDuration(seconds) {
@@ -172,24 +144,70 @@ document.addEventListener('alpine:init', () => {
     },
 
     calculateTimeLeft(timer) {
-        if (timer.status === 'completed') {
-          return 'User Ended';
+      if (timer.status === 'completed') return 'User Ended';
+      if (!timer.start_time) return 'Not Started';
+
+      const start = new Date(timer.start_time);
+      const now = new Date();
+      const elapsedSeconds = Math.floor((now - start) / 1000);
+      const remainingSeconds = Math.max(0, timer.duration_seconds - elapsedSeconds);
+
+      if (remainingSeconds <= 0) {
+        if (timer.status === 'active') {
+          this.completeTimer(timer.id);
         }
-        if (!timer.start_time) return 'Not Started';
+        return 'Expired';
+      }
 
-        const start = new Date(timer.start_time);
-        const now = new Date();
-        const elapsedSeconds = Math.floor((now - start) / 1000);
-        const remainingSeconds = Math.max(0, timer.duration_seconds - elapsedSeconds);
+      return this.formatDuration(remainingSeconds);
+    },
 
-        if (remainingSeconds <= 0) {
-          if (timer.status === 'active') {
-            this.completeTimer(timer.id);
-          }
-          return 'Expired';
-        }
+    calculateTotalSeconds() {
+      return (parseInt(this.hours || 0) * 3600) + 
+             (parseInt(this.minutes || 0) * 60) + 
+             parseInt(this.seconds || 0);
+    },
 
-        return this.formatDuration(remainingSeconds);
+    async createTimer() {
+      const totalSeconds = this.calculateTotalSeconds();
+      if (totalSeconds < 1) {
+        alert('Please enter a valid duration');
+        return;
+      }
+
+      const timerData = {
+        name: this.newTimer.name,
+        batch_id: this.newTimer.batch_id || null,
+        duration_seconds: totalSeconds
+      };
+
+      const response = await fetch('/timers/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(timerData)
+      });
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        this.timers.push({
+          ...timerData,
+          id: result.timer_id,
+          start_time: new Date().toISOString(),
+          status: 'active',
+          original_duration: totalSeconds
+        });
+        
+        // Reset form
+        this.newTimer.name = '';
+        this.newTimer.batch_id = '';
+        this.hours = '';
+        this.minutes = '';
+        this.seconds = '';
+        this.addingTimer = false;
+      }
     },
 
     async deleteTimer(timerId) {
@@ -215,32 +233,14 @@ document.addEventListener('alpine:init', () => {
 
       if (response.ok) {
         const result = await response.json();
-        this.timers = this.timers.map(timer => {
-          if (timer.id === timerId) {
-            return {
-              ...timer,
-              status: 'completed',
-              end_time: result.end_time
-            };
-          }
-          return timer;
-        });
+        this.timers = this.timers.map(timer => 
+          timer.id === timerId ? {
+            ...timer,
+            status: 'completed',
+            end_time: result.end_time
+          } : timer
+        );
       }
-    },
-
-    init() {
-      this.timers = this.timers.map(timer => ({
-        ...timer,
-        duration_seconds: timer.original_duration
-      }));
-      
-      setInterval(() => {
-        this.timers = this.timers.map(timer => ({
-          ...timer,
-          status: timer.status === 'pending' && 
-                 this.calculateTimeLeft(timer) === 'Expired' ? 'expired' : timer.status
-        }));
-      }, 1000);
     }
   }));
 });
