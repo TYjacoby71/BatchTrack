@@ -75,19 +75,27 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>Batch</th>
                         <th>Timer Label</th>
-                        <th>Duration</th>
-                        <th>Status</th>
                         <th>Started</th>
                         <th>Due</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in timers %}
                     <tr id="timer-{{ t.id }}">
+                        <td>{{ batch.label_code }}</td>
                         <td><strong>{{ t.name }}</strong></td>
-                        <td>{{ t.duration_seconds }} seconds</td>
+                        <td>{{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else '-' }}</td>
+                        <td>
+                            {% if t.status == 'running' %}
+                            <span class="timer-end" data-end-time="{{ t.end_time.isoformat() }}">{{ t.end_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
                         <td>
                             {% if t.status == 'running' %}
                             <span class="badge bg-warning">Active</span>
@@ -98,17 +106,12 @@
                             <span class="badge bg-secondary">Pending</span>
                             {% endif %}
                         </td>
-                        <td>{{ t.start_time.strftime('%I:%M %p') if t.start_time else '-' }}</td>
-                        <td>
-                            {% if t.status == 'running' %}
-                            <span class="timer-end" data-end-time="{{ t.end_time.isoformat() }}">{{ t.end_time.strftime('%I:%M %p') }}</span>
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
                         <td>
                             {% if t.status == 'running' %}
                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelTimer({{ t.id }})">⊗</button>
+                            {% endif %}
+                            {% if not t.completed %}
+                            <button type="submit" class="btn btn-sm btn-success" onclick="completeTimer({{ t.id }})">Complete</button>
                             {% endif %}
                         </td>
                     </tr>
