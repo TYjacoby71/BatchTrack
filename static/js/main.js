@@ -169,11 +169,18 @@ function updateTimerCountdowns() {
     if (remaining <= 0) {
       element.textContent = 'Complete';
       element.classList.add('text-success');
-      // Optional: Play sound or show notification
-      new Notification('Timer Complete', {
-        body: 'A timer has finished!',
-        icon: '/static/images/timer-icon.png'
-      });
+      
+      // Show notification if not already shown for this timer
+      if (!element.dataset.notified) {
+        element.dataset.notified = 'true';
+        
+        // Request permission if needed
+        if (Notification.permission === 'default') {
+          Notification.requestPermission().then(showTimerNotification);
+        } else if (Notification.permission === 'granted') {
+          showTimerNotification();
+        }
+      }
     } else {
       const minutes = Math.floor(remaining / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
@@ -182,10 +189,22 @@ function updateTimerCountdowns() {
   });
 }
 
+function showTimerNotification() {
+  const notification = new Notification('Timer Complete', {
+    body: 'A batch timer has finished!',
+    icon: '/static/images/timer-icon.png',
+    requireInteraction: true
+  });
+  
+  notification.onclick = function() {
+    window.focus();
+  };
+}
+
 // Check for timer updates every second
 setInterval(updateTimerCountdowns, 1000);
 
-// Request notification permission
-if (Notification.permission !== 'granted') {
+// Initial notification permission request
+if (Notification.permission === 'default') {
   Notification.requestPermission();
 }
