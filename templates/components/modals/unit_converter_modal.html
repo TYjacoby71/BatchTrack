@@ -1,3 +1,4 @@
+
 {# Unit Converter Modal Component #}
 <div class="modal fade" id="unitConverterModal" tabindex="-1" aria-labelledby="unitConverterLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -13,23 +14,15 @@
         </div>
         <div class="mb-2">
           <select name="from_unit" class="form-select" required>
-            {% for type, type_units in units_by_type.items() %}
-              <optgroup label="{{ type|title }}">
-                {% for unit in type_units %}
-                  <option value="{{ unit.name }}">{{ unit.name }}</option>
-                {% endfor %}
-              </optgroup>
+            {% for unit in units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="mb-2">
           <select name="to_unit" class="form-select" required>
-            {% for type, type_units in units_by_type.items() %}
-              <optgroup label="{{ type|title }}">
-                {% for unit in type_units %}
-                  <option value="{{ unit.name }}">{{ unit.name }}</option>
-                {% endfor %}
-              </optgroup>
+            {% for unit in units %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
         </div>
