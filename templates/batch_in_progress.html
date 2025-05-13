@@ -74,6 +74,7 @@
       newTimerName: '',
       newTimerDuration: '',
       addingTimer: false,
+      timerCounter: 0,
       init() {
         this.timers = {{ [timer.to_dict() for timer in batch.timers]|tojson|safe }};
         this.updateTimers();
@@ -81,7 +82,8 @@
       updateTimers() {
         this.timers = this.timers.map(timer => ({
           ...timer,
-          timeLeft: this.calculateTimeLeft(timer)
+          timeLeft: this.calculateTimeLeft(timer),
+          status: this.getTimerStatus(timer)
         }));
         setTimeout(() => this.updateTimers(), 1000);
       },
@@ -95,6 +97,32 @@
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
         return `${minutes}m ${seconds}s`;
+      },
+      getTimerStatus(timer) {
+        if (timer.completed) return 'completed';
+        if (!timer.start_time) return 'pending';
+        const timeLeft = this.calculateTimeLeft(timer);
+        return timeLeft === 'Expired' ? 'expired' : 'active';
+      },
+      async saveTimers() {
+        try {
+          const response = await fetch(`/timers/batch/${this.timers[0].batch_id}/save`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+              timers: this.timers.filter(t => !t.temp_id)
+            })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            this.timers = data.timers;
+          }
+        } catch (error) {
+          console.error('Error saving timers:', error);
+        }
       }
 
     }">
@@ -114,12 +142,23 @@
         </thead>
         <tbody>
             <template x-for="timer in timers" :key="timer.id">
-                <tr>
+                <tr :class="{
+                    'table-danger': timer.status === 'expired',
+                    'table-success': timer.status === 'completed',
+                    'table-warning': timer.status === 'pending'
+                }">
                     <td x-text="timer.name"></td>
                     <td x-text="timer.duration_string"></td>
-                    <td x-text="timer.timeLeft"></td>
                     <td>
-                        <button class="btn btn-sm btn-danger" @click="timers = timers.filter(t => t.id !== timer.id)">Remove</button>
+                        <span x-text="timer.timeLeft"></span>
+                        <span x-show="timer.status === 'expired'" class="badge bg-danger ms-2">⏰ Expired</span>
+                    </td>
+                    <td class="d-flex gap-2">
+                        <button class="btn btn-sm btn-success" 
+                                x-show="!timer.completed && timer.status !== 'expired'"
+                                @click="timer.completed = true; saveTimers()">Complete</button>
+                        <button class="btn btn-sm btn-danger" 
+                                @click="timers = timers.filter(t => t.id !== timer.id)">Remove</button>
                     </td>
                 </tr>
             </template>
@@ -282,9 +321,6 @@
         </div>
     </div>
 </form>
-
-{# Finish Batch Modal - include only once #}
-{% include 'components/batch/finish_batch_modal.html' %}
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
