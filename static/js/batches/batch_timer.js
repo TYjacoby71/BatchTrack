@@ -1,2 +1,2 @@
 
-// Empty - timer functionality removed
+// Timer functionality now handled by Alpine.js

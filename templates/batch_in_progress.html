@@ -68,7 +68,91 @@
 </template>
 
 
-    <!-- Timer section removed -->
+<!-- Timer Section -->
+    <div class="mt-4" x-data="{ 
+      timers: [],
+      newTimerName: '',
+      newTimerDuration: '',
+      addingTimer: false,
+      init() {
+        this.timers = {{ [timer.to_dict() for timer in batch.timers]|tojson|safe }};
+        this.updateTimers();
+      },
+      updateTimers() {
+        this.timers = this.timers.map(timer => ({
+          ...timer,
+          timeLeft: this.calculateTimeLeft(timer)
+        }));
+        setTimeout(() => this.updateTimers(), 1000);
+      },
+      calculateTimeLeft(timer) {
+        if (!timer.start_time) return 'Not Started';
+        const start = new Date(timer.start_time);
+        const now = new Date();
+        const duration = timer.duration_seconds * 1000;
+        const diff = (start.getTime() + duration) - now.getTime();
+        if (diff <= 0) return 'Expired';
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
+      }
+
+    }">
+    <h4>Timers</h4>
+    <template x-if="timers.length === 0">
+        <p>No timers are currently running.</p>
+    </template>
+    
+    <table class="table" x-show="timers.length > 0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Duration</th>
+                <th>Time Left</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <template x-for="timer in timers" :key="timer.id">
+                <tr>
+                    <td x-text="timer.name"></td>
+                    <td x-text="timer.duration_string"></td>
+                    <td x-text="timer.timeLeft"></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @click="timers = timers.filter(t => t.id !== timer.id)">Remove</button>
+                    </td>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+
+    <div x-show="addingTimer">
+        <input type="text" x-model="newTimerName" placeholder="Timer Name" class="form-control mb-2">
+        <input type="text" x-model="newTimerDuration" placeholder="Duration (e.g., 1h30m)" class="form-control mb-2">
+        <button class="btn btn-sm btn-success" @click="
+            const durationSeconds = parseDuration(newTimerDuration);
+            if (isNaN(durationSeconds)) {
+                alert('Invalid duration format. Please use formats like 1h30m or 30m.');
+                return;
+            }
+            timers.push({
+                id: Math.random(), // Temporary ID
+                name: newTimerName,
+                duration_seconds: durationSeconds,
+                duration_string: newTimerDuration,
+                start_time: new Date().toISOString(),
+                timeLeft: 'Calculating...'
+            });
+            newTimerName = '';
+            newTimerDuration = '';
+            addingTimer = false;
+            updateTimers();
+        ">Add Timer</button>
+        <button class="btn btn-sm btn-secondary" @click="addingTimer = false">Cancel</button>
+    </div>
+
+    <button class="btn btn-sm btn-primary" x-show="!addingTimer" @click="addingTimer = true">➕ Add New Timer</button>
+</div>
 
     <!-- Batch Cost Summary -->
     <!-- Batch Cost Summary -->
@@ -208,5 +292,22 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
+
+<script>
+    function parseDuration(durationString) {
+        const regex = /(\d+h)?(\d+m)?(\d+s)?/;
+        const matches = durationString.match(regex);
+
+        if (!matches) {
+            return NaN;
+        }
+
+        let hours = matches[1] ? parseInt(matches[1]) : 0;
+        let minutes = matches[2] ? parseInt(matches[2]) : 0;
+        let seconds = matches[3] ? parseInt(matches[3]) : 0;
+
+        return hours * 3600 + minutes * 60 + seconds;
+    }
+</script>
 
 {% endblock %}
