@@ -46,4 +46,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python run_tests.py"
+args = "python -m pytest tests/"
