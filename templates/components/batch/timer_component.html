@@ -42,7 +42,7 @@
 
   <div x-show="showTimerForm" class="card mt-3">
     <div class="card-body">
-      <form @submit.prevent="createTimer">
+      <div class="timer-form">
         <div class="mb-3">
           <label class="form-label">Timer Label</label>
           <input type="text" class="form-control" x-model="name" required>
@@ -56,10 +56,10 @@
           </div>
         </div>
         <div class="d-flex gap-2">
-          <button type="submit" class="btn btn-success">Create Timer</button>
+          <button type="button" @click="createTimer" class="btn btn-success">Create Timer</button>
           <button type="button" @click="showTimerForm = false" class="btn btn-secondary">Cancel</button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 </div>
