@@ -69,7 +69,10 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4" x-data="timerManager">
+    <div class="mt-4" x-data="timerManager" 
+         x-init="init()"
+         id="existing-timers" 
+         data-timers='{{ timers|tojson }}'>
         <h4>Timers</h4>
         <div id="timer-list">
             <template x-for="(timer, index) in timers" :key="index">

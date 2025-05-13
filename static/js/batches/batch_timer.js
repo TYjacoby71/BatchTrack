@@ -1,31 +1,32 @@
 
 // Timer display functionality
-function startTimerDisplay(timerId, duration) {
-  const timerElement = document.getElementById(`timer-${timerId}`);
-  if (!timerElement) return;
-
-  const endTime = Date.now() + (duration * 1000);
+function updateTimerDisplay(timer) {
+  if (!timer.start_time || !timer.duration_seconds) return;
   
-  const timer = setInterval(() => {
-    const now = Date.now();
-    const remaining = Math.max(0, endTime - now);
-    
-    if (remaining === 0) {
-      clearInterval(timer);
-      timerElement.textContent = 'Timer Complete!';
-      // Alert or notification logic
-    } else {
-      const minutes = Math.floor(remaining / 60000);
-      const seconds = Math.floor((remaining % 60000) / 1000);
-      timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-  }, 1000);
+  const endTime = new Date(timer.start_time).getTime() + (timer.duration_seconds * 1000);
+  const now = new Date().getTime();
+  const remaining = Math.max(0, endTime - now);
+  
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 document.addEventListener('alpine:init', () => {
   Alpine.data('timerManager', () => ({
-    timers: Alpine.$data.timers || [],
+    timers: [],
     
+    init() {
+      // Initialize with any existing timers from the page
+      const existingTimers = JSON.parse(document.getElementById('existing-timers')?.dataset?.timers || '[]');
+      this.timers = existingTimers.map(timer => ({
+        ...timer,
+        name: timer.name || '',
+        duration_seconds: timer.duration_seconds || null,
+        start_time: timer.start_time || null
+      }));
+    },
+
     addTimer() {
       this.timers.push({
         name: '',
@@ -59,7 +60,7 @@ document.addEventListener('alpine:init', () => {
         const data = await response.json();
         if (data.success) {
           timer.start_time = new Date().toISOString();
-          startTimerDisplay(timer.id, timer.duration_seconds);
+          timer.status = 'running';
         }
       } catch (error) {
         console.error('Error starting timer:', error);
