@@ -71,7 +71,20 @@
     <!-- TIMER SECTION -->
     <div class="mt-4">
         <h4>Timers</h4>
-        <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">Manage Batch Timers</a>
+        <div id="active-timers">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Timer Label</th>
+                        <th>Duration</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div id="timer-list"></div>
+        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">View All Timers</a>
     </div>
 
     <!-- Timer Scripts -->
