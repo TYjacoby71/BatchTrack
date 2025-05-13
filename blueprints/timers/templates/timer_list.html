@@ -177,8 +177,13 @@ document.addEventListener('alpine:init', () => {
           return 'Expired';
         }
 
-        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
+        
+        if (hours > 0) {
+          return `${hours}h ${minutes}m ${seconds}s`;
+        }
         return `${minutes}m ${seconds}s`;
     },
 
