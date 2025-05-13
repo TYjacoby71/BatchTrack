@@ -61,7 +61,8 @@ def complete_timer(timer_id):
         timer.status = 'completed'
         timer.end_time = now
         db.session.commit()
-    return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'end_time': now.isoformat()})
+    return jsonify({'status': 'error', 'message': 'Timer already completed'})
 
 @timers_bp.route('/status/<int:timer_id>', methods=['POST'])
 @login_required

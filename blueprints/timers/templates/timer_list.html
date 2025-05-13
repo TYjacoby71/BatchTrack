@@ -125,22 +125,25 @@ document.addEventListener('alpine:init', () => {
     },
 
     calculateTimeLeft(timer) {
-      if (!timer.start_time) return 'Not Started';
-      const start = new Date(timer.start_time);
-      const now = new Date();
-      const duration = timer.duration_seconds * 1000;
-      const diff = (start.getTime() + duration) - now.getTime();
-
-      if (diff <= 0) {
-        if (timer.status !== 'completed') {
-          this.completeTimer(timer.id);
+        if (timer.status === 'completed') {
+          return 'User Ended';
         }
-        return 'Expired';
-      }
+        if (!timer.start_time) return 'Not Started';
+        const start = new Date(timer.start_time);
+        const now = new Date();
+        const duration = timer.duration_seconds * 1000;
+        const diff = (start.getTime() + duration) - now.getTime();
 
-      const minutes = Math.floor(diff / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
-      return `${minutes}m ${seconds}s`;
+        if (diff <= 0) {
+          if (timer.status === 'active') {
+            this.completeTimer(timer.id);
+          }
+          return 'Expired';
+        }
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
     },
 
     async createTimer() {
