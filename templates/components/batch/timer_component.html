@@ -1,6 +1,7 @@
 
 <div x-data="{ 
   showTimerForm: false,
+  showTimerList: false,
   name: '',
   hours: '',
   minutes: '',
@@ -39,9 +40,46 @@
     }
   }
 }">
-  <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary">
-    + Add Timer
-  </button>
+  <div class="d-flex align-items-center gap-2">
+    <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary">
+      + Add Timer
+    </button>
+    <button type="button" @click="showTimerList = !showTimerList" class="btn btn-outline-secondary btn-sm" title="Show/Hide Timer List">
+      <span x-text="showTimerList ? '▼' : '▶'" style="font-size: 10px;"></span>
+    </button>
+  </div>
+
+  <div x-show="showTimerList" class="mt-3" x-transition>
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Duration</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for timer in timers if timer.batch_id == batch.id %}
+          <tr>
+            <td>{{ timer.name }}</td>
+            <td>{{ timer.duration_seconds // 60 }}m {{ timer.duration_seconds % 60 }}s</td>
+            <td>{{ timer.status|title }}</td>
+            <td>
+              {% if timer.status != 'completed' %}
+              <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-success">Complete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <div x-show="showTimerForm" class="card mt-3">
     <div class="card-body">
