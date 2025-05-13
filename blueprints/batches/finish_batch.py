@@ -38,18 +38,21 @@ def complete_batch(batch_id):
     # Get completion details
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
-    output_unit = request.form.get('output_unit')
+    # output_unit = request.form.get('output_unit')
 
     # Validate required fields
-    if not all([output_type, final_quantity > 0, output_unit]):
-        flash("Output type, quantity and unit are required", "error")
+    if not all([output_type, final_quantity > 0]):
+        flash("Output type, quantity are required", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
     try:
         # Update batch details
         batch.batch_type = output_type
         batch.final_quantity = final_quantity
-        batch.output_unit = output_unit
+        if batch.batch_type == 'ingredient':
+            batch.output_unit = batch.recipe.predicted_yield_unit
+        else:
+            batch.output_unit = request.form.get('output_unit')
         batch.notes = request.form.get('notes')
         batch.tags = request.form.get('tags')
 
@@ -95,7 +98,7 @@ def complete_batch(batch_id):
                 ingredient.quantity += final_quantity
             else:  # New ingredient
                 ingredient.quantity = final_quantity
-                ingredient.unit = output_unit
+                ingredient.unit = batch.output_unit
                 ingredient.cost_per_unit = unit_cost
                 db.session.add(ingredient)
 
