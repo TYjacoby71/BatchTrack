@@ -71,6 +71,25 @@
     <!-- TIMER SECTION -->
     <div class="mt-4" x-data="{ 
       timers: {{ timers|tojson }},
+      timerName: '',
+      timerDuration: null,
+      startTimer(index) {
+        const timer = this.timers[index];
+        fetch('/timers/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `timer_id=${timer.id}&csrf_token={{ csrf_token() }}`
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            timer.start_time = data.start_time;
+            timer.status = 'running';
+          }
+        });
+      },
       addTimer() {
         this.timers.push({
           name: '',
