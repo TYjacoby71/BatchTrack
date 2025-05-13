@@ -1,22 +1,45 @@
-// Batch form functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('finishBatchModal');
-  const modalForm = document.getElementById('finishBatchModalForm');
-
-  if (!modalForm) {
-    console.error('Modal form not found.');
+// Modal form handling
+function submitFinishBatch() {
+  const form = document.getElementById('finishBatchModalForm');
+  if (!form) {
+    console.error('Form not found');
     return;
   }
 
-  if (modal) {
-    modal.addEventListener('shown.bs.modal', function () {
-      toggleOutputFields();
-    });
+  const finalQty = parseFloat(form.querySelector('#final_quantity').value);
+  if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
+    alert('Please enter a valid final quantity');
+    return;
   }
 
+  form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('finishBatchModal');
+  const form = document.getElementById('finishBatchModalForm');
   const outputTypeSelect = document.getElementById('output_type');
-  if (outputTypeSelect) {
-    outputTypeSelect.addEventListener('change', toggleOutputFields);
+  const productFields = document.getElementById('productFields');
+
+  if (modal && form && outputTypeSelect) {
+    // Handle output type changes
+    function updateProductFields() {
+      const isProduct = outputTypeSelect.value === 'product';
+      if (productFields) {
+        productFields.style.display = isProduct ? 'block' : 'none';
+        const productSelect = productFields.querySelector('select[name="product_id"]');
+        if (productSelect) {
+          productSelect.required = isProduct;
+        }
+      }
+    }
+
+    // Set up event listeners
+    outputTypeSelect.addEventListener('change', updateProductFields);
+    modal.addEventListener('shown.bs.modal', updateProductFields);
+
+    // Initial state
+    updateProductFields();
   }
 });
 
@@ -33,41 +56,6 @@ function toggleOutputFields() {
       productSelect.required = type === 'product';
     }
   }
-}
-
-function submitFinishBatch() {
-  const modalForm = document.getElementById('finishBatchModalForm');
-  if (!modalForm) return;
-
-  const finalQtyInput = modalForm.querySelector('#final_quantity');
-  const finalQty = parseFloat(finalQtyInput?.value);
-
-  if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
-    alert('Please enter a valid final quantity');
-    return;
-  }
-
-  const formData = new FormData(modalForm);
-
-  fetch(modalForm.action, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': formData.get('csrf_token'),
-      'Accept': 'application/json'
-    }
-  })
-  .then(response => {
-    if (!response.ok) {
-      return response.json().then(err => {
-        throw new Error(err.error || 'Batch failed to complete');
-      });
-    }
-    window.location.href = '/batches/';
-  })
-  .catch(err => {
-    alert('Error completing batch: ' + err.message);
-  });
 }
 
 function toggleBatchTypeFields() {
