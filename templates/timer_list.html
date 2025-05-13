@@ -19,7 +19,7 @@
         {% for timer in timers %}
         <tr>
           <td>{{ timer.batch_id }}</td>
-          <td>{{ timer.label }}</td>
+          <td>{{ timer.name }}</td>
           <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>{{ timer.end_time.strftime('%Y-%m-%d %H:%M') if timer.end_time else '-' }}</td>
           <td>
