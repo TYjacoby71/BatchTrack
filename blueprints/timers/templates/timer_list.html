@@ -27,15 +27,16 @@
             <td>
               <span x-text="timer.status" :class="{
                 'badge bg-success': timer.status === 'completed',
+                'badge bg-primary': timer.status === 'active',
                 'badge bg-warning': timer.status === 'pending',
                 'badge bg-danger': timer.status === 'expired'
               }"></span>
             </td>
             <td>
               <button 
-                x-show="timer.status === 'pending'"
+                x-show="timer.status === 'active' || timer.status === 'pending'"
                 @click="completeTimer(timer.id)" 
-                class="btn btn-sm btn-success">
+                class="btn btn-sm btn-primary">
                 Complete
               </button>
             </td>

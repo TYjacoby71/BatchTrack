@@ -27,7 +27,7 @@ def create_timer():
         name=data.get('name'),
         duration_seconds=int(data.get('duration_seconds')),
         start_time=datetime.utcnow(),
-        status='pending'
+        status='active'
     )
     db.session.add(timer)
     db.session.commit()
