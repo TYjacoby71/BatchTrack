@@ -1,0 +1,504 @@
+Thank you for sharing the restored version of the code. Your goal is to refactor this code by splitting it into multiple files to improve maintainability and reduce the complexity of the single large file, which is currently around 300–400 lines based on the provided snippet. Below, I’ll outline the main purpose of the code, propose a refactoring strategy to split it into logical modules, and provide a detailed plan for dissecting and reorganizing the code. I’ll also include sample code for each module to illustrate the split.
+Main Purpose of the Code
+The code is a JavaScript frontend for a batch management system, likely part of a web application for managing recipes, inventory, or production processes. Its primary purposes are:
+UI Initialization:
+Initializes Select2 dropdowns for units, ingredients, and containers.
+
+Sets up Bootstrap tooltips and modal transitions for quick-add forms.
+
+Handles container checkbox logic on recipe forms.
+Unit Management:
+Provides functionality to add new units via a quick-add modal (initQuickAddUnit).
+
+Filters unit cards based on type (filterUnits).
+
+Converts units with density considerations (convertUnits).
+Batch Management:
+Saves batch data (saveBatch) with details like ingredients, containers, timers, and metadata (notes, tags, etc.).
+
+Finishes or cancels batches (finishBatch, cancelBatch).
+
+Updates stock check tables (updateStockCheckTable) based on inventory data.
+Utility Functions:
+Handles CSRF token retrieval (implicit in fetch headers).
+
+Manages clipboard operations (copyToClipboard) and result display (displayResult).
+The code interacts with a backend via fetch requests (e.g., /batches/${batchId}/save, /quick-add/unit) and uses jQuery, Bootstrap, and Select2 for UI components. It’s tightly coupled to specific DOM elements and assumes a Jinja-templated backend.
+Why Split the Code?
+Splitting the code into multiple files addresses several issues:
+Maintainability: A single 300–400 line file is hard to navigate and debug, especially as features grow.
+
+Modularity: Separating concerns (e.g., UI, batch logic, unit management) makes it easier to update or reuse code.
+
+Team Collaboration: Smaller files reduce merge conflicts in team settings.
+
+Scalability: Modular code is easier to extend with new features.
+Refactoring Strategy: Splitting into Modules
+Based on the code’s purpose, I propose splitting it into the following modules, each stored in a separate file. This structure groups related functionality and keeps each file under 100–150 lines.
+ui.js:
+Handles UI initialization (Select2, tooltips, modal transitions).
+
+Manages DOM event listeners for checkboxes and forms (e.g., container checkbox, quick-add container form).
+
+Purpose: Centralize UI-related logic to keep it separate from business logic.
+unitManager.js:
+Manages unit-related functionality: quick-add units, unit filtering, and unit conversion.
+
+Includes utilities like displayResult and copyToClipboard since they’re used in unit conversion.
+
+Purpose: Isolate unit management, which is a distinct feature set.
+batchManager.js:
+Handles batch operations: saving, finishing, and canceling batches.
+
+Manages stock check table updates.
+
+Purpose: Encapsulate batch-related business logic and API interactions.
+utils.js:
+Contains shared utilities like CSRF token retrieval and common DOM helpers.
+
+Purpose: Provide reusable functions across modules to avoid duplication.
+main.js:
+Imports and initializes all modules.
+
+Sets up top-level event listeners (e.g., DOMContentLoaded).
+
+Purpose: Serve as the entry point to orchestrate module initialization.
+Module Breakdown and Code
+Below, I’ll dissect the code and distribute it across the proposed modules, providing sample code for each file. I’ll use ES Modules (import/export) for modern JavaScript, assuming a bundler like Webpack or a browser that supports ES Modules. If you’re not using a bundler, I can adjust for <script> tags with global variables.
+1. ui.js
+Purpose: Initialize UI components (Select2, tooltips) and handle DOM events for modals, checkboxes, and forms.
+javascript
+// ui.js
+export function initializeUI() {
+  // Initialize Select2 dropdowns
+  $('select[data-unit-select]').select2({
+    placeholder: 'Select a unit',
+    allowClear: true,
+    width: '100%'
+  });
+
+  $('.ingredient-select').select2({
+    placeholder: 'Select ingredients',
+    allowClear: true,
+    width: '100%'
+  });
+
+  $('.container-select:not([x-data])').select2({
+    placeholder: 'Select containers',
+    allowClear: true,
+    multiple: true,
+    width: '100%'
+  });
+
+  // Initialize Bootstrap tooltips
+  $('[data-bs-toggle="tooltip"]').tooltip();
+
+  // Quick add modal transitions
+  const cancelQuickUnit = document.getElementById('cancelQuickUnit');
+  if (cancelQuickUnit) {
+    cancelQuickUnit.addEventListener('click', () => {
+      const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+      if (unitModal) unitModal.hide();
+      setTimeout(() => {
+        const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+        ingredientModal.show();
+        document.getElementById('ingredientName')?.focus();
+      }, 300);
+    });
+  }
+
+  const cancelQuickIngredient = document.getElementById('cancelQuickIngredient');
+  if (cancelQuickIngredient) {
+    cancelQuickIngredient.addEventListener('click', () => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+      if (modal) modal.hide();
+    });
+  }
+
+  // Container checkbox logic
+  if (document.getElementById('recipeForm')) {
+    const requiresContainersCheckbox = document.getElementById('requiresContainers');
+    const allowedContainersSection = document.getElementById('allowedContainersSection');
+    if (requiresContainersCheckbox && allowedContainersSection) {
+      requiresContainersCheckbox.addEventListener('change', function () {
+        allowedContainersSection.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+  }
+
+  // Quick Add Container form handler
+  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
+  if (quickAddContainerForm) {
+    quickAddContainerForm.addEventListener('submit', e => {
+      e.preventDefault();
+      // Add form submission logic here if needed
+    });
+  }
+}
+
+Line Count: ~70 lines
+Rationale: Groups all UI initialization and DOM event handling, keeping it separate from business logic. This module is called once on page load.
+2. unitManager.js
+Purpose: Manage unit-related features (adding units, filtering, converting).
+javascript
+// unitManager.js
+import { getCSRFToken } from './utils.js';
+
+export function initQuickAddUnit() {
+  const saveButton = document.getElementById('saveQuickUnit');
+  if (!saveButton) {
+    setTimeout(initQuickAddUnit, 100);
+    return;
+  }
+
+  saveButton.addEventListener('click', () => {
+    const name = document.getElementById('unitName').value.trim();
+    const type = document.getElementById('unitType').value;
+    if (!name) return alert('Unit name required');
+
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) return alert('CSRF token missing');
+
+    fetch('/quick-add/unit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ name, type })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) return alert('Error: ' + data.error);
+
+        // Update unit dropdowns
+        const unitSelect = document.getElementById('quickIngredientUnit');
+        if (unitSelect) {
+          unitSelect.add(new Option(data.name, data.name, false, true));
+          unitSelect.value = data.name;
+        }
+        const quickUnit = document.getElementById('new-ingredient-unit');
+        if (quickUnit) {
+          quickUnit.add(new Option(data.name, data.name, false, true));
+          quickUnit.value = data.name;
+        }
+        document.querySelectorAll("select[name='units[]']").forEach(select => {
+          select.add(new Option(data.name, data.name));
+        });
+
+        // Modal transition
+        const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
+        if (unitModal) {
+          unitModal.hide();
+          setTimeout(() => {
+            const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
+            ingredientModal.show();
+            document.getElementById('ingredientName')?.focus();
+          }, 300);
+        }
+
+        // Reset form
+        document.getElementById('unitName').value = '';
+        document.getElementById('unitType').selectedIndex = 0;
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to add unit');
+      });
+  });
+}
+
+export function filterUnits() {
+  const filter = document.getElementById('unitFilter').value;
+  document.querySelectorAll('.card.mb-3').forEach(card => {
+    const type = card.querySelector('h5').textContent.toLowerCase();
+    card.style.display = filter === 'all' || filter === type ? '' : 'none';
+  });
+}
+
+export function convertUnits() {
+  const amount = document.getElementById('amount').value;
+  const fromUnit = document.getElementById('fromUnit').value;
+  const toUnit = document.getElementById('toUnit').value;
+  const ingredientId = document.getElementById('ingredientId').value;
+  const resultDiv = document.getElementById('converterResult');
+
+  fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error && data.error.includes('without density')) {
+        const useDefault = confirm(
+          `Heads up! You're converting ${fromUnit} to ${toUnit}, which requires a density.\n` +
+          `This ingredient doesn't have one defined.\n\nWould you like to:\n✅ Use water (1.0 g/mL)\nℹ️ Or go define it manually?`
+        );
+        if (useDefault) {
+          fetch(`/convert/convert/${amount}/${fromUnit}/${toUnit}?ingredient_id=${ingredientId}&density=1.0`)
+            .then(r => r.json())
+            .then(result => displayResult(resultDiv, `${amount} ${fromUnit} = ${result.result} ${result.unit}`));
+        } else {
+          resultDiv.innerHTML = '<p class="text-danger">Conversion canceled.</p>';
+        }
+      } else {
+        displayResult(resultDiv, `${amount} ${fromUnit} = ${data.result} ${data.unit}`);
+      }
+    })
+    .catch(err => {
+      resultDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+    });
+}
+
+function displayResult(element, text) {
+  element.innerHTML = `
+    <p>${text}</p>
+    <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('${text}')">Copy</button>`;
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text)
+    .then(() => alert('Copied to clipboard!'))
+    .catch(err => console.error('Failed to copy:', err));
+}
+
+Line Count: ~120 lines
+Rationale: Groups all unit-related logic, which is a distinct feature set. Depends on getCSRFToken from utils.js.
+3. batchManager.js
+Purpose: Handle batch operations (save, finish, cancel) and stock check updates.
+javascript
+// batchManager.js
+import { getCSRFToken } from './utils.js';
+
+export function saveBatch(event) {
+  if (event) event.preventDefault();
+  const batchId = window.location.pathname.split('/').pop();
+  const form = document.getElementById('batchForm');
+  if (!form) return console.error('Batch form not found');
+
+  const data = {
+    notes: form.querySelector('textarea[name="notes"]')?.value || '',
+    tags: form.querySelector('input[name="tags"]')?.value || '',
+    output_type: form.querySelector('select[name="output_type"]')?.value,
+    product_id: form.querySelector('select[name="product_id"]')?.value,
+    variant_label: form.querySelector('input[name="variant_label"]')?.value,
+    final_quantity: parseFloat(form.querySelector('input[name="final_quantity"]')?.value) || 0,
+    output_unit: form.querySelector('select[name="output_unit"]')?.value || '',
+    ingredients: Array.from(form.querySelectorAll('.ingredient-row')).map(row => ({
+      id: parseInt(row.querySelector('select[name="ingredients[]"]').value),
+      amount: parseFloat(row.querySelector('input[name="amounts[]"]').value),
+      unit: row.querySelector('select[name="units[]"]').value
+    })),
+    containers: Array.from(form.querySelectorAll('.container-row')).map(row => ({
+      id: parseInt(row.querySelector('select[name="containers[]"]').value),
+      qty: parseInt(row.querySelector('input[name="container_amounts[]"]').value),
+      cost_each: parseFloat(row.querySelector('input[name="container_costs[]"]').value) || 0
+    })),
+    timers: Array.from(form.querySelectorAll('.timer-row')).map(row => ({
+      name: row.querySelector('input[name="timers[]"]').value,
+      duration_seconds: parseInt(row.querySelector('input[name="timer_durations[]"]').value)
+    }))
+  };
+
+  const csrfToken = getCSRFToken();
+  if (!csrfToken) return alert('CSRF token missing');
+
+  fetch(`/batches/${batchId}/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify(data)
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.message) {
+        const notesField = form.querySelector('textarea[name="notes"]');
+        const tagsField = form.querySelector('input[name="tags"]');
+        if (notesField) notesField.value = data.notes || notesField.value;
+        if (tagsField) tagsField.value = data.tags || tagsField.value;
+        alert('Batch saved successfully');
+      }
+    })
+    .catch(error => {
+      console.error('Error saving batch:', error);
+      alert('Error saving batch');
+    });
+}
+
+export function finishBatch(action) {
+  const form = document.getElementById('batchForm');
+  const formData = new FormData(form);
+  formData.append('action', action);
+
+  const csrfToken = getCSRFToken();
+  if (!csrfToken) return alert('CSRF token missing');
+
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: { 'X-CSRFToken': csrfToken }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      window.location.href = '/batches/';
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error finishing batch: ' + error.message);
+    });
+}
+
+export function cancelBatch() {
+  if (!confirm('Cancel this batch? Ingredients will be returned to inventory.')) return;
+  const batchId = window.location.pathname.split('/').pop();
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/batches/cancel/${batchId}`;
+
+  const csrfToken = getCSRFToken();
+  if (!csrfToken) return alert('CSRF token missing');
+
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'csrf_token';
+  csrfInput.value = csrfToken;
+  form.appendChild(csrfInput);
+  document.body.appendChild(form);
+  form.submit();
+}
+
+export function updateStockCheckTable(data) {
+  const tableBody = document.getElementById('stockCheckTableBody');
+  const startBatchBtn = document.getElementById('startBatchBtn');
+  if (!tableBody) return;
+
+  tableBody.innerHTML = data.stock_check.map(item => {
+    const showUnit = item.type !== 'container';
+    return `
+      <tr class="${item.status === 'OK' ? 'table-success' : item.status === 'LOW' ? 'table-warning' : 'table-danger'}">
+        <td>${item.type || 'ingredient'}</td>
+        <td>${item.name}</td>
+        <td>${item.needed}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${item.available}${showUnit ? ' ' + item.unit : ''}</td>
+        <td>${showUnit ? item.unit : '-'}</td>
+        <td>${item.status}</td>
+      </tr>`;
+  }).join('');
+
+  if (startBatchBtn) startBatchBtn.style.display = data.all_ok ? 'block' : 'none';
+}
+
+Line Count: ~110 lines
+Rationale: Centralizes batch-related logic and API calls. Depends on getCSRFToken from utils.js.
+4. utils.js
+Purpose: Provide shared utilities like CSRF token retrieval.
+javascript
+// utils.js
+export function getCSRFToken() {
+  const token = document.querySelector('input[name="csrf_token"]')?.value;
+  if (!token) console.error('CSRF token not found');
+  return token;
+}
+
+Line Count: ~10 lines
+Rationale: Keeps shared utilities minimal and reusable across modules.
+5. main.js
+Purpose: Entry point to initialize all modules.
+javascript
+// main.js
+import { initializeUI } from './ui.js';
+import { initQuickAddUnit, filterUnits, convertUnits } from './unitManager.js';
+import { saveBatch, finishBatch, cancelBatch, updateStockCheckTable } from './batchManager.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  initializeUI();
+  initQuickAddUnit();
+});
+
+// Expose functions to global scope if needed (e.g., for inline HTML event handlers)
+window.filterUnits = filterUnits;
+window.convertUnits = convertUnits;
+window.saveBatch = saveBatch;
+window.finishBatch = finishBatch;
+window.cancelBatch = cancelBatch;
+window.updateStockCheckTable = updateStockCheckTable;
+
+Line Count: ~20 lines
+Rationale: Orchestrates module initialization and exposes functions for global access if needed (e.g., for <button onclick="saveBatch()">).
+Implementation Steps
+Create File Structure:
+Create a js/ directory in your project.
+
+Add the five files: ui.js, unitManager.js, batchManager.js, utils.js, main.js.
+Set Up Module Loading:
+With a Bundler (e.g., Webpack):
+Configure Webpack to bundle the modules, with main.js as the entry point.
+
+Include the bundled script in your HTML:
+html
+<script src="/dist/bundle.js"></script>
+Without a Bundler:
+Use <script type="module"> in your HTML:
+html
+<script type="module" src="/js/main.js"></script>
+Ensure your server supports ES Modules (modern browsers do, but older ones may need polyfills).
+
+Alternatively, modify the code to use IIFE (Immediately Invoked Function Expressions) and global variables if modules aren’t supported:
+javascript
+// ui.js
+(function () {
+  window.UI = {
+    initializeUI: function () { /* ... */ }
+  };
+})();
+Update HTML:
+Ensure CSRF tokens are included in forms (already present in your code).
+
+Update event handlers to reference global functions if needed (e.g., <button onclick="saveBatch()">).
+
+Verify that Select2, jQuery, and Bootstrap are loaded before your scripts.
+Test Each Module:
+Test UI initialization (dropdowns, tooltips, modals).
+
+Test unit management (adding units, filtering, converting).
+
+Test batch operations (saving, finishing, canceling, stock checks).
+
+Check console for errors related to missing CSRF tokens or DOM elements.
+Optimize Further (Optional):
+If any module grows too large (e.g., batchManager.js), split it further (e.g., stockManager.js for updateStockCheckTable).
+
+Minify the bundled code for production to reduce file size.
+Benefits of This Refactor
+Smaller Files: Each file is 10–120 lines, making them easier to read and maintain.
+
+Clear Separation: UI, unit management, and batch logic are isolated, reducing cognitive load.
+
+Reusability: Utilities like getCSRFToken can be reused across other parts of the application.
+
+Scalability: New features (e.g., recipe management) can be added as new modules.
+Potential Challenges
+Module Setup: If you’re not using a bundler, setting up ES Modules or global variables requires careful configuration.
+
+Global Access: Functions like saveBatch need to be globally accessible for inline HTML event handlers, which main.js handles via window.
+
+Dependencies: Ensure jQuery, Bootstrap, and Select2 are loaded before your scripts. If they’re not, add <script> tags in your HTML:
+html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+Line Count After Refactor
+ui.js: ~70 lines
+
+unitManager.js: ~120 lines
+
+batchManager.js: ~110 lines
+
+utils.js: ~10 lines
+
+main.js: ~20 lines
+
+Total: ~330 lines (comparable to the original, but split for better organization)
+The total line count remains similar, but the modular structure makes the code more maintainable and easier to extend.
+Questions for You
+Module System: Are you using a bundler (e.g., Webpack) or plain <script> tags? This affects how I finalize the module setup.
+
+Missing Features: The restored code omits some features from the original (e.g., batchSnapshot, addIngredient). Do you want to include these in the refactor? If so, I can add them to batchManager.js or a new module.
+
+Specific Concerns: Are there particular parts of the code (e.g., batch saving, unit conversion) you want to optimize further during the split?
+
+Testing Environment: Can you test the modular code in your environment, or do you need help setting up a development server?
+

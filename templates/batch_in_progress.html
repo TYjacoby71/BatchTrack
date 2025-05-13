@@ -10,7 +10,7 @@
 </div>
 
 
-<form id="batchForm" method="post" action="{{ url_for('finish_batch.mark_batch_complete', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
+<form id="batchForm" method="post" action="{{ url_for('finish_batch.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
     <!-- Yield info will be handled in modal -->
     <div class="form-group mt-4">
@@ -218,7 +218,6 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-{% include 'components/batch/finish_batch_modal.html' %}
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
 
 {% endblock %}
