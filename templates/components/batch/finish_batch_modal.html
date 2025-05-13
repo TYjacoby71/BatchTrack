@@ -8,7 +8,7 @@
       </div>
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
-          {{ csrf_token() }}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <div class="form-group mb-3">
             <label for="final_quantity">Final Quantity</label>

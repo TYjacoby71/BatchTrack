@@ -1,7 +1,7 @@
 
-// Get CSRF token from form
+// Get CSRF token from meta tag
 function getCSRFToken() {
-  return document.querySelector('.csrf-token')?.value;
+  return document.querySelector('meta[name="csrf-token"]')?.content;
 }
 
 function handleModalTransition(fromModalId, toModalId, focusElementId) {
