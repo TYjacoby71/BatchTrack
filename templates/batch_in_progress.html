@@ -89,6 +89,7 @@
                     <input type="text" :name="'timers['+index+'][name]'" x-model="timer.name" class="form-control" placeholder="Timer Name">
                     <input type="number" :name="'timers['+index+'][duration_seconds]'" x-model="timer.duration_seconds" class="form-control" placeholder="Duration (seconds)">
                     <span class="text-muted align-self-center" x-text="timer.start_time ? '(Started: ' + new Date(timer.start_time).toLocaleString() + ')' : '(Not started)'"></span>
+                    <button type="button" class="btn btn-success btn-sm" x-show="!timer.start_time" @click="startTimer(timer)">Start</button>
                     <button type="button" class="btn btn-danger btn-sm" @click="removeTimer(index)">✕</button>
                 </div>
             </template>
