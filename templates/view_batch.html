@@ -46,7 +46,7 @@
             {% endif %}
 
             <p><strong>Quantity Produced:</strong> {{ batch.final_quantity or 'N/A' }} {{ batch.output_unit or '' }}</p>
-            <p><strong>Projected Yield:</strong> {{ batch.scale * batch.recipe.predicted_yield }} {{ batch.recipe.predicted_yield_unit }}</p>
+            <p><strong>Projected Yield:</strong> {{ batch.yield_amount }} {{ batch.yield_unit }}</p>
             {% if batch.total_cost %}
                 <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
             {% endif %}
