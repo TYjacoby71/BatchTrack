@@ -21,7 +21,7 @@
           <td>{{ timer.batch_id }}</td>
           <td>{{ timer.label }}</td>
           <td>{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td>{{ timer.due_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ timer.end_time.strftime('%Y-%m-%d %H:%M') if timer.end_time else '-' }}</td>
           <td>
             {% if timer.completed %}
             <span class="badge bg-success">Completed</span>
