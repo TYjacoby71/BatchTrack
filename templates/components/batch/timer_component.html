@@ -1,0 +1,65 @@
+
+<div x-data="{ 
+  showTimerForm: false,
+  name: '',
+  hours: '',
+  minutes: '',
+  seconds: '',
+  calculateTotalSeconds() {
+    return (parseInt(this.hours || 0) * 3600) + 
+           (parseInt(this.minutes || 0) * 60) + 
+           parseInt(this.seconds || 0);
+  },
+  async createTimer() {
+    const totalSeconds = this.calculateTotalSeconds();
+    if (totalSeconds < 1) {
+      alert('Please enter a valid duration');
+      return;
+    }
+
+    const response = await fetch('/timers/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name=csrf_token]').content
+      },
+      body: JSON.stringify({
+        name: this.name,
+        batch_id: {{ batch.id }},
+        duration_seconds: totalSeconds
+      })
+    });
+
+    const result = await response.json();
+    if (result.status === 'success') {
+      window.location.reload();
+    }
+  }
+}">
+  <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary">
+    + Add Timer
+  </button>
+
+  <div x-show="showTimerForm" class="card mt-3">
+    <div class="card-body">
+      <form @submit.prevent="createTimer">
+        <div class="mb-3">
+          <label class="form-label">Timer Label</label>
+          <input type="text" class="form-control" x-model="name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Duration (H:M:S)</label>
+          <div class="d-flex gap-2">
+            <input type="number" class="form-control" x-model="hours" placeholder="H" min="0">
+            <input type="number" class="form-control" x-model="minutes" placeholder="M" min="0">
+            <input type="number" class="form-control" x-model="seconds" placeholder="S" min="0">
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">Create Timer</button>
+          <button type="button" @click="showTimerForm = false" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -71,20 +71,18 @@
     <!-- TIMER SECTION -->
     <div class="mt-4">
         <h4>Timers</h4>
-        <div id="timer-list">
-            <a href="{{ url_for('timers.list_timers') }}" class="btn btn-primary">
-                <i class="fas fa-clock"></i> Manage Timers
-            </a>
-            {% for t in timers %}
-            <div class="timer-row d-flex gap-2 mb-2">
-                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
-                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
-                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-            </div>
-            {% endfor %}
+        {% for timer in timers %}
+        <div class="d-flex gap-2 mb-2 align-items-center">
+            <span class="flex-grow-1">{{ timer.name }}</span>
+            <span>{{ timer.duration_seconds // 60 }}m {{ timer.duration_seconds % 60 }}s</span>
+            <span class="text-muted">(Started: {{ timer.start_time.strftime('%Y-%m-%d %H:%M') if timer.start_time else 'Not started' }})</span>
+            <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-success">Complete</button>
+            </form>
         </div>
-        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        {% endfor %}
+        {% include 'components/batch/timer_component.html' %}
     </div>
 
     <!-- Batch Cost Summary -->
