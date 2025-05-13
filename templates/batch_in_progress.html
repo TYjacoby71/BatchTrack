@@ -70,6 +70,7 @@
 
     <!-- TIMER SECTION -->
     <div class="mt-4" x-data="{
+      showForm: false,
       timerName: '',
       duration: '',
       async startNewTimer() {
@@ -91,6 +92,9 @@
           });
           const data = await response.json();
           if (data.status === 'success') {
+            this.showForm = false;
+            this.timerName = '';
+            this.duration = '';
             window.location.href = '{{ url_for('timers.list_timers', batch_id=batch.id) }}';
           }
         } catch (error) {
@@ -100,10 +104,16 @@
     }">
         <h4>Timers</h4>
         <div class="mb-3">
-          <input type="text" x-model="timerName" class="form-control mb-2" placeholder="Timer Name">
-          <input type="number" x-model="duration" class="form-control mb-2" placeholder="Duration (minutes)" min="1">
-          <button type="button" @click="startNewTimer()" class="btn btn-outline-secondary">+ Add Timer</button>
-          <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary">View All Timers</a>
+          <button x-show="!showForm" type="button" @click="showForm = true" class="btn btn-outline-secondary">+ Add Timer</button>
+          <div x-show="showForm" class="card p-3 mt-2">
+            <input type="text" x-model="timerName" class="form-control mb-2" placeholder="Timer Name">
+            <input type="number" x-model="duration" class="form-control mb-2" placeholder="Duration (minutes)" min="1">
+            <div class="d-flex gap-2">
+              <button type="button" @click="startNewTimer()" class="btn btn-primary">Start Timer</button>
+              <button type="button" @click="showForm = false" class="btn btn-danger">Cancel</button>
+            </div>
+          </div>
+          <a href="{{ url_for('timers.list_timers', batch_id=batch.id) }}" class="btn btn-primary mt-2">View All Timers</a>
         </div>
     </div>
 
