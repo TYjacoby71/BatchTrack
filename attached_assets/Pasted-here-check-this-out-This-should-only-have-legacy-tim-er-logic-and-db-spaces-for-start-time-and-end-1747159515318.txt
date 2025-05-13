@@ -1,3 +1,10 @@
+here, check this out. This should only have legacy tim,er logic and db spaces for start time and end time or whatever its called. 
+
+The timer manager page may be missing all logic. I dont know. its just a server error.
+
+
+
+ChatGPT said:
 Thanks for restoring btv-8959-timer-upgrade.zip — here’s a precise breakdown of what’s currently in place regarding timers, and what needs to be cleaned up:
 
 ✅ What Works or Exists Now
