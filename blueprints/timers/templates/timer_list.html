@@ -77,9 +77,14 @@
             <label class="form-label">Timer Label</label>
             <input type="text" class="form-control" x-model="newTimer.name" required>
           </div>
+          <!-- Updated duration input -->
           <div class="mb-3">
-            <label class="form-label">Duration (seconds)</label>
-            <input type="number" class="form-control" x-model="newTimer.duration_seconds" required min="1">
+            <label class="form-label">Duration (H:M:S)</label>
+            <div class="d-flex gap-2">
+              <input type="number" class="form-control" x-model="hours" placeholder="H" min="0">
+              <input type="number" class="form-control" x-model="minutes" placeholder="M" min="0" max="59">
+              <input type="number" class="form-control" x-model="seconds" placeholder="S" min="0" max="59">
+            </div>
           </div>
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success">Create Timer</button>
@@ -97,6 +102,9 @@ document.addEventListener('alpine:init', () => {
     timers: {{ timers|tojson|safe }},
     activeBatches: {{ active_batches|tojson|safe }},
     addingTimer: false,
+    hours: '',
+    minutes: '',
+    seconds: '',
     newTimer: {
       name: '',
       duration_seconds: '',
@@ -113,7 +121,19 @@ document.addEventListener('alpine:init', () => {
         });
       }, 1000);
     },
+    calculateTotalSeconds() {
+      const h = parseInt(this.hours || 0);
+      const m = parseInt(this.minutes || 0);
+      const s = parseInt(this.seconds || 0);
+      return (h * 3600) + (m * 60) + s;
+    },
     async createTimer() {
+      const totalSeconds = this.calculateTotalSeconds();
+      if (totalSeconds < 1) {
+        alert('Please enter a valid duration');
+        return;
+      }
+      this.newTimer.duration_seconds = totalSeconds;
       const response = await fetch('/timers/create', {
         method: 'POST',
         headers: {
@@ -162,30 +182,6 @@ document.addEventListener('alpine:init', () => {
         return `${minutes}m ${seconds}s`;
     },
 
-    async createTimer() {
-      const response = await fetch('/timers/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify(this.newTimer)
-      });
-
-      const result = await response.json();
-      if (result.status === 'success') {
-        this.timers.push({
-          ...this.newTimer,
-          id: result.timer_id,
-          start_time: new Date().toISOString(),
-          status: 'active'
-        });
-        this.newTimer.name = '';
-        this.newTimer.duration_seconds = '';
-        this.addingTimer = false;
-      }
-    },
-
     async deleteTimer(timerId) {
       const response = await fetch(`/timers/delete/${timerId}`, {
         method: 'POST',
@@ -193,7 +189,7 @@ document.addEventListener('alpine:init', () => {
           'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
         }
       });
-      
+
       if (response.ok) {
         this.timers = this.timers.filter(timer => timer.id !== timerId);
       }
