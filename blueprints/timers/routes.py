@@ -1,7 +1,7 @@
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
-from models import db, BatchTimer
+from models import db, BatchTimer, Batch
 from datetime import datetime
 from . import timers_bp
 
