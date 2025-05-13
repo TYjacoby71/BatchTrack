@@ -18,8 +18,7 @@ def list_timers():
         'duration_seconds': int(t.duration_seconds) if t.duration_seconds else 0,
         'start_time': t.start_time.isoformat() if t.start_time else None,
         'end_time': t.end_time.isoformat() if t.end_time else None,
-        'status': t.status,
-        'original_duration': int(t.duration_seconds) if t.duration_seconds else 0
+        'status': t.status
     } for t in timers]
     
     active_batch_data = [{

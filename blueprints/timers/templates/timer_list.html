@@ -112,16 +112,6 @@ document.addEventListener('alpine:init', () => {
     },
 
     init() {
-      // Initialize timers with validated duration
-      this.timers = this.timers.map(timer => {
-        const duration = parseInt(timer.duration_seconds);
-        return {
-          ...timer,
-          duration_seconds: (!isNaN(duration) && duration > 0) ? duration : timer.duration_seconds
-        };
-      });
-      
-      // Start update loop
       this.updateTimers();
     },
 
