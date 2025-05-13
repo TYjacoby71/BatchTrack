@@ -1,5 +1,6 @@
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
+from datetime import datetime, timedelta
 from flask_login import login_required
 from models import db, BatchTimer, Batch
 from datetime import datetime
@@ -8,6 +9,7 @@ from . import timers_bp
 @timers_bp.route('/list')
 @login_required
 def list_timers():
+    from datetime import timedelta
     timers = BatchTimer.query.all()
     active_batches = Batch.query.filter_by(status='in_progress').all()
     
@@ -15,11 +17,10 @@ def list_timers():
         'id': t.id,
         'batch_id': t.batch_id,
         'name': t.name,
-        'duration_seconds': int(t.duration_seconds) if t.duration_seconds else 0,
-        'start_time': t.start_time.isoformat() if t.start_time else None,
-        'end_time': t.end_time.isoformat() if t.end_time else None,
-        'status': t.status,
-        'original_duration': int(t.duration_seconds) if t.duration_seconds else 0
+        'duration_seconds': int(t.duration_seconds),
+        'start_time': t.start_time.replace(tzinfo=None).isoformat() if t.start_time else None,
+        'end_time': t.end_time.replace(tzinfo=None).isoformat() if t.end_time else None,
+        'status': t.status
     } for t in timers]
     
     active_batch_data = [{
@@ -29,7 +30,8 @@ def list_timers():
     
     return render_template('timer_list.html', 
                          timers=timer_data,
-                         active_batches=active_batch_data)
+                         active_batches=active_batch_data,
+                         now=datetime.utcnow())
 
 @timers_bp.route('/create', methods=['POST'])
 @login_required

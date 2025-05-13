@@ -71,20 +71,9 @@
     <!-- TIMER SECTION -->
     <div class="mt-4">
         <h4>Timers</h4>
-        <div id="timer-list">
-            <a href="{{ url_for('timers.list_timers') }}" class="btn btn-primary">
-                <i class="fas fa-clock"></i> Manage Timers
-            </a>
-            {% for t in timers %}
-            <div class="timer-row d-flex gap-2 mb-2">
-                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
-                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
-                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-            </div>
-            {% endfor %}
-        </div>
-        <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
+        {% with timers=timers, now=now %}
+            {% include 'components/batch/timer_component.html' %}
+        {% endwith %}
     </div>
 
     <!-- Batch Cost Summary -->
@@ -176,9 +165,10 @@
             </tbody>
 
             <tfoot>
+                {% set total_cost = (ingredient_total if ingredient_total else 0) + (container_total if container_total else 0) + (extras_total if extras_total else 0) + (extra_container_total if extra_container_total else 0) %}
                 <tr>
                     <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                    <td><strong>${{ "%.2f"|format(batch_cost) if batch_cost else '0.00' }}</strong></td>
+                    <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
                 </tr>
             </tfoot>
         </table>

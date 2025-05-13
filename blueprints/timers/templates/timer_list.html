@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container" x-data="timerManager">
@@ -82,8 +81,8 @@
             <label class="form-label">Duration (H:M:S)</label>
             <div class="d-flex gap-2">
               <input type="number" class="form-control" x-model="hours" placeholder="H" min="0">
-              <input type="number" class="form-control" x-model="minutes" placeholder="M" min="0" max="59">
-              <input type="number" class="form-control" x-model="seconds" placeholder="S" min="0" max="59">
+              <input type="number" class="form-control" x-model="minutes" placeholder="M" min="0">
+              <input type="number" class="form-control" x-model="seconds" placeholder="S" min="0">
             </div>
           </div>
           <div class="d-flex gap-2">
@@ -112,16 +111,6 @@ document.addEventListener('alpine:init', () => {
     },
 
     init() {
-      // Initialize timers with validated duration
-      this.timers = this.timers.map(timer => {
-        const duration = parseInt(timer.duration_seconds);
-        return {
-          ...timer,
-          duration_seconds: (!isNaN(duration) && duration > 0) ? duration : timer.duration_seconds
-        };
-      });
-      
-      // Start update loop
       this.updateTimers();
     },
 
@@ -139,7 +128,7 @@ document.addEventListener('alpine:init', () => {
       const hours = Math.floor(seconds / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
       const remainingSeconds = seconds % 60;
-      
+
       if (hours > 0) {
         return `${hours}h ${minutes}m ${remainingSeconds}s`;
       }
@@ -147,22 +136,32 @@ document.addEventListener('alpine:init', () => {
     },
 
     calculateTimeLeft(timer) {
-      if (timer.status === 'completed') return 'User Ended';
-      if (!timer.start_time) return 'Not Started';
+        if (timer.status === 'completed' && !this.isExpired(timer)) return 'User Ended';
+        if (!timer.start_time) return 'Not Started';
 
-      const start = new Date(timer.start_time);
-      const now = new Date();
-      const elapsedSeconds = Math.floor((now - start) / 1000);
-      const remainingSeconds = Math.max(0, timer.duration_seconds - elapsedSeconds);
+        const start = new Date(timer.start_time + 'Z');
+        const now = new Date();
+        const totalSeconds = parseInt(timer.duration_seconds);
+        const elapsedSeconds = Math.floor((now - start) / 1000);
+        const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 
-      if (remainingSeconds <= 0) {
-        if (timer.status === 'active') {
-          this.completeTimer(timer.id);
+        if (remainingSeconds <= 0) {
+            if (timer.status === 'active') {
+                this.completeTimer(timer.id);
+            }
+            return 'Expired';
         }
-        return 'Expired';
-      }
 
-      return this.formatDuration(remainingSeconds);
+        return this.formatDuration(remainingSeconds);
+    },
+
+    isExpired(timer) {
+        if (!timer.start_time) return false;
+        const start = new Date(timer.start_time + 'Z');
+        const now = new Date();
+        const totalSeconds = parseInt(timer.duration_seconds);
+        const elapsedSeconds = Math.floor((now - start) / 1000);
+        return elapsedSeconds >= totalSeconds;
     },
 
     calculateTotalSeconds() {
@@ -195,16 +194,10 @@ document.addEventListener('alpine:init', () => {
 
       const result = await response.json();
       if (result.status === 'success') {
-        this.timers.push({
-          ...timerData,
-          id: result.timer_id,
-          start_time: new Date().toISOString(),
-          status: 'active',
-          original_duration: totalSeconds
-        });
-        
-        // Reset form
-        this.newTimer.name = '';
+        // Force page refresh after successful timer creation
+        window.location.reload();
+      } else {
+        alert('Failed to create timer');
         this.newTimer.batch_id = '';
         this.hours = '';
         this.minutes = '';

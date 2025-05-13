@@ -28,9 +28,17 @@
           <div class="form-group mb-3">
             <label for="output_unit">Output Unit</label>
             <select name="output_unit" id="output_unit" class="form-select" required>
-              {% for unit in units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
-              {% endfor %}
+              {% if batch.batch_type == 'ingredient' %}
+                {% for unit in units %}
+                  {% if unit.type in ['weight', 'volume', 'count'] %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                {% for unit in units %}
+                  <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+              {% endif %}
             </select>
           </div>
 
