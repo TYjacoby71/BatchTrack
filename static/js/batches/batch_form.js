@@ -89,7 +89,7 @@ function submitFinishBatch(action) {
     }
 
     const formData = new FormData(modalForm);
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    const csrfToken = modalForm.querySelector('input[name="csrf_token"]').value;
 
     formData.append('action', action);
 
