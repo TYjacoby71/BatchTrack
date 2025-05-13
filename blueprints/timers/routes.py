@@ -17,6 +17,7 @@ def list_timers():
         'name': t.name,
         'duration_seconds': t.duration_seconds,
         'start_time': t.start_time.isoformat() if t.start_time else None,
+        'end_time': t.end_time.isoformat() if t.end_time else None,
         'status': t.status
     } for t in timers]
     

@@ -160,31 +160,36 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
+    formatDuration(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${remainingSeconds}s`;
+      }
+      return `${minutes}m ${remainingSeconds}s`;
+    },
+
     calculateTimeLeft(timer) {
         if (timer.status === 'completed') {
           return 'User Ended';
         }
         if (!timer.start_time) return 'Not Started';
+
         const start = new Date(timer.start_time);
         const now = new Date();
-        const duration = timer.duration_seconds * 1000;
-        const diff = (start.getTime() + duration) - now.getTime();
+        const elapsedSeconds = Math.floor((now - start) / 1000);
+        const remainingSeconds = Math.max(0, timer.duration_seconds - elapsedSeconds);
 
-        if (diff <= 0) {
+        if (remainingSeconds <= 0) {
           if (timer.status === 'active') {
             this.completeTimer(timer.id);
           }
           return 'Expired';
         }
 
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        
-        if (hours > 0) {
-          return `${hours}h ${minutes}m ${seconds}s`;
-        }
-        return `${minutes}m ${seconds}s`;
+        return this.formatDuration(remainingSeconds);
     },
 
     async deleteTimer(timerId) {
