@@ -194,17 +194,10 @@ document.addEventListener('alpine:init', () => {
 
       const result = await response.json();
       if (result.status === 'success') {
-        const timer = {
-          ...timerData,
-          id: result.timer_id,
-          start_time: new Date().toISOString(),
-          status: 'active',
-          duration_seconds: totalSeconds
-        };
-        this.timers.push(timer);
-
-        // Reset form
-        this.newTimer.name = '';
+        // Force page refresh after successful timer creation
+        window.location.reload();
+      } else {
+        alert('Failed to create timer');
         this.newTimer.batch_id = '';
         this.hours = '';
         this.minutes = '';
