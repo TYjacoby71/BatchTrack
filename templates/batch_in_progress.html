@@ -73,7 +73,6 @@
       showForm: false,
       timerName: '',
       duration: '',
-      timers: [],
       async startNewTimer() {
         if (!this.timerName || !this.duration) {
           alert('Please fill in both timer name and duration');
@@ -94,15 +93,9 @@
           const data = await response.json();
           if (data.status === 'success') {
             this.showForm = false;
-            alert(`Timer "${this.timerName}" started`);
             this.timerName = '';
             this.duration = '';
-            // Add new timer to the list
-            this.timers.push({
-              id: data.timer_id,
-              name: data.name,
-              end_time: new Date(data.end_time)
-            });
+            window.location.href = '{{ url_for('timers.list_timers', batch_id=batch.id) }}';
           }
         } catch (error) {
           console.error('Error starting timer:', error);
