@@ -115,7 +115,7 @@ function submitFinishBatch(action) {
     const formData = new FormData(modalForm);
     // Using raw CSRF token from <input>, not Flask-WTF
     const csrfTokenInput = modalForm.querySelector('input[name="csrf_token"]');
-    
+
     if (!csrfTokenInput) {
         console.error('CSRF token not found');
         alert('Error: Security token missing. Please refresh the page.');
@@ -126,6 +126,26 @@ function submitFinishBatch(action) {
     formData.append('action', action);
 
     const batchId = window.location.pathname.split('/').pop();
+
+    // Required: Batch yield (final quantity)
+    const batchYield = modalForm.querySelector('#final_quantity').value;
+    if (!batchYield || batchYield <= 0) {
+        alert('Please enter the batch yield');
+        return;
+    }
+
+    // Required: Output type and unit
+    const outputType = modalForm.querySelector('#output_type').value;
+    const outputUnit = modalForm.querySelector('#output_unit').value;
+
+    // Only required if output type is 'product'
+    if (outputType === 'product') {
+        const productId = modalForm.querySelector('#product_id').value;
+        if (!productId) {
+            alert('Please select a product');
+            return;
+        }
+    }
 
     fetch(modalForm.action, {
         method: 'POST',
