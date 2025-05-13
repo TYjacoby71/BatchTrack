@@ -89,12 +89,15 @@ function markBatchFailed() {
 }
 
 function submitFinishBatch(action) {
-    const modalForm = document.getElementById('finishBatchModalForm');
     const modal = document.getElementById('finishBatchModal');
+    if (!modal) {
+        console.error('Modal not found');
+        return;
+    }
 
+    const modalForm = modal.querySelector('#finishBatchModalForm');
     if (!modalForm) {
         console.error('Modal form not found');
-        alert('Error: Form not found. Please refresh the page and try again.');
         return;
     }
 
