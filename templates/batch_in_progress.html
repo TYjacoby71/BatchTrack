@@ -75,7 +75,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Timer</th>
+                        <th>Timer Label</th>
                         <th>Duration</th>
                         <th>Status</th>
                         <th>Started</th>
@@ -86,7 +86,7 @@
                 <tbody>
                     {% for t in timers %}
                     <tr id="timer-{{ t.id }}">
-                        <td>{{ t.name }}</td>
+                        <td><strong>{{ t.name }}</strong></td>
                         <td>{{ t.duration_seconds }} seconds</td>
                         <td>
                             {% if t.status == 'running' %}
