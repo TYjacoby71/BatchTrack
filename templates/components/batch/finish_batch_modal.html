@@ -7,28 +7,51 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="finishBatchForm">
-          <!-- Batch Type Selection -->
+        <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
           <div class="form-group mb-3">
-            <label for="output_type">Batch Type:</label>
-            <select name="output_type" id="output_type" class="form-select" required onchange="toggleBatchTypeFields()">
-              <option value="product">Product</option>
-              <option value="ingredient">Ingredient</option>
+            <label for="final_quantity">Final Quantity</label>
+            <input type="number" 
+                   id="final_quantity"
+                   name="final_quantity"
+                   class="form-control"
+                   min="0.01"
+                   step="any"
+                   value="1"
+                   required>
+            <div class="form-text">
+              Projected yield: {{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="output_unit">Output Unit</label>
+            <select name="output_unit" id="output_unit" class="form-select" required>
+              {% for unit in units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
             </select>
           </div>
 
-          <!-- Product Fields -->
-          <div id="productFields">
+          <div class="form-group mb-3">
+            <label for="output_type">Output Type</label>
+            <select name="output_type" id="output_type" class="form-select" required onchange="toggleOutputFields()">
+              <option value="ingredient">Intermediate Ingredient</option>
+              <option value="product">Final Product</option>
+            </select>
+          </div>
+
+          <div id="productFields" style="display: none;">
             <div class="mb-3">
               <label for="product_id">Product</label>
-              <select name="product_id" id="product_id" class="form-select" onchange="loadProductVariants()">
-                <option value="">Select Product...</option>
+              <select name="product_id" id="product_id" class="form-select">
                 {% for product in products %}
                   <option value="{{ product.id }}">{{ product.name }}</option>
                 {% endfor %}
               </select>
             </div>
-            
+
             <div class="mb-3">
               <label for="variant_label">Variant</label>
               <select name="variant_label" id="variant_label" class="form-select">
@@ -37,42 +60,11 @@
             </div>
           </div>
 
-          <!-- Batch Yield Section -->
-          <div class="mb-3">
-            <label for="final_quantity" class="d-flex align-items-center">
-              Batch Yield
-              <i class="fas fa-question-circle ms-2" 
-                 data-bs-toggle="tooltip" 
-                 title="How much product or intermediate ingredient did your batch make?"></i>
-            </label>
-            <input type="number" 
-                   class="form-control" 
-                   name="final_quantity" 
-                   id="final_quantity"
-                   required>
-            <div class="form-text">
-              Projected yield: <span id="projectedYield">{{ batch.scale * recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</span>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="output_unit">Unit</label>
-            <select name="output_unit" id="output_unit" class="form-select" required>
-              {% for unit in units %}
-                <option value="{{ unit.name }}">{{ unit.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="notes-section">
-            <label for="notes">Notes</label>
-            <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success" onclick="submitFinishBatch()">Complete Batch</button>
           </div>
         </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" onclick="submitFinishBatch('finish')">Complete Batch</button>
       </div>
     </div>
   </div>
