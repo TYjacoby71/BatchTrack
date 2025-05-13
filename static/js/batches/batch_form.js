@@ -64,10 +64,8 @@ function submitBatchCompletion() {
         console.error('Batch completion form not found');
         return;
     }
+    console.log('Submitting batch...');
     form.submit();
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => {
                 throw new Error(err.error || 'Failed to complete batch');
             });
         }
