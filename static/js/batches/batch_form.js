@@ -59,23 +59,12 @@ async function loadProductVariants() {
 }
 
 function submitBatchCompletion() {
-    const form = document.getElementById('finishBatchForm');
+    const form = document.getElementById('finishBatchModalForm');
     if (!form) {
         console.error('Batch completion form not found');
         return;
     }
-
-    const formData = new FormData(form);
-    const batchId = window.location.pathname.split('/').pop();
-    const csrfToken = document.querySelector('.csrf-token').value;
-
-    fetch(`/finish_batch/${batchId}/complete`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': csrfToken
-        }
-    })
+    form.submit();
     .then(response => {
         if (!response.ok) {
             return response.json().then(err => {

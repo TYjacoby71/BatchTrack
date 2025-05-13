@@ -6,8 +6,10 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="finishBatchForm" method="POST">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
+        <form id="finishBatchModalForm" method="POST" action="{{ url_for('finish_batch.mark_batch_complete', batch_id=batch.id) }}">
+          {{ form.csrf_token }}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="batch_id" value="{{ batch.id }}">
 
           <div class="mb-3">
             <label class="form-label">Batch Type</label>
