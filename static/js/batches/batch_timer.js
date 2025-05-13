@@ -1,6 +1,6 @@
 
-// Batch timer functionality
-function startTimer(timerId, duration) {
+// Timer display functionality
+function startTimerDisplay(timerId, duration) {
   const timerElement = document.getElementById(`timer-${timerId}`);
   if (!timerElement) return;
 
@@ -24,18 +24,31 @@ function startTimer(timerId, duration) {
 
 document.addEventListener('alpine:init', () => {
   Alpine.data('timerManager', () => ({
-    timers: [],
-    newTimer: '',
-    newDuration: null,
+    timers: Alpine.$data.timers || [],
     
+    addTimer() {
+      this.timers.push({
+        name: '',
+        duration_seconds: null,
+        start_time: null
+      });
+    },
+
+    removeTimer(index) {
+      this.timers.splice(index, 1);
+    },
+
     async startTimer(timer) {
       if (!timer.duration_seconds) return;
+      
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
       
       try {
         const response = await fetch('/timers/start', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
           },
           body: JSON.stringify({ 
             timer_id: timer.id,
@@ -46,23 +59,11 @@ document.addEventListener('alpine:init', () => {
         const data = await response.json();
         if (data.success) {
           timer.start_time = new Date().toISOString();
-          startTimer(timer.id, timer.duration_seconds);
+          startTimerDisplay(timer.id, timer.duration_seconds);
         }
       } catch (error) {
         console.error('Error starting timer:', error);
       }
-    },
-    
-    removeTimer(index) {
-      this.timers.splice(index, 1);
-    },
-    
-    addTimer() {
-      this.timers.push({
-        name: '',
-        duration_seconds: null,
-        start_time: null
-      });
     }
   }));
 });

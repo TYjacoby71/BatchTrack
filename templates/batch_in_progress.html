@@ -69,19 +69,7 @@
 
 
     <!-- TIMER SECTION -->
-    <div class="mt-4" x-data="{ 
-      timers: {{ timers|tojson }},
-      addTimer() {
-        this.timers.push({
-          name: '',
-          duration_seconds: null,
-          start_time: null
-        });
-      },
-      removeTimer(index) {
-        this.timers.splice(index, 1);
-      }
-    }">
+    <div class="mt-4" x-data="timerManager">
         <h4>Timers</h4>
         <div id="timer-list">
             <template x-for="(timer, index) in timers" :key="index">
