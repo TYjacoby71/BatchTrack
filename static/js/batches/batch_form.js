@@ -64,26 +64,6 @@ function submitBatchCompletion() {
         console.error('Batch completion form not found');
         return;
     }
-
-    const finalQuantity = form.querySelector('input[name="final_quantity"]').value;
-    const outputType = form.querySelector('select[name="output_type"]').value;
-    const outputUnit = form.querySelector('select[name="output_unit"]').value;
-
-    if (!finalQuantity || finalQuantity <= 0) {
-        alert('Please enter a valid final quantity greater than 0');
-        return;
-    }
-
-    if (!outputType) {
-        alert('Please select an output type');
-        return;
-    }
-
-    if (!outputUnit) {
-        alert('Please select an output unit');
-        return;
-    }
-
     console.log('Submitting batch...');
     form.submit();
 }
