@@ -82,7 +82,7 @@ function markBatchFailed() {
 
 function submitFinishBatch(action) {
     const modalForm = document.getElementById('finishBatchModalForm');
-    
+
     if (!modalForm) {
         console.error('Modal form not found');
         return;
@@ -90,12 +90,12 @@ function submitFinishBatch(action) {
 
     const formData = new FormData(modalForm);
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    
+
     formData.append('action', action);
 
     const batchId = window.location.pathname.split('/').pop();
 
-    fetch(`/batches/finish/${batchId}`, {
+    fetch(`/finish-batch/${batchId}/complete`, {
         method: 'POST',
         body: formData,
         headers: {
