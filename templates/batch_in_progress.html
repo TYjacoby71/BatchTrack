@@ -71,18 +71,27 @@
     <!-- TIMER SECTION -->
     <div class="mt-4">
         <h4>Timers</h4>
-        <div id="timer-list">
-            {% for t in timers %}
-            <div class="timer-row d-flex gap-2 mb-2">
-                <input type="text" name="timers[{{ loop.index0 }}][name]" value="{{ t.name }}" class="form-control" placeholder="Timer Name">
-                <input type="number" name="timers[{{ loop.index0 }}][duration_seconds]" value="{{ t.duration_seconds }}" class="form-control" placeholder="Duration (seconds)">
-                <span class="text-muted align-self-center">(Started: {{ t.start_time.strftime('%Y-%m-%d %H:%M') if t.start_time else 'Not started' }})</span>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+        <div id="active-timers">
+            {% for t in timers if t.status == 'running' %}
+            <div class="active-timer-row d-flex gap-2 mb-2 align-items-center" id="timer-{{ t.id }}">
+                <span class="timer-name">{{ t.name }}</span>
+                <span class="timer-countdown badge bg-primary"></span>
+                <span class="timer-end">Ends: {{ t.end_time.strftime('%I:%M %p') }}</span>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelTimer({{ t.id }})">⊗</button>
             </div>
             {% endfor %}
         </div>
+        <div id="timer-list"></div>
         <button type="button" onclick="addTimerRow()" class="btn btn-outline-secondary mt-2">+ Add Timer</button>
     </div>
+    
+    <script>
+        const batchId = {{ batch.id }};
+        // Initialize existing active timers
+        {% for t in timers if t.status == 'running' %}
+            updateTimerCountdown({{ t.id }}, new Date('{{ t.end_time.isoformat() }}'));
+        {% endfor %}
+    </script>
 
     <!-- Batch Cost Summary -->
     <!-- Batch Cost Summary -->
