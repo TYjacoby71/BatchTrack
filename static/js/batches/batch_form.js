@@ -1,48 +1,41 @@
-// Batch form functionality
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const finishModal = document.getElementById('finishBatchModal');
-    if (finishModal) {
-        finishModal.addEventListener('shown.bs.modal', function () {
-            toggleOutputFields();
-        });
-    }
-
-    // Initialize tooltips
-    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltips.map(function (tooltip) {
-        return new bootstrap.Tooltip(tooltip);
-    });
-
-    const outputTypeSelect = document.getElementById('output_type');
-    if (outputTypeSelect) {
-        outputTypeSelect.addEventListener('change', toggleOutputFields);
-    }
+    initializeForm();
+    initializeTooltips();
 });
 
-function togglePerishableFields() {
-    const isPerishable = document.getElementById('is_perishable').checked;
-    const perishableFields = document.getElementById('perishableFields');
-    if (perishableFields) {
-        perishableFields.style.display = isPerishable ? 'block' : 'none';
+function initializeForm() {
+    const outputType = document.getElementById('output_type');
+    if (outputType) {
+        outputType.addEventListener('change', toggleProductFields);
+        toggleProductFields(); // Initial toggle
+    }
+
+    const productSelect = document.getElementById('product_id');
+    if (productSelect) {
+        productSelect.addEventListener('change', loadProductVariants);
     }
 }
 
-function toggleOutputFields() {
-    const type = document.getElementById('output_type').value;
+function initializeTooltips() {
+    const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function(tooltip) {
+        return new bootstrap.Tooltip(tooltip);
+    });
+}
+
+function toggleProductFields() {
+    const outputType = document.getElementById('output_type');
     const productFields = document.getElementById('productFields');
-    const ingredientFields = document.getElementById('ingredientFields');
 
-    if (productFields) {
-        productFields.style.display = type === 'product' ? 'block' : 'none';
-    }
-    if (ingredientFields) {
-        ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
-    }
+    if (productFields && outputType) {
+        productFields.style.display = outputType.value === 'product' ? 'block' : 'none';
 
-    // Update required attributes
-    const productSelect = productFields?.querySelector('select[name="product_id"]');
-    if (productSelect) {
-        productSelect.required = type === 'product';
+        // Toggle required attributes
+        const productSelect = document.getElementById('product_id');
+        if (productSelect) {
+            productSelect.required = outputType.value === 'product';
+        }
     }
 }
 
@@ -50,126 +43,79 @@ async function loadProductVariants() {
     const productId = document.getElementById('product_id').value;
     const variantSelect = document.getElementById('variant_label');
 
-    if (!productId) {
-        variantSelect.innerHTML = '<option value="">Select a product first</option>';
-        return;
-    }
+    if (!productId || !variantSelect) return;
 
     try {
         const response = await fetch(`/api/products/${productId}/variants`);
         const variants = await response.json();
 
-        if (variants.length > 0) {
-            variantSelect.innerHTML = variants.map(v => 
-                `<option value="${v.name}">${v.name}</option>`
-            ).join('');
-        } else {
-            variantSelect.innerHTML = '<option value="">No variants available</option>';
-        }
+        variantSelect.innerHTML = variants.length ? 
+            variants.map(v => `<option value="${v.name}">${v.name}</option>`).join('') :
+            '<option value="">No variants available</option>';
     } catch (error) {
         console.error('Error loading variants:', error);
         variantSelect.innerHTML = '<option value="">Error loading variants</option>';
     }
 }
 
-function markBatchFailed() {
-    if (confirm('Are you sure you want to mark this batch as failed?')) {
-        const batchId = window.location.pathname.split('/').pop();
-        fetch(`/finish-batch/${batchId}/fail`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-            }
-        }).then(response => {
-            if (response.ok) {
-                window.location.href = '/batches/';
-            }
-        });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Verify modal form exists on page load
-    const modalForm = document.getElementById('finishBatchModalForm');
-    if (!modalForm) {
-        console.error('Initial modal form check failed - form not found on page load');
-    }
-});
-
-function submitFinishBatch(action) {
-    console.log('Submitting batch...');
-    const modal = document.getElementById('finishBatchModal');
-    const modalForm = document.getElementById('finishBatchModalForm');
-
-    // More detailed error logging
-    if (!modal || !modalForm) {
-        console.error('Modal elements check failed:', {
-            modalExists: !!modal,
-            formExists: !!modalForm,
-            formHTML: document.querySelector('#finishBatchModal .modal-body').innerHTML
-        });
-        alert('Error: Form elements not found. Please refresh the page.');
+function submitBatchCompletion() {
+    const form = document.getElementById('finishBatchForm');
+    if (!form) {
+        console.error('Batch completion form not found');
         return;
     }
 
-    const formData = new FormData(modalForm);
-    // Using raw CSRF token from <input>, not Flask-WTF
-    const csrfTokenInput = modalForm.querySelector('input[name="csrf_token"]');
-    
-    if (!csrfTokenInput) {
-        console.error('CSRF token not found');
-        alert('Error: Security token missing. Please refresh the page.');
-        return;
-    }
-
-    const csrfToken = csrfTokenInput.value;
-    formData.append('action', action);
-
+    const formData = new FormData(form);
     const batchId = window.location.pathname.split('/').pop();
+    const csrfToken = document.querySelector('.csrf-token').value;
 
     fetch(`/finish_batch/${batchId}/complete`, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': csrfToken,
-            'Accept': 'application/json'
+            'X-CSRFToken': csrfToken
         }
     })
     .then(response => {
         if (!response.ok) {
             return response.json().then(err => {
-                throw new Error(err.error || 'Failed to finish batch');
+                throw new Error(err.error || 'Failed to complete batch');
             });
         }
         window.location.href = '/batches/';
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error finishing batch: ' + error.message);
+        alert('Error completing batch: ' + error.message);
     });
 }
 
-function saveBatchAndExit() {
-    const batchId = window.location.pathname.split('/').pop();
-    const notes = document.querySelector('textarea[name="notes"]').value;
-    const tags = document.querySelector('input[name="tags"]').value;
+function cancelBatch() {
+    if (!confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
+        return;
+    }
 
-    fetch(`/batches/${batchId}/update-notes`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
-        },
-        body: JSON.stringify({
-            notes: notes,
-            tags: tags
-        })
-    })
-    .then(response => {
-        if (response.ok) {
-            window.location.href = '/batches/';
-        }
-    });
+    const batchId = window.location.pathname.split('/').pop();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/batches/cancel/${batchId}`;
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = document.querySelector('.csrf-token').value;
+
+    form.appendChild(csrfInput);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function togglePerishableFields() {
+    const isPerishable = document.getElementById('is_perishable').checked;
+    const perishableFields = document.getElementById('perishableFields');
+    if (perishableFields) {
+        perishableFields.style.display = isPerishable ? 'block' : 'none';
+    }
 }
 
 function updateRowCost(selectElement) {
@@ -301,23 +247,4 @@ function saveExtras() {
         alert(err.message);
         console.error(err);
     });
-}
-
-function cancelBatch() {
-    if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-        const batchId = window.location.pathname.split('/').pop();
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/batches/cancel/${batchId}`;
-
-        const csrf = document.querySelector('.csrf-token').value;
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrf;
-
-        form.appendChild(csrfInput);
-        document.body.appendChild(form);
-        form.submit();
-    }
 }
