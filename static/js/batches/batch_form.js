@@ -1,99 +1,176 @@
-// Initialize on page load
+// Batch form functionality
+// Listen for modal open to initialize fields
 document.addEventListener('DOMContentLoaded', function() {
-    initializeForm();
-    initializeTooltips();
+    const finishModal = document.getElementById('finishBatchModal');
+    if (finishModal) {
+        finishModal.addEventListener('shown.bs.modal', function () {
+            toggleOutputFields();
+        });
+    }
 });
 
-function initializeForm() {
-    const outputType = document.getElementById('output_type');
-    if (outputType) {
-        outputType.addEventListener('change', toggleProductFields);
-        toggleProductFields(); // Initial toggle
-    }
-
-    const productSelect = document.getElementById('product_id');
-    if (productSelect) {
-        productSelect.addEventListener('change', loadProductVariants);
-    }
-}
-
-function initializeTooltips() {
-    const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltips.map(function(tooltip) {
-        return new bootstrap.Tooltip(tooltip);
-    });
-}
-
-function toggleProductFields() {
-    const outputType = document.getElementById('output_type');
+function toggleOutputFields() {
+    const type = document.getElementById('output_type').value;
     const productFields = document.getElementById('productFields');
+    const ingredientFields = document.getElementById('ingredientFields');
 
-    if (productFields && outputType) {
-        productFields.style.display = outputType.value === 'product' ? 'block' : 'none';
+    productFields.style.display = type === 'product' ? 'block' : 'none';
+    ingredientFields.style.display = type === 'ingredient' ? 'block' : 'none';
 
-        // Toggle required attributes
-        const productSelect = document.getElementById('product_id');
-        if (productSelect) {
-            productSelect.required = outputType.value === 'product';
-        }
+    // Update required attributes
+    const productSelect = productFields.querySelector('select[name="product_id"]');
+    if (productSelect) {
+        productSelect.required = type === 'product';
+    }
+}
+
+// Add event listener when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    const outputTypeSelect = document.getElementById('output_type');
+    if (outputTypeSelect) {
+        outputTypeSelect.addEventListener('change', toggleOutputFields);
+    }
+});
+
+function toggleBatchTypeFields() {
+    const type = document.getElementById('output_type').value;
+    const productFields = document.getElementById('productFields');
+    
+    if (type === 'product') {
+        productFields.style.display = 'block';
+        document.getElementById('product_id').required = true;
+    } else {
+        productFields.style.display = 'none';
+        document.getElementById('product_id').required = false;
     }
 }
 
 async function loadProductVariants() {
     const productId = document.getElementById('product_id').value;
     const variantSelect = document.getElementById('variant_label');
-
-    if (!productId || !variantSelect) return;
+    
+    if (!productId) {
+        variantSelect.innerHTML = '<option value="">Select a product first</option>';
+        return;
+    }
 
     try {
         const response = await fetch(`/api/products/${productId}/variants`);
         const variants = await response.json();
-
-        variantSelect.innerHTML = variants.length ? 
-            variants.map(v => `<option value="${v.name}">${v.name}</option>`).join('') :
-            '<option value="">No variants available</option>';
+        
+        if (variants.length > 0) {
+            variantSelect.innerHTML = variants.map(v => 
+                `<option value="${v.name}">${v.name}</option>`
+            ).join('');
+        } else {
+            variantSelect.innerHTML = '<option value="">No variants available</option>';
+        }
     } catch (error) {
         console.error('Error loading variants:', error);
         variantSelect.innerHTML = '<option value="">Error loading variants</option>';
     }
 }
 
-function submitBatchCompletion() {
-    const form = document.getElementById('finishBatchModalForm');
-    if (!form) {
-        console.error('Batch completion form not found');
-        return;
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    toggleBatchTypeFields();
+    var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function (tooltip) {
+        return new bootstrap.Tooltip(tooltip);
+    });
+});
+
+function markBatchFailed() {
+    if (confirm('Are you sure you want to mark this batch as failed?')) {
+        const batchId = window.location.pathname.split('/').pop();
+        fetch(`/finish-batch/${batchId}/fail`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            }
+        }).then(response => {
+            if (response.ok) {
+                window.location.href = '/batches/';
+            }
+        });
     }
-    console.log('Submitting batch...');
-    form.submit();
 }
 
-function cancelBatch() {
-    if (!confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
+function submitFinishBatch(action) {
+    const modalForm = document.getElementById('finishBatchModalForm');
+    const mainForm = document.getElementById('batchForm');
+    
+    if (!modalForm || !mainForm) {
+        console.error('Required forms not found');
         return;
     }
+
+    const formData = new FormData();
+    
+    // Add data from modal form
+    const modalInputs = modalForm.querySelectorAll('input, select, textarea');
+    modalInputs.forEach(input => {
+        if (input.name) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
+    // Add data from main form
+    const mainInputs = mainForm.querySelectorAll('input, select, textarea');
+    mainInputs.forEach(input => {
+        if (input.name && !formData.has(input.name)) {
+            formData.append(input.name, input.value);
+        }
+    });
+    
+    formData.append('action', action);
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
 
     const batchId = window.location.pathname.split('/').pop();
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/batches/cancel/${batchId}`;
 
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = document.querySelector('.csrf-token').value;
-
-    form.appendChild(csrfInput);
-    document.body.appendChild(form);
-    form.submit();
+    fetch(`/batches/${batchId}/finish`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to finish batch');
+            });
+        }
+        window.location.href = '/batches/';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error finishing batch: ' + error.message);
+    });
 }
 
-function togglePerishableFields() {
-    const isPerishable = document.getElementById('is_perishable').checked;
-    const perishableFields = document.getElementById('perishableFields');
-    if (perishableFields) {
-        perishableFields.style.display = isPerishable ? 'block' : 'none';
-    }
+function saveBatchAndExit() {
+    const batchId = window.location.pathname.split('/').pop();
+    const notes = document.querySelector('textarea[name="notes"]').value;
+    const tags = document.querySelector('input[name="tags"]').value;
+
+    fetch(`/batches/${batchId}/update-notes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('.csrf-token').value
+        },
+        body: JSON.stringify({
+            notes: notes,
+            tags: tags
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = '/batches/';
+        }
+    });
 }
 
 function updateRowCost(selectElement) {
@@ -113,7 +190,7 @@ function addExtraIngredientRow() {
         width: 'resolve',
         dropdownAutoWidth: true
     });
-
+    
     // Set initial cost
     const select = newRow.querySelector('.ingredient-select');
     updateRowCost(select);
@@ -130,26 +207,6 @@ function addExtraContainerRow() {
         width: 'resolve',
         dropdownAutoWidth: true
     });
-}
-
-function updateNotesAndTags(event) {
-    const form = document.getElementById('saveAndExitForm');
-    const notes = document.querySelector('textarea[name="notes"]').value;
-    const tags = document.querySelector('input[name="tags"]').value;
-    
-    // Add the current values as hidden fields
-    const notesInput = document.createElement('input');
-    notesInput.type = 'hidden';
-    notesInput.name = 'notes';
-    notesInput.value = notes;
-    
-    const tagsInput = document.createElement('input');
-    tagsInput.type = 'hidden';
-    tagsInput.name = 'tags';
-    tagsInput.value = tags;
-    
-    form.appendChild(notesInput);
-    form.appendChild(tagsInput);
 }
 
 function saveExtraContainers() {
@@ -245,4 +302,23 @@ function saveExtras() {
         alert(err.message);
         console.error(err);
     });
+}
+
+function cancelBatch() {
+    if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
+        const batchId = window.location.pathname.split('/').pop();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/batches/cancel/${batchId}`;
+
+        const csrf = document.querySelector('.csrf-token').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrf;
+
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
