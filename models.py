@@ -164,6 +164,7 @@ class BatchTimer(db.Model):
             'duration_seconds': self.duration_seconds,
             'start_time': self.start_time.isoformat() if self.start_time else None,
             'end_time': self.end_time.isoformat() if self.end_time else None,
+            'expires_at': (self.start_time + timedelta(seconds=self.duration_seconds)).isoformat() if self.start_time and self.duration_seconds else None,
             'status': self.status
         }
 
