@@ -38,10 +38,10 @@ def complete_batch(batch_id):
     # Get completion details
     output_type = request.form.get('output_type')
     final_quantity = float(request.form.get('final_quantity', 0))
-    output_unit = request.form.get('output_unit')
+    output_unit = request.form.get('output_unit') or batch.yield_unit
 
     # Validate required fields
-    if not all([output_type, final_quantity > 0, output_unit]):
+    if not all([output_type, final_quantity > 0]):
         flash("Output type, quantity and unit are required", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
