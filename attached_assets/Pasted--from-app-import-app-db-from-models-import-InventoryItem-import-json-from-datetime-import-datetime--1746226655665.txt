@@ -1,0 +1,95 @@
+
+from app import app, db
+from models import InventoryItem
+import json
+from datetime import datetime
+
+def export_inventory():
+    with app.app_context():
+        items = InventoryItem.query.all()
+        inventory_data = []
+
+        for item in items:
+            data = {
+                'name': item.name,
+                'quantity': item.quantity,
+                'unit': item.unit,
+                'type': item.type,
+                'cost_per_unit': item.cost_per_unit,
+                'low_stock_threshold': item.low_stock_threshold,
+                'is_perishable': item.is_perishable,
+                'category_id': item.category_id,
+                'density': item.category.default_density if item.category else None
+            }
+            
+            # Add container-specific fields
+            if item.type == 'container':
+                data.update({
+                    'storage_amount': item.storage_amount,
+                    'storage_unit': item.storage_unit
+                })
+                
+            inventory_data.append(data)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'inventory_export_{timestamp}.json'
+        
+        with open(filename, 'w') as f:
+            json.dump(inventory_data, f, indent=2)
+        
+        print(f"✅ Inventory exported to {filename}")
+
+if __name__ == '__main__':
+    export_inventory()
+
+
+
+from app import app, db
+from models import Unit, CustomUnitMapping
+import json
+from datetime import datetime
+
+def export_units():
+    with app.app_context():
+        # Export standard units
+        units = Unit.query.filter_by(is_custom=False).all()
+        unit_data = [{
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base
+        } for unit in units]
+
+        # Export custom units
+        custom_units = Unit.query.filter_by(is_custom=True).all()
+        custom_unit_data = [{
+            'name': unit.name,
+            'type': unit.type,
+            'base_unit': unit.base_unit,
+            'multiplier_to_base': unit.multiplier_to_base
+        } for unit in custom_units]
+
+        # Export mappings
+        mappings = CustomUnitMapping.query.all()
+        mapping_data = [{
+            'from_unit': mapping.from_unit,
+            'to_unit': mapping.to_unit,
+            'multiplier': mapping.multiplier
+        } for mapping in mappings]
+
+        export_data = {
+            'units': unit_data,
+            'custom_units': custom_unit_data,
+            'mappings': mapping_data
+        }
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'units_export_{timestamp}.json'
+        
+        with open(filename, 'w') as f:
+            json.dump(export_data, f, indent=2)
+        
+        print(f"✅ Units exported to {filename}")
+
+if __name__ == '__main__':
+    export_units()
