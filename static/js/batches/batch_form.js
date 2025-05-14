@@ -7,14 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
       if (outputTypeSelect) {
-        updateOutputUI();
+        toggleOutputFields();
         toggleShelfLife();
       }
     });
   }
 
   if (outputTypeSelect) {
-    outputTypeSelect.addEventListener('change', updateOutputUI);
+    outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
   if (!modalForm) {
@@ -55,7 +55,7 @@ function toggleShelfLife() {
   }
 }
 
-function updateOutputUI() {
+function toggleOutputFields() {
   const type = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
   const productSelect = document.getElementById('product_id');
@@ -73,13 +73,13 @@ function markBatchFailed() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/finish-batch/${batchId}/fail`;
-    
+
     const csrf = document.querySelector('input[name="csrf_token"]').value;
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';
     csrfInput.value = csrf;
-    
+
     form.appendChild(csrfInput);
     document.body.appendChild(form);
     form.submit();
@@ -92,28 +92,23 @@ function submitFinishBatch() {
 
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
-  const isPerishableCheck = document.getElementById('is_perishable').checked;
+  const isPerishable = document.getElementById('is_perishable').checked;
 
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
-  if (isPerishableCheck) {
+  if (isPerishable) {
     const shelfLife = document.getElementById('shelf_life_days').value;
     if (!shelfLife || parseInt(shelfLife) <= 0) {
       alert('Please enter valid shelf life days for perishable items');
       return;
     }
-    
-    // Calculate expiration date
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
-    document.getElementById('expiration_date').value = expirationDate.toISOString().split('T')[0];
   }
 
   const formData = new FormData(modalForm);
-  formData.set('is_perishable', isPerishableCheck ? 'on' : 'off');
+  formData.set('is_perishable', isPerishable ? 'on' : 'off');
 
   fetch(modalForm.action, {
     method: 'POST',
@@ -124,28 +119,30 @@ function submitFinishBatch() {
     }
   })
   .then(async response => {
-    const contentType = response.headers.get("content-type");
-    if (!response.ok) {
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await response.json();
-        throw new Error(data.error || 'Batch failed to complete');
-      } else {
-        const text = await response.text();
-        // Check if response contains a flask flash message
-        const div = document.createElement('div');
-        div.innerHTML = text;
-        const flashMessage = div.querySelector('.alert');
-        if (flashMessage) {
-          throw new Error(flashMessage.textContent);
-        }
-        throw new Error('Batch failed to complete: ' + text);
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // Handle HTML response (likely contains flash message)
+      const div = document.createElement('div');
+      div.innerHTML = text;
+      const flashMessage = div.querySelector('.alert');
+      if (flashMessage) {
+        throw new Error(flashMessage.textContent.trim());
       }
+      // If redirected to success page, follow the redirect
+      if (response.redirected || response.ok) {
+        window.location.href = response.url || '/batches/';
+        return;
+      }
+      throw new Error('Failed to complete batch');
     }
-    if (response.redirected) {
-      window.location.href = response.url;
-    } else {
-      window.location.href = '/batches/';
+
+    if (data.error) {
+      throw new Error(data.error);
     }
+    window.location.href = '/batches/';
   })
   .catch(err => {
     const flashDiv = document.createElement('div');
@@ -154,7 +151,8 @@ function submitFinishBatch() {
       ${err.message}
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    document.querySelector('.modal-body').prepend(flashDiv);
+    const modalBody = document.querySelector('.modal-body');
+    modalBody.insertBefore(flashDiv, modalBody.firstChild);
   });
 }
 
