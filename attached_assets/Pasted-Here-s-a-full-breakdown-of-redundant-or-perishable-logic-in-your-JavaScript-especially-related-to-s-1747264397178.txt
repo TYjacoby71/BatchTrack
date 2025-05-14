@@ -1,0 +1,112 @@
+Here's a full breakdown of redundant or perishable logic in your JavaScript, especially related to shelf life, batch type switching, and duplicated or outdated variable definitions.
+
+🔍 1. Redundant isPerishable Declaration (Twice in submitFinishBatch)
+✅ Problem:
+js
+Copy
+Edit
+const isPerishable = document.getElementById('is_perishable').checked;
+// ...
+const isPerishable = document.getElementById('is_perishable').checked;
+❌ You're redeclaring isPerishable with const — this causes a SyntaxError in strict mode and can lead to weird behavior.
+
+✅ Fix:
+Replace the second declaration with an overwrite:
+
+js
+Copy
+Edit
+formData.set('is_perishable', isPerishable ? 'on' : 'off');
+🔍 2. Duplicated Logic: toggleOutputFields() and toggleBatchTypeFields()
+✅ Problem:
+Both do essentially the same thing:
+
+js
+Copy
+Edit
+// toggleOutputFields()
+const type = document.getElementById('output_type').value;
+// toggleBatchTypeFields()
+const type = document.getElementById('output_type').value;
+Both toggle visibility of productFields and manage .required status of product_id.
+
+✅ Fix:
+Collapse into one function, e.g.:
+
+js
+Copy
+Edit
+function updateOutputUI() {
+  const type = document.getElementById('output_type').value;
+  const productFields = document.getElementById('productFields');
+  const productSelect = document.getElementById('product_id');
+
+  const isProduct = type === 'product';
+
+  productFields.style.display = isProduct ? 'block' : 'none';
+  productSelect.required = isProduct;
+}
+Then replace all calls to toggleOutputFields() and toggleBatchTypeFields() with updateOutputUI().
+
+🔍 3. Perishable Shelf Life Toggle Should Run on Modal Open
+You're only calling toggleOutputFields() on modal shown.bs.modal:
+
+js
+Copy
+Edit
+if (modal) {
+  modal.addEventListener('shown.bs.modal', function () {
+    if (outputTypeSelect) {
+      toggleOutputFields();
+    }
+  });
+}
+✅ Fix:
+Also add:
+
+js
+Copy
+Edit
+toggleShelfLife(); // ← Run once modal opens
+🔍 4. Obsolete/Fragile Tooltip Initialization
+This pattern is outdated for BS5:
+
+js
+Copy
+Edit
+var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+tooltips.map(function (tooltip) {
+  return new bootstrap.Tooltip(tooltip);
+});
+Replace with:
+
+js
+Copy
+Edit
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
+🔍 5. Unscoped Selectors May Misfire in Duplicated Rows
+In addExtraIngredientRow() and addExtraContainerRow(), you use:
+
+js
+Copy
+Edit
+const select = newRow.querySelector('.ingredient-select');
+updateRowCost(select);
+But if select is not found or misfires (missing class), you’ll get silent failures.
+
+✅ Fix:
+Add guard:
+
+js
+Copy
+Edit
+if (select) updateRowCost(select);
+✅ Summary of Redundant/Perishable Fixes
+Location	Issue	Fix
+submitFinishBatch()	const isPerishable declared twice	Remove second const, re-use variable
+toggleOutputFields() vs toggleBatchTypeFields()	Duplicate logic	Merge into updateOutputUI()
+Modal open handler	Only toggles output fields	Add toggleShelfLife() on modal open
+Tooltip init	Uses deprecated Bootstrap pattern	Replace with forEach variant
+Extra ingredient/container row	Unscoped .ingredient-select	Wrap in if (select) or improve query
+Form logic	No unit lock for intermediate yield	Ensure output_unit is set server-side to projected unit
