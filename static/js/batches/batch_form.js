@@ -24,13 +24,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleShelfLife() {
   const isPerishable = document.getElementById('is_perishable').checked;
   const shelfLifeField = document.getElementById('shelfLifeField');
-  shelfLifeField.style.display = isPerishable ? 'block' : 'none';
   
-  if (isPerishable) {
-    document.getElementById('shelf_life_days').required = true;
-  } else {
-    document.getElementById('shelf_life_days').required = false;
-    document.getElementById('shelf_life_days').value = '';
+  if (shelfLifeField) {
+    shelfLifeField.style.display = isPerishable ? 'block' : 'none';
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = isPerishable;
+      if (!isPerishable) {
+        shelfLifeInput.value = '';
+      }
+    }
   }
 }
 
