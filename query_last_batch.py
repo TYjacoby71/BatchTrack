@@ -16,10 +16,9 @@ with app.app_context():
         print(f"Completed: {last_batch.completed_at}")
         print(f"Type: {last_batch.batch_type}")
         print(f"Final Quantity: {last_batch.final_quantity} {last_batch.output_unit}")
-        
-        if last_batch.is_perishable:
-            print(f"Shelf Life: {last_batch.shelf_life_days} days")
-            print(f"Expires: {last_batch.expiration_date}")
+        print(f"Perishable: {'Yes' if last_batch.is_perishable else 'No'}")
+        print(f"Shelf Life: {last_batch.shelf_life_days if last_batch.shelf_life_days else 'N/A'} days")
+        print(f"Expiration Date: {last_batch.expiration_date.strftime('%Y-%m-%d') if last_batch.expiration_date else 'N/A'}")
 
         # Show ingredients used
         print("\nIngredients Used:")
