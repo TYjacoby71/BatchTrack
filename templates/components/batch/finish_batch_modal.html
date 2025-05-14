@@ -62,8 +62,12 @@
 
           <div id="shelfLifeField" class="form-group mb-3" style="display: none;">
             <label for="shelf_life_days">Shelf Life (days)</label>
-            <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1">
-            <input type="hidden" id="expiration_date" name="expiration_date">
+            <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" onchange="updateExpirationDate()">
+            <div class="mt-2">
+              <label for="expiration_date_display">Expiration Date</label>
+              <input type="date" id="expiration_date_display" class="form-control" readonly>
+              <input type="hidden" id="expiration_date" name="expiration_date">
+            </div>
           </div>
 
           <div class="modal-footer">

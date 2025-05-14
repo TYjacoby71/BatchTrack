@@ -26,6 +26,17 @@ document.addEventListener('DOMContentLoaded', function() {
   tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
 });
 
+function updateExpirationDate() {
+  const shelfLife = document.getElementById('shelf_life_days').value;
+  if (shelfLife && parseInt(shelfLife) > 0) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
+    const dateString = expirationDate.toISOString().split('T')[0];
+    document.getElementById('expiration_date').value = dateString;
+    document.getElementById('expiration_date_display').value = dateString;
+  }
+}
+
 function toggleShelfLife() {
   const isPerishable = document.getElementById('is_perishable').checked;
   const shelfLifeField = document.getElementById('shelfLifeField');
@@ -37,6 +48,8 @@ function toggleShelfLife() {
       shelfLifeInput.required = isPerishable;
       if (!isPerishable) {
         shelfLifeInput.value = '';
+        document.getElementById('expiration_date').value = '';
+        document.getElementById('expiration_date_display').value = '';
       }
     }
   }
