@@ -63,7 +63,7 @@ def complete_batch(batch_id):
             
         if batch.is_perishable:
             batch.shelf_life_days = shelf_life_days
-            batch.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
+            batch.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d')
 
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
