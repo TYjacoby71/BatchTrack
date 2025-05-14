@@ -21,6 +21,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable').checked;
+  const shelfLifeField = document.getElementById('shelfLifeField');
+  shelfLifeField.style.display = isPerishable ? 'block' : 'none';
+  
+  if (isPerishable) {
+    document.getElementById('shelf_life_days').required = true;
+  } else {
+    document.getElementById('shelf_life_days').required = false;
+    document.getElementById('shelf_life_days').value = '';
+  }
+}
+
 function toggleOutputFields() {
   const type = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
