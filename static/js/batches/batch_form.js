@@ -141,12 +141,15 @@ function submitFinishBatch() {
       throw new Error('Failed to complete batch');
     }
 
-    if (data.error) {
+    if (data && data.error) {
       throw new Error(data.error);
     }
-    if (response.redirected) {
-      window.location.href = response.url;
+    // Close modal and redirect
+    const modal = bootstrap.Modal.getInstance(document.getElementById('finishBatchModal'));
+    if (modal) {
+      modal.hide();
     }
+    window.location.href = response.url;
   })
   .catch(err => {
     const flashDiv = document.createElement('div');
