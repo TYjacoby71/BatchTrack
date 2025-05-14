@@ -1,0 +1,83 @@
+✅ Summary: What’s Working
+Unit management page (/conversion/units) includes the custom mapping form as a section (not a separate page).
+
+Your form action is:
+
+html
+Copy
+Edit
+<form method="POST" action="{{ url_for('conversion_bp.manage_mappings') }}">
+This is correct and matches the blueprint route:
+
+python
+Copy
+Edit
+@conversion_bp.route('/custom-mappings', methods=['POST'])
+def manage_mappings():
+CSRF token is correctly rendered in this form:
+
+html
+Copy
+Edit
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+🛑 Current Problems
+1. ❌ csrf_token is NOT being generated as a function
+You're rendering it like this:
+
+html
+Copy
+Edit
+{{ csrf_token }}
+But Flask-WTF requires:
+
+html
+Copy
+Edit
+{{ csrf_token() }}
+Effect: CSRF validation fails silently → 400 Bad Request on form submit.
+
+2. ❌ The POST route redirects to /conversion_bp.manage_units, but the GET version does NOT load the mappings into context
+Inside your manage_units() route:
+
+python
+Copy
+Edit
+return render_template('conversion/units.html', units=units, units_by_type=units_by_type)
+You're not passing mappings=mappings.
+
+Effect: After submitting a new mapping, the table doesn’t update with the new entry.
+
+✅ Correct Fixes Required
+✅ Fix #1 — Correct the CSRF token in your form
+Update your form HTML:
+
+html
+Copy
+Edit
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+✅ Fix #2 — Pass mappings back into units.html template
+Update your manage_units() route:
+
+python
+Copy
+Edit
+mappings = CustomUnitMapping.query.all()
+return render_template('conversion/units.html', units=units, units_by_type=units_by_type, mappings=mappings)
+✅ Optional UX Improvement
+Instead of redirecting to:
+
+python
+Copy
+Edit
+return redirect(url_for('conversion_bp.manage_units'))
+You could anchor back to the mapping section:
+
+python
+Copy
+Edit
+return redirect(url_for('conversion_bp.manage_units', _anchor='mappings'))
+✅ Summary of Required Edits
+File	Line	Fix
+conversion/units.html	CSRF input line	Change {{ csrf_token }} → {{ csrf_token() }}
+routes.py > manage_units()	Before render	Add mappings = CustomUnitMapping.query.all()
+routes.py > manage_units()	render_template call	Add mappings=mappings
