@@ -171,6 +171,8 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
     default_unit = db.Column(db.String(32), nullable=False)
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)  # Shelf life in days
     is_active = db.Column(db.Boolean, default=True)
     low_stock_threshold = db.Column(db.Float, default=0)
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
@@ -217,6 +219,7 @@ class InventoryItem(db.Model):
     perishable = db.Column(db.Boolean, default=False)
     low_stock_threshold = db.Column(db.Float, default=0)
     is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)  # Shelf life in days
     storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
     storage_unit = db.Column(db.String(50), default="")  # e.g., oz, ml, count
     density = db.Column(db.Float, nullable=True)  # Per-item density override
