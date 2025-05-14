@@ -54,20 +54,39 @@ function updateOutputUI() {
   }
 }
 
+function markBatchFailed() {
+  if (confirm('Mark this batch as failed? This action cannot be undone.')) {
+    const batchId = window.location.pathname.split('/').pop();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/finish-batch/${batchId}/fail`;
+    
+    const csrf = document.querySelector('input[name="csrf_token"]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrf;
+    
+    form.appendChild(csrfInput);
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
 function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
-  const isPerishable = document.getElementById('is_perishable').checked;
+  const isPerishableCheck = document.getElementById('is_perishable').checked;
 
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
-  if (isPerishable) {
+  if (isPerishableCheck) {
     const shelfLife = document.getElementById('shelf_life_days').value;
     if (!shelfLife || parseInt(shelfLife) <= 0) {
       alert('Please enter valid shelf life days for perishable items');
@@ -76,7 +95,7 @@ function submitFinishBatch() {
   }
 
   const formData = new FormData(modalForm);
-  formData.set('is_perishable', isPerishable ? 'on' : 'off');
+  formData.set('is_perishable', isPerishableCheck ? 'on' : 'off');
 
   fetch(modalForm.action, {
     method: 'POST',
