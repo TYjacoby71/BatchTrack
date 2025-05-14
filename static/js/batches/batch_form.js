@@ -4,6 +4,89 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalForm = document.getElementById('finishBatchModalForm');
   const outputTypeSelect = document.getElementById('output_type');
 
+  function toggleOutputFields() {
+    const productFields = document.getElementById('productFields');
+    if (productFields) {
+      productFields.style.display = outputTypeSelect.value === 'product' ? 'block' : 'none';
+    }
+  }
+
+  function toggleShelfLife() {
+    const isPerishable = document.getElementById('is_perishable').checked;
+    const shelfLifeField = document.getElementById('shelfLifeField');
+    if (shelfLifeField) {
+      shelfLifeField.style.display = isPerishable ? 'block' : 'none';
+    }
+  }
+
+  function updateExpirationDate() {
+    const shelfLifeDays = document.getElementById('shelf_life_days').value;
+    if (shelfLifeDays) {
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLifeDays));
+      document.getElementById('expiration_date_display').value = expirationDate.toISOString().split('T')[0];
+      document.getElementById('expiration_date').value = expirationDate.toISOString().split('T')[0];
+    }
+  }
+
+  window.submitFinishBatch = function() {
+    if (!modalForm) return;
+
+    const finalQtyInput = modalForm.querySelector('#final_quantity');
+    const finalQty = parseFloat(finalQtyInput?.value);
+    const isPerishable = document.getElementById('is_perishable').checked;
+
+    if (!finalQty || finalQty <= 0) {
+      alert('Please enter a valid final quantity');
+      return;
+    }
+
+    const formData = new FormData(modalForm);
+    formData.set('is_perishable', isPerishable ? 'on' : 'off');
+
+    if (isPerishable) {
+      const shelfLife = document.getElementById('shelf_life_days').value;
+      if (!shelfLife || parseInt(shelfLife) <= 0) {
+        alert('Please enter valid shelf life days for perishable items');
+        return;
+      }
+      formData.set('shelf_life_days', shelfLife);
+      formData.set('expiration_date', document.getElementById('expiration_date').value);
+    }
+
+    fetch(modalForm.action, {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    })
+    .then(data => {
+      if (data.status === 'success') {
+        window.location.href = data.redirect_url;
+      } else {
+        alert(data.message || 'Error completing batch');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error completing batch. Please try again.');
+    });
+  };
+
+  if (outputTypeSelect) {
+    outputTypeSelect.addEventListener('change', toggleOutputFields);
+  }
+
+  // Initialize tooltips
+  if (typeof bootstrap !== 'undefined') {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }
+
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
       if (outputTypeSelect) {
@@ -13,59 +96,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  if (outputTypeSelect) {
-    outputTypeSelect.addEventListener('change', toggleOutputFields);
-  }
-
   if (!modalForm) {
     console.warn('Modal form not found on initial load');
   }
-
-  // Initialize tooltips
-  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
 });
-
-function updateExpirationDate() {
-  const shelfLife = document.getElementById('shelf_life_days').value;
-  if (shelfLife && parseInt(shelfLife) > 0) {
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
-    const dateString = expirationDate.toISOString().split('T')[0];
-    document.getElementById('expiration_date').value = dateString;
-    document.getElementById('expiration_date_display').value = dateString;
-  }
-}
-
-function toggleShelfLife() {
-  const isPerishable = document.getElementById('is_perishable').checked;
-  const shelfLifeField = document.getElementById('shelfLifeField');
-
-  if (shelfLifeField) {
-    shelfLifeField.style.display = isPerishable ? 'block' : 'none';
-    const shelfLifeInput = document.getElementById('shelf_life_days');
-    if (shelfLifeInput) {
-      shelfLifeInput.required = isPerishable;
-      if (!isPerishable) {
-        shelfLifeInput.value = '';
-        document.getElementById('expiration_date').value = '';
-        document.getElementById('expiration_date_display').value = '';
-      }
-    }
-  }
-}
-
-function toggleOutputFields() {
-  const type = document.getElementById('output_type').value;
-  const productFields = document.getElementById('productFields');
-  const productSelect = document.getElementById('product_id');
-
-  if (productFields && productSelect) {
-    const isProduct = type === 'product';
-    productFields.style.display = isProduct ? 'block' : 'none';
-    productSelect.required = isProduct;
-  }
-}
 
 function markBatchFailed() {
   if (confirm('Mark this batch as failed? This action cannot be undone.')) {
@@ -84,78 +118,6 @@ function markBatchFailed() {
     document.body.appendChild(form);
     form.submit();
   }
-}
-
-function submitFinishBatch() {
-  const modalForm = document.getElementById('finishBatchModalForm');
-  if (!modalForm) return;
-
-  const formData = new FormData(modalForm);
-  const finalQtyInput = modalForm.querySelector('#final_quantity');
-  const finalQty = parseFloat(finalQtyInput?.value);
-  const isPerishable = document.getElementById('is_perishable').checked;
-
-  if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
-    alert('Please enter a valid final quantity');
-    return;
-  }
-
-  formData.set('is_perishable', isPerishable ? 'on' : 'off');
-
-  if (isPerishable) {
-    const shelfLife = document.getElementById('shelf_life_days').value;
-    if (!shelfLife || parseInt(shelfLife) <= 0) {
-      alert('Please enter valid shelf life days for perishable items');
-      return;
-    }
-    formData.set('shelf_life_days', shelfLife);
-    formData.set('expiration_date', document.getElementById('expiration_date').value);
-  }
-
-  fetch(modalForm.action, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': formData.get('csrf_token'),
-      'Accept': 'application/json'
-    }
-  })
-  .then(async response => {
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      // Handle HTML response (likely contains flash message)
-      const div = document.createElement('div');
-      div.innerHTML = text;
-      const flashMessage = div.querySelector('.alert');
-      if (flashMessage) {
-        throw new Error(flashMessage.textContent.trim());
-      }
-      // If redirected to success page, follow the redirect
-      if (response.redirected || response.ok) {
-        window.location.href = response.url || '/batches/';
-        return;
-      }
-      throw new Error('Failed to complete batch');
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    window.location.href = '/batches/';
-  })
-  .catch(err => {
-    const flashDiv = document.createElement('div');
-    flashDiv.className = 'alert alert-danger alert-dismissible fade show';
-    flashDiv.innerHTML = `
-      ${err.message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    const modalBody = document.querySelector('.modal-body');
-    modalBody.insertBefore(flashDiv, modalBody.firstChild);
-  });
 }
 
 function updateRowCost(selectElement) {
