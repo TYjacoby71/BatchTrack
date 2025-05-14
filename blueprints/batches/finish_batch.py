@@ -118,7 +118,7 @@ def complete_batch(batch_id):
 
         db.session.commit()
         flash("✅ Batch completed successfully!", "success")
-        return redirect(url_for('batches.list_batches'))
+        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
 
     except Exception as e:
         db.session.rollback()

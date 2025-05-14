@@ -144,7 +144,9 @@ function submitFinishBatch() {
     if (data.error) {
       throw new Error(data.error);
     }
-    window.location.href = '/batches/';
+    if (response.redirected) {
+      window.location.href = response.url;
+    }
   })
   .catch(err => {
     const flashDiv = document.createElement('div');
