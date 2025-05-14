@@ -63,12 +63,16 @@ function submitFinishBatch() {
 
   const formData = new FormData(modalForm);
   
-  // Explicitly handle checkbox
+  // Explicitly handle checkbox and related fields
   const isPerishable = document.getElementById('is_perishable');
   formData.set('is_perishable', isPerishable.checked ? 'true' : 'false');
 
   if (isPerishable.checked) {
     const shelfLife = document.getElementById('shelf_life_days').value;
+    if (!shelfLife || parseInt(shelfLife) <= 0) {
+      alert('Please enter a valid shelf life for perishable items');
+      return;
+    }
     formData.set('shelf_life_days', shelfLife);
   }
 
@@ -76,10 +80,20 @@ function submitFinishBatch() {
     method: 'POST',
     body: formData,
     headers: {
-      'X-CSRFToken': formData.get('csrf_token'),
-      'Accept': 'application/json'
+      'X-CSRFToken': formData.get('csrf_token')
     }
   })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url;
+    } else {
+      window.location.href = '/batches/';
+    }
+  })
+  .catch(err => {
+    alert('Error completing batch: ' + err.message);
+  });
+}
   .then(response => {
     if (!response.ok) {
       return response.json().then(err => {
