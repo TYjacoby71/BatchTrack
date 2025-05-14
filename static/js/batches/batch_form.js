@@ -123,16 +123,38 @@ function submitFinishBatch() {
       'Accept': 'application/json'
     }
   })
-  .then(response => {
+  .then(async response => {
+    const contentType = response.headers.get("content-type");
     if (!response.ok) {
-      return response.json().then(err => {
-        throw new Error(err.error || 'Batch failed to complete');
-      });
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        throw new Error(data.error || 'Batch failed to complete');
+      } else {
+        const text = await response.text();
+        // Check if response contains a flask flash message
+        const div = document.createElement('div');
+        div.innerHTML = text;
+        const flashMessage = div.querySelector('.alert');
+        if (flashMessage) {
+          throw new Error(flashMessage.textContent);
+        }
+        throw new Error('Batch failed to complete: ' + text);
+      }
     }
-    window.location.href = '/batches/';
+    if (response.redirected) {
+      window.location.href = response.url;
+    } else {
+      window.location.href = '/batches/';
+    }
   })
   .catch(err => {
-    alert('Error completing batch: ' + err.message);
+    const flashDiv = document.createElement('div');
+    flashDiv.className = 'alert alert-danger alert-dismissible fade show';
+    flashDiv.innerHTML = `
+      ${err.message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.modal-body').prepend(flashDiv);
   });
 }
 
