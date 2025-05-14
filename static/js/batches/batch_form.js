@@ -58,10 +58,19 @@ function submitFinishBatch() {
 
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
+  const isPerishable = document.getElementById('is_perishable').checked;
 
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
+  }
+
+  if (isPerishable) {
+    const shelfLife = document.getElementById('shelf_life_days').value;
+    if (!shelfLife || parseInt(shelfLife) <= 0) {
+      alert('Please enter valid shelf life days for perishable items');
+      return;
+    }
   }
 
   const formData = new FormData(modalForm);

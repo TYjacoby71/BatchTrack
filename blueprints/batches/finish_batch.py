@@ -58,12 +58,17 @@ def complete_batch(batch_id):
             batch.variant_label = request.form.get('variant_label')
             
             # Handle perishable status and shelf life
+            # Perishable status is required for all batch types
             batch.is_perishable = request.form.get('is_perishable') == 'on'
+            shelf_life_days = request.form.get('shelf_life_days', type=int)
+            
+            if batch.is_perishable and (not shelf_life_days or shelf_life_days <= 0):
+                flash("Shelf life days required for perishable items", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+                
             if batch.is_perishable:
-                shelf_life_days = request.form.get('shelf_life_days', type=int)
-                if shelf_life_days:
-                    batch.shelf_life_days = shelf_life_days
-                    batch.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
+                batch.shelf_life_days = shelf_life_days
+                batch.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
 
             # Create product inventory record
             product_inv = ProductInventory(
