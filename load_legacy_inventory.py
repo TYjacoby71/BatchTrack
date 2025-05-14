@@ -1,10 +1,14 @@
-
 import json
 from app import app, db
-from models import InventoryItem
+from models import InventoryItem, IngredientCategory
 
 # Path to your legacy inventory export
 JSON_PATH = 'inventory_export_20250502_225444.json'
+
+def get_density_reference():
+    with open('data/density_reference.json', 'r') as f:
+        data = json.load(f)
+        return {item['name'].lower(): item for item in data['common_densities']}
 
 def load_legacy_inventory():
     with app.app_context():
@@ -28,8 +32,21 @@ def load_legacy_inventory():
                 storage_amount=item.get('storage_amount', 0.0),
                 storage_unit=item.get('storage_unit', '')
             )
+
+            # Look up density from reference data
+            densities = get_density_reference()
+            name_lower = new_item.name.lower()
+
+            if name_lower in densities:
+                new_item.density = densities[name_lower]["density_g_per_ml"]
+                cat_name = densities[name_lower]["category"]
+                category = IngredientCategory.query.filter_by(name=cat_name).first()
+                if category:
+                    new_item.category_id = category.id
+
             db.session.add(new_item)
-            print(f"[ADDED] {new_item.name} → {new_item.quantity} {new_item.unit}")
+            density_str = f' (density: {new_item.density} g/ml)' if new_item.density else ''
+            print(f'[ADDED] {new_item.name} → {new_item.quantity} {new_item.unit}{density_str}')
 
         db.session.commit()
         print("✅ Legacy inventory import complete.")
