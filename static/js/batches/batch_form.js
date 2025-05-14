@@ -62,6 +62,15 @@ function submitFinishBatch() {
   }
 
   const formData = new FormData(modalForm);
+  
+  // Explicitly handle checkbox
+  const isPerishable = document.getElementById('is_perishable');
+  formData.set('is_perishable', isPerishable.checked ? 'true' : 'false');
+
+  if (isPerishable.checked) {
+    const shelfLife = document.getElementById('shelf_life_days').value;
+    formData.set('shelf_life_days', shelfLife);
+  }
 
   fetch(modalForm.action, {
     method: 'POST',
