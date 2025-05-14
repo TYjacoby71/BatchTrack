@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.graalvmCEPackages.graaljs
     pkgs.zlib
     pkgs.tk
     pkgs.tcl
