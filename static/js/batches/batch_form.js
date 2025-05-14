@@ -52,6 +52,22 @@ function toggleOutputFields() {
   }
 }
 
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable').checked;
+  const shelfLifeField = document.getElementById('shelfLifeField');
+  
+  if (shelfLifeField) {
+    shelfLifeField.style.display = isPerishable ? 'block' : 'none';
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = isPerishable;
+      if (!isPerishable) {
+        shelfLifeInput.value = '';
+      }
+    }
+  }
+}
+
 function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
@@ -74,6 +90,7 @@ function submitFinishBatch() {
   }
 
   const formData = new FormData(modalForm);
+  formData.set('is_perishable', isPerishable ? 'on' : 'off');
 
   fetch(modalForm.action, {
     method: 'POST',
