@@ -50,12 +50,8 @@
             {% if batch.total_cost %}
                 <p><strong>Total Cost:</strong> ${{ "%.2f"|format(batch.total_cost) }}</p>
             {% endif %}
-            
-            <p><strong>Perishable:</strong> {% if batch.is_perishable %}Yes{% else %}No{% endif %}</p>
             {% if batch.is_perishable %}
-                {% if batch.shelf_life_days %}
-                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
-                {% endif %}
+                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
                 {% if batch.expiration_date %}
                     <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
                 {% endif %}
