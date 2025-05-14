@@ -63,6 +63,7 @@
   </div>
 
   <div x-show="showTimerList" class="mt-3" x-transition>
+    {% from datetime import timedelta %}
     <div class="table-responsive">
       <table class="table">
         <thead>
