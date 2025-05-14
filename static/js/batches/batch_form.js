@@ -105,6 +105,15 @@ function submitFinishBatch() {
       alert('Please enter valid shelf life days for perishable items');
       return;
     }
+    
+    // Add shelf life to form data
+    formData.set('shelf_life_days', shelfLife);
+    
+    // Set expiration date
+    const expirationDate = document.getElementById('expiration_date').value;
+    if (expirationDate) {
+      formData.set('expiration_date', expirationDate);
+    }
   }
 
   const formData = new FormData(modalForm);
