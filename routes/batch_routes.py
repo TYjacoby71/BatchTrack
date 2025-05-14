@@ -215,7 +215,7 @@ def view_batch_in_progress(batch_identifier):
     
     # Get units for dropdown
     from datetime import timedelta
-    from utils.unit_utils import get_global_unit_list
+from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
     # Build cost summary-deleted and fixed in template screenshot taken of original code at 5-6-25 11:02 am
