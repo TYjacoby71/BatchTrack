@@ -74,6 +74,8 @@ function submitFinishBatch() {
   }
 
   const formData = new FormData(modalForm);
+  const isPerishable = document.getElementById('is_perishable').checked;
+  formData.set('is_perishable', isPerishable ? 'on' : 'off');
 
   fetch(modalForm.action, {
     method: 'POST',
