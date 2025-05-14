@@ -102,6 +102,9 @@ class Batch(db.Model):
     failed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
     inventory_credited = db.Column(db.Boolean, default=False)  # Track if inventory was returned
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer)
+    expiration_date = db.Column(db.DateTime)
 
     @property
     def status_display(self):
