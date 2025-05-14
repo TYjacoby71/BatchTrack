@@ -58,11 +58,12 @@ def complete_batch(batch_id):
             batch.variant_label = request.form.get('variant_label')
             
             # Handle perishable status and shelf life
-            batch.is_perishable = request.form.get('is_perishable') == 'on'
+            batch.is_perishable = request.form.get('is_perishable') == 'true'
             if batch.is_perishable:
                 shelf_life_days = request.form.get('shelf_life_days', type=int)
                 if shelf_life_days:
                     batch.shelf_life_days = shelf_life_days
+                    from datetime import timedelta
                     batch.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
 
             # Create product inventory record
