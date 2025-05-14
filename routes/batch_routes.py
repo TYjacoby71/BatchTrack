@@ -214,7 +214,7 @@ def view_batch_in_progress(batch_identifier):
     recipe = batch.recipe  # Use the relationship
     
     # Get units for dropdown
-    from datetime import timedelta
+    from datetime import datetime, timedelta
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
