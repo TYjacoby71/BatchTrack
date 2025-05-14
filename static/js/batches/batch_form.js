@@ -92,6 +92,11 @@ function submitFinishBatch() {
       alert('Please enter valid shelf life days for perishable items');
       return;
     }
+    
+    // Calculate expiration date
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
+    document.getElementById('expiration_date').value = expirationDate.toISOString().split('T')[0];
   }
 
   const formData = new FormData(modalForm);
