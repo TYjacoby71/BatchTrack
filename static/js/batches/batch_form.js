@@ -290,27 +290,19 @@ function saveExtras() {
   });
 }
 
-function saveBatchAndExit() {
+function saveBatchNotes() {
   const batchId = window.location.pathname.split('/').pop();
   const notes = document.querySelector('textarea[name="notes"]').value;
   const tags = document.querySelector('input[name="tags"]').value;
   const csrf = document.querySelector('input[name="csrf_token"]').value;
 
-  fetch(`/batches/${batchId}/update-notes`, {
+  return fetch(`/batches/${batchId}/update-notes`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': csrf
     },
     body: JSON.stringify({ notes, tags })
-  })
-  .then(response => response.json())
-  .then(data => {
-    window.location.href = '/batches/';
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error saving batch notes');
   });
 }
 
