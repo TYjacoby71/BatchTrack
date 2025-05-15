@@ -112,7 +112,7 @@
             {% for batch in batches %}
             <tr>
                 {% if 'recipe' in visible_columns %}
-                <td>{{ batch.recipe_name }}</td>
+                <td>{{ batch.recipe.name }} + {{ batch.label_code }}</td>
                 {% endif %}
                 <td>{{ batch.label_code }}</td>
                 <td>{{ batch.scale }}</td>
@@ -121,10 +121,13 @@
                 {% endif %}
                 <td>{{ batch.status }}</td>
                 {% if 'total_cost' in visible_columns %}
-                <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
+                <td>${{ "%.2f"|format(total_cost) if total_cost else '—' }}</td>
                 {% endif %}
                 {% if 'product_quantity' in visible_columns %}
-                <td>{{ batch.product_quantity if batch.product_quantity else '—' }}</td>
+                <td>
+                    {% set fifo_remaining = batch.final_quantity - (batch.product_inventory|sum(attribute='quantity_used')|default(0)) %}
+                    {{ fifo_remaining }}/{{ batch.final_quantity if batch.final_quantity else '—' }}
+                </td>
                 {% endif %}
                 {% if 'tags' in visible_columns %}
                 <td>{{ batch.tags if batch.tags else '—' }}</td>
