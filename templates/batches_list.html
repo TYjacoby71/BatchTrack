@@ -112,7 +112,7 @@
             {% for batch in batches %}
             <tr>
                 {% if 'recipe' in visible_columns %}
-                <td>{{ batch.recipe.name }} + {{ batch.label_code }}</td>
+                <td>{{ batch.recipe.name }}</td>
                 {% endif %}
                 <td>{{ batch.label_code }}</td>
                 <td>{{ batch.scale }}</td>
