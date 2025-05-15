@@ -134,11 +134,7 @@
                                 {% endif %}
                             {% endfor %}
                         {% else %}
-                            {% set remaining = 0 %}
-                            {% for item in InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).all() %}
-                                {% set remaining = item.quantity %}
-                            {% endfor %}
-                            {{ remaining|round(2) if remaining >= 0 else 0 }}
+                            {{ batch.final_quantity|round(2) if batch.final_quantity >= 0 else 0 }}
                         {% endif %}
                     {% else %}
                         —
