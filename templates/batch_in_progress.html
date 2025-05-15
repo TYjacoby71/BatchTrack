@@ -192,7 +192,7 @@
     <!-- Submission Buttons -->
     <div class="button-group mt-4 d-flex justify-content-between">
         <div>
-            <button type="submit" formaction="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}" formmethod="post" class="btn btn-secondary">Save and Exit</button>
+            <button type="button" onclick="saveBatchAndExit()" class="btn btn-secondary">Save and Exit</button>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>
