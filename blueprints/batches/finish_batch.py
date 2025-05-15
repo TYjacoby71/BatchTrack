@@ -1,3 +1,24 @@
+from flask import Blueprint, request, redirect, url_for, flash
+from flask_login import login_required
+from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
+from datetime import datetime
+
+finish_batch_bp = Blueprint('finish_batch', __name__)
+
+@finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
+@login_required
+def mark_batch_failed(batch_id):
+    """Mark a batch as failed"""
+    batch = Batch.query.get_or_404(batch_id)
+
+    batch.status = 'failed'
+    batch.failed_at = datetime.utcnow()
+    batch.status_reason = request.form.get('reason', '')
+
+    db.session.commit()
+    flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
+    return redirect(url_for('batches.list_batches'))
+
         @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
         @login_required
         def complete_batch(batch_id):
