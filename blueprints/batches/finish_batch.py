@@ -20,8 +20,8 @@ def mark_batch_failed(batch_id):
     return redirect(url_for('batches.list_batches'))
 
         @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
-        @login_required
-        def complete_batch(batch_id):
+@login_required
+def complete_batch(batch_id):
             batch = Batch.query.get_or_404(batch_id)
 
             if not request.form.get('force'):
