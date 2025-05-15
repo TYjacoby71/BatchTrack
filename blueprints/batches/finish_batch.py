@@ -41,17 +41,26 @@ def complete_batch(batch_id):
         
         # Get and validate final quantity
         try:
-            final_quantity_str = request.form.get('final_quantity')
-            if not final_quantity_str or not final_quantity_str.strip():
+            final_quantity_str = (request.form.get('final_quantity') or '').strip()
+            if not final_quantity_str:
                 flash("Final quantity is required", "error")
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
             
-            final_quantity = float(final_quantity_str.strip())
-            if final_quantity <= 0:
+            final_quantity = float(final_quantity_str)
+            if not final_quantity > 0:  # Handles NaN and negative numbers
                 flash("Final quantity must be greater than 0", "error")
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-        except ValueError:
-            flash("Please enter a valid number for final quantity", "error") 
+                
+            # Validate perishable fields
+            is_perishable = request.form.get('is_perishable') == 'on'
+            if is_perishable:
+                shelf_life = request.form.get('shelf_life_days', type=int)
+                if not shelf_life or shelf_life <= 0:
+                    flash("Valid shelf life required for perishable items", "error")
+                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+                    
+        except (ValueError, TypeError):
+            flash("Please enter a valid number for final quantity", "error")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
             
         output_unit = request.form.get('output_unit') or batch.yield_unit

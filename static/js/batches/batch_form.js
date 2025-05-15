@@ -91,27 +91,27 @@ function submitFinishBatch() {
   if (!modalForm) return;
 
   const finalQuantityInput = modalForm.querySelector('#final_quantity');
-  if (!finalQuantityInput) {
-    alert('Final quantity input not found');
-    return;
-  }
-
-  const finalQty = finalQuantityInput.value.trim();
-  if (!finalQty || parseFloat(finalQty) <= 0) {
+  const finalQty = finalQuantityInput?.value?.trim();
+  const isPerishable = document.getElementById('is_perishable')?.checked || false;
+  const shelfLifeInput = document.getElementById('shelf_life_days');
+  
+  // Basic validation
+  if (!finalQty || isNaN(finalQty) || parseFloat(finalQty) <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
-  const isPerishable = document.getElementById('is_perishable').checked;
-  if (isPerishable) {
-    const shelfLife = parseInt(document.getElementById('shelf_life_days').value);
-    if (!shelfLife || shelfLife <= 0) {
-      alert('Please enter valid shelf life days for perishable items');
-      return;
-    }
+  if (isPerishable && (!shelfLifeInput?.value || parseInt(shelfLifeInput.value) <= 0)) {
+    alert('Please enter valid shelf life days for perishable items');
+    return;
   }
 
-  modalForm.querySelector('input[name="is_perishable"]').value = isPerishable ? 'on' : 'off';
+  // Set form values
+  const perishableInput = modalForm.querySelector('input[name="is_perishable"]');
+  if (perishableInput) {
+    perishableInput.value = isPerishable ? 'on' : 'off';
+  }
+
   modalForm.submit();
 }
 
