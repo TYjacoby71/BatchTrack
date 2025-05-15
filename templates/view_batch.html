@@ -46,7 +46,7 @@
             {% endif %}
 
             <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
-            <p><strong>Final Yield:</strong> {{ batch.final_quantity or 'N/A' }} {{ batch.output_unit or batch.projected_yield_unit }}</p>
+            <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
                        {% if batch.is_perishable %}
                 <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
                 {% if batch.expiration_date %}
