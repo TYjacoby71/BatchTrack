@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -11,7 +10,7 @@
         <button class="btn btn-outline-secondary" onclick="showView('tableView')">Table View</button>
         <button class="btn btn-outline-secondary" onclick="showView('cardView')">Card View</button>
     </div>
-    
+
     <!-- Filter Button -->
     <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection" id="filterButton">
         <i class="fas fa-filter"></i> Filters
@@ -102,6 +101,7 @@
                 {% if 'product_quantity' in visible_columns %}
                 <th>Quantity</th>
                 {% endif %}
+                <th>Remaining</th>
                 {% if 'tags' in visible_columns %}
                 <th>Tags</th>
                 {% endif %}
@@ -112,7 +112,7 @@
             {% for batch in batches %}
             <tr>
                 {% if 'recipe' in visible_columns %}
-                <td>{{ batch.recipe_name }}</td>
+                <td>{{ batch.recipe.name }}</td>
                 {% endif %}
                 <td>{{ batch.label_code }}</td>
                 <td>{{ batch.scale }}</td>
@@ -121,10 +121,25 @@
                 {% endif %}
                 <td>{{ batch.status }}</td>
                 {% if 'total_cost' in visible_columns %}
-                <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
+                <td>${{ "%.2f"|format(total_cost) if total_cost else '—' }}</td>
                 {% endif %}
                 {% if 'product_quantity' in visible_columns %}
-                <td>{{ batch.product_quantity if batch.product_quantity else '—' }}</td>
+                <td>{{ batch.final_quantity if batch.final_quantity else batch.projected_yield|round(2) if batch.projected_yield else '—' }}</td>
+                <td>
+                    {% if batch.final_quantity %}
+                        {% if batch.batch_type == 'product' %}
+                            {% for inv in batch.product.inventory %}
+                                {% if inv.batch_id == batch.id %}
+                                    {{ inv.quantity|round(2) if inv.quantity >= 0 else 0 }}
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {{ batch.final_quantity|round(2) if batch.final_quantity >= 0 else 0 }}
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
                 {% endif %}
                 {% if 'tags' in visible_columns %}
                 <td>{{ batch.tags if batch.tags else '—' }}</td>
@@ -140,7 +155,7 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     <!-- Pagination Controls -->
     <div class="d-flex justify-content-center mt-3">
         <nav aria-label="Batch navigation">
@@ -150,13 +165,13 @@
                     <a class="page-link" href="{{ url_for('batches.list_batches', page=pagination.prev_num) }}">Previous</a>
                 </li>
                 {% endif %}
-                
+
                 <li class="page-item">
                     <span class="page-link">
                         Page {{ pagination.page }} of {{ pagination.pages }}
                     </span>
                 </li>
-                
+
                 {% if pagination.has_next %}
                 <li class="page-item">
                     <a class="page-link" href="{{ url_for('batches.list_batches', page=pagination.next_num) }}">Next</a>
@@ -222,3 +237,4 @@ document.getElementById('columnForm').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
+```

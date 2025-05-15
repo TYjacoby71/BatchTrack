@@ -1,10 +1,10 @@
-2025-05-14 22:05:15,180 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-15 21:10:38,205 ERROR: Exception on /dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: batch.is_perishable
+sqlite3.OperationalError: no such column: batch.remaining_quantity
 
 The above exception was the direct cause of the following exception:
 
@@ -62,54 +62,11 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: batch.is_perishable
-[SQL: SELECT batch.id AS batch_id, batch.recipe_id AS batch_recipe_id, batch.label_code AS batch_label_code, batch.batch_type AS batch_batch_type, batch.yield_amount AS batch_yield_amount, batch.yield_unit AS batch_yield_unit, batch.product_id AS batch_product_id, batch.variant_id AS batch_variant_id, batch.final_quantity AS batch_final_quantity, batch.output_unit AS batch_output_unit, batch.scale AS batch_scale, batch.status AS batch_status, batch.status_reason AS batch_status_reason, batch.notes AS batch_notes, batch.tags AS batch_tags, batch.total_cost AS batch_total_cost, batch.started_at AS batch_started_at, batch.completed_at AS batch_completed_at, batch.failed_at AS batch_failed_at, batch.cancelled_at AS batch_cancelled_at, batch.inventory_credited AS batch_inventory_credited, batch.is_perishable AS batch_is_perishable, batch.shelf_life_days AS batch_shelf_life_days, batch.expiration_date AS batch_expiration_date 
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: batch.remaining_quantity
+[SQL: SELECT batch.id AS batch_id, batch.recipe_id AS batch_recipe_id, batch.label_code AS batch_label_code, batch.batch_type AS batch_batch_type, batch.projected_yield AS batch_projected_yield, batch.projected_yield_unit AS batch_projected_yield_unit, batch.product_id AS batch_product_id, batch.variant_id AS batch_variant_id, batch.final_quantity AS batch_final_quantity, batch.output_unit AS batch_output_unit, batch.scale AS batch_scale, batch.status AS batch_status, batch.status_reason AS batch_status_reason, batch.notes AS batch_notes, batch.tags AS batch_tags, batch.total_cost AS batch_total_cost, batch.started_at AS batch_started_at, batch.completed_at AS batch_completed_at, batch.failed_at AS batch_failed_at, batch.cancelled_at AS batch_cancelled_at, batch.inventory_credited AS batch_inventory_credited, batch.is_perishable AS batch_is_perishable, batch.shelf_life_days AS batch_shelf_life_days, batch.expiration_date AS batch_expiration_date, batch.remaining_quantity AS batch_remaining_quantity 
 FROM batch 
 WHERE batch.status = ?
  LIMIT ? OFFSET ?]
 [parameters: ('in_progress', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-05-14 22:07:51,591 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:07:53,534 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:21:07,923 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:22:56,729 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:25:36,103 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:28:10,533 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:30:09,323 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:31:47,274 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:33:12,120 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:33:58,695 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:35:34,448 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:37:31,338 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:39:59,453 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:43:55,710 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:44:34,202 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:44:36,270 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:45:12,834 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:46:48,235 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:46:51,343 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:47:05,319 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:48:32,576 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:48:36,026 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:49:07,586 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:52:45,950 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:55:02,512 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:55:22,342 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:55:26,059 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:57:18,801 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 22:58:39,622 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:05:45,249 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:15:07,506 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:19:53,855 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:22:24,676 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:24:26,861 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:27:24,681 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:27:54,364 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:30:50,085 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:33:17,983 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:36:19,588 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:38:06,169 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:39:29,891 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:40:02,449 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:40:02,465 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-14 23:40:04,379 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-15 21:10:43,014 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]

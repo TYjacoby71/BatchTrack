@@ -82,14 +82,37 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            if ingredient.quantity < required_converted:
-                ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
+            if ingredient.intermediate:
+                # Handle FIFO deduction for intermediate ingredients
+                success, used_batches = FIFOService.deduct_intermediate_fifo(
+                    ingredient.name,
+                    ingredient.unit,
+                    required_converted
+                )
+                if not success:
+                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                    continue
+
+                # Create BatchIngredient records for each used batch
+                for batch_id, amount in used_batches:
+                    batch_ingredient = BatchIngredient(
+                        batch_id=new_batch.id,
+                        ingredient_id=ingredient.id,
+                        amount_used=amount,
+                        unit=ingredient.unit,
+                        cost_per_unit=ingredient.cost_per_unit,
+                        source_batch_id=batch_id
+                    )
+                    db.session.add(batch_ingredient)
             else:
-                # Deduct from inventory
+                # Regular inventory deduction
+                if ingredient.quantity < required_converted:
+                    ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
+                    continue
+                
                 ingredient.quantity -= required_converted
                 db.session.add(ingredient)
 
-                # Create BatchIngredient record with frozen cost
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
                     ingredient_id=ingredient.id,
@@ -151,8 +174,19 @@ def list_batches():
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     batches = pagination.items
+
+    # Calculate total cost for each batch including ingredients, containers and extras
+    for batch in batches:
+        ingredient_total = sum((ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
+        container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
+        extras_total = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
+        extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
+        batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
+
     all_recipes = Recipe.query.order_by(Recipe.name).all()
-    return render_template('batches_list.html', 
+    from models import InventoryItem
+    return render_template('batches_list.html',
+        InventoryItem=InventoryItem, 
                          batches=batches, 
                          pagination=pagination,
                          all_recipes=all_recipes, 
