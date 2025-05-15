@@ -90,8 +90,8 @@ function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
-  const finalQty = parseFloat(modalForm.querySelector('#final_quantity').value);
-  if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
+  const finalQty = document.querySelector('#final_quantity').value.trim();
+  if (!finalQty || isNaN(parseFloat(finalQty)) || parseFloat(finalQty) <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
@@ -105,7 +105,6 @@ function submitFinishBatch() {
     }
   }
 
-  const isPerishable = document.getElementById('is_perishable').checked;
   modalForm.querySelector('input[name="is_perishable"]').value = isPerishable ? 'on' : 'off';
   modalForm.submit();
 }
