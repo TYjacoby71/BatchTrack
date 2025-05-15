@@ -33,8 +33,8 @@ def start_batch():
         scale=scale,
         notes=data.get('notes', ''),
         status='in_progress',
-        yield_amount=scale * recipe.predicted_yield,
-        yield_unit=recipe.predicted_yield_unit
+        projected_yield=scale * recipe.predicted_yield,
+        projected_yield_unit=recipe.predicted_yield_unit
     )
 
     db.session.add(new_batch)
