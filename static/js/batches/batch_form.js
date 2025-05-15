@@ -90,75 +90,22 @@ function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
-  const formData = new FormData(modalForm);
-  const finalQtyInput = modalForm.querySelector('#final_quantity');
-  const finalQty = parseFloat(finalQtyInput?.value);
-  
+  const finalQty = parseFloat(modalForm.querySelector('#final_quantity').value);
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
-  // Explicitly set final quantity in form data
-  formData.set('final_quantity', finalQty.toString());
-  
   const isPerishable = document.getElementById('is_perishable').checked;
-  formData.set('is_perishable', isPerishable ? 'on' : 'off');
-
   if (isPerishable) {
-    const shelfLife = document.getElementById('shelf_life_days').value;
-    if (!shelfLife || parseInt(shelfLife) <= 0) {
+    const shelfLife = parseInt(document.getElementById('shelf_life_days').value);
+    if (!shelfLife || shelfLife <= 0) {
       alert('Please enter valid shelf life days for perishable items');
       return;
     }
-    formData.set('shelf_life_days', shelfLife);
-    formData.set('expiration_date', document.getElementById('expiration_date').value);
   }
 
-  fetch(modalForm.action, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': formData.get('csrf_token'),
-      'Accept': 'application/json'
-    }
-  })
-  .then(async response => {
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      // Handle HTML response (likely contains flash message)
-      const div = document.createElement('div');
-      div.innerHTML = text;
-      const flashMessage = div.querySelector('.alert');
-      if (flashMessage) {
-        throw new Error(flashMessage.textContent.trim());
-      }
-      // If redirected to success page, follow the redirect
-      if (response.redirected || response.ok) {
-        window.location.href = response.url || '/batches/';
-        return;
-      }
-      throw new Error('Failed to complete batch');
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    window.location.href = '/batches/';
-  })
-  .catch(err => {
-    const flashDiv = document.createElement('div');
-    flashDiv.className = 'alert alert-danger alert-dismissible fade show';
-    flashDiv.innerHTML = `
-      ${err.message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    const modalBody = document.querySelector('.modal-body');
-    modalBody.insertBefore(flashDiv, modalBody.firstChild);
-  });
+  modalForm.submit();
 }
 
 function updateRowCost(selectElement) {
@@ -273,15 +220,7 @@ function saveExtras() {
       const errorMsg = data.errors.map(err => 
         `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
       ).join('\n');
-      function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
-
-        alert("Save failed:\n\n" + message);
-      }
-
-      displayErrors(data.errors);
+      alert("Cannot save extras:\n" + errorMsg);
     } else {
       alert("Extra ingredients saved successfully");
       window.location.reload();
