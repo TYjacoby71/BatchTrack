@@ -22,7 +22,7 @@ def mark_batch_failed(batch_id):
         @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 def complete_batch(batch_id):
-            batch = Batch.query.get_or_404(batch_id)
+    batch = Batch.query.get_or_404(batch_id)
 
             if not request.form.get('force'):
                 active_timers = BatchTimer.query.filter_by(batch_id=batch.id, status='pending').all()
