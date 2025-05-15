@@ -125,8 +125,17 @@
                 {% endif %}
                 {% if 'product_quantity' in visible_columns %}
                 <td>
-                    {% set fifo_remaining = batch.final_quantity - (batch.product_inventory|sum(attribute='quantity_used')|default(0)) %}
-                    {{ fifo_remaining }}/{{ batch.final_quantity if batch.final_quantity else '—' }}
+                    {% if batch.final_quantity %}
+                        {% if batch.batch_type == 'product' %}
+                            {% set used = batch.product_inventory|sum(attribute='quantity_used')|default(0) %}
+                        {% else %}
+                            {% set used = batch.ingredients|sum(attribute='amount_used')|default(0) %}
+                        {% endif %}
+                        {% set remaining = batch.final_quantity - used %}
+                        {{ remaining }}/{{ batch.final_quantity }}
+                    {% else %}
+                        —
+                    {% endif %}
                 </td>
                 {% endif %}
                 {% if 'tags' in visible_columns %}
