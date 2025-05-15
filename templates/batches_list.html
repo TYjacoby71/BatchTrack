@@ -128,12 +128,17 @@
                 <td>
                     {% if batch.final_quantity %}
                         {% if batch.batch_type == 'product' %}
-                            {% set used = batch.product_inventory|sum(attribute='quantity_used')|default(0) %}
+                            {% set used = 0 %}
+                            {% for inv in batch.product.inventory %}
+                                {% if inv.batch_id == batch.id %}
+                                    {% set used = batch.final_quantity - inv.quantity %}
+                                {% endif %}
+                            {% endfor %}
                         {% else %}
                             {% set used = batch.ingredients|sum(attribute='amount_used')|default(0) %}
                         {% endif %}
                         {% set remaining = batch.final_quantity - used %}
-                        {{ remaining|round(2) }}
+                        {{ remaining|round(2) if remaining >= 0 else 0 }}
                     {% else %}
                         —
                     {% endif %}
