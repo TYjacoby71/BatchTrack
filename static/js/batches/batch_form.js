@@ -90,8 +90,14 @@ function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
-  const finalQty = document.querySelector('#final_quantity').value.trim();
-  if (!finalQty || isNaN(parseFloat(finalQty)) || parseFloat(finalQty) <= 0) {
+  const finalQuantityInput = modalForm.querySelector('#final_quantity');
+  if (!finalQuantityInput) {
+    alert('Final quantity input not found');
+    return;
+  }
+
+  const finalQty = parseFloat(finalQuantityInput.value);
+  if (isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
