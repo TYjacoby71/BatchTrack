@@ -107,9 +107,6 @@ function submitFinishBatch() {
 
   modalForm.submit();
 }
-
-  fetch(modalForm.action, {
-    method: 'POST',
     body: formData,
     headers: {
       'X-CSRFToken': formData.get('csrf_token'),
