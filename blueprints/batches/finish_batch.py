@@ -38,11 +38,17 @@ def complete_batch(batch_id):
     try:
         # Get completion details
         output_type = request.form.get('output_type')
-        final_quantity = request.form.get('final_quantity')
         
-        # Strict validation for final quantity
-        if not final_quantity:
+        # Get and validate final quantity
+        try:
+            final_quantity = float(request.form['final_quantity'])  # Using [] to raise KeyError if missing
+            if final_quantity <= 0:
+                raise ValueError("Final quantity must be greater than 0")
+        except (KeyError, TypeError):
             flash("Final quantity is required", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+        except ValueError as e:
+            flash(str(e), "error")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
             
         try:

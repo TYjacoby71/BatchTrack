@@ -93,13 +93,16 @@ function submitFinishBatch() {
   const formData = new FormData(modalForm);
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
-  const isPerishable = document.getElementById('is_perishable').checked;
-
+  
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
+  // Explicitly set final quantity in form data
+  formData.set('final_quantity', finalQty.toString());
+  
+  const isPerishable = document.getElementById('is_perishable').checked;
   formData.set('is_perishable', isPerishable ? 'on' : 'off');
 
   if (isPerishable) {
