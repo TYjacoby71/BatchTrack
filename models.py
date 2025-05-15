@@ -85,8 +85,8 @@ class Batch(db.Model):
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
     label_code = db.Column(db.String(32), unique=True)
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
-    yield_amount = db.Column(db.Float)
-    yield_unit = db.Column(db.String(50))
+    projected_yield = db.Column(db.Float)
+    projected_yield_unit = db.Column(db.String(50))
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'))
     final_quantity = db.Column(db.Float)
