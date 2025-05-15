@@ -161,7 +161,9 @@ def list_batches():
         batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
-    return render_template('batches_list.html', 
+    from models import InventoryItem
+    return render_template('batches_list.html',
+        InventoryItem=InventoryItem, 
                          batches=batches, 
                          pagination=pagination,
                          all_recipes=all_recipes, 
