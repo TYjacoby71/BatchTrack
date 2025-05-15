@@ -128,24 +128,16 @@
                 <td>
                     {% if batch.final_quantity %}
                         {% if batch.batch_type == 'product' %}
-                            {% set used = 0 %}
                             {% for inv in batch.product.inventory %}
                                 {% if inv.batch_id == batch.id %}
-                                    {% set used = batch.final_quantity - inv.quantity %}
+                                    {{ inv.quantity|round(2) if inv.quantity >= 0 else 0 }}
                                 {% endif %}
                             {% endfor %}
                         {% else %}
-                            {% set total_used = 0 %}
-                            {% set batch_date = batch.completed_at or batch.started_at %}
-                            {% for b in batches %}
-                                {% if b.recipe.name == batch.recipe.name and b.status == 'completed' %}
-                                    {% set b_date = b.completed_at or b.started_at %}
-                                    {% if b_date > batch_date %}
-                                        {% set total_used = total_used + b.ingredients|sum(attribute='amount_used')|default(0) %}
-                                    {% endif %}
-                                {% endif %}
+                            {% set remaining = 0 %}
+                            {% for item in InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).all() %}
+                                {% set remaining = item.quantity %}
                             {% endfor %}
-                            {% set remaining = batch.final_quantity - total_used %}
                             {{ remaining|round(2) if remaining >= 0 else 0 }}
                         {% endif %}
                     {% else %}
