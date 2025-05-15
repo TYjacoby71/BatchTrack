@@ -105,6 +105,8 @@ function submitFinishBatch() {
     }
   }
 
+  const isPerishable = document.getElementById('is_perishable').checked;
+  modalForm.querySelector('input[name="is_perishable"]').value = isPerishable ? 'on' : 'off';
   modalForm.submit();
 }
 
