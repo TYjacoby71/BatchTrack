@@ -12,7 +12,7 @@ import sqlalchemy as sa
 # revision identifiers, used by Alembic.
 revision = 'add_batch_inventory'
 down_revision = '2af2ecb1908a' 
-branch_labels = None
+branch_labels = ('remainingquantity',)
 depends_on = None
 
 def upgrade():
