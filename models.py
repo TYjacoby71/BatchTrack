@@ -105,6 +105,7 @@ class Batch(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer)
     expiration_date = db.Column(db.DateTime)
+    remaining_quantity = db.Column(db.Float, nullable=True)
 
     @property
     def status_display(self):
@@ -229,6 +230,17 @@ class InventoryItem(db.Model):
 class ProductUnit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
+
+class BatchInventoryLog(db.Model):
+    """Tracks changes to batch inventory quantities"""
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    quantity_change = db.Column(db.Float, nullable=False)
+    reason = db.Column(db.String(32), nullable=False)  # consumed, expired, lost, disposed
+    notes = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    batch = db.relationship('Batch', backref='inventory_logs')
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
