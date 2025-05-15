@@ -135,12 +135,19 @@
                                 {% endif %}
                             {% endfor %}
                         {% else %}
-                            {% for ingredient in InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).all() %}
-                                {% set used = batch.final_quantity - ingredient.quantity %}
+                            {% set total_used = 0 %}
+                            {% set batch_date = batch.completed_at or batch.started_at %}
+                            {% for b in batches %}
+                                {% if b.recipe.name == batch.recipe.name and b.status == 'completed' %}
+                                    {% set b_date = b.completed_at or b.started_at %}
+                                    {% if b_date > batch_date %}
+                                        {% set total_used = total_used + b.ingredients|sum(attribute='amount_used')|default(0) %}
+                                    {% endif %}
+                                {% endif %}
                             {% endfor %}
+                            {% set remaining = batch.final_quantity - total_used %}
+                            {{ remaining|round(2) if remaining >= 0 else 0 }}
                         {% endif %}
-                        {% set remaining = batch.final_quantity - (used if used is defined else 0) %}
-                        {{ remaining|round(2) if remaining >= 0 else 0 }}
                     {% else %}
                         —
                     {% endif %}
@@ -242,3 +249,4 @@ document.getElementById('columnForm').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
+```
