@@ -107,49 +107,6 @@ function submitFinishBatch() {
 
   modalForm.submit();
 }
-    body: formData,
-    headers: {
-      'X-CSRFToken': formData.get('csrf_token'),
-      'Accept': 'application/json'
-    }
-  })
-  .then(async response => {
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      // Handle HTML response (likely contains flash message)
-      const div = document.createElement('div');
-      div.innerHTML = text;
-      const flashMessage = div.querySelector('.alert');
-      if (flashMessage) {
-        throw new Error(flashMessage.textContent.trim());
-      }
-      // If redirected to success page, follow the redirect
-      if (response.redirected || response.ok) {
-        window.location.href = response.url || '/batches/';
-        return;
-      }
-      throw new Error('Failed to complete batch');
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    window.location.href = '/batches/';
-  })
-  .catch(err => {
-    const flashDiv = document.createElement('div');
-    flashDiv.className = 'alert alert-danger alert-dismissible fade show';
-    flashDiv.innerHTML = `
-      ${err.message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    const modalBody = document.querySelector('.modal-body');
-    modalBody.insertBefore(flashDiv, modalBody.firstChild);
-  });
-}
 
 function updateRowCost(selectElement) {
   const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
@@ -263,15 +220,7 @@ function saveExtras() {
       const errorMsg = data.errors.map(err => 
         `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
       ).join('\n');
-      function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
-
-        alert("Save failed:\n\n" + message);
-      }
-
-      displayErrors(data.errors);
+      alert("Cannot save extras:\n" + errorMsg);
     } else {
       alert("Extra ingredients saved successfully");
       window.location.reload();
