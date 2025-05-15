@@ -6,10 +6,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      if (outputTypeSelect) {
+      const form = document.getElementById('finishBatchModalForm');
+      if (form && outputTypeSelect) {
         toggleOutputFields();
         toggleShelfLife();
       }
+    });
+  }
+
+  if (modalForm) {
+    modalForm.addEventListener('submit', function(e) {
+      // Form validation can be added here
+      return true;
     });
   }
 
