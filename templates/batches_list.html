@@ -135,13 +135,9 @@
                                 {% endif %}
                             {% endfor %}
                         {% else %}
-                            {% set ingredient = InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).first() %}
-                            {% if ingredient %}
-                                {% set remaining = ingredient.quantity %}
-                            {% else %}
-                                {% set remaining = 0 %}
-                            {% endif %}
-                            {% set used = batch.final_quantity - remaining %}
+                            {% for ingredient in InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).all() %}
+                                {% set used = batch.final_quantity - ingredient.quantity %}
+                            {% endfor %}
                         {% endif %}
                         {% set remaining = batch.final_quantity - (used if used is defined else 0) %}
                         {{ remaining|round(2) if remaining >= 0 else 0 }}
