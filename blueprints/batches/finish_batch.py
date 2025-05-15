@@ -1,3 +1,4 @@
+
 from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
@@ -35,17 +36,24 @@ def complete_batch(batch_id):
             flash("This batch has active timers. Complete timers or force finish.", "warning")
             return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
-    # Get completion details
-    output_type = request.form.get('output_type')
-    final_quantity = float(request.form.get('final_quantity', 0))
-    output_unit = request.form.get('output_unit') or batch.yield_unit
-
-    # Validate required fields
-    if not all([output_type, final_quantity > 0]):
-        flash("Output type, quantity and unit are required", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
     try:
+        # Get completion details
+        output_type = request.form.get('output_type')
+        try:
+            final_quantity = float(request.form.get('final_quantity', 0))
+            if final_quantity <= 0:
+                raise ValueError("Final quantity must be greater than 0")
+        except (ValueError, TypeError) as e:
+            flash(f"Invalid final quantity: {str(e)}", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
+        output_unit = request.form.get('output_unit') or batch.yield_unit
+
+        # Validate required fields
+        if not output_type:
+            flash("Output type is required", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
         # Update batch details
         batch.batch_type = output_type
         batch.final_quantity = final_quantity
@@ -53,15 +61,12 @@ def complete_batch(batch_id):
         batch.notes = request.form.get('notes')
         batch.tags = request.form.get('tags')
 
-        # Handle perishable status and shelf life for all batch types
+        # Handle perishable status and shelf life
         batch.is_perishable = request.form.get('is_perishable') == 'on'
-        shelf_life_days = request.form.get('shelf_life_days', type=int)
-        
-        if batch.is_perishable and (not shelf_life_days or shelf_life_days <= 0):
-            flash("Shelf life days required for perishable items", "error") 
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-            
         if batch.is_perishable:
+            shelf_life_days = int(request.form.get('shelf_life_days', 0))
+            if shelf_life_days <= 0:
+                raise ValueError("Shelf life days required for perishable items")
             batch.shelf_life_days = shelf_life_days
             batch.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d')
 
@@ -72,7 +77,7 @@ def complete_batch(batch_id):
             # Create product inventory record
             product_inv = ProductInventory(
                 product_id=batch.product_id,
-                variant=batch.variant_id,
+                variant=batch.variant_label,
                 unit=batch.output_unit,
                 quantity=batch.final_quantity,
                 batch_id=batch.id
