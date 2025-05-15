@@ -1,4 +1,3 @@
-
 // Batch form functionality
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
@@ -18,38 +17,8 @@ document.addEventListener('DOMContentLoaded', function() {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
-  // Form validation
-  if (modalForm) {
-    modalForm.addEventListener('submit', function(e) {
-      const finalQuantity = document.getElementById('final_quantity').value;
-      const outputType = document.getElementById('output_type').value;
-      const isPerishable = document.getElementById('is_perishable').checked;
-      const shelfLifeDays = document.getElementById('shelf_life_days').value;
-
-      if (!finalQuantity || finalQuantity <= 0) {
-        e.preventDefault();
-        alert('Please enter a valid final quantity');
-        return false;
-      }
-
-      if (!outputType) {
-        e.preventDefault();
-        alert('Please select an output type');
-        return false;
-      }
-
-      if (isPerishable && (!shelfLifeDays || shelfLifeDays <= 0)) {
-        e.preventDefault();
-        alert('Please enter shelf life days for perishable items');
-        return false;
-      }
-
-      if (outputType === 'product' && !document.getElementById('product_id').value) {
-        e.preventDefault();
-        alert('Please select a product');
-        return false;
-      }
-    });
+  if (!modalForm) {
+    console.warn('Modal form not found on initial load');
   }
 
   // Initialize tooltips
