@@ -135,9 +135,11 @@
                                 {% endif %}
                             {% endfor %}
                         {% else %}
-                            {% set used = batch.ingredients|sum(attribute='amount_used')|default(0) %}
+                            {% for ingredient in InventoryItem.query.filter_by(name=batch.recipe.name, intermediate=True).all() %}
+                                {% set used = batch.final_quantity - ingredient.quantity %}
+                            {% endfor %}
                         {% endif %}
-                        {% set remaining = batch.final_quantity - used %}
+                        {% set remaining = batch.final_quantity - (used if used is defined else 0) %}
                         {{ remaining|round(2) if remaining >= 0 else 0 }}
                     {% else %}
                         —
