@@ -90,27 +90,23 @@ function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
-  const finalQtyInput = modalForm.querySelector('#final_quantity');
-  const finalQty = parseFloat(finalQtyInput?.value);
-  
+  const finalQty = parseFloat(modalForm.querySelector('#final_quantity').value);
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
-  // Let the form submit normally - no FormData manipulation needed
   const isPerishable = document.getElementById('is_perishable').checked;
-  modalForm.querySelector('input[name="is_perishable"]').value = isPerishable ? 'on' : 'off';
-
   if (isPerishable) {
-    const shelfLife = document.getElementById('shelf_life_days').value;
-    if (!shelfLife || parseInt(shelfLife) <= 0) {
+    const shelfLife = parseInt(document.getElementById('shelf_life_days').value);
+    if (!shelfLife || shelfLife <= 0) {
       alert('Please enter valid shelf life days for perishable items');
       return;
     }
-    formData.set('shelf_life_days', shelfLife);
-    formData.set('expiration_date', document.getElementById('expiration_date').value);
   }
+
+  modalForm.submit();
+}
 
   fetch(modalForm.action, {
     method: 'POST',
