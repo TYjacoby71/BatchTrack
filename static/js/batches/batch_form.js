@@ -96,8 +96,8 @@ function submitFinishBatch() {
     return;
   }
 
-  const finalQty = parseFloat(finalQuantityInput.value);
-  if (isNaN(finalQty) || finalQty <= 0) {
+  const finalQty = finalQuantityInput.value.trim();
+  if (!finalQty || parseFloat(finalQty) <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
