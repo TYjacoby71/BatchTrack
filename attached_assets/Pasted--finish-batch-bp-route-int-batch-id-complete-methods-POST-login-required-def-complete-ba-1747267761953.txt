@@ -1,24 +1,3 @@
-from flask import Blueprint, request, redirect, url_for, flash
-from flask_login import login_required
-from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
-from datetime import datetime
-
-finish_batch_bp = Blueprint('finish_batch', __name__)
-
-@finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
-@login_required
-def mark_batch_failed(batch_id):
-    """Mark a batch as failed"""
-    batch = Batch.query.get_or_404(batch_id)
-
-    batch.status = 'failed'
-    batch.failed_at = datetime.utcnow()
-    batch.status_reason = request.form.get('reason', '')
-
-    db.session.commit()
-    flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
-    return redirect(url_for('batches.list_batches'))
-
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 def complete_batch(batch_id):
@@ -52,18 +31,6 @@ def complete_batch(batch_id):
         batch.output_unit = output_unit
         batch.notes = request.form.get('notes')
         batch.tags = request.form.get('tags')
-
-        # Handle perishable status and shelf life for all batch types
-        batch.is_perishable = request.form.get('is_perishable') == 'on'
-        shelf_life_days = request.form.get('shelf_life_days', type=int)
-        
-        if batch.is_perishable and (not shelf_life_days or shelf_life_days <= 0):
-            flash("Shelf life days required for perishable items", "error") 
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-            
-        if batch.is_perishable:
-            batch.shelf_life_days = shelf_life_days
-            batch.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d')
 
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
@@ -99,28 +66,3 @@ def complete_batch(batch_id):
                 type='ingredient',
                 intermediate=True
             )
-
-            if ingredient.id:  # Existing ingredient - update with weighted average cost
-                total_quantity = ingredient.quantity + final_quantity
-                ingredient.cost_per_unit = ((ingredient.quantity * ingredient.cost_per_unit) + 
-                                          (final_quantity * unit_cost)) / total_quantity
-                ingredient.quantity += final_quantity
-            else:  # New ingredient
-                ingredient.quantity = final_quantity
-                ingredient.unit = output_unit
-                ingredient.cost_per_unit = unit_cost
-                db.session.add(ingredient)
-
-        # Mark batch as completed
-        batch.status = 'completed'
-        batch.completed_at = datetime.utcnow()
-        batch.inventory_credited = True
-
-        db.session.commit()
-        flash("✅ Batch completed successfully!", "success")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error completing batch: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))

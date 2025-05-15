@@ -121,30 +121,37 @@ function submitFinishBatch() {
     }
   })
   .then(async response => {
+    // Close modal first
+    const modal = bootstrap.Modal.getInstance(document.getElementById('finishBatchModal'));
+    if (modal) {
+      modal.hide();
+    }
+
+    // Handle redirect
+    if (response.redirected) {
+      window.location.href = response.url;
+      return;
+    }
+
+    // Try to parse JSON response
     const text = await response.text();
-    let data;
     try {
-      data = JSON.parse(text);
+      const data = JSON.parse(text);
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      // If successful, redirect to batches list
+      window.location.href = '/batches/';
     } catch (e) {
-      // Handle HTML response (likely contains flash message)
+      // Not JSON, check if it's an error message
       const div = document.createElement('div');
       div.innerHTML = text;
       const flashMessage = div.querySelector('.alert');
       if (flashMessage) {
         throw new Error(flashMessage.textContent.trim());
       }
-      // If redirected to success page, follow the redirect
-      if (response.redirected || response.ok) {
-        window.location.href = response.url || '/batches/';
-        return;
-      }
       throw new Error('Failed to complete batch');
     }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    window.location.href = '/batches/';
   })
   .catch(err => {
     const flashDiv = document.createElement('div');
