@@ -35,17 +35,37 @@ def complete_batch(batch_id):
             flash("This batch has active timers. Complete timers or force finish.", "warning")
             return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
-    # Get completion details
-    output_type = request.form.get('output_type')
-    final_quantity = float(request.form.get('final_quantity', 0))
-    output_unit = request.form.get('output_unit') or batch.yield_unit
-
-    # Validate required fields
-    if not all([output_type, final_quantity > 0]):
-        flash("Output type, quantity and unit are required", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-
     try:
+        # Get completion details
+        output_type = request.form.get('output_type')
+        
+        # Get and validate final quantity
+        try:
+            final_quantity = float(request.form['final_quantity'])  # Using [] to raise KeyError if missing
+            if final_quantity <= 0:
+                raise ValueError("Final quantity must be greater than 0")
+        except (KeyError, TypeError):
+            flash("Final quantity is required", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+            
+        try:
+            final_quantity = float(final_quantity)
+            if final_quantity <= 0:
+                flash("Final quantity must be greater than 0", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+        except ValueError:
+            flash("Invalid final quantity value", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+            
+        output_unit = request.form.get('output_unit') or batch.yield_unit
+        
+        if not output_type:
+            flash("Output type is required", "error")
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
         # Update batch details
         batch.batch_type = output_type
         batch.final_quantity = final_quantity
@@ -118,7 +138,7 @@ def complete_batch(batch_id):
 
         db.session.commit()
         flash("✅ Batch completed successfully!", "success")
-        return redirect(url_for('batches.view_batch', batch_identifier=batch.id))
+        return redirect(url_for('batches.list_batches'))
 
     except Exception as e:
         db.session.rollback()

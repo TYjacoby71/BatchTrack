@@ -93,13 +93,16 @@ function submitFinishBatch() {
   const formData = new FormData(modalForm);
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
-  const isPerishable = document.getElementById('is_perishable').checked;
-
+  
   if (!finalQty || isNaN(finalQty) || finalQty <= 0) {
     alert('Please enter a valid final quantity');
     return;
   }
 
+  // Explicitly set final quantity in form data
+  formData.set('final_quantity', finalQty.toString());
+  
+  const isPerishable = document.getElementById('is_perishable').checked;
   formData.set('is_perishable', isPerishable ? 'on' : 'off');
 
   if (isPerishable) {
@@ -121,37 +124,30 @@ function submitFinishBatch() {
     }
   })
   .then(async response => {
-    // Close modal first
-    const modal = bootstrap.Modal.getInstance(document.getElementById('finishBatchModal'));
-    if (modal) {
-      modal.hide();
-    }
-
-    // Handle redirect
-    if (response.redirected) {
-      window.location.href = response.url;
-      return;
-    }
-
-    // Try to parse JSON response
     const text = await response.text();
+    let data;
     try {
-      const data = JSON.parse(text);
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      // If successful, redirect to batches list
-      window.location.href = '/batches/';
+      data = JSON.parse(text);
     } catch (e) {
-      // Not JSON, check if it's an error message
+      // Handle HTML response (likely contains flash message)
       const div = document.createElement('div');
       div.innerHTML = text;
       const flashMessage = div.querySelector('.alert');
       if (flashMessage) {
         throw new Error(flashMessage.textContent.trim());
       }
+      // If redirected to success page, follow the redirect
+      if (response.redirected || response.ok) {
+        window.location.href = response.url || '/batches/';
+        return;
+      }
       throw new Error('Failed to complete batch');
     }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    window.location.href = '/batches/';
   })
   .catch(err => {
     const flashDiv = document.createElement('div');
