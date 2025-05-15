@@ -90,7 +90,6 @@ function submitFinishBatch() {
   const modalForm = document.getElementById('finishBatchModalForm');
   if (!modalForm) return;
 
-  const formData = new FormData(modalForm);
   const finalQtyInput = modalForm.querySelector('#final_quantity');
   const finalQty = parseFloat(finalQtyInput?.value);
   
@@ -99,11 +98,9 @@ function submitFinishBatch() {
     return;
   }
 
-  // Explicitly set final quantity in form data
-  formData.set('final_quantity', finalQty.toString());
-  
+  // Let the form submit normally - no FormData manipulation needed
   const isPerishable = document.getElementById('is_perishable').checked;
-  formData.set('is_perishable', isPerishable ? 'on' : 'off');
+  modalForm.querySelector('input[name="is_perishable"]').value = isPerishable ? 'on' : 'off';
 
   if (isPerishable) {
     const shelfLife = document.getElementById('shelf_life_days').value;
