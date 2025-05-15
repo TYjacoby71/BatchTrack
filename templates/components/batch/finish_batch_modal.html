@@ -26,14 +26,13 @@
                    class="form-control"
                    min="0.01"
                    step="any"
-                   value="1"
+                   value="{{ batch.projected_yield }}"
                    required>
             <div class="form-text">
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
             </div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
-              
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">
