@@ -39,29 +39,44 @@ def complete_batch(batch_id):
         # Get completion details
         output_type = request.form.get('output_type')
         
-        # Get and validate final quantity
+        # Get and validate final quantity first
         try:
-            final_quantity_str = (request.form.get('final_quantity') or '').strip()
+            final_quantity_str = request.form.get('final_quantity', '').strip()
             if not final_quantity_str:
                 flash("Final quantity is required", "error")
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
             
             final_quantity = float(final_quantity_str)
-            if not final_quantity > 0:  # Handles NaN and negative numbers
+            if final_quantity <= 0:
                 flash("Final quantity must be greater than 0", "error")
                 return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-                
-            # Validate perishable fields
-            is_perishable = request.form.get('is_perishable') == 'on'
-            if is_perishable:
-                shelf_life = request.form.get('shelf_life_days', type=int)
-                if not shelf_life or shelf_life <= 0:
-                    flash("Valid shelf life required for perishable items", "error")
-                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-                    
+
         except (ValueError, TypeError):
             flash("Please enter a valid number for final quantity", "error")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+
+        # Then handle perishable validation separately
+        is_perishable = request.form.get('is_perishable') == 'on'
+        if is_perishable:
+            shelf_life_str = request.form.get('shelf_life_days', '').strip()
+            if not shelf_life_str:
+                flash("Shelf life days required for perishable items", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+            
+            try:
+                shelf_life_days = int(shelf_life_str)
+                if shelf_life_days <= 0:
+                    flash("Shelf life must be greater than 0 days", "error")
+                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
+                batch.shelf_life_days = shelf_life_days
+                
+                # Only try to parse expiration date if shelf life is valid
+                expiration_date = request.form.get('expiration_date')
+                if expiration_date:
+                    batch.expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d')
+            except ValueError:
+                flash("Please enter a valid number for shelf life", "error")
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
             
         output_unit = request.form.get('output_unit') or batch.yield_unit
         
