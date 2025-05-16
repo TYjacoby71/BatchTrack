@@ -30,6 +30,7 @@ def view_inventory(id):
                          item=item,
                          history=history,
                          units=get_global_unit_list(),
+                         get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all)
 
 @inventory_bp.route('/add', methods=['POST'])
