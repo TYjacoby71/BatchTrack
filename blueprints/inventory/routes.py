@@ -16,7 +16,10 @@ def list_inventory():
         query = query.filter_by(type=inventory_type)
     items = query.all()
     units = get_global_unit_list()
-    return render_template('inventory_list.html', items=items, units=units)
+    return render_template('inventory_list.html', 
+                         items=items, 
+                         units=units, 
+                         get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
