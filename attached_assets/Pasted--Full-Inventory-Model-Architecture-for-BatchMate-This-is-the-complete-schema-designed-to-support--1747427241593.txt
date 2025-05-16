@@ -1,0 +1,78 @@
+🧱 Full Inventory Model Architecture for BatchMate
+This is the complete schema, designed to support:
+
+Raw and intermediate ingredient tracking
+
+Inventory history and audit logs
+
+Recounts, spoilage, trash, and purchases
+
+FIFO support
+
+Vendor and source tracking
+
+Unified inventory system for containers and ingredients
+
+✅ 1. InventoryItem
+🔹 Core definition of an item in your inventory
+
+Field	Type	Notes
+id	Integer (PK)	
+name	String	"Coconut Oil", "Single Egg Batch", etc.
+type	Enum/String	"ingredient" or "container"
+quantity	Float	Current quantity available
+unit	String	"g", "oz", "count", etc.
+cost_per_unit	Float	Updated dynamically on purchase
+density	Float	Optional, used for conversion
+storage_amount	Float	For containers only
+storage_unit	String	For containers
+low_stock_threshold	Float	Optional alert setting
+is_perishable	Boolean	Supports spoilage warnings
+category_id	FK → IngredientCategory	Allows density fallback
+archived	Boolean	Optional, for soft-deletes
+
+✅ 2. InventoryHistory
+🔹 Logs every change to inventory — this is the engine for FIFO and traceability
+
+Field	Type	Notes
+id	Integer (PK)	
+inventory_item_id	FK → InventoryItem	
+timestamp	DateTime	
+change_type	Enum	"purchase", "use", "spoil", "trash", "recount", "manual"
+quantity_change	Float	Positive or negative
+unit_cost	Float	Only used for purchases
+source	String	"Vendor X", or batch label (e.g., "SE-2025-12")
+used_for_batch_id	FK → Batch	If this was used in production
+note	Text	Optional user note or system message
+created_by	FK → User	For multi-user setups
+
+✅ This table replaces the need for separate “restock log”, “spoilage log”, etc.
+
+✅ 3. IngredientCategory
+🔹 Gives fallback density, soft classification, and filterability
+
+Field	Type	Notes
+id	Integer (PK)	
+name	String	e.g. “Oil”, “Powder”, “Liquid”
+default_density	Float	Used if no item-level density
+
+✅ 4. (Optional) Vendor
+🔹 If you want vendor recall and cost-per-source tracking
+
+Field	Type	Notes
+id	Integer (PK)	
+name	String	
+contact_info	String	
+note	Text	
+
+→ Referenced in InventoryHistory.source
+
+✅ 5. (Optional) RecountEvent
+You might also want a separate table just for recounts, but you probably don’t need it if they’re logged in InventoryHistory with change_type='recount'.
+
+🔗 Summary of How It All Ties Together
+Action	Stored In
+Add stock (purchase)	InventoryHistory + updates InventoryItem.quantity + adjusts cost_per_unit
+Use in a batch	InventoryHistory (with used_for_batch_id)
+Spoilage or trash	InventoryHistory with reason
+Recount	InventoryHistory with change_type='recount'
