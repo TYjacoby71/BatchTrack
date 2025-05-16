@@ -1,7 +1,4 @@
-The inventory adjustment route is updated to include inventory history logging.
-```
 
-```python
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory
@@ -28,7 +25,7 @@ def list_inventory():
 @login_required
 def view_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    history = [] # TODO: Add InventoryHistory model and query
+    history = InventoryHistory.query.filter_by(inventory_item_id=item.id).order_by(InventoryHistory.timestamp.desc()).all()
     return render_template('inventory/view.html', 
                          item=item,
                          history=history,
@@ -75,7 +72,7 @@ def update_inventory():
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type='adjustment',
-                quantity=amount,
+                quantity_change=amount,
                 cost_per_unit=item.cost_per_unit,
                 notes=notes
             )

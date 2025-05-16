@@ -147,6 +147,24 @@ class ExtraBatchContainer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+
+class InventoryHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    change_type = db.Column(db.String(32), nullable=False)  # purchase, use, spoil, trash, recount, manual
+    quantity_change = db.Column(db.Float, nullable=False)
+    unit_cost = db.Column(db.Float)  # Only for purchases
+    source = db.Column(db.String(128))  # Vendor name or batch number
+    used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
+    note = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    inventory_item = db.relationship('InventoryItem', backref='history')
+    batch = db.relationship('Batch')
+    user = db.relationship('User')
+
     quantity_used = db.Column(db.Integer, nullable=False)
     cost_each = db.Column(db.Float)
     container = db.relationship('InventoryItem', backref='extra_batch_containers')
@@ -208,17 +226,7 @@ class ProductEvent(db.Model):
     note = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-class InventoryHistory(db.Model):
-    __tablename__ = 'inventory_history'
-    id = db.Column(db.Integer, primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(32), nullable=False)  # adjustment, recount, batch_usage, etc.
-    quantity = db.Column(db.Float, nullable=False)  # The change amount (positive or negative)
-    cost_per_unit = db.Column(db.Float, nullable=True)
-    notes = db.Column(db.Text, nullable=True)
-    
-    inventory_item = db.relationship('InventoryItem', backref='history')
+
 
 class InventoryItem(db.Model):
     __tablename__ = 'inventory_item'
