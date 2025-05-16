@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
 from utils.unit_utils import get_global_unit_list
+from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -15,7 +16,7 @@ def list_inventory():
         query = query.filter_by(type=inventory_type)
     items = query.all()
     units = get_global_unit_list()
-    return render_template('inventory/inventory_list.html', 
+    return render_template('inventory_list.html', 
                          items=items, 
                          units=units, 
                          get_global_unit_list=get_global_unit_list)
