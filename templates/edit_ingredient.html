@@ -102,13 +102,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.querySelector('input[name="quantity"]');
     const saveButton = document.getElementById('saveButton');
     const originalQuantity = parseFloat(quantityInput.value);
-    const recountModal = new bootstrap.Modal(document.getElementById('recountConfirmModal'));
+    const recountModalEl = document.getElementById('recountConfirmModal');
+    const recountModal = new bootstrap.Modal(recountModalEl);
     
     form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Always prevent default first
         const newQuantity = parseFloat(quantityInput.value);
         if (newQuantity !== originalQuantity) {
-            e.preventDefault();
             recountModal.show();
+        } else {
+            form.submit();
         }
     });
 
