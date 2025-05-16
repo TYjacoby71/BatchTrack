@@ -8,7 +8,7 @@ inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/')
 @login_required
-def list_inventory():
+def inventory():
     inventory_type = request.args.get('type')
     query = InventoryItem.query
     if inventory_type:
