@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
-from utils import ConversionEngine
+from services.unit_conversion import ConversionEngine
 
 def get_ingredient_categories():
     return IngredientCategory.query.order_by(IngredientCategory.name).all()
