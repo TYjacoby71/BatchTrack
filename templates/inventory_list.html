@@ -117,7 +117,7 @@
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>{{ item.category.name if item.category else 'None' }}</td>
           <td>
-            <a href="{{ url_for('inventory.edit_ingredient', id=item.id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
           </td>
         </tr>

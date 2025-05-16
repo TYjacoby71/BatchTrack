@@ -21,6 +21,16 @@ def list_inventory():
                          units=units, 
                          get_global_unit_list=get_global_unit_list)
 
+@inventory_bp.route('/view/<int:id>')
+@login_required
+def view_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    history = [] # TODO: Add InventoryHistory model and query
+    return render_template('inventory/view.html', 
+                         item=item,
+                         history=history,
+                         units=get_global_unit_list())
+
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
