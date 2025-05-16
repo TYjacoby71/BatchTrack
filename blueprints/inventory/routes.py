@@ -15,7 +15,7 @@ def list_inventory():
         query = query.filter_by(type=inventory_type)
     items = query.all()
     units = get_global_unit_list()
-    return render_template('inventory_list.html', 
+    return render_template('inventory/inventory_list.html', 
                          items=items, 
                          units=units, 
                          get_global_unit_list=get_global_unit_list)
@@ -120,4 +120,4 @@ def delete_inventory(id):
     db.session.delete(item)
     db.session.commit()
     flash('Inventory item deleted successfully.')
-    return redirect(url_for('inventory.inventory'))
+    return redirect(url_for('inventory.list_inventory'))
