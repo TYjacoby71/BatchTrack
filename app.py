@@ -1,4 +1,3 @@
-# Importing the product_log_bp to fix the import error.
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
