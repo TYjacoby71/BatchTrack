@@ -140,7 +140,7 @@ def edit_ingredient(id):
 
         db.session.commit()
         flash('Ingredient updated successfully.')
-        return redirect(url_for('inventory.list_inventory'))
+        return redirect(url_for('inventory.view_inventory', id=id))
 
     return render_template('edit_ingredient.html', 
                          ing=item, 
