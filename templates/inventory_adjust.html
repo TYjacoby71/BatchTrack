@@ -5,21 +5,40 @@
 
 <form method="post">
     {{ csrf_token() }}
-    <label for="ingredient">Ingredient:</label>
-    <select name="ingredient_id">
-        {% for ing in ingredients %}
-        <option value="{{ ing.id }}">{{ ing.name }} ({{ ing.quantity }} {{ ing.unit }})</option>
-        {% endfor %}
-    </select><br>
+    <div class="form-group">
+        <label for="ingredient">Item:</label>
+        <select name="ingredient_id" class="form-control" required>
+            {% for ing in ingredients %}
+            <option value="{{ ing.id }}">{{ ing.name }} (Current: {{ ing.quantity }} {{ ing.unit }})</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <label for="adjustment">Adjustment Amount:</label>
-    <input type="number" step="0.01" name="adjustment" required><br>
+    <div class="form-group">
+        <label for="adjustment">Quantity Change:</label>
+        <input type="number" step="0.01" name="adjustment" class="form-control" required>
+    </div>
 
-    <label for="reason">Reason:</label>
-    <input type="text" name="reason" placeholder="e.g. Spoiled, Sample, Manual"><br>
+    <div class="form-group">
+        <label for="unit">Unit:</label>
+        <select name="unit" class="form-control" required>
+            {% for unit in units %}
+            <option value="{{ unit }}">{{ unit }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <button type="submit">Apply Adjustment</button>
+    <div class="form-group">
+        <label for="reason">Reason:</label>
+        <select name="reason" class="form-control" required>
+            <option value="restock">Restock (Purchase)</option>
+            <option value="spoil">Spoil (Waste)</option>
+            <option value="trash">Trash (Discard)</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Apply Adjustment</button>
 </form>
 
-<a href="/ingredients">Back to Inventory</a>
+<a href="/inventory" class="btn btn-secondary mt-3">Back to Inventory</a>
 {% endblock %}
