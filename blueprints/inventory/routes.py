@@ -1,12 +1,46 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
-
-def get_ingredient_categories():
-    return IngredientCategory.query.order_by(IngredientCategory.name).all()
+from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
+
+@inventory_bp.route('/')
+@login_required
+def list_inventory():
+    inventory_type = request.args.get('type')
+    query = InventoryItem.query
+    if inventory_type:
+        query = query.filter_by(type=inventory_type)
+    items = query.all()
+    units = get_global_unit_list()
+    return render_template('inventory_list.html', items=items, units=units)
+
+@inventory_bp.route('/add', methods=['POST'])
+@login_required
+def add_inventory():
+    name = request.form.get('name')
+    quantity = float(request.form.get('quantity', 0))
+    unit = request.form.get('unit')
+    item_type = request.form.get('type', 'ingredient')
+    cost_per_unit = float(request.form.get('cost_per_unit', 0))
+    low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+    is_perishable = request.form.get('is_perishable', 'false') == 'true'
+    
+    item = InventoryItem(
+        name=name,
+        quantity=quantity,
+        unit=unit,
+        type=item_type,
+        cost_per_unit=cost_per_unit,
+        low_stock_threshold=low_stock_threshold,
+        is_perishable=is_perishable
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Inventory item added successfully.')
+    return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/update', methods=['POST'])
 @login_required
@@ -24,42 +58,6 @@ def update_inventory():
     flash('Inventory updated successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
-@inventory_bp.route('/add', methods=['POST'])
-@login_required
-def add_inventory():
-    name = request.form.get('name')
-    quantity = float(request.form.get('quantity'))
-    unit = request.form.get('unit')
-    type = request.form.get('type')
-    cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    
-    item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
-    db.session.add(item)
-    db.session.commit()
-    flash('Inventory item added successfully.')
-    return redirect(url_for('inventory.list_inventory'))
-
-from utils.unit_utils import get_global_unit_list
-
-@inventory_bp.route('/')
-@login_required
-def list_inventory():
-    items = InventoryItem.query.all()
-    units = Unit.query.all()
-    return render_template('inventory_list.html', 
-                         items=items,
-                         units=units,
-                         get_global_unit_list=get_global_unit_list)
-
-@inventory_bp.route('/delete/<int:id>')
-@login_required
-def delete_inventory(id):
-    item = InventoryItem.query.get_or_404(id)
-    db.session.delete(item)
-    db.session.commit()
-    flash('Inventory item deleted successfully.')
-    return redirect(url_for('inventory.list_inventory'))
-
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_ingredient(id):
@@ -73,17 +71,25 @@ def edit_ingredient(id):
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         item.category_id = request.form.get('category_id', None)
+        item.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+        item.is_perishable = request.form.get('is_perishable', 'false') == 'true'
+        
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
         else:
-            item.density = None  # Use category default
+            category = IngredientCategory.query.get(item.category_id)
+            if category and category.default_density:
+                item.density = category.default_density
+            else:
+                item.density = None
+        
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    from utils.unit_utils import get_global_unit_list
+    
     return render_template('edit_ingredient.html', 
                          ing=item, 
-                         get_ingredient_categories=get_ingredient_categories,
+                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
@@ -103,3 +109,12 @@ def edit_container(id):
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
     return render_template('edit_container.html', item=item)
+
+@inventory_bp.route('/delete/<int:id>')
+@login_required
+def delete_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Inventory item deleted successfully.')
+    return redirect(url_for('inventory.list_inventory'))
