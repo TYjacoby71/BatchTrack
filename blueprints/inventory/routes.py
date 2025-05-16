@@ -12,16 +12,44 @@ inventory_bp = Blueprint('inventory', __name__)
 @login_required
 def update_inventory():
     items = request.form.to_dict(flat=False)
+    errors = []
+    success_count = 0
+    
     for i in range(len(items.get('items[][id]', []))):
         item_id = items['items[][id]'][i]
         quantity = float(items['items[][quantity]'][i])
+        from_unit = items['items[][unit]'][i]
         
         item = InventoryItem.query.get(item_id)
-        if item:
-            item.quantity += quantity
+        if not item:
+            errors.append(f"Item {item_id} not found")
+            continue
+            
+        try:
+            # Convert quantity to item's storage unit
+            conversion = ConversionEngine.convert_units(
+                quantity,
+                from_unit,
+                item.unit,
+                ingredient_id=item.id,
+                density=item.density or (item.category.default_density if item.category else None)
+            )
+            converted_qty = conversion['converted_value']
+            item.quantity += converted_qty
+            success_count += 1
+            
+        except ValueError as e:
+            errors.append(f"Error updating {item.name}: {str(e)}")
+            continue
     
-    db.session.commit()
-    flash('Inventory updated successfully.')
+    if success_count > 0:
+        db.session.commit()
+        
+    if errors:
+        flash('Some items could not be updated: ' + ' | '.join(errors), 'warning')
+    if success_count:
+        flash(f'{success_count} items updated successfully.', 'success')
+        
     return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/add', methods=['POST'])
