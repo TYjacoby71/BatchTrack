@@ -21,6 +21,17 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
   }
 }
 
+function toggleIngredientForm() {
+  const form = document.getElementById('addIngredientForm');
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    // Clear form fields
+    form.reset();
+  } else {
+    form.style.display = 'none';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize all Select2 dropdowns
   const select2Config = {
