@@ -1,7 +1,7 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
+from utils import ConversionEngine
 
 def get_ingredient_categories():
     return IngredientCategory.query.order_by(IngredientCategory.name).all()
@@ -14,17 +14,17 @@ def update_inventory():
     items = request.form.to_dict(flat=False)
     errors = []
     success_count = 0
-    
+
     for i in range(len(items.get('items[][id]', []))):
         item_id = items['items[][id]'][i]
         quantity = float(items['items[][quantity]'][i])
         from_unit = items['items[][unit]'][i]
-        
+
         item = InventoryItem.query.get(item_id)
         if not item:
             errors.append(f"Item {item_id} not found")
             continue
-            
+
         try:
             # Convert quantity to item's storage unit
             conversion = ConversionEngine.convert_units(
@@ -37,19 +37,19 @@ def update_inventory():
             converted_qty = conversion['converted_value']
             item.quantity += converted_qty
             success_count += 1
-            
+
         except ValueError as e:
             errors.append(f"Error updating {item.name}: {str(e)}")
             continue
-    
+
     if success_count > 0:
         db.session.commit()
-        
+
     if errors:
         flash('Some items could not be updated: ' + ' | '.join(errors), 'warning')
     if success_count:
         flash(f'{success_count} items updated successfully.', 'success')
-        
+
     return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/add', methods=['POST'])
@@ -60,7 +60,7 @@ def add_inventory():
     unit = request.form.get('unit')
     type = request.form.get('type')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    
+
     item = InventoryItem(name=name, quantity=quantity, unit=unit, type=type, cost_per_unit=cost_per_unit)
     db.session.add(item)
     db.session.commit()
@@ -94,7 +94,7 @@ def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
@@ -120,7 +120,7 @@ def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'container':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
