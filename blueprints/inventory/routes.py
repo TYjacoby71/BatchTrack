@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
 from utils.unit_utils import get_global_unit_list
+from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -120,4 +121,4 @@ def delete_inventory(id):
     db.session.delete(item)
     db.session.commit()
     flash('Inventory item deleted successfully.')
-    return redirect(url_for('inventory.inventory'))
+    return redirect(url_for('inventory.list_inventory'))
