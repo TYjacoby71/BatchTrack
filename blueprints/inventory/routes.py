@@ -1,7 +1,10 @@
+The inventory adjustment route is updated to include inventory history logging.
+```
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+```python
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required
-from models import db, InventoryItem, Unit, IngredientCategory
+from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory
 from utils.unit_utils import get_global_unit_list
 from utils.unit_utils import get_global_unit_list
 
@@ -21,6 +24,16 @@ def list_inventory():
                          units=units, 
                          get_global_unit_list=get_global_unit_list)
 
+@inventory_bp.route('/view/<int:id>')
+@login_required
+def view_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    history = [] # TODO: Add InventoryHistory model and query
+    return render_template('inventory/view.html', 
+                         item=item,
+                         history=history,
+                         units=get_global_unit_list())
+
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
@@ -31,7 +44,7 @@ def add_inventory():
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
     low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
     is_perishable = request.form.get('is_perishable', 'false') == 'true'
-    
+
     item = InventoryItem(
         name=name,
         quantity=quantity,
@@ -49,18 +62,30 @@ def add_inventory():
 @inventory_bp.route('/update', methods=['POST'])
 @login_required
 def update_inventory():
-    items = request.form.to_dict(flat=False)
-    for i in range(len(items.get('items[][id]', []))):
-        item_id = items['items[][id]'][i]
-        quantity = float(items['items[][quantity]'][i])
-        
+    if request.is_json:
+        # Handle AJAX inventory adjustment
+        data = request.get_json()
+        item_id = data.get('item_id')
+        amount = float(data.get('amount', 0))
+        notes = data.get('notes', '')
+
         item = InventoryItem.query.get(item_id)
         if item:
-            item.quantity += quantity
-    
-    db.session.commit()
-    flash('Inventory updated successfully.')
-    return redirect(url_for('inventory.list_inventory'))
+            # Create history entry
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='adjustment',
+                quantity=amount,
+                cost_per_unit=item.cost_per_unit,
+                notes=notes
+            )
+            db.session.add(history)
+
+            # Update inventory
+            item.quantity += amount
+            db.session.commit()
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Item not found'})
 
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -68,7 +93,7 @@ def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'ingredient':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.quantity = float(request.form.get('quantity'))
@@ -77,7 +102,7 @@ def edit_ingredient(id):
         item.category_id = request.form.get('category_id', None)
         item.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
         item.is_perishable = request.form.get('is_perishable', 'false') == 'true'
-        
+
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
         else:
@@ -86,11 +111,11 @@ def edit_ingredient(id):
                 item.density = category.default_density
             else:
                 item.density = None
-        
+
         db.session.commit()
         flash('Ingredient updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    
+
     return render_template('edit_ingredient.html', 
                          ing=item, 
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
@@ -102,7 +127,7 @@ def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
     if item.type != 'container':
         abort(404)
-    
+
     if request.method == 'POST':
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))

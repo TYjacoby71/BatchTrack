@@ -1,0 +1,164 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+          <li class="breadcrumb-item active">{{ item.name }}</li>
+        </ol>
+      </nav>
+
+      <!-- Summary Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Inventory Item Details</h5>
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDetailsModal">
+            Edit Details
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Name:</strong> {{ item.name }}</p>
+              <p><strong>Type:</strong> {{ item.type|title }}</p>
+              <p><strong>Unit:</strong> {{ item.unit }}</p>
+              {% if item.density %}
+              <p><strong>Density:</strong> {{ item.density }}</p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
+              <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit or 0) }}</p>
+              {% if item.category %}
+              <p><strong>Category:</strong> {{ item.category.name }}</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Adjustment -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Adjust Inventory</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Change Type</label>
+                  <select class="form-control" name="change_type" required>
+                    <option value="purchase">Purchase/Restock</option>
+                    <option value="recount">Recount</option>
+                    <option value="spoilage">Spoilage</option>
+                    <option value="correction">Correction</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Quantity Change</label>
+                  <input type="number" class="form-control" name="quantity" step="0.01" required>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Cost per Unit (optional)</label>
+                  <input type="number" class="form-control" name="cost_per_unit" step="0.01">
+                </div>
+              </div>
+            </div>
+            <div class="form-group mt-3">
+              <label>Notes</label>
+              <textarea class="form-control" name="notes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Submit Adjustment</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">History</h5>
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Change Type</th>
+                <th>Quantity</th>
+                <th>Cost per Unit</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in history %}
+              <tr>
+                <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ entry.change_type|title }}</td>
+                <td>{{ entry.quantity }} {{ item.unit }}</td>
+                <td>${{ "%.2f"|format(entry.cost_per_unit) if entry.cost_per_unit else '-' }}</td>
+                <td>{{ entry.notes or '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Details Modal -->
+<div class="modal fade" id="editDetailsModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Item Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('inventory.update_details', id=item.id) }}">
+          <div class="form-group mb-3">
+            <label>Name</label>
+            <input type="text" class="form-control" name="name" value="{{ item.name }}" required>
+          </div>
+          <div class="form-group mb-3">
+            <label>Unit</label>
+            <select class="form-control" name="unit" required>
+              {% for unit in units %}
+              <option value="{{ unit }}" {% if unit == item.unit %}selected{% endif %}>{{ unit }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label>Density (optional)</label>
+            <input type="number" class="form-control" name="density" value="{{ item.density or '' }}" step="0.01">
+          </div>
+          {% if item.type == 'ingredient' %}
+          <div class="form-group mb-3">
+            <label>Category</label>
+            <select class="form-control" name="category_id">
+              <option value="">No Category</option>
+              {% for category in get_ingredient_categories() %}
+              <option value="{{ category.id }}" {% if item.category_id == category.id %}selected{% endif %}>
+                {{ category.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

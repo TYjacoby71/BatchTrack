@@ -208,6 +208,18 @@ class ProductEvent(db.Model):
     note = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class InventoryHistory(db.Model):
+    __tablename__ = 'inventory_history'
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    change_type = db.Column(db.String(32), nullable=False)  # adjustment, recount, batch_usage, etc.
+    quantity = db.Column(db.Float, nullable=False)  # The change amount (positive or negative)
+    cost_per_unit = db.Column(db.Float, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    
+    inventory_item = db.relationship('InventoryItem', backref='history')
+
 class InventoryItem(db.Model):
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
