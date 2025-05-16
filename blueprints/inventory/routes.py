@@ -1,6 +1,6 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory
 from utils.unit_utils import get_global_unit_list
 from utils.unit_utils import get_global_unit_list
@@ -29,7 +29,9 @@ def view_inventory(id):
     return render_template('inventory/view.html', 
                          item=item,
                          history=history,
-                         units=get_global_unit_list())
+                         units=get_global_unit_list(),
+                         get_global_unit_list=get_global_unit_list,
+                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -120,7 +122,16 @@ def edit_ingredient(id):
 
     if request.method == 'POST':
         item.name = request.form.get('name')
-        item.quantity = float(request.form.get('quantity'))
+        new_quantity = float(request.form.get('quantity'))
+        if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='recount',
+                quantity_change=new_quantity - item.quantity,
+                created_by=current_user.id if current_user else None
+            )
+            db.session.add(history)
+        item.quantity = new_quantity
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         item.category_id = request.form.get('category_id', None)
@@ -138,7 +149,7 @@ def edit_ingredient(id):
 
         db.session.commit()
         flash('Ingredient updated successfully.')
-        return redirect(url_for('inventory.list_inventory'))
+        return redirect(url_for('inventory.view_inventory', id=id))
 
     return render_template('edit_ingredient.html', 
                          ing=item, 
