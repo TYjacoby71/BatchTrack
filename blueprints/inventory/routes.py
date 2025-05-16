@@ -120,4 +120,4 @@ def delete_inventory(id):
     db.session.delete(item)
     db.session.commit()
     flash('Inventory item deleted successfully.')
-    return redirect(url_for('inventory.list_inventory'))
+    return redirect(url_for('inventory.inventory'))
