@@ -1,25 +1,2 @@
 
-{% extends 'layout.html' %}
-{% block content %}
-<h2>Inventory Adjustment</h2>
-
-<form method="post">
-    {{ csrf_token() }}
-    <label for="ingredient">Ingredient:</label>
-    <select name="ingredient_id">
-        {% for ing in ingredients %}
-        <option value="{{ ing.id }}">{{ ing.name }} ({{ ing.quantity }} {{ ing.unit }})</option>
-        {% endfor %}
-    </select><br>
-
-    <label for="adjustment">Adjustment Amount:</label>
-    <input type="number" step="0.01" name="adjustment" required><br>
-
-    <label for="reason">Reason:</label>
-    <input type="text" name="reason" placeholder="e.g. Spoiled, Sample, Manual"><br>
-
-    <button type="submit">Apply Adjustment</button>
-</form>
-
-<a href="/ingredients">Back to Inventory</a>
-{% endblock %}
+<!-- This file has been intentionally removed -->
