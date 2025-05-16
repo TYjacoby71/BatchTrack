@@ -122,7 +122,16 @@ def edit_ingredient(id):
 
     if request.method == 'POST':
         item.name = request.form.get('name')
-        item.quantity = float(request.form.get('quantity'))
+        new_quantity = float(request.form.get('quantity'))
+        if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='recount',
+                quantity_change=new_quantity - item.quantity,
+                created_by=current_user.id if current_user else None
+            )
+            db.session.add(history)
+        item.quantity = new_quantity
         item.unit = request.form.get('unit')
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         item.category_id = request.form.get('category_id', None)
