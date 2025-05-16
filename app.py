@@ -1,4 +1,4 @@
-# Updated blueprint registration in app.py
+# Importing the product_log_bp to fix the import error.
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -78,7 +78,7 @@ app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
 app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
-app.register_blueprint(product_log_routes, url_prefix='/product-logs')
+app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
