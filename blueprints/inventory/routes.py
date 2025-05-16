@@ -3,7 +3,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from models import db, InventoryItem, Unit, IngredientCategory
 from utils.unit_utils import get_global_unit_list
-from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
 
