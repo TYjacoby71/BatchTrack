@@ -163,6 +163,19 @@ def edit_container(id):
         return redirect(url_for('inventory.list_inventory'))
     return render_template('edit_container.html', item=item)
 
+@inventory_bp.route('/update_details/<int:id>', methods=['POST'])
+@login_required
+def update_details(id):
+    item = InventoryItem.query.get_or_404(id)
+    item.name = request.form.get('name')
+    item.unit = request.form.get('unit')
+    item.density = float(request.form.get('density')) if request.form.get('density') else None
+    if item.type == 'ingredient':
+        item.category_id = request.form.get('category_id') or None
+    db.session.commit()
+    flash('Item details updated successfully')
+    return redirect(url_for('inventory.view_inventory', id=id))
+
 @inventory_bp.route('/delete/<int:id>')
 @login_required
 def delete_inventory(id):

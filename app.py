@@ -49,7 +49,7 @@ from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
-from routes.inventory_adjust_routes import adjust_bp
+# Inventory adjustments now handled in blueprints/inventory/routes.py
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
@@ -75,7 +75,6 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(adjust_bp, url_prefix='/adjust')
 app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
