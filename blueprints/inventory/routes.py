@@ -8,6 +8,22 @@ def get_ingredient_categories():
 
 inventory_bp = Blueprint('inventory', __name__)
 
+@inventory_bp.route('/update', methods=['POST'])
+@login_required
+def update_inventory():
+    items = request.form.to_dict(flat=False)
+    for i in range(len(items.get('items[][id]', []))):
+        item_id = items['items[][id]'][i]
+        quantity = float(items['items[][quantity]'][i])
+        
+        item = InventoryItem.query.get(item_id)
+        if item:
+            item.quantity += quantity
+    
+    db.session.commit()
+    flash('Inventory updated successfully.')
+    return redirect(url_for('inventory.list_inventory'))
+
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():

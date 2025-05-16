@@ -23,9 +23,24 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
 
 function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
+  const updateForm = document.getElementById('updateInventoryForm');
+  updateForm.style.display = 'none';
+  
   if (form.style.display === 'none') {
     form.style.display = 'block';
-    // Clear form fields
+    form.reset();
+  } else {
+    form.style.display = 'none';
+  }
+}
+
+function toggleUpdateForm() {
+  const form = document.getElementById('updateInventoryForm');
+  const addForm = document.getElementById('addIngredientForm');
+  addForm.style.display = 'none';
+  
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
     form.reset();
   } else {
     form.style.display = 'none';
