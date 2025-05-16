@@ -1,0 +1,54 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Update Ingredient</h2>
+<form method="post">
+    {{ csrf_token() }}
+    <label for="name">Name:</label>
+    <input type="text" name="name" value="{{ ing.name }}" required><br>
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" step="0.01" name="quantity" value="{{ ing.quantity }}"><br>
+
+    <label for="type">Inventory Type:</label>
+    <select name="type" class="form-select" required>
+        <option value="ingredient" {% if ing.type == 'ingredient' %}selected{% endif %}>Ingredient</option>
+        <option value="container" {% if ing.type == 'container' %}selected{% endif %}>Container</option>
+        <option value="packaging" {% if ing.type == 'packaging' %}selected{% endif %}>Packaging</option>
+    </select>
+
+    <div class="mb-3" id="categorySection" {% if ing.type != 'ingredient' %}style="display: none;"{% endif %}>
+        <label for="category">Ingredient Category:</label>
+        <select name="category_id" class="form-select">
+            <option value="">-- Select Category --</option>
+            {% for category in get_ingredient_categories() %}
+            <option value="{{ category.id }}" {% if ing.category_id == category.id %}selected{% endif %}>
+                {{ category.name }} (Density: {{ category.default_density }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <script>
+        document.querySelector('select[name="type"]').addEventListener('change', function() {
+            document.getElementById('categorySection').style.display = 
+                this.value === 'ingredient' ? 'block' : 'none';
+        });
+    </script>
+
+    <label for="unit">Unit:</label>
+    <select name="unit" class="form-select select2" data-unit-select>
+        {% for unit in get_global_unit_list() %}
+        <option value="{{ unit.name }}" {% if unit.name == ing.unit %}selected{% endif %}>{{ unit.name }}</option>
+        {% endfor %}
+    </select><br>
+
+    <label for="cost_per_unit">Cost Per Unit:</label>
+    <input type="number" step="0.01" name="cost_per_unit" value="{{ ing.cost_per_unit or 0.0 }}"><br>
+
+    <div class="form-group mt-3 d-flex justify-content-between">
+        <a href="{{ url_for('ingredients.list_ingredients') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+</form>
+{% endblock %}
