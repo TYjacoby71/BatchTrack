@@ -56,6 +56,33 @@ def add_inventory():
     flash('Inventory item added successfully.')
     return redirect(url_for('inventory.list_inventory'))
 
+@inventory_bp.route('/adjust/<int:id>', methods=['POST'])
+@login_required
+def adjust_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    change_type = request.form.get('change_type')
+    quantity = float(request.form.get('quantity', 0))
+    cost_per_unit = float(request.form.get('cost_per_unit')) if request.form.get('cost_per_unit') else None
+    notes = request.form.get('notes', '')
+
+    history = InventoryHistory(
+        inventory_item_id=item.id,
+        change_type=change_type,
+        quantity_change=quantity if change_type != 'recount' else quantity - item.quantity,
+        cost_per_unit=cost_per_unit,
+        notes=notes
+    )
+    db.session.add(history)
+    
+    if change_type != 'recount':
+        item.quantity += quantity
+    else:
+        item.quantity = quantity
+        
+    db.session.commit()
+    flash('Inventory adjusted successfully')
+    return redirect(url_for('inventory.view_inventory', id=id))
+
 @inventory_bp.route('/update', methods=['POST'])
 @login_required
 def update_inventory():
