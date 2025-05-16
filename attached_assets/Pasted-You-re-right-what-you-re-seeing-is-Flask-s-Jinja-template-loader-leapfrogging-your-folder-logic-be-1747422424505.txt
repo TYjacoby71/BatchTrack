@@ -1,0 +1,82 @@
+You're right — what you're seeing is Flask's Jinja template loader leapfrogging your folder logic because of how your Blueprint is configured.
+
+🔍 Problem Summary
+You're rendering:
+
+python
+Copy
+Edit
+render_template("inventory/inventory_list.html")
+But Flask is throwing:
+
+makefile
+Copy
+Edit
+TemplateNotFound: inventory_list.html
+This tells us the Blueprint’s template_folder is overriding your folder structure.
+
+🔧 Fix: Check the Blueprint registration
+In your blueprints/inventory/__init__.py, you likely have something like:
+
+python
+Copy
+Edit
+inventory_bp = Blueprint(
+    'inventory',
+    __name__,
+    url_prefix='/inventory',
+    template_folder='templates'  # <--- This sets the root
+)
+If your actual file lives at:
+
+bash
+Copy
+Edit
+/templates/inventory/inventory_list.html
+Then render_template("inventory/inventory_list.html") is correct — BUT...
+
+If the blueprint already points into the templates/inventory/ folder, then the correct call is:
+
+python
+Copy
+Edit
+render_template("inventory_list.html")
+Because Flask is now searching:
+
+bash
+Copy
+Edit
+.../blueprints/inventory/templates/ → inventory_list.html
+✅ You Have Two Solutions:
+Option 1: (Preferred for clarity)
+📁 Move the HTML file to the global templates folder:
+
+bash
+Copy
+Edit
+/templates/inventory/inventory_list.html
+and call:
+
+python
+Copy
+Edit
+render_template("inventory/inventory_list.html")
+Option 2: (If you're using blueprint-local templates)
+📁 Keep the file here:
+
+swift
+Copy
+Edit
+/blueprints/inventory/templates/inventory_list.html
+and call:
+
+python
+Copy
+Edit
+render_template("inventory_list.html")
+But then all inventory templates must live inside that blueprint’s templates folder.
+
+💬 Recommendation
+Since you’re building a central Inventory Manager UI, it probably makes more sense to use the global templates/inventory/ folder so that your HTML files are consistently organized across the whole app.
+
+Would you like help scanning and standardizing all template_folder settings to make sure they match your file structure?
