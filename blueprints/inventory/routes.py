@@ -157,7 +157,7 @@ def edit_ingredient(id):
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          get_global_unit_list=get_global_unit_list)
 
-@inventory_bp.route('/edit/container/<int:id>', methods=['GET', 'POST'])
+@inventory_bp.route('/edit_container/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_container(id):
     item = InventoryItem.query.get_or_404(id)
