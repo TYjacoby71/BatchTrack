@@ -168,12 +168,24 @@ def edit_container(id):
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
         item.storage_unit = request.form.get('storage_unit')
-        item.quantity = float(request.form.get('quantity'))
+        new_quantity = float(request.form.get('quantity'))
+        if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='recount',
+                quantity_change=new_quantity - item.quantity,
+                created_by=current_user.id if current_user else None,
+                quantity_used=0
+            )
+            db.session.add(history)
+        item.quantity = new_quantity
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
         db.session.commit()
         flash('Container updated successfully.')
-        return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_container.html', item=item)
+        return redirect(url_for('inventory.view_inventory', id=id))
+    return render_template('edit_container.html', 
+                         item=item,
+                         get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/update_details/<int:id>', methods=['POST'])
 @login_required

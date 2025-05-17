@@ -152,7 +152,7 @@ class InventoryHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(32), nullable=False)  # purchase, use, spoil, trash, recount, manual
+    change_type = db.Column(db.String(32), nullable=False)  # batch, refunded, restock, spoil, trash, recount
     quantity_change = db.Column(db.Float, nullable=False)
     unit_cost = db.Column(db.Float)  # Only for purchases
     source = db.Column(db.String(128))  # Vendor name or batch number
