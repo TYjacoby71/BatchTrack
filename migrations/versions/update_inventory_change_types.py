@@ -2,7 +2,7 @@
 """Update inventory change types
 
 Revision ID: update_inventory_types
-Revises: @historyreasons
+Revises: 923b23b7c7ba
 Create Date: 2025-05-17 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
 revision = 'update_inventory_types'
-down_revision = '@historyreasons'
+down_revision = '923b23b7c7ba'
 branch_labels = None
 depends_on = None
 
