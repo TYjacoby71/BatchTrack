@@ -114,6 +114,7 @@ def update_inventory():
         return jsonify({'success': False, 'error': 'Item not found'})
 
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
+@inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])  # Add compatibility route
 @login_required
 def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
