@@ -64,7 +64,8 @@
 
                     <!-- Inventory Management -->
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-                    <!-- Inventory adjust menu item removed -->
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.edit_ingredient', id=0) }}">New Ingredient</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.edit_container', id=0) }}">New Container</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product.list_products') }}">Products</a></li>
                     
                     <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
