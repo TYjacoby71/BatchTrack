@@ -114,7 +114,6 @@ def update_inventory():
         return jsonify({'success': False, 'error': 'Item not found'})
 
 @inventory_bp.route('/edit/ingredient/<int:id>', methods=['GET', 'POST'])
-@inventory_bp.route('/edit/<int:id>', methods=['GET', 'POST'])  # Add compatibility route
 @login_required
 def edit_ingredient(id):
     item = InventoryItem.query.get_or_404(id)
@@ -174,7 +173,7 @@ def edit_container(id):
         db.session.commit()
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_container.html', item=item, get_global_unit_list=get_global_unit_list)
+    return render_template('edit_container.html', item=item)
 
 @inventory_bp.route('/update_details/<int:id>', methods=['POST'])
 @login_required
