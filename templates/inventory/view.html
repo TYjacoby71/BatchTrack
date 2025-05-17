@@ -164,6 +164,11 @@
           
           {% if item.type == 'container' %}
           <div class="mb-3">
+            <label for="storage_amount">Storage Amount:</label>
+            <input type="number" step="0.01" name="storage_amount" value="{{ item.storage_amount }}" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
             <label for="storage_unit">Storage Unit:</label>
             <select name="storage_unit" class="form-select select2" data-unit-select required>
               {% for unit in get_global_unit_list() %}
