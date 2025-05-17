@@ -24,13 +24,17 @@
             <div class="col-md-6">
               <p><strong>Name:</strong> {{ item.name }}</p>
               <p><strong>Type:</strong> {{ item.type|title }}</p>
+              {% if item.type == 'container' %}
+              <p><strong>Storage Amount:</strong> {{ item.storage_amount }} {{ item.storage_unit }}</p>
+              {% else %}
               <p><strong>Unit:</strong> {{ item.unit }}</p>
               {% if item.density %}
               <p><strong>Density:</strong> {{ item.density }}</p>
               {% endif %}
+              {% endif %}
             </div>
             <div class="col-md-6">
-              <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
+              <p><strong>Current Quantity:</strong> {{ item.quantity }} {% if item.type == 'container' %}units{% else %}{{ item.unit }}{% endif %}</p>
               <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit or 0) }}</p>
               {% if item.category %}
               <p><strong>Category:</strong> {{ item.category.name }}</p>
