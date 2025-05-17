@@ -165,28 +165,11 @@ def edit_container(id):
         abort(404)
 
     if request.method == 'POST':
-        old_quantity = item.quantity
         item.name = request.form.get('name')
         item.storage_amount = float(request.form.get('storage_amount'))
         item.storage_unit = request.form.get('storage_unit')
-        new_quantity = float(request.form.get('quantity'))
+        item.quantity = float(request.form.get('quantity'))
         item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
-        item.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-        item.is_perishable = request.form.get('is_perishable') == 'on'
-        
-        # Create history entry if quantity changed
-        if new_quantity != old_quantity:
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type='recount',
-                quantity_change=new_quantity - old_quantity,
-                unit_cost=item.cost_per_unit,
-                created_by=current_user.id if current_user else None,
-                source='Manual Edit'
-            )
-            db.session.add(history)
-            
-        item.quantity = new_quantity
         db.session.commit()
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
