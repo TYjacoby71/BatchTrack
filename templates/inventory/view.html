@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 
 {% block content %}
@@ -162,6 +161,26 @@
             </select>
           </div>
 
+          
+          {% if item.type == 'container' %}
+          <div class="mb-3">
+            <label for="storage_unit">Storage Unit:</label>
+            <select name="storage_unit" class="form-select select2" data-unit-select required>
+              {% for unit in get_global_unit_list() %}
+                <option value="{{ unit.name }}" {% if unit.name == item.storage_unit %}selected{% endif %}>{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label for="unit">Unit:</label>
+            <select name="unit" class="form-select select2" data-unit-select required>
+              {% for unit in get_global_unit_list() %}
+                <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
           <div class="mb-3">
             <label for="density">Density (g/ml):</label>
             <div class="input-group">
@@ -171,15 +190,7 @@
             </div>
             <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
           </div>
-
-          <div class="mb-3">
-            <label for="unit">Unit:</label>
-            <select name="unit" class="form-select select2" data-unit-select>
-              {% for unit in get_global_unit_list() %}
-              <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
+          {% endif %}
 
           <div class="mb-3">
             <label for="cost_per_unit">Cost Per Unit:</label>
@@ -223,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const originalQuantity = parseFloat(quantityInput.value);
     const recountModalEl = document.getElementById('recountConfirmModal');
     const recountModal = new bootstrap.Modal(recountModalEl);
-    
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         const newQuantity = parseFloat(quantityInput.value);
