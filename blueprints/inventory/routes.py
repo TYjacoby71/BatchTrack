@@ -128,7 +128,8 @@ def edit_ingredient(id):
                 inventory_item_id=item.id,
                 change_type='recount',
                 quantity_change=new_quantity - item.quantity,
-                created_by=current_user.id if current_user else None
+                created_by=current_user.id if current_user else None,
+                quantity_used=0  # Set default value for NOT NULL constraint
             )
             db.session.add(history)
         item.quantity = new_quantity
