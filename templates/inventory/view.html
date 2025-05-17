@@ -92,9 +92,11 @@
               <tr>
                 <th>Date</th>
                 <th>Change Type</th>
-                <th>Quantity</th>
+                <th>Quantity Change</th>
                 <th>Cost per Unit</th>
-                <th>Notes</th>
+                <th>Source</th>
+                <th>Used For</th>
+                <th>Created By</th>
               </tr>
             </thead>
             <tbody>
@@ -102,9 +104,11 @@
               <tr>
                 <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ entry.change_type|title }}</td>
-                <td>{{ entry.quantity }} {{ item.unit }}</td>
-                <td>${{ "%.2f"|format(entry.cost_per_unit) if entry.cost_per_unit else '-' }}</td>
-                <td>{{ entry.notes or '' }}</td>
+                <td>{{ entry.quantity_change }} {{ item.unit }}</td>
+                <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost else '-' }}</td>
+                <td>{{ entry.source if entry.source else '-' }}</td>
+                <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
+                <td>{{ entry.user.username if entry.user else '-' }}</td>
               </tr>
               {% endfor %}
             </tbody>
