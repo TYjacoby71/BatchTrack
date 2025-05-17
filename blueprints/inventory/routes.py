@@ -173,7 +173,7 @@ def edit_container(id):
         db.session.commit()
         flash('Container updated successfully.')
         return redirect(url_for('inventory.list_inventory'))
-    return render_template('edit_container.html', item=item)
+    return render_template('edit_container.html', item=item, get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/update_details/<int:id>', methods=['POST'])
 @login_required
