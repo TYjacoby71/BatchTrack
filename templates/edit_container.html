@@ -2,7 +2,7 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Edit Container</h2>
-<form method="post">
+<form method="post" action="{{ url_for('inventory.edit_container', id=item.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
     <div class="mb-3">
