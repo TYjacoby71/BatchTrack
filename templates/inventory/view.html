@@ -141,7 +141,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form method="post" action="{% if item.type == 'container' %}{{ url_for('inventory.edit_container', id=item.id) }}{% else %}{{ url_for('inventory.edit_ingredient', id=item.id) }}{% endif %}">
+        <form method="post" action="{% if item.type == 'container' %}{{ url_for('inventory.edit_container', id=item.id) }}{% else %}{{ url_for('inventory.edit_ingredient', id=item.id) }}{% endif %}" id="editModalForm">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label for="name">Name:</label>
@@ -213,7 +213,16 @@
 
           <div class="mb-3">
             <label for="cost_per_unit">Cost Per Unit:</label>
-            <input type="number" step="0.01" min="0" name="cost_per_unit" value="{{ item.cost_per_unit or 0.0 }}" class="form-control">
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" name="cost_per_unit" id="modal_cost_per_unit" 
+                     value="{{ item.cost_per_unit or 0.0 }}" class="form-control" readonly>
+              <div class="input-group-append">
+                <div class="input-group-text">
+                  <input type="checkbox" id="modal_override_cost" name="override_cost"> Override
+                </div>
+              </div>
+            </div>
+            <small class="text-muted">Changing cost will reset tracked average cost. Historical records remain unchanged.</small>
           </div>
 
           <div class="modal-footer">
@@ -272,6 +281,13 @@ document.addEventListener('DOMContentLoaded', function() {
         form.appendChild(hiddenInput);
         recountModal.hide();
         form.submit();
+    });
+
+    const overrideCostCheckbox = document.getElementById('modal_override_cost');
+    const costPerUnitInput = document.getElementById('modal_cost_per_unit');
+
+    overrideCostCheckbox.addEventListener('change', function() {
+        costPerUnitInput.readOnly = !this.checked;
     });
 });
 
