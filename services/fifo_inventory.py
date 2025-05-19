@@ -1,4 +1,3 @@
-
 from models import ProductInventory, db
 from sqlalchemy import and_
 
@@ -32,10 +31,10 @@ def deduct_product_fifo(product_id, variant, unit, quantity_requested):
         if remaining <= 0:
             break
 
-        deduction = min(row.quantity, remaining)
-        row.quantity -= deduction
+        deduction = min(row.remaining_quantity or row.quantity_change, remaining)
+        row.remaining_quantity = (row.remaining_quantity or row.quantity_change) - deduction
         remaining -= deduction
-        used_batches.append((row.batch_id, deduction))
+        used_entries.append((row.id, deduction))
 
     db.session.commit()
-    return used_batches
+    return used_entries
