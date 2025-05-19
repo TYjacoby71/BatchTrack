@@ -8,7 +8,7 @@ Create Date: 2025-05-19 18:45:00.000000
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '@dbindex'
+revision = 'dbindex'
 down_revision = 'update_inventory_types'
 branch_labels = None
 depends_on = None
