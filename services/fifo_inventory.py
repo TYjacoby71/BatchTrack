@@ -1,18 +1,11 @@
-from models import ProductInventory, db
+
+from models import InventoryHistory, db
 from sqlalchemy import and_
 
-def get_fifo_inventory():
+def deduct_fifo(inventory_item_id, quantity_requested):
     """
-    Gets all active FIFO inventory entries ordered by timestamp.
-    """
-    return ProductInventory.query.filter(
-        ProductInventory.quantity > 0
-    ).order_by(ProductInventory.timestamp.asc()).all()
-
-def deduct_product_fifo(product_id, variant, unit, quantity_requested):
-    """
-    Deducts inventory from the oldest entries using FIFO logic.
-    Returns a list of (history_id, quantity_deducted) pairs.
+    Deducts inventory using FIFO logic for any inventory type
+    Returns a list of (history_id, quantity_deducted) pairs
     """
     remaining = quantity_requested
     used_entries = []
@@ -20,12 +13,10 @@ def deduct_product_fifo(product_id, variant, unit, quantity_requested):
     # Get valid inventory entries ordered by timestamp
     inventory_rows = InventoryHistory.query.filter(
         and_(
-            ProductInventory.product_id == product_id,
-            ProductInventory.variant == variant,
-            ProductInventory.unit == unit,
-            ProductInventory.quantity > 0
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
         )
-    ).order_by(ProductInventory.timestamp.asc()).all()
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     for row in inventory_rows:
         if remaining <= 0:
@@ -36,5 +27,19 @@ def deduct_product_fifo(product_id, variant, unit, quantity_requested):
         remaining -= deduction
         used_entries.append((row.id, deduction))
 
+    if remaining > 0:
+        return None  # Not enough stock
+
     db.session.commit()
     return used_entries
+
+def get_fifo_entries(inventory_item_id):
+    """
+    Gets all active FIFO inventory entries ordered by timestamp
+    """
+    return InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).order_by(InventoryHistory.timestamp.asc()).all()
