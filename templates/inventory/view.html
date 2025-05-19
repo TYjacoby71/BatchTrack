@@ -141,7 +141,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form method="post" action="{% if item.type == 'container' %}{{ url_for('inventory.edit_container', id=item.id) }}{% else %}{{ url_for('inventory.edit_ingredient', id=item.id) }}{% endif %}" id="editModalForm">
+        <form method="post" action="{{ url_for('inventory.edit_inventory', id=item.id) }}" id="editModalForm">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label for="name">Name:</label>
