@@ -238,7 +238,6 @@ class InventoryItem(db.Model):
     cost_per_unit = db.Column(db.Float, default=0.0)
     intermediate = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.Date, nullable=True)
-    perishable = db.Column(db.Boolean, default=False)
     low_stock_threshold = db.Column(db.Float, default=0)
     is_perishable = db.Column(db.Boolean, default=False)
     storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
