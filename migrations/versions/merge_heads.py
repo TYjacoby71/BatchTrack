@@ -2,7 +2,7 @@
 """merge heads
 
 Revision ID: merge_heads
-Revises: dbindex, 923b23b7c7ba
+Revises: dbindex
 Create Date: 2025-05-19 19:05:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'merge_heads'
-down_revision = ('dbindex', '923b23b7c7ba')
+down_revision = 'dbindex'
 branch_labels = None
 depends_on = None
 
