@@ -71,10 +71,57 @@
               </div>
               <div class="col-md-4">
                 <div class="form-group">
-                  <label>Cost per Unit (optional)</label>
+                  <label>Cost Entry Type</label>
+                  <select class="form-control" name="cost_entry_type" id="costEntryType">
+                    <option value="no_change">No Change</option>
+                    <option value="per_unit">Per Unit Cost</option>
+                    <option value="total">Total Cost</option>
+                  </select>
+                </div>
+                <div class="form-group mt-2">
+                  <label>Cost</label>
                   <input type="number" class="form-control" name="cost_per_unit" step="0.01" id="costPerUnit">
+                  <small class="form-text text-muted" id="costHelp"></small>
                 </div>
               </div>
+              <script>
+                document.getElementById('costEntryType').addEventListener('change', function() {
+                  const costInput = document.getElementById('costPerUnit');
+                  const helpText = document.getElementById('costHelp');
+                  const currentCost = {{ item.cost_per_unit or 0 }};
+                  const qty = parseFloat(document.querySelector('input[name="quantity"]').value) || 0;
+
+                  switch(this.value) {
+                    case 'no_change':
+                      costInput.value = currentCost;
+                      costInput.readOnly = true;
+                      helpText.textContent = 'Using current cost per unit';
+                      break;
+                    case 'per_unit':
+                      costInput.value = '';
+                      costInput.readOnly = false;
+                      helpText.textContent = 'Enter cost per individual unit';
+                      break;
+                    case 'total':
+                      costInput.value = '';
+                      costInput.readOnly = false;
+                      helpText.textContent = 'Enter total cost - will be divided by quantity';
+                      break;
+                  }
+                });
+
+                document.querySelector('input[name="quantity"]').addEventListener('input', function() {
+                  const costType = document.getElementById('costEntryType');
+                  if (costType.value === 'total') {
+                    const qty = parseFloat(this.value) || 0;
+                    document.getElementById('costHelp').textContent = 
+                      `Enter total cost - will be divided by ${qty} units`;
+                  }
+                });
+
+                // Initialize to no_change on load
+                document.getElementById('costEntryType').dispatchEvent(new Event('change'));
+              </script>
               <script>
                 document.querySelector('select[name="change_type"]').addEventListener('change', function() {
                   const costInput = document.getElementById('costPerUnit');
@@ -235,6 +282,27 @@
   </div>
 </div>
 
+<!-- Cost Override Warning Modal -->
+<div class="modal fade" id="costOverrideWarningModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Cost Override</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This will override the calculated average cost per unit.</p>
+                <p>Historical cost records will be preserved but future calculations will use this new base cost.</p>
+                <p>Continue with this change?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmCostOverride">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Recount Confirmation Modal -->
 <div class="modal fade" id="recountConfirmModal" tabindex="-1">
     <div class="modal-dialog">
@@ -286,8 +354,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const overrideCostCheckbox = document.getElementById('modal_override_cost');
     const costPerUnitInput = document.getElementById('modal_cost_per_unit');
 
+    const costOverrideModal = new bootstrap.Modal(document.getElementById('costOverrideWarningModal'));
+    
     overrideCostCheckbox.addEventListener('change', function() {
-        costPerUnitInput.readOnly = !this.checked;
+        if (this.checked) {
+            costOverrideModal.show();
+        } else {
+            costPerUnitInput.readOnly = true;
+        }
+    });
+
+    document.getElementById('confirmCostOverride').addEventListener('click', function() {
+        costPerUnitInput.readOnly = false;
+        costOverrideModal.hide();
+    });
+
+    document.getElementById('costOverrideWarningModal').addEventListener('hidden.bs.modal', function() {
+        if (costPerUnitInput.readOnly) {
+            overrideCostCheckbox.checked = false;
+        }
     });
 });
 
