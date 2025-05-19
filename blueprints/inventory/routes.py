@@ -31,7 +31,8 @@ def view_inventory(id):
                          history=history,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all)
+                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
+                         User=User)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
