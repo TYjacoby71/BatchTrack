@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'dbindex'
-down_revision = ('add_batch_inventory', 'update_inventory_types')
+down_revision = ('add_batch_inventory', '923b23b7c7ba')
 branch_labels = None
 depends_on = None
 
