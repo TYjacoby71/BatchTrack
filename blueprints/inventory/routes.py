@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
@@ -25,8 +24,9 @@ def list_inventory():
 @login_required
 def view_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    history = InventoryHistory.query.filter_by(inventory_item_id=item.id).order_by(InventoryHistory.timestamp.desc()).all()
-    return render_template('inventory/view.html', 
+    history = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc()).all()
+    return render_template('inventory/view.html',
+                         abs=abs,
                          item=item,
                          history=history,
                          units=get_global_unit_list(),
@@ -83,12 +83,12 @@ def adjust_inventory(id):
         created_by=current_user.id
     )
     db.session.add(history)
-    
+
     if change_type == 'recount':
         item.quantity = quantity
     elif change_type in ['spoil', 'trash']:
         item.quantity -= abs(quantity)  # Deduct for spoilage and trash
-        cost_per_unit = item.cost_per_unit  # Use current inventory cost for spoilage/trash
+        cost_per_unit = -abs(item.cost_per_unit)  # Make cost negative for deductions
         history.unit_cost = cost_per_unit  # Set the history entry cost
     else:
         # For restocks, calculate weighted average cost
@@ -97,13 +97,13 @@ def adjust_inventory(id):
             old_total_value = item.quantity * item.cost_per_unit if item.cost_per_unit else 0
             new_value = quantity * cost_per_unit
             new_total_quantity = item.quantity + quantity
-            
+
             # Update cost with weighted average
             if new_total_quantity > 0:
                 item.cost_per_unit = (old_total_value + new_value) / new_total_quantity
-                
+
         item.quantity += quantity  # Add for restocks
-        
+
     db.session.commit()
     flash('Inventory adjusted successfully')
     return redirect(url_for('inventory.view_inventory', id=id))
