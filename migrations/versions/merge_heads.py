@@ -2,7 +2,7 @@
 """merge heads
 
 Revision ID: merge_heads
-Revises: add_batch_inventory, update_inventory_types
+Revises: dbindex, allow_null_perishable
 Create Date: 2025-05-16 20:33:00.000000
 
 """
@@ -12,9 +12,9 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'merge_heads'
-down_revision = None
+down_revision = ('dbindex', 'allow_null_perishable')
 branch_labels = None
-depends_on = ('add_batch_inventory', 'update_inventory_types')
+depends_on = None
 
 
 def upgrade():
