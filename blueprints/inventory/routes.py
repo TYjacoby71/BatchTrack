@@ -71,7 +71,7 @@ def adjust_inventory(id):
     history = InventoryHistory(
         inventory_item_id=item.id,
         change_type=change_type,
-        quantity_change=quantity if change_type != 'recount' else quantity - item.quantity,
+        quantity_change=-abs(quantity) if change_type in ['spoil', 'trash'] else (quantity if change_type != 'recount' else quantity - item.quantity),
         unit_cost=cost_per_unit,
         note=notes,
         quantity_used=0,
