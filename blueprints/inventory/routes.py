@@ -79,10 +79,12 @@ def adjust_inventory(id):
     )
     db.session.add(history)
     
-    if change_type != 'recount':
-        item.quantity += quantity
-    else:
+    if change_type == 'recount':
         item.quantity = quantity
+    elif change_type in ['spoil', 'trash']:
+        item.quantity -= abs(quantity)  # Deduct for spoilage and trash
+    else:
+        item.quantity += quantity  # Add for restocks
         
     db.session.commit()
     flash('Inventory adjusted successfully')
