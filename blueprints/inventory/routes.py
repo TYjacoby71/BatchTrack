@@ -89,6 +89,7 @@ def adjust_inventory(id):
     elif change_type in ['spoil', 'trash']:
         item.quantity -= abs(quantity)  # Deduct for spoilage and trash
         cost_per_unit = item.cost_per_unit  # Use current inventory cost for spoilage/trash
+        history.unit_cost = cost_per_unit  # Set the history entry cost
     else:
         # For restocks, calculate weighted average cost
         if cost_per_unit:
