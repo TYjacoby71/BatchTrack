@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory
+from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
 from utils.unit_utils import get_global_unit_list
 
@@ -71,8 +71,9 @@ def adjust_inventory(id):
         inventory_item_id=item.id,
         change_type=change_type,
         quantity_change=quantity if change_type != 'recount' else quantity - item.quantity,
-        cost_per_unit=cost_per_unit,
-        notes=notes
+        unit_cost=cost_per_unit,
+        note=notes,
+        quantity_used=0
     )
     db.session.add(history)
     
