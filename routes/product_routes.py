@@ -4,7 +4,7 @@ from models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-from services.fifo_inventory import deduct_product_fifo
+from services.fifo_inventory import deduct_fifo
 
 product_bp = Blueprint('product', __name__)
 
@@ -57,7 +57,7 @@ def deduct_product(product_id):
         if quantity <= 0:
             raise ValueError("Quantity must be positive")
 
-        used = deduct_product_fifo(product_id, variant, unit, quantity)
+        used = deduct_fifo(product_id, quantity)
 
         if used:
             flash(f"Deducted {quantity} {unit} from inventory using FIFO", "success")
