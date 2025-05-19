@@ -112,7 +112,7 @@
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost else '-' }}</td>
                 <td>{{ entry.source if entry.source else '-' }}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
-                <td>{{ entry.user.username if entry.user else '-' }}</td>
+                <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
