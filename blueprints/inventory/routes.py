@@ -74,7 +74,8 @@ def adjust_inventory(id):
         quantity_change=quantity if change_type != 'recount' else quantity - item.quantity,
         unit_cost=cost_per_unit,
         note=notes,
-        quantity_used=0
+        quantity_used=0,
+        created_by=current_user.id
     )
     db.session.add(history)
     
