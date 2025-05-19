@@ -89,6 +89,17 @@ def adjust_inventory(id):
     elif change_type in ['spoil', 'trash']:
         item.quantity -= abs(quantity)  # Deduct for spoilage and trash
     else:
+        # For restocks, calculate weighted average cost
+        if cost_per_unit:
+            # Calculate new weighted average cost
+            old_total_value = item.quantity * item.cost_per_unit if item.cost_per_unit else 0
+            new_value = quantity * cost_per_unit
+            new_total_quantity = item.quantity + quantity
+            
+            # Update cost with weighted average
+            if new_total_quantity > 0:
+                item.cost_per_unit = (old_total_value + new_value) / new_total_quantity
+                
         item.quantity += quantity  # Add for restocks
         
     db.session.commit()
