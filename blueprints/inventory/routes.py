@@ -31,7 +31,8 @@ def view_inventory(id):
                          history=history,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all)
+                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
+                         User=User)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -64,23 +65,44 @@ def adjust_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     change_type = request.form.get('change_type')
     quantity = float(request.form.get('quantity', 0))
-    cost_per_unit = float(request.form.get('cost_per_unit')) if request.form.get('cost_per_unit') else None
+    # If no cost provided, use existing item cost for restocks, None for other types
+    input_cost = request.form.get('cost_per_unit')
+    if input_cost:
+        cost_per_unit = float(input_cost)
+    else:
+        cost_per_unit = item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount'] else None
     notes = request.form.get('notes', '')
 
     history = InventoryHistory(
         inventory_item_id=item.id,
         change_type=change_type,
-        quantity_change=quantity if change_type != 'recount' else quantity - item.quantity,
+        quantity_change=-abs(quantity) if change_type in ['spoil', 'trash'] else (quantity if change_type != 'recount' else quantity - item.quantity),
         unit_cost=cost_per_unit,
         note=notes,
-        quantity_used=0
+        quantity_used=0,
+        created_by=current_user.id
     )
     db.session.add(history)
     
-    if change_type != 'recount':
-        item.quantity += quantity
-    else:
+    if change_type == 'recount':
         item.quantity = quantity
+    elif change_type in ['spoil', 'trash']:
+        item.quantity -= abs(quantity)  # Deduct for spoilage and trash
+        cost_per_unit = item.cost_per_unit  # Use current inventory cost for spoilage/trash
+        history.unit_cost = cost_per_unit  # Set the history entry cost
+    else:
+        # For restocks, calculate weighted average cost
+        if cost_per_unit:
+            # Calculate new weighted average cost
+            old_total_value = item.quantity * item.cost_per_unit if item.cost_per_unit else 0
+            new_value = quantity * cost_per_unit
+            new_total_quantity = item.quantity + quantity
+            
+            # Update cost with weighted average
+            if new_total_quantity > 0:
+                item.cost_per_unit = (old_total_value + new_value) / new_total_quantity
+                
+        item.quantity += quantity  # Add for restocks
         
     db.session.commit()
     flash('Inventory adjusted successfully')
