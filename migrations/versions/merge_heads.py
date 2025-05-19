@@ -2,7 +2,7 @@
 """merge heads
 
 Revision ID: merge_heads
-Revises: dbindex, allow_null_perishable
+Revises: a489c6978022, add_batch_inventory
 Create Date: 2025-05-16 20:33:00.000000
 
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 revision = 'merge_heads'
 down_revision = None
 branch_labels = None
-depends_on = ('dbindex', 'update_inventory_types')
+depends_on = ('a489c6978022', 'add_batch_inventory')
 
 
 def upgrade():
