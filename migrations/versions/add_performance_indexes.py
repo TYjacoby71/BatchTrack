@@ -1,16 +1,16 @@
 
-"""Add performance indexes
+"""Add database indexes for performance
 
-Revision ID: add_performance_indexes
-Revises: a489c6978022
+Revision ID: dbindex
+Revises: add_batch_inventory
 Create Date: 2025-05-19 18:45:00.000000
 
 """
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'add_performance_indexes'
-down_revision = 'a489c6978022'
+revision = 'dbindex'
+down_revision = 'add_batch_inventory'
 branch_labels = None
 depends_on = None
 
