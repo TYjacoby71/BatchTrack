@@ -117,7 +117,7 @@
                 <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ entry.change_type|title }}</td>
                 <td>{{ entry.quantity_change }} {{ item.unit }}</td>
-                <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost else '-' }}</td>
+                <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else '-' }}</td>
                 <td>{% if entry.change_type in ['restock', 'spoil', 'trash'] %}${{ "%.2f"|format(entry.quantity_change * (entry.unit_cost or 0)) }}{% else %}-{% endif %}</td>
                 <td>{{ entry.source if entry.source else '-' }}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
