@@ -1,3 +1,4 @@
+# Applying the cost override handling to the edit_ingredient route.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
@@ -157,7 +158,20 @@ def edit_ingredient(id):
             db.session.add(history)
         item.quantity = new_quantity
         item.unit = request.form.get('unit')
-        item.cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        new_cost = float(request.form.get('cost_per_unit', 0))
+        if request.form.get('override_cost') and new_cost != item.cost_per_unit:
+            # Log the cost override
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='cost_override',
+                quantity_change=0,
+                unit_cost=new_cost,
+                note=f'Cost manually changed from {item.cost_per_unit} to {new_cost}',
+                created_by=current_user.id,
+                quantity_used=0
+            )
+            db.session.add(history)
+            item.cost_per_unit = new_cost
         item.category_id = request.form.get('category_id', None)
         item.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
         item.is_perishable = request.form.get('is_perishable', 'false') == 'true'
