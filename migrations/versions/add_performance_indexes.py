@@ -1,7 +1,8 @@
+
 """Add database indexes for performance
 
 Revision ID: dbindex
-Revises: update_inventory_types
+Revises: initial
 Create Date: 2025-05-19 18:45:00.000000
 
 """
@@ -9,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'dbindex'
-down_revision = 'update_inventory_types'
+down_revision = 'initial'
 branch_labels = None
 depends_on = None
 
@@ -19,7 +20,7 @@ def upgrade():
     op.create_index('idx_batch_label_code', 'batch', ['label_code'])
     op.create_index('idx_batch_started_at', 'batch', ['started_at'])
 
-    # Inventory tracking indexes
+    # Inventory tracking indexes  
     op.create_index('idx_inventory_history_timestamp', 'inventory_history', ['timestamp'])
     op.create_index('idx_inventory_history_change_type', 'inventory_history', ['change_type'])
 
