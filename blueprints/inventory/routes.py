@@ -65,7 +65,12 @@ def adjust_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     change_type = request.form.get('change_type')
     quantity = float(request.form.get('quantity', 0))
-    cost_per_unit = float(request.form.get('cost_per_unit')) if request.form.get('cost_per_unit') else None
+    # If no cost provided, use existing item cost for restocks, None for other types
+    input_cost = request.form.get('cost_per_unit')
+    if input_cost:
+        cost_per_unit = float(input_cost)
+    else:
+        cost_per_unit = item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount'] else None
     notes = request.form.get('notes', '')
 
     history = InventoryHistory(
