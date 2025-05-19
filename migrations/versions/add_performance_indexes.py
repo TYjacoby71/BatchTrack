@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'dbindex'
-down_revision = 'initial'
+down_revision = 'update_inventory_types'
 branch_labels = None
 depends_on = None
 
