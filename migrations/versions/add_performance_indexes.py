@@ -1,6 +1,6 @@
 """Add database indexes for performance
 
-Revision ID: @dbindex
+Revision ID: dbindex
 Revises: update_inventory_types
 Create Date: 2025-05-19 18:45:00.000000
 
