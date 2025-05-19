@@ -12,13 +12,14 @@ def get_fifo_inventory():
 
 def deduct_product_fifo(product_id, variant, unit, quantity_requested):
     """
-    Deducts inventory from the oldest batches using FIFO logic.
-    Returns a list of (batch_id, quantity_deducted) pairs.
+    Deducts inventory from the oldest entries using FIFO logic.
+    Returns a list of (history_id, quantity_deducted) pairs.
     """
     remaining = quantity_requested
-    used_batches = []
+    used_entries = []
 
-    inventory_rows = ProductInventory.query.filter(
+    # Get valid inventory entries ordered by timestamp
+    inventory_rows = InventoryHistory.query.filter(
         and_(
             ProductInventory.product_id == product_id,
             ProductInventory.variant == variant,

@@ -156,6 +156,9 @@ class InventoryHistory(db.Model):
     quantity_change = db.Column(db.Float, nullable=False)
     unit_cost = db.Column(db.Float)  # Only for purchases
     source = db.Column(db.String(128))  # Vendor name or batch number
+    is_perishable = db.Column(db.Boolean, default=False)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
     used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
