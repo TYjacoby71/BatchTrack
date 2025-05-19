@@ -12,9 +12,9 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'merge_heads'
-down_revision = ('dbindex', 'allow_null_perishable')
+down_revision = None
 branch_labels = None
-depends_on = None
+depends_on = ('dbindex', 'update_inventory_types')
 
 
 def upgrade():
