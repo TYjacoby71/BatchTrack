@@ -157,8 +157,7 @@ class InventoryHistory(db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)  # Only for FIFO trackable events
     unit_cost = db.Column(db.Float, nullable=True)  # Cost for restocks/purchases
     source = db.Column(db.String(128))  # Vendor, batch code or deduction source
-    source_fifo_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)  # Links to source FIFO entry
-    credited_to_fifo_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)  # For recounts/credits
+    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)  # References source/target FIFO entry
     is_perishable = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.DateTime, nullable=True)
     shelf_life_days = db.Column(db.Integer, nullable=True)

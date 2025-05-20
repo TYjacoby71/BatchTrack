@@ -173,10 +173,12 @@
                 <td>{{ entry.source if entry.source else '-' }}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
                 <td>
-                  {% if entry.credited_to_fifo_id %}
-                    Credited to FIFO #{{ entry.credited_to_fifo_id }} ({{ InventoryHistory.query.get(entry.credited_to_fifo_id).timestamp.strftime('%Y-%m-%d %H:%M') }})
-                  {% elif entry.source_fifo_id %}
-                    Debited from FIFO #{{ entry.source_fifo_id }}
+                  {% if entry.fifo_reference_id %}
+                    {% if entry.quantity_change > 0 %}
+                      Credited to FIFO #{{ entry.fifo_reference_id }} ({{ InventoryHistory.query.get(entry.fifo_reference_id).timestamp.strftime('%Y-%m-%d %H:%M') }})
+                    {% else %}
+                      Debited from FIFO #{{ entry.fifo_reference_id }}
+                    {% endif %}
                   {% else %}
                     -
                   {% endif %}

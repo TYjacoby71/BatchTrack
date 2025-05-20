@@ -65,7 +65,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 change_type='recount',
                 quantity_change=-deduct_amount,
                 remaining_quantity=0,
-                source_fifo_id=entry_id,
+                fifo_reference_id=entry_id,
                 unit_cost=unit_cost,
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,

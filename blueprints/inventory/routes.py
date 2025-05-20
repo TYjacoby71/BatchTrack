@@ -125,7 +125,7 @@ def adjust_inventory(id):
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,  # Negative since it's a deduction
-                source_fifo_id=entry_id,
+                fifo_reference_id=entry_id,
                 unit_cost=unit_cost,
                 note=f"{notes} (From FIFO #{entry_id})",
                 created_by=current_user.id,
