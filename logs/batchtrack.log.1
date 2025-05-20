@@ -1,10 +1,10 @@
-2025-05-20 19:38:27,625 ERROR: Exception on /inventory/adjust/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-20 20:21:09,317 ERROR: Exception on /inventory/delete/20 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.quantity_used
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1933, in _exec_single_context
+    self.dialect.do_executemany(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 942, in do_executemany
+    cursor.executemany(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.inventory_item_id
 
 The above exception was the direct cause of the following exception:
 
@@ -24,10 +24,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 133, in adjust_inventory
-    deduction_records = deduct_fifo(
-                        ^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/fifo/services.py", line 43, in deduct_fifo
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 270, in delete_inventory
     db.session.commit()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
     return self._proxied.commit()
@@ -58,11 +55,11 @@ Traceback (most recent call last):
     rec.execute(self)
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
     util.preloaded.orm_persistence.save_obj(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
-    result = connection.execute(
-             ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        ^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
     return meth(
            ^^^^^
@@ -79,18 +76,36 @@ Traceback (most recent call last):
     self._handle_dbapi_exception(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.quantity_used
-[SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, unit_cost, source, source_fifo_id, credited_to_fifo_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-05-20 19:38:27.625222', 'spoil', -1.0, None, 5.5, 'spoil', 21, None, 0, None, None, None, None, None, None, None)]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1933, in _exec_single_context
+    self.dialect.do_executemany(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 942, in do_executemany
+    cursor.executemany(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.inventory_item_id
+[SQL: UPDATE inventory_history SET inventory_item_id=? WHERE inventory_history.id = ?]
+[parameters: [(None, 21), (None, 22), (None, 23), (None, 24), (None, 25), (None, 26), (None, 27), (None, 28)  ... displaying 10 of 26 total bound parameter sets ...  (None, 45), (None, 46)]]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
-2025-05-20 19:39:34,252 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 19:47:53,989 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 19:48:48,646 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 19:49:04,391 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 19:50:47,677 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 20:12:37,954 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 20:20:54,053 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:21:44,633 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:25:44,173 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:29:14,846 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:29:35,628 ERROR: Exception on /inventory/adjust/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 121, in adjust_inventory
+    and_(
+    ^^^^
+NameError: name 'and_' is not defined
+2025-05-20 20:30:07,553 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
