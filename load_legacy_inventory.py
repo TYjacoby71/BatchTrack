@@ -57,9 +57,14 @@ def load_legacy_inventory():
                     unit_cost=new_item.cost_per_unit,
                     source='Legacy Import',
                     created_by=1,  # System user
-                    quantity_used=0
+                    quantity_used=0,
+                    note='Initial import',
+                    is_perishable=new_item.is_perishable,
+                    expiration_date=new_item.expiration_date,
+                    shelf_life_days=None
                 )
                 db.session.add(history)
+                print(f'[HISTORY] Created initial FIFO entry for {new_item.quantity} {new_item.unit}')
             density_str = f' (density: {new_item.density} g/ml)' if new_item.density else ''
             print(f'[ADDED] {new_item.name} → {new_item.quantity} {new_item.unit}{density_str}')
 
