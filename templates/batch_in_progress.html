@@ -103,7 +103,10 @@
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% endfor %}
-                {% set ingredient_total = batch.ingredients|sum(attribute=lambda x: (x.amount_used or 0) * (x.cost_per_unit or 0)) %}
+                {% set ingredient_total = 0 %}
+                {% for ing in batch.ingredients %}
+                    {% set ingredient_total = ingredient_total + ((ing.amount_used or 0) * (ing.cost_per_unit or 0)) %}
+                {% endfor %}
                 <tr>
                     <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
                     <td>${{ "%.2f"|format(ingredient_total) }}</td>
