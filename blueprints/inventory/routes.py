@@ -1,4 +1,3 @@
-# Applying the cost override handling to the edit_ingredient route.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
@@ -110,25 +109,27 @@ def adjust_inventory(id):
     else:
         qty_change = quantity
 
-    # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
-    remaining = qty_change if qty_change > 0 else 0
-
-    history = InventoryHistory(
-        inventory_item_id=item.id,
-        change_type=change_type,
-        quantity_change=qty_change,
-        remaining_quantity=remaining,  # Track remaining quantity for FIFO
-        unit_cost=cost_per_unit,
-        note=notes,
-        quantity_used=0,
-        created_by=current_user.id
-    )
-    db.session.add(history)
-
-    if change_type == 'recount':
-        item.quantity = quantity
+    # Handle restocks and positive adjustments
+    if qty_change > 0:
+        history = InventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=qty_change,
+            remaining_quantity=qty_change,  # Track remaining quantity for FIFO
+            unit_cost=cost_per_unit,
+            note=notes,
+            quantity_used=0,
+            created_by=current_user.id
+        )
+        db.session.add(history)
+        if change_type == 'recount':
+            item.quantity = quantity
+        else:
+            item.quantity += qty_change
+    # Handle deductions (spoilage, trash, etc)
     elif change_type in ['spoil', 'trash']:
         from blueprints.fifo.services import deduct_fifo
+
         qty_to_deduct = abs(quantity)
         deduction_records = deduct_fifo(
             item.id,
@@ -136,7 +137,7 @@ def adjust_inventory(id):
             change_type,
             f"{change_type} adjustment: {notes}" if notes else change_type
         )
-        
+
         if deduction_records:
             item.quantity -= qty_to_deduct  # Update main inventory quantity
             db.session.add(item)
