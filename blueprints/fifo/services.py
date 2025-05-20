@@ -78,6 +78,19 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
             if entry.remaining_quantity < entry.quantity_change:
                 can_fill = entry.quantity_change - entry.remaining_quantity
                 fill_amount = min(can_fill, remaining_to_add)
+                # Create credited recount entry
+                history = InventoryHistory(
+                    inventory_item_id=inventory_item_id,
+                    change_type='recount',
+                    quantity_change=fill_amount,
+                    remaining_quantity=0,
+                    credited_to_fifo_id=entry.id,
+                    note=f"Recount credit to FIFO entry #{entry.id}",
+                    created_by=user_id,
+                    quantity_used=fill_amount,
+                    timestamp=datetime.utcnow()
+                )
+                db.session.add(history)
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
                 
@@ -91,7 +104,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"Recount yielded {remaining_to_add} more than could be filled in existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0,
-                timestamp=datetime.utcnow()  # Newest timestamp
+                timestamp=datetime.utcnow()
             )
             db.session.add(history)
         
