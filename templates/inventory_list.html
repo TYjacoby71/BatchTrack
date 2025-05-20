@@ -12,7 +12,7 @@
     </div>
 
     <!-- Update Inventory Form -->
-    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" x-data="{ rows: [{}] }">
+    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" x-data="{ rows: [{unit: '{{ get_global_unit_list()[0].name }}'}] }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <template x-for="(row, index) in rows" :key="index">
@@ -32,7 +32,7 @@
           </div>
           <div class="col">
             <label class="form-label">Unit</label>
-            <select :name="'items[' + index + '][unit]'" class="form-select" required>
+            <select :name="'items[' + index + '][unit]'" class="form-select" required x-model="row.unit">
               {% for unit in get_global_unit_list() %}
                 <option value="{{ unit.name }}">{{ unit.name }}</option>
               {% endfor %}
