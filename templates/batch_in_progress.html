@@ -89,10 +89,10 @@
                 <th>Line Cost</th>
             </tr>
         </thead>
+        {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
         <tbody>
             {% if batch.ingredients %}
             <tr><th colspan="5">Ingredients</th></tr>
-            {% set ns = namespace(ingredient_total=0) %}
             {% for ing in batch.ingredients %}
                 {% set amount = ing.amount_used|float or 0 %}
                 {% set cost = ing.cost_per_unit|float or 0 %}
@@ -114,7 +114,6 @@
 
             {% if batch.containers %}
             <tr><th colspan="5">Containers</th></tr>
-            {% set ns = namespace(container_total=0) %}
             {% for container in batch.containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
@@ -134,7 +133,6 @@
 
             {% if batch.extra_ingredients %}
             <tr><th colspan="5">Extra Ingredients</th></tr>
-            {% set ns = namespace(extras_total=0) %}
             {% for extra in batch.extra_ingredients %}
                 {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
                 <tr>
@@ -154,7 +152,6 @@
 
             {% if batch.extra_containers %}
             <tr><th colspan="5">Extra Containers</th></tr>
-            {% set ns = namespace(extra_container_total=0) %}
             {% for container in batch.extra_containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
