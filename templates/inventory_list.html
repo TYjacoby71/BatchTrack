@@ -74,16 +74,12 @@
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="ingredient">
-      <div class="row g-3 align-items-end">
-        <div class="col">
+      <div class="row g-3">
+        <div class="col-md-4">
           <label class="form-label">Name</label>
           <input type="text" name="name" class="form-control" required>
         </div>
-        <div class="col">
-          <label class="form-label">Quantity</label>
-          <input type="number" step="0.01" name="quantity" class="form-control" required>
-        </div>
-        <div class="col">
+        <div class="col-md-4">
           <label class="form-label">Unit</label>
           <select name="unit" class="form-select" required>
             {% for unit in units %}
@@ -91,11 +87,28 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col">
+        <div class="col-md-4">
+          <label class="form-label">Quantity</label>
+          <input type="number" step="0.01" name="quantity" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Density (g/ml)</label>
+          <input type="number" step="0.001" name="density" class="form-control">
+        </div>
+        <div class="col-md-4">
           <label class="form-label">Cost/Unit</label>
           <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
         </div>
-        <div class="col">
+        <div class="col-md-4">
+          <label class="form-label">Category</label>
+          <select name="category_id" class="form-select">
+            <option value="">None</option>
+            {% for category in get_ingredient_categories() %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 mt-3">
           <button type="submit" class="btn btn-success">Save</button>
           <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
         </div>
@@ -104,27 +117,6 @@
 
     <table class="table" id="ingredientsTable">
       <thead>
-        <tr>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Name">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Unit">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Quantity">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Density">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Cost/Unit">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
-          </th>
-          <th>Actions</th>
-        </tr>
         <tr>
           <th>Name</th>
           <th>Unit</th>
