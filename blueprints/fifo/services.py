@@ -64,14 +64,14 @@ def recount_fifo(inventory_item_id, new_quantity, note):
     difference = new_quantity - current_total
     
     if difference > 0:
-        # Get the emptied events in reverse chronological order
+        # Get the emptied events in order by timestamp (oldest first)
         emptied_events = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity == 0,
                 InventoryHistory.quantity_change > 0  # Original addition events
             )
-        ).order_by(InventoryHistory.timestamp.desc()).all()
+        ).order_by(InventoryHistory.timestamp.asc()).all()
 
         remaining_credit = difference
         for event in emptied_events:
@@ -88,7 +88,10 @@ def recount_fifo(inventory_item_id, new_quantity, note):
                 quantity_change=credit_amount,
                 remaining_quantity=credit_amount,
                 credited_to_fifo_id=event.id,
-                note=f"{note} (credited to event {event.id})"
+                note=f"{note} (credited to event {event.id})",
+                unit_cost=event.unit_cost,  # Use the same unit cost
+                created_by=event.created_by,  # Copy the creator
+                source=f"Recount credit to event {event.id}"
             )
             db.session.add(history)
             
