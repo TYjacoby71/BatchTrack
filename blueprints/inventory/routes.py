@@ -134,8 +134,7 @@ def adjust_inventory(id):
             item.id,
             qty_to_deduct,
             change_type,
-            f"From FIFO entry {entry.id}: {notes}" if notes else f"From FIFO entry {entry.id}"
-            for entry in get_fifo_entries(item.id)
+            f"{change_type} adjustment: {notes}" if notes else change_type
         )
         
         if deduction_records:
