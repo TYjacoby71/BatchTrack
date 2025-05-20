@@ -78,7 +78,8 @@ def add_inventory():
             remaining_quantity=quantity,  # For FIFO tracking
             unit_cost=cost_per_unit,
             note='Initial stock creation',
-            created_by=current_user.id if current_user else None
+            created_by=current_user.id if current_user else None,
+            quantity_used=0  # Required field for FIFO tracking
         )
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
@@ -180,11 +181,11 @@ def update_inventory():
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
-    
+
     # Handle recount if quantity changed
     if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
         history = InventoryHistory(
