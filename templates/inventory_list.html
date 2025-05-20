@@ -38,13 +38,14 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-auto" x-show="index === rows.length - 1">
-            <button type="button" class="btn btn-outline-primary" @click="rows.push({})">Add Another Item</button>
+          <div class="col-auto">
+            <button type="button" class="btn btn-danger" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">Remove</button>
           </div>
         </div>
       </template>
 
       <div class="mt-3">
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({})">Add Another Item</button>
         <button type="submit" class="btn btn-success">Save Updates</button>
         <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Cancel</button>
       </div>
