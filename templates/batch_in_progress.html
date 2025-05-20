@@ -174,15 +174,15 @@
         </tbody>
 
         <tfoot>
-            {% set total_cost = (ingredient_ns.total if ingredient_ns.total is defined else 0) + 
-                                       (container_ns.total if container_ns.total is defined else 0) + 
-                                       (extra_ingredient_ns.total if extra_ingredient_ns.total is defined else 0) + 
-                                       (extra_container_ns.total if extra_container_ns.total is defined else 0) %}
-                <tr>
-                    <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                    <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
-                </tr>
-         </tfoot>
+            {% set total_cost = (ns.ingredient_total if ns.ingredient_total is defined else 0) + 
+                               (ns.container_total if ns.container_total is defined else 0) + 
+                               (ns.extras_total if ns.extras_total is defined else 0) + 
+                               (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
+            <tr>
+                <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
+                <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
