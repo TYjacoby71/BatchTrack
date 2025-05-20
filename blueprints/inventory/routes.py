@@ -266,7 +266,13 @@ def update_details(id):
 @login_required
 def delete_inventory(id):
     item = InventoryItem.query.get_or_404(id)
+    
+    # First delete related history entries
+    InventoryHistory.query.filter_by(inventory_item_id=id).delete()
+    
+    # Then delete the item
     db.session.delete(item)
     db.session.commit()
+    
     flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
