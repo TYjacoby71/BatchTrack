@@ -16,20 +16,39 @@ def list_inventory():
         query = query.filter_by(type=inventory_type)
     items = query.all()
     units = get_global_unit_list()
+    
+    # Default visible columns
+    if 'inventory_columns' not in session:
+        session['inventory_columns'] = ['name', 'type', 'quantity', 'unit', 'cost']
+    visible_columns = session.get('inventory_columns', [])
+    
     return render_template('inventory_list.html', 
                          items=items, 
-                         units=units, 
+                         units=units,
+                         visible_columns=visible_columns,
                          get_global_unit_list=get_global_unit_list)
+
+@inventory_bp.route('/set-columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    columns = request.form.getlist('columns')
+    session['inventory_columns'] = columns
+    return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/view/<int:id>')
 @login_required
 def view_inventory(id):
+    page = request.args.get('page', 1, type=int)
+    per_page = 5
     item = InventoryItem.query.get_or_404(id)
-    history = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc()).all()
+    history_query = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc())
+    pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+    history = pagination.items
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
                          history=history,
+                         pagination=pagination,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
