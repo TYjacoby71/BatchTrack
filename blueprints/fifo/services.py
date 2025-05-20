@@ -64,22 +64,46 @@ def recount_fifo(inventory_item_id, new_quantity, note):
     difference = new_quantity - current_total
     
     if difference > 0:
-        oldest_entry = InventoryHistory.query.filter(
+        # Get the emptied events in reverse chronological order
+        emptied_events = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
+                InventoryHistory.remaining_quantity == 0,
+                InventoryHistory.quantity_change > 0  # Original addition events
             )
-        ).order_by(InventoryHistory.timestamp.asc()).first()
+        ).order_by(InventoryHistory.timestamp.desc()).all()
 
-        history = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type='recount',
-            quantity_change=difference,
-            remaining_quantity=difference,
-            credited_to_fifo_id=oldest_entry.id if oldest_entry else None,
-            note=note
-        )
-        db.session.add(history)
+        remaining_credit = difference
+        for event in emptied_events:
+            if remaining_credit <= 0:
+                break
+
+            original_quantity = event.quantity_change
+            credit_amount = min(remaining_credit, original_quantity)
+            
+            # Create recount history entry crediting this event
+            history = InventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type='recount',
+                quantity_change=credit_amount,
+                remaining_quantity=credit_amount,
+                credited_to_fifo_id=event.id,
+                note=f"{note} (credited to event {event.id})"
+            )
+            db.session.add(history)
+            
+            remaining_credit -= credit_amount
+
+        # If there's still remaining credit with no events to credit to
+        if remaining_credit > 0:
+            history = InventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type='recount',
+                quantity_change=remaining_credit,
+                remaining_quantity=remaining_credit,
+                note=f"{note} (new stock)"
+            )
+            db.session.add(history)
     else:
         deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
 
