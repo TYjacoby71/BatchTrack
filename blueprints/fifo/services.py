@@ -1,38 +1,10 @@
 
 from models import InventoryHistory, db
-from sqlalchemy import and_
-
-def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_reference):
-    """
-    Plans FIFO deduction without modifying inventory
-    Returns: tuple(success, list of (entry_id, deduction_amount) tuples)
-    """
-    remaining = quantity_requested
-    deduction_plan = []
-
-    fifo_entries = InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0
-        )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
-
-    for entry in fifo_entries:
-        if remaining <= 0:
-            break
-
-        deduction = min(entry.remaining_quantity, remaining)
-        entry.remaining_quantity -= deduction
-        remaining -= deduction
-
-        deduction_plan.append((entry.id, deduction, entry.unit_cost))
-        
-    if remaining > 0:
-        return False, []
-
-    return True, deduction_plan
+from sqlalchemy import and_, desc
+from datetime import datetime
 
 def get_fifo_entries(inventory_item_id):
+    """Get all FIFO entries for an item with remaining quantity"""
     return InventoryHistory.query.filter(
         and_(
             InventoryHistory.inventory_item_id == inventory_item_id,
@@ -40,35 +12,103 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def recount_fifo(inventory_item_id, new_quantity, note):
-    current_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
-        .filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
-            )
-        ).scalar() or 0
+def deduct_fifo(inventory_item_id, quantity, change_type, notes):
+    """
+    Deducts quantity using FIFO logic, returns deduction plan
+    """
+    remaining = quantity
+    deduction_plan = []
 
+    fifo_entries = get_fifo_entries(inventory_item_id)
+    
+    for entry in fifo_entries:
+        if remaining <= 0:
+            break
+
+        deduction = min(entry.remaining_quantity, remaining)
+        remaining -= deduction
+
+        deduction_plan.append((entry.id, deduction, entry.unit_cost))
+        
+    if remaining > 0:
+        return False, []
+
+    # Execute deductions
+    for entry_id, deduct_amount, _ in deduction_plan:
+        entry = InventoryHistory.query.get(entry_id)
+        entry.remaining_quantity -= deduct_amount
+
+    return True, deduction_plan
+
+def recount_fifo(inventory_item_id, new_quantity, note, user_id):
+    """
+    Handles recounts with proper FIFO integrity
+    """
+    current_entries = get_fifo_entries(inventory_item_id)
+    current_total = sum(entry.remaining_quantity for entry in current_entries)
+    
     difference = new_quantity - current_total
     
-    if difference > 0:
-        oldest_entry = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
-            )
-        ).order_by(InventoryHistory.timestamp.asc()).first()
-
+    if difference == 0:
+        return True
+        
+    # Handle reduction in quantity
+    if difference < 0:
+        success, deductions = deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
+        if not success:
+            return False
+            
+        # Create recount history entry showing the deduction
+        history = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type='recount',
+            quantity_change=difference, 
+            remaining_quantity=0,
+            note=note,
+            created_by=user_id,
+            quantity_used=abs(difference)
+        )
+        db.session.add(history)
+        
+    # Handle increase in quantity    
+    else:
+        # Create new FIFO entry for excess
         history = InventoryHistory(
             inventory_item_id=inventory_item_id,
             change_type='recount',
             quantity_change=difference,
             remaining_quantity=difference,
-            credited_to_fifo_id=oldest_entry.id if oldest_entry else None,
-            note=note
+            note=note,
+            created_by=user_id,
+            quantity_used=0,
+            timestamp=datetime.utcnow()  # Explicit timestamp
         )
         db.session.add(history)
-    else:
-        deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
-
+        
     db.session.commit()
+    return True
+
+def reverse_recount(entry_id, user_id):
+    """
+    Reverses a recount entry if it hasn't been used
+    """
+    entry = InventoryHistory.query.get(entry_id)
+    
+    if not entry or entry.change_type != 'recount' or entry.remaining_quantity != entry.quantity_change:
+        return False
+        
+    reversal = InventoryHistory(
+        inventory_item_id=entry.inventory_item_id,
+        change_type='recount',
+        quantity_change=-entry.quantity_change,
+        remaining_quantity=0,
+        credited_to_fifo_id=entry.id,
+        note=f'Reversal of recount #{entry.id}',
+        created_by=user_id,
+        quantity_used=abs(entry.quantity_change)
+    )
+    
+    entry.remaining_quantity = 0
+    db.session.add(reversal)
+    db.session.commit()
+    return True
