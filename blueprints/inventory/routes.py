@@ -241,14 +241,8 @@ def edit_inventory(id):
 
     # Handle recount if quantity changed
     if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type='recount',
-            quantity_change=new_quantity - item.quantity,
-            created_by=current_user.id if current_user else None,
-            quantity_used=0
-        )
-        db.session.add(history)
+        from blueprints.fifo.services import recount_fifo
+        recount_fifo(item.id, new_quantity, "Quantity adjusted through edit form")
     item.quantity = new_quantity
 
     # Handle cost override
