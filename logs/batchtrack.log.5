@@ -1,4 +1,35 @@
-2025-05-20 16:45:18,205 ERROR: Exception on /inventory/view/22 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-20 15:31:28,479 ERROR: Exception on /inventory/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 21, in list_inventory
+    if 'inventory_columns' not in session:
+                                  ^^^^^^^
+NameError: name 'session' is not defined
+2025-05-20 15:31:37,161 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 15:32:39,514 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 15:48:12,594 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 15:57:44,490 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 15:57:54,377 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:09:20,402 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:15:46,387 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:20:33,760 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:22:26,824 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:23:54,882 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:24:40,081 ERROR: Exception on /inventory/view/2 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -24,7 +55,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 37, in view_inventory
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 45, in view_inventory
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
@@ -76,7 +107,8 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inve
 FROM inventory_history 
 WHERE inventory_history.inventory_item_id = ? ORDER BY inventory_history.timestamp DESC
  LIMIT ? OFFSET ?]
-[parameters: (22, 5, 0)]
+[parameters: (2, 5, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-05-20 16:47:22,420 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 16:47:34,317 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:24:57,115 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:28:12,453 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 16:29:53,590 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
