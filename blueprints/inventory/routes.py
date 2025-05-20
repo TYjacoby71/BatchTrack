@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
+from sqlalchemy import and_
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
 from utils.unit_utils import get_global_unit_list
@@ -111,20 +112,55 @@ def adjust_inventory(id):
 
     # Handle restocks and positive adjustments
     if qty_change > 0:
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type=change_type,
-            quantity_change=qty_change,
-            remaining_quantity=qty_change,  # Track remaining quantity for FIFO
-            unit_cost=cost_per_unit,
-            note=notes,
-            quantity_used=0,
-            created_by=current_user.id
-        )
-        db.session.add(history)
         if change_type == 'recount':
+            from blueprints.fifo.services import recount_fifo
+            recount_fifo(item.id, quantity, notes)
             item.quantity = quantity
         else:
+            # For restocks, first try to credit empty FIFO entries
+            emptied_events = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == item.id,
+                    InventoryHistory.remaining_quantity == 0,
+                    InventoryHistory.quantity_change > 0  # Original addition events
+                )
+            ).order_by(InventoryHistory.timestamp.desc()).all()
+
+            remaining_credit = qty_change
+            for event in emptied_events:
+                if remaining_credit <= 0:
+                    break
+                
+                original_quantity = event.quantity_change
+                credit_amount = min(remaining_credit, original_quantity)
+                
+                history = InventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=credit_amount,
+                    remaining_quantity=credit_amount,
+                    credited_to_fifo_id=event.id,
+                    unit_cost=cost_per_unit,
+                    note=f"{notes} (credited to event {event.id})",
+                    quantity_used=0,
+                    created_by=current_user.id
+                )
+                db.session.add(history)
+                remaining_credit -= credit_amount
+
+            # Create new entry for any remaining amount
+            if remaining_credit > 0:
+                history = InventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=remaining_credit,
+                    remaining_quantity=remaining_credit,
+                    unit_cost=cost_per_unit,
+                    note=f"{notes} (new stock)",
+                    quantity_used=0,
+                    created_by=current_user.id
+                )
+                db.session.add(history)
             item.quantity += qty_change
     # Handle deductions (spoilage, trash, etc)
     elif change_type in ['spoil', 'trash']:
@@ -266,7 +302,13 @@ def update_details(id):
 @login_required
 def delete_inventory(id):
     item = InventoryItem.query.get_or_404(id)
+    
+    # First delete related history entries
+    InventoryHistory.query.filter_by(inventory_item_id=id).delete()
+    
+    # Then delete the item
     db.session.delete(item)
     db.session.commit()
+    
     flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
