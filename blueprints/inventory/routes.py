@@ -78,7 +78,8 @@ def add_inventory():
             remaining_quantity=quantity,  # For FIFO tracking
             unit_cost=cost_per_unit,
             note='Initial stock creation',
-            created_by=current_user.id if current_user else None
+            created_by=current_user.id if current_user else None,
+            quantity_used=0  # Required field for FIFO tracking
         )
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
@@ -127,9 +128,22 @@ def adjust_inventory(id):
     if change_type == 'recount':
         item.quantity = quantity
     elif change_type in ['spoil', 'trash']:
-        item.quantity -= abs(quantity)  # Deduct for spoilage and trash
-        cost_per_unit = -abs(item.cost_per_unit)  # Make cost negative for deductions
-        history.unit_cost = cost_per_unit  # Set the history entry cost
+        from blueprints.fifo.services import deduct_fifo
+        qty_to_deduct = abs(quantity)
+        deduction_records = deduct_fifo(
+            item.id,
+            qty_to_deduct,
+            change_type,
+            f"{change_type} adjustment: {notes}" if notes else change_type
+        )
+        
+        if deduction_records:
+            item.quantity -= qty_to_deduct
+            # Original history entry not needed since deduct_fifo creates it
+            return redirect(url_for('inventory.view_inventory', id=id))
+        else:
+            flash('Error: Not enough stock to fulfill deduction', 'danger')
+            return redirect(url_for('inventory.view_inventory', id=id))
     else:
         # For restocks, calculate weighted average cost
         if cost_per_unit:
@@ -180,11 +194,11 @@ def update_inventory():
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
-    
+
     # Handle recount if quantity changed
     if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
         history = InventoryHistory(
