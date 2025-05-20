@@ -119,17 +119,17 @@ def adjust_inventory(id):
             flash('Insufficient stock for FIFO deduction', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
 
-        # Execute the FIFO deduction plan
+        # Create separate history entries for each FIFO deduction
         for entry_id, deduction_amount, unit_cost in deduction_plan:
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
-                quantity_change=qty_change,
+                quantity_change=-deduction_amount,  # Negative since it's a deduction
                 source_fifo_id=entry_id,
                 unit_cost=unit_cost,
-                note=notes,
+                note=f"{notes} (From FIFO #{entry_id})",
                 created_by=current_user.id,
-                quantity_used=abs(qty_change)  # Track the quantity used for FIFO
+                quantity_used=deduction_amount
             )
             db.session.add(history)
 
