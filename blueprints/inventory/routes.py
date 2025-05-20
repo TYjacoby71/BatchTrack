@@ -16,10 +16,24 @@ def list_inventory():
         query = query.filter_by(type=inventory_type)
     items = query.all()
     units = get_global_unit_list()
+    
+    # Default visible columns
+    if 'inventory_columns' not in session:
+        session['inventory_columns'] = ['name', 'type', 'quantity', 'unit', 'cost']
+    visible_columns = session.get('inventory_columns', [])
+    
     return render_template('inventory_list.html', 
                          items=items, 
-                         units=units, 
+                         units=units,
+                         visible_columns=visible_columns,
                          get_global_unit_list=get_global_unit_list)
+
+@inventory_bp.route('/set-columns', methods=['POST'])
+@login_required
+def set_column_visibility():
+    columns = request.form.getlist('columns')
+    session['inventory_columns'] = columns
+    return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/view/<int:id>')
 @login_required
