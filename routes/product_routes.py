@@ -4,7 +4,7 @@ from models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-from services.fifo_inventory import deduct_fifo
+from blueprints.fifo.services import deduct_fifo
 
 product_bp = Blueprint('product', __name__)
 
