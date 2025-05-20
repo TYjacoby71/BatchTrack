@@ -1,10 +1,10 @@
-2025-05-20 21:46:45,615 ERROR: Exception on /inventory/adjust/21 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-20 22:50:30,419 ERROR: Exception on /inventory/view/19 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.quantity_used
+sqlite3.OperationalError: no such column: inventory_history.fifo_reference_id
 
 The above exception was the direct cause of the following exception:
 
@@ -24,42 +24,33 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 149, in adjust_inventory
-    db.session.commit()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
-    return self._proxied.commit()
-           ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2032, in commit
-    trans.commit(_to_root=True)
-  File "<string>", line 2, in commit
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1313, in commit
-    self._prepare_impl()
-  File "<string>", line 2, in _prepare_impl
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1288, in _prepare_impl
-    self.session.flush()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
-    self._flush(objects)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4488, in _flush
-    with util.safe_reraise():
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
-    flush_context.execute()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
-    rec.execute(self)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
-    util.preloaded.orm_persistence.save_obj(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
-    result = connection.execute(
-             ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 36, in view_inventory
+    pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+           ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+            ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
     return meth(
            ^^^^^
@@ -80,56 +71,10 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.quantity_used
-[SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, unit_cost, source, source_fifo_id, credited_to_fifo_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (21, '2025-05-20 21:46:45.614920', 'spoil', -10.0, None, 12.0, None, 42, None, 0, None, None, None, '', 1, None, None)]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2025-05-20 21:48:30,154 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 21:52:40,936 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 22:01:45,700 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 22:04:39,455 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 22:26:44,494 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 22:29:27,701 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 22:30:29,592 ERROR: Exception on /inventory/view/21 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 38, in view_inventory
-    return render_template('inventory/view.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/inventory/view.html", line 1, in top-level template code
-    {% extends "layout.html" %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 101, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/inventory/view.html", line 174, in block 'content'
-    <td>{{ InventoryHistory.query.get(entry.credited_to_fifo_id).timestamp.strftime('%Y-%m-%d %H:%M') if entry.credited_to_fifo_id else '-' }}</td>
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
-    return getattr(obj, attribute)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-jinja2.exceptions.UndefinedError: 'InventoryHistory' is undefined
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_history.fifo_reference_id
+[SQL: SELECT inventory_history.id AS inventory_history_id, inventory_history.inventory_item_id AS inventory_history_inventory_item_id, inventory_history.timestamp AS inventory_history_timestamp, inventory_history.change_type AS inventory_history_change_type, inventory_history.quantity_change AS inventory_history_quantity_change, inventory_history.remaining_quantity AS inventory_history_remaining_quantity, inventory_history.unit_cost AS inventory_history_unit_cost, inventory_history.source AS inventory_history_source, inventory_history.fifo_reference_id AS inventory_history_fifo_reference_id, inventory_history.is_perishable AS inventory_history_is_perishable, inventory_history.expiration_date AS inventory_history_expiration_date, inventory_history.shelf_life_days AS inventory_history_shelf_life_days, inventory_history.used_for_batch_id AS inventory_history_used_for_batch_id, inventory_history.note AS inventory_history_note, inventory_history.created_by AS inventory_history_created_by, inventory_history.quantity_used AS inventory_history_quantity_used, inventory_history.cost_each AS inventory_history_cost_each 
+FROM inventory_history 
+WHERE inventory_history.inventory_item_id = ? ORDER BY inventory_history.timestamp DESC
+ LIMIT ? OFFSET ?]
+[parameters: (19, 5, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
