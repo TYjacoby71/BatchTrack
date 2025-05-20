@@ -91,104 +91,86 @@
                 </tr>
             </thead>
             <tbody>
-              {% if batch.ingredients %}
-              <tr><th colspan="5">Ingredients</th></tr>
-              {% set ingredient_total = 0 %}
-              {% for ing in batch.ingredients %}
-                {% set amount = (ing.amount_used | default(0)) | float %}
-                {% set cost = (ing.cost_per_unit | default(0)) | float %}
-                {% set line_cost = amount * cost %}
-                {% set ingredient_total = ingredient_total + line_cost %}
+                {% if batch.ingredients %}
+                <tr><th colspan="5">Ingredients</th></tr>
+                {% for ing in batch.ingredients %}
                 <tr>
-                  <td>{{ ing.ingredient.name }}</td>
-                  <td>{{ "%.2f"|format(amount) }}</td>
-                  <td>{{ ing.unit }}</td>
-                  <td>${{ "%.2f"|format(cost) }}</td>
-                  <td>${{ "%.2f"|format(line_cost) }}</td>
+                    <td>{{ ing.ingredient.name }}</td>
+                    <td>{{ "%.2f"|format(ing.amount_used) }}</td>
+                    <td>{{ ing.unit }}</td>
+                    <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>
+                    <td>${{ "%.2f"|format((ing.amount_used or 0) * (ing.cost_per_unit or 0)) }}</td>
                 </tr>
-              {% endfor %}
-              <tr>
-                <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
-                <td>${{ "%.2f"|format(ingredient_total) }}</td>
-              </tr>
-              {% endif %}
+                {% endfor %}
+                {% set ingredient_total = (batch.ingredients|sum(attribute='amount_used') or 0) * (batch.ingredients|sum(attribute='ingredient.cost_per_unit') or 0) %}
+                <tr>
+                    <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
+                    <td>${{ "%.2f"|format(ingredient_total) }}</td>
+                </tr>
+                {% endif %}
 
-              {% if batch.containers %}
-              <tr><th colspan="5">Containers</th></tr>
-              {% set container_total = 0 %}
-              {% for container in batch.containers %}
-                {% set qty = (container.quantity_used | default(0)) | float %}
-                {% set cost = (container.cost_each | default(0)) | float %}
-                {% set line_cost = qty * cost %}
-                {% set container_total = container_total + line_cost %}
+                {% if batch.containers %}
+                <tr><th colspan="5">Containers</th></tr>
+                {% for container in batch.containers %}
                 <tr>
-                  <td>{{ container.container.name }}</td>
-                  <td>{{ "%.2f"|format(qty) }}</td>
-                  <td></td>
-                  <td>${{ "%.2f"|format(container.cost_each) }}</td>
-                  <td>${{ "%.2f"|format(line_cost) }}</td>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.quantity_used }}</td>
+                    <td></td>
+                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                 </tr>
-              {% endfor %}
-              <tr>
-                <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
-                <td>${{ "%.2f"|format(container_total) }}</td>
-              </tr>
-              {% endif %}
+                {% endfor %}
+                {% set container_total = (batch.containers|sum(attribute='quantity_used') or 0) * (batch.containers|sum(attribute='cost_each') or 0) %}
+                <tr>
+                    <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
+                    <td>${{ "%.2f"|format(container_total) }}</td>
+                </tr>
+                {% endif %}
 
-              {% if batch.extra_ingredients %}
-              <tr><th colspan="5">Extra Ingredients</th></tr>
-              {% set extras_total = 0 %}
-              {% for extra in batch.extra_ingredients %}
-                {% set qty = (extra.quantity | default(0)) | float %}
-                {% set cost = (extra.cost_per_unit | default(0)) | float %}
-                {% set line_cost = qty * cost %}
-                {% set extras_total = extras_total + line_cost %}
+                {% if batch.extra_ingredients %}
+                <tr><th colspan="5">Extra Ingredients</th></tr>
+                {% for extra in batch.extra_ingredients %}
                 <tr>
-                  <td>{{ extra.ingredient.name }}</td>
-                  <td>{{ "%.3f"|format(qty) }}</td>
-                  <td>{{ extra.unit }}</td>
-                  <td>${{ "%.2f"|format(extra.cost_per_unit or 0) }}</td>
-                  <td>${{ "%.2f"|format(line_cost) }}</td>
+                    <td>{{ extra.ingredient.name }}</td>
+                    <td>{{ "%.3f"|format(extra.quantity) }}</td>
+                    <td>{{ extra.unit }}</td>
+                    <td>${{ "%.2f"|format(extra.cost_per_unit or 0) }}</td>
+                    <td>${{ "%.2f"|format((extra.quantity or 0) * (extra.cost_per_unit or 0)) }}</td>
                 </tr>
-                {% set extras_total = extras_total + line_cost %}
-              {% endfor %}
-              <tr>
-                <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
-                <td>${{ "%.2f"|format(extras_total) }}</td>
-              </tr>
-              {% endif %}
+                {% endfor %}
+                {% set extras_total = (batch.extra_ingredients|sum(attribute='quantity') or 0) * (batch.extra_ingredients|sum(attribute='cost_per_unit') or 0) %}
+                <tr>
+                    <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
+                    <td>${{ "%.2f"|format(extras_total) }}</td>
+                </tr>
+                {% endif %}
 
-              {% if batch.extra_containers %}
-              <tr><th colspan="5">Extra Containers</th></tr>
-              {% set extra_container_total = 0 %}
-              {% for container in batch.extra_containers %}
-                {% set qty = (container.quantity_used | default(0)) | float %}
-                {% set cost = (container.cost_each | default(0)) | float %}
-                {% set line_cost = qty * cost %}
-                {% set extra_container_total = extra_container_total + line_cost %}
+                {% if batch.extra_containers %}
+                <tr><th colspan="5">Extra Containers</th></tr>
+                {% for container in batch.extra_containers %}
                 <tr>
-                  <td>{{ container.container.name }}</td>
-                  <td>{{ "%.2f"|format(qty) }}</td>
-                  <td></td>
-                  <td>${{ "%.2f"|format(container.cost_each) }}</td>
-                  <td>${{ "%.2f"|format(line_cost) }}</td>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.quantity_used }}</td>
+                    <td></td>
+                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>${{ "%.2f"|format(container.quantity_used * container.cost_each) }}</td>
                 </tr>
-                {% set extra_container_total = extra_container_total + line_cost %}
-              {% endfor %}
-              <tr>
-                <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
-                <td>${{ "%.2f"|format(extra_container_total) }}</td>
-              </tr>
-              {% endif %}
+                {% endfor %}
+                {% set extra_container_total = (batch.extra_containers|sum(attribute='quantity_used') or 0) * (batch.extra_containers|sum(attribute='cost_each') or 0) %}
+                <tr>
+                    <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
+                    <td>${{ "%.2f"|format(extra_container_total) }}</td>
+                </tr>
+                {% endif %}
             </tbody>
-            <tfoot>
-              {% set total_cost = (ingredient_total or 0) + (container_total or 0) + (extras_total or 0) + (extra_container_total or 0) %}
-              <tr>
-                <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
-              </tr>
-            </tfoot>
 
+            <tfoot>
+                {% set total_cost = (ingredient_total if ingredient_total else 0) + (container_total if container_total else 0) + (extras_total if extras_total else 0) + (extra_container_total if extra_container_total else 0) %}
+                <tr>
+                    <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
+                    <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 
