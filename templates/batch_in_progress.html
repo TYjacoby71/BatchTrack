@@ -99,7 +99,8 @@
                     <td>{{ "%.2f"|format(ing.amount_used) }}</td>
                     <td>{{ ing.unit }}</td>
                     <td>${{ "%.2f"|format(ing.cost_per_unit or 0) }}</td>
-                    <td>${{ "%.2f"|format((ing.amount_used or 0) * (ing.cost_per_unit or 0)) }}</td>
+                    {% set line_cost = (ing.amount_used or 0) * (ing.cost_per_unit or 0) %}
+                    <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
                 {% endfor %}
                 {% set ingredient_total = batch.ingredients|sum(attribute=lambda x: (x.amount_used or 0) * (x.cost_per_unit or 0)) %}
