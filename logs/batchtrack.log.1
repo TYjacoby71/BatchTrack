@@ -1,4 +1,4 @@
-2025-05-20 19:33:56,023 ERROR: Exception on /inventory/add [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-20 19:38:27,625 ERROR: Exception on /inventory/adjust/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -24,7 +24,10 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 86, in add_inventory
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 133, in adjust_inventory
+    deduction_records = deduct_fifo(
+                        ^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/fifo/services.py", line 43, in deduct_fifo
     db.session.commit()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
     return self._proxied.commit()
@@ -82,7 +85,12 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.quantity_used
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, unit_cost, source, source_fifo_id, credited_to_fifo_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-05-20 19:33:56.022511', 'restock', 2.0, 2.0, 5.5, None, None, None, 0, None, None, None, 'Initial stock creation', 1, None, None)]
+[parameters: (20, '2025-05-20 19:38:27.625222', 'spoil', -1.0, None, 5.5, 'spoil', 21, None, 0, None, None, None, None, None, None, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
-2025-05-20 19:34:52,716 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-05-20 19:38:09,470 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 19:39:34,252 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 19:47:53,989 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 19:48:48,646 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 19:49:04,391 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 19:50:47,677 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:12:37,954 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-20 20:20:54,053 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
