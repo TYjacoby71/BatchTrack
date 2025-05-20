@@ -2,44 +2,83 @@
 from models import InventoryHistory, db
 from sqlalchemy import and_
 
-def deduct_fifo(inventory_item_id, quantity_requested):
+def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_reference):
     """
-    Deducts inventory using FIFO logic for any inventory type
-    Returns a list of (history_id, quantity_deducted) pairs
+    Deducts inventory using FIFO logic
+    source_type: batch, manual, spoilage etc
+    source_reference: batch code or description
     """
     remaining = quantity_requested
-    used_entries = []
+    deduction_records = []
 
-    # Get valid inventory entries ordered by timestamp
-    inventory_rows = InventoryHistory.query.filter(
+    # Get valid FIFO entries ordered by timestamp
+    fifo_entries = InventoryHistory.query.filter(
         and_(
             InventoryHistory.inventory_item_id == inventory_item_id,
             InventoryHistory.remaining_quantity > 0
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-    for row in inventory_rows:
+    for entry in fifo_entries:
         if remaining <= 0:
             break
 
-        deduction = min(row.remaining_quantity or row.quantity_change, remaining)
-        row.remaining_quantity = (row.remaining_quantity or row.quantity_change) - deduction
+        deduction = min(entry.remaining_quantity, remaining)
+        entry.remaining_quantity -= deduction
         remaining -= deduction
-        used_entries.append((row.id, deduction))
+
+        # Record deduction
+        history = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type=source_type,
+            quantity_change=-deduction,
+            source=source_reference,
+            source_fifo_id=entry.id,
+            unit_cost=entry.unit_cost
+        )
+        db.session.add(history)
+        deduction_records.append(history)
 
     if remaining > 0:
         return None  # Not enough stock
 
     db.session.commit()
-    return used_entries
+    return deduction_records
 
-def get_fifo_entries(inventory_item_id):
+def recount_fifo(inventory_item_id, new_quantity, note):
     """
-    Gets all active FIFO inventory entries ordered by timestamp
+    Handles inventory recounts by adjusting oldest FIFO entries
     """
-    return InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0
+    current_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
+        .filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0
+            )
+        ).scalar() or 0
+
+    difference = new_quantity - current_total
+    
+    if difference > 0:
+        # Find oldest non-full FIFO entry to credit
+        oldest_entry = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0
+            )
+        ).order_by(InventoryHistory.timestamp.asc()).first()
+
+        history = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type='recount',
+            quantity_change=difference,
+            remaining_quantity=difference,
+            credited_to_fifo_id=oldest_entry.id if oldest_entry else None,
+            note=note
         )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+        db.session.add(history)
+    else:
+        # Deduct from newest to oldest
+        deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
+
+    db.session.commit()
