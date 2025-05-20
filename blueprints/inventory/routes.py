@@ -1,5 +1,5 @@
 # Applying the cost override handling to the edit_ingredient route.
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
@@ -93,10 +93,22 @@ def adjust_inventory(id):
         cost_per_unit = item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount'] else None
     notes = request.form.get('notes', '')
 
+    # Calculate the quantity change
+    if change_type == 'recount':
+        qty_change = quantity - item.quantity
+    elif change_type in ['spoil', 'trash']:
+        qty_change = -abs(quantity)
+    else:
+        qty_change = quantity
+
+    # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
+    remaining = qty_change if qty_change > 0 else 0
+
     history = InventoryHistory(
         inventory_item_id=item.id,
         change_type=change_type,
-        quantity_change=-abs(quantity) if change_type in ['spoil', 'trash'] else (quantity if change_type != 'recount' else quantity - item.quantity),
+        quantity_change=qty_change,
+        remaining_quantity=remaining,  # Track remaining quantity for FIFO
         unit_cost=cost_per_unit,
         note=notes,
         quantity_used=0,
