@@ -72,12 +72,22 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         
     # Handle increase in quantity    
     else:
-        # First, fill any remaining capacity in existing FIFO entries
+        # Fill all FIFO entries that have available capacity
         remaining_to_add = difference
-        for entry in current_entries:
-            if entry.remaining_quantity < entry.quantity_change:
-                can_fill = entry.quantity_change - entry.remaining_quantity
-                fill_amount = min(can_fill, remaining_to_add)
+        # Sort by oldest first to maintain FIFO order
+        fillable_entries = sorted(
+            [e for e in current_entries if e.remaining_quantity < e.quantity_change],
+            key=lambda x: x.timestamp
+        )
+        
+        for entry in fillable_entries:
+            if remaining_to_add <= 0:
+                break
+                
+            can_fill = entry.quantity_change - entry.remaining_quantity
+            fill_amount = min(can_fill, remaining_to_add)
+            
+            if fill_amount > 0:
                 # Create credited recount entry
                 history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
