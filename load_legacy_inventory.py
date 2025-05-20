@@ -45,6 +45,21 @@ def load_legacy_inventory():
                     new_item.category_id = category.id
 
             db.session.add(new_item)
+            db.session.flush()  # Get the ID
+
+            # Create initial FIFO history entry if quantity exists
+            if new_item.quantity > 0:
+                history = InventoryHistory(
+                    inventory_item_id=new_item.id,
+                    change_type='restock',
+                    quantity_change=new_item.quantity,
+                    remaining_quantity=new_item.quantity,
+                    unit_cost=new_item.cost_per_unit,
+                    source='Legacy Import',
+                    created_by=1,  # System user
+                    quantity_used=0
+                )
+                db.session.add(history)
             density_str = f' (density: {new_item.density} g/ml)' if new_item.density else ''
             print(f'[ADDED] {new_item.name} → {new_item.quantity} {new_item.unit}{density_str}')
 

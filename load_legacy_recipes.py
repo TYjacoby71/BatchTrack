@@ -24,6 +24,11 @@ def load_legacy_recipes():
                 requires_containers=r.get('requires_containers', False),
                 allowed_containers=r.get('allowed_containers', [])
             )
+            
+            # Auto-detect if recipe needs containers based on ingredients
+            if any(i.get('type') == 'container' for i in r['ingredients']):
+                recipe.requires_containers = True
+                
             db.session.add(recipe)
             db.session.flush()  # Assigns recipe.id
 
