@@ -43,7 +43,8 @@ def view_inventory(id):
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
-                         User=User)
+                         User=User,
+                         InventoryHistory=InventoryHistory)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -183,22 +184,20 @@ def update_inventory():
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-
+    
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
 
     # Handle recount if quantity changed
-    if request.form.get('change_type') == 'recount' and new_quantity != item.quantity:
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type='recount',
-            quantity_change=new_quantity - item.quantity,
-            created_by=current_user.id if current_user else None,
-            quantity_used=0
-        )
-        db.session.add(history)
-    item.quantity = new_quantity
+    if new_quantity != item.quantity:
+        from blueprints.fifo.services import recount_fifo
+        notes = "Manual quantity update via inventory edit"
+        success = recount_fifo(item.id, new_quantity, notes, current_user.id)
+        if not success:
+            flash('Error updating quantity', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+        item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
 
     # Handle cost override
     new_cost = float(request.form.get('cost_per_unit', 0))
