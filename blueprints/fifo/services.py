@@ -72,18 +72,28 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         
     # Handle increase in quantity    
     else:
-        # Create new FIFO entry for excess
-        history = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type='recount',
-            quantity_change=difference,
-            remaining_quantity=difference,
-            note=note,
-            created_by=user_id,
-            quantity_used=0,
-            timestamp=datetime.utcnow()  # Explicit timestamp
-        )
-        db.session.add(history)
+        # First, fill any remaining capacity in existing FIFO entries
+        remaining_to_add = difference
+        for entry in current_entries:
+            if entry.remaining_quantity < entry.quantity_change:
+                can_fill = entry.quantity_change - entry.remaining_quantity
+                fill_amount = min(can_fill, remaining_to_add)
+                entry.remaining_quantity += fill_amount
+                remaining_to_add -= fill_amount
+                
+        # If there's still quantity to add, create new FIFO entry
+        if remaining_to_add > 0:
+            history = InventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type='recount',
+                quantity_change=remaining_to_add,
+                remaining_quantity=remaining_to_add,
+                note=f"Recount yielded {remaining_to_add} more than could be filled in existing FIFO entries",
+                created_by=user_id,
+                quantity_used=0,
+                timestamp=datetime.utcnow()  # Newest timestamp
+            )
+            db.session.add(history)
         
     db.session.commit()
     return True
