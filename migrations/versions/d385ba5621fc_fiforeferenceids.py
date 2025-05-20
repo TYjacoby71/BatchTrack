@@ -2,7 +2,7 @@
 """fiforeferenceids
 
 Revision ID: d385ba5621fc
-Revises: 3ddb9fa0db0d
+Revises: 
 Create Date: 2025-05-20 23:01:13.055
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'd385ba5621fc'
-down_revision = '3ddb9fa0db0d'
+down_revision = None
 branch_labels = None
 depends_on = None
 
