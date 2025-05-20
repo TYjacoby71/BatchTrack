@@ -95,7 +95,9 @@
               <tr><th colspan="5">Ingredients</th></tr>
               {% set ingredient_total = 0 %}
               {% for ing in batch.ingredients %}
-                {% set line_cost = (ing.amount_used or 0) * (ing.cost_per_unit or 0) %}
+                {% set amount = (ing.amount_used | default(0)) | float %}
+                {% set cost = (ing.cost_per_unit | default(0)) | float %}
+                {% set line_cost = amount * cost %}
                 {% set ingredient_total = ingredient_total + line_cost %}
                 <tr>
                   <td>{{ ing.ingredient.name }}</td>
@@ -115,7 +117,9 @@
               <tr><th colspan="5">Containers</th></tr>
               {% set container_total = 0 %}
               {% for container in batch.containers %}
-                {% set line_cost = (container.quantity_used or 0) * (container.cost_each or 0) %}
+                {% set qty = (container.quantity_used | default(0)) | float %}
+                {% set cost = (container.cost_each | default(0)) | float %}
+                {% set line_cost = qty * cost %}
                 {% set container_total = container_total + line_cost %}
                 <tr>
                   <td>{{ container.container.name }}</td>
