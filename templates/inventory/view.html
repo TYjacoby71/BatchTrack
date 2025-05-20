@@ -252,6 +252,14 @@
             </select>
           </div>
 
+          <div class="mb-3">
+            <label for="is_perishable">Perishable:</label>
+            <div class="form-check">
+              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" {% if item.is_perishable %}checked{% endif %}>
+              <label class="form-check-label" for="is_perishable">Is Perishable</label>
+            </div>
+          </div>
+
           <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
             <label for="category">Ingredient Category:</label>
             <select name="category_id" class="form-select" id="categorySelect">
