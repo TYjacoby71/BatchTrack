@@ -1,6 +1,6 @@
 import json
 from app import app, db
-from models import InventoryItem, IngredientCategory
+from models import InventoryItem, IngredientCategory, InventoryHistory
 
 # Path to your legacy inventory export
 JSON_PATH = 'inventory_export_20250502_225444.json'
