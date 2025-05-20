@@ -138,8 +138,10 @@ def adjust_inventory(id):
         )
         
         if deduction_records:
-            item.quantity -= qty_to_deduct
-            # Original history entry not needed since deduct_fifo creates it
+            item.quantity -= qty_to_deduct  # Update main inventory quantity
+            db.session.add(item)
+            db.session.commit()
+            flash(f'{change_type.title()} deduction recorded successfully', 'success')
             return redirect(url_for('inventory.view_inventory', id=id))
         else:
             flash('Error: Not enough stock to fulfill deduction', 'danger')
