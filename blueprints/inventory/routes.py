@@ -1,5 +1,5 @@
 # Applying the cost override handling to the edit_ingredient route.
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
