@@ -196,6 +196,7 @@ def edit_inventory(id):
         if not success:
             flash('Error updating quantity', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
+        item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
 
     # Handle cost override
     new_cost = float(request.form.get('cost_per_unit', 0))
