@@ -1,6 +1,6 @@
 import json
 from app import app, db
-from models import InventoryItem, IngredientCategory
+from models import InventoryItem, IngredientCategory, InventoryHistory
 
 # Path to your legacy inventory export
 JSON_PATH = 'inventory_export_20250502_225444.json'
@@ -45,6 +45,26 @@ def load_legacy_inventory():
                     new_item.category_id = category.id
 
             db.session.add(new_item)
+            db.session.flush()  # Get the ID
+
+            # Create initial FIFO history entry if quantity exists
+            if new_item.quantity > 0:
+                history = InventoryHistory(
+                    inventory_item_id=new_item.id,
+                    change_type='restock',
+                    quantity_change=new_item.quantity,
+                    remaining_quantity=new_item.quantity,
+                    unit_cost=new_item.cost_per_unit,
+                    source='Legacy Import',
+                    created_by=1,  # System user
+                    quantity_used=0,
+                    note='Initial import',
+                    is_perishable=new_item.is_perishable,
+                    expiration_date=new_item.expiration_date,
+                    shelf_life_days=None
+                )
+                db.session.add(history)
+                print(f'[HISTORY] Created initial FIFO entry for {new_item.quantity} {new_item.unit}')
             density_str = f' (density: {new_item.density} g/ml)' if new_item.density else ''
             print(f'[ADDED] {new_item.name} → {new_item.quantity} {new_item.unit}{density_str}')
 

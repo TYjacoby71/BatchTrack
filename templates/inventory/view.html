@@ -151,10 +151,12 @@
                 <th>Date</th>
                 <th>Change Type</th>
                 <th>Quantity Change</th>
+                <th>Remaining</th>
                 <th>Cost per Unit</th>
                 <th>Total Cost</th>
                 <th>Source</th>
                 <th>Used For</th>
+                <th>Credited To</th>
                 <th>Created By</th>
               </tr>
             </thead>
@@ -164,10 +166,12 @@
                 <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ entry.change_type|title }}</td>
                 <td>{{ entry.quantity_change }} {{ item.unit }}</td>
+                <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else '-' }}</td>
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else '-' }}</td>
                 <td>{% if entry.change_type in ['restock', 'spoil', 'trash'] and entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}-{% endif %}</td>
                 <td>{{ entry.source if entry.source else '-' }}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
+                <td>{{ InventoryHistory.query.get(entry.credited_to_fifo_id).timestamp.strftime('%Y-%m-%d %H:%M') if entry.credited_to_fifo_id else '-' }}</td>
                 <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
