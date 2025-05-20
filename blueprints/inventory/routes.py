@@ -10,14 +10,18 @@ inventory_bp = Blueprint('inventory', __name__)
 @inventory_bp.route('/')
 @login_required
 def list_inventory():
+    page = request.args.get('page', 1, type=int)
+    per_page = 5
     inventory_type = request.args.get('type')
     query = InventoryItem.query
     if inventory_type:
         query = query.filter_by(type=inventory_type)
-    items = query.all()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
     units = get_global_unit_list()
     return render_template('inventory_list.html', 
-                         items=items, 
+                         items=items,
+                         pagination=pagination,
                          units=units, 
                          get_global_unit_list=get_global_unit_list)
 
