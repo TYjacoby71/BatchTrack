@@ -95,8 +95,8 @@
                 <tr><th colspan="5">Ingredients</th></tr>
                 {% set ingredient_total = 0 %}
                 {% for ing in batch.ingredients %}
-                    {% set amount = float(ing.amount_used or 0) %}
-                    {% set cost = float(ing.cost_per_unit or 0) %}
+                    {% set amount = ing.amount_used|float or 0 %}
+                    {% set cost = ing.cost_per_unit|float or 0 %}
                     {% set line_cost = amount * cost %}
                     <tr>
                         <td>{{ ing.ingredient.name }}</td>
