@@ -170,15 +170,15 @@
                 <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else '-' }}</td>
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else '-' }}</td>
                 <td>{% if entry.change_type in ['restock', 'spoil', 'trash'] and entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}-{% endif %}</td>
-                <td>{{ entry.source if entry.source else '-' }}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
                 <td>
                   {% if entry.fifo_reference_id %}
                     {% if entry.quantity_change > 0 %}
-                      Credited to FIFO #{{ entry.fifo_reference_id }} ({{ InventoryHistory.query.get(entry.fifo_reference_id).timestamp.strftime('%Y-%m-%d %H:%M') }})
+                      Credited to FIFO #{{ entry.fifo_reference_id }}
                     {% else %}
                       Debited from FIFO #{{ entry.fifo_reference_id }}
                     {% endif %}
+                    ({{ InventoryHistory.query.get(entry.fifo_reference_id).timestamp.strftime('%Y-%m-%d %H:%M') }})
                   {% else %}
                     -
                   {% endif %}
