@@ -12,7 +12,13 @@
     </div>
 
     <!-- Update Inventory Form -->
-    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" x-data="{ rows: [{unit: '{{ get_global_unit_list()[0].name }}'}] }">
+    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" 
+      x-data="{ 
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}'}],
+        resetRows() {
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}'}];
+        }
+      }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <template x-for="(row, index) in rows" :key="index">
@@ -49,7 +55,7 @@
       <div class="mt-3">
         <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({})">Add Another Item</button>
         <button type="submit" class="btn btn-success">Save Updates</button>
-        <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Cancel</button>
+        <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
       </div>
     </form>
 
