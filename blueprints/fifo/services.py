@@ -93,6 +93,8 @@ def recount_fifo(inventory_item_id, new_quantity, note):
                 created_by=event.created_by,  # Copy the creator
                 source=f"Recount credit to event {event.id}"
             )
+            # Update the remaining quantity of the credited event
+            event.remaining_quantity = credit_amount
             db.session.add(history)
             
             remaining_credit -= credit_amount
