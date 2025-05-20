@@ -94,6 +94,7 @@
               {% if batch.ingredients %}
               <tr><th colspan="5">Ingredients</th></tr>
               {% set ingredient_total = 0 %}
+              {% set ingredient_total = 0 %}
               {% for ing in batch.ingredients %}
                 {% set line_cost = (ing.amount_used or 0) * (ing.cost_per_unit or 0) %}
                 <tr>
