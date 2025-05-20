@@ -24,7 +24,7 @@
         <form method="get" class="row g-3 mb-3" id="filterForm">
             <div class="col-md-3">
                 <select name="status" class="form-select form-select-sm">
-                    <option value="">Status: All</option>
+                    <option value="all" {% if not session.get('batch_filter_status') or session.get('batch_filter_status') == 'all' %}selected{% endif %}>Status: All</option>
                     <option value="in_progress" {% if session.get('batch_filter_status') == 'in_progress' %}selected{% endif %}>In Progress</option>
                     <option value="completed" {% if session.get('batch_filter_status') == 'completed' %}selected{% endif %}>Completed</option>
                     <option value="failed" {% if session.get('batch_filter_status') == 'failed' %}selected{% endif %}>Failed</option>

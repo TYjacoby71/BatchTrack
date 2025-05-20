@@ -162,7 +162,7 @@ def list_batches():
     session['batch_filter_start'] = start 
     session['batch_filter_end'] = end
 
-    if status:
+    if status and status != 'all':
         query = query.filter_by(status=status)
 
     if recipe_id:
