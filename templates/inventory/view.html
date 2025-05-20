@@ -255,9 +255,14 @@
           <div class="mb-3">
             <label for="is_perishable">Perishable:</label>
             <div class="form-check">
-              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" {% if item.is_perishable %}checked{% endif %}>
+              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" {% if item.is_perishable %}checked{% endif %} onchange="toggleShelfLife()">
               <label class="form-check-label" for="is_perishable">Is Perishable</label>
             </div>
+          </div>
+
+          <div id="shelfLifeField" class="mb-3" style="display: {% if item.is_perishable %}block{% else %}none{% endif %};">
+            <label for="shelf_life_days">Shelf Life (days)</label>
+            <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" value="{{ item.shelf_life_days or '' }}" {% if item.is_perishable %}required{% endif %}>
           </div>
 
           <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
@@ -443,5 +448,18 @@ document.getElementById('categorySelect').addEventListener('change', function() 
         densityInput.disabled = true;
     }
 });
+</script>
+<script>
+  function toggleShelfLife() {
+    var checkBox = document.getElementById("is_perishable");
+    var shelfLifeField = document.getElementById("shelfLifeField");
+    if (checkBox.checked == true){
+      shelfLifeField.style.display = "block";
+      document.getElementById("shelf_life_days").required = true;
+    } else {
+      shelfLifeField.style.display = "none";
+      document.getElementById("shelf_life_days").required = false;
+    }
+  }
 </script>
 {% endblock %}
