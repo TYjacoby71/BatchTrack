@@ -45,6 +45,17 @@ def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_refer
     db.session.commit()
     return deduction_records
 
+def get_fifo_entries(inventory_item_id):
+    """
+    Get all FIFO entries for an inventory item ordered by timestamp
+    """
+    return InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).order_by(InventoryHistory.timestamp.asc()).all()
+
 def recount_fifo(inventory_item_id, new_quantity, note):
     """
     Handles inventory recounts by adjusting oldest FIFO entries
