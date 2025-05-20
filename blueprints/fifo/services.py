@@ -4,12 +4,11 @@ from sqlalchemy import and_
 
 def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_reference):
     """
-    Deducts inventory using FIFO logic
-    source_type: batch, manual, spoilage etc
-    source_reference: batch code or description
+    Plans FIFO deduction without modifying inventory
+    Returns: tuple(success, list of (entry_id, deduction_amount) tuples)
     """
     remaining = quantity_requested
-    deduction_records = []
+    deduction_plan = []
 
     fifo_entries = InventoryHistory.query.filter(
         and_(
@@ -26,22 +25,12 @@ def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_refer
         entry.remaining_quantity -= deduction
         remaining -= deduction
 
-        history = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type=source_type,
-            quantity_change=-deduction,
-            source=source_reference,
-            source_fifo_id=entry.id,
-            unit_cost=entry.unit_cost
-        )
-        db.session.add(history)
-        deduction_records.append(history)
-
+        deduction_plan.append((entry.id, deduction, entry.unit_cost))
+        
     if remaining > 0:
-        return None
+        return False, []
 
-    db.session.commit()
-    return deduction_records
+    return True, deduction_plan
 
 def get_fifo_entries(inventory_item_id):
     return InventoryHistory.query.filter(
