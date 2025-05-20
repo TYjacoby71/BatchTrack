@@ -6,34 +6,6 @@
   <div class="section">
     <h3>Ingredients</h3>
 
-    <!-- Column Visibility -->
-    <form method="post" action="{{ url_for('inventory.set_column_visibility') }}" id="columnForm" class="mb-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="d-flex gap-3 align-items-center">
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" name="columns" value="name" {% if 'name' in visible_columns %}checked{% endif %}>
-          <label class="form-check-label">Name</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" name="columns" value="type" {% if 'type' in visible_columns %}checked{% endif %}>
-          <label class="form-check-label">Type</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" name="columns" value="quantity" {% if 'quantity' in visible_columns %}checked{% endif %}>
-          <label class="form-check-label">Quantity</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" name="columns" value="unit" {% if 'unit' in visible_columns %}checked{% endif %}>
-          <label class="form-check-label">Unit</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" name="columns" value="cost" {% if 'cost' in visible_columns %}checked{% endif %}>
-          <label class="form-check-label">Cost</label>
-        </div>
-        <button type="submit" class="btn btn-sm btn-primary">Update Columns</button>
-      </div>
-    </form>
-
     <div class="d-flex gap-2 mb-3">
       <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
       <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
@@ -206,11 +178,11 @@
       <tbody>
         {% for item in items if item.type == 'container' %}
         <tr>
-          {% if 'name' in visible_columns %}<td>{{ item.name }}</td>{% endif %}
-          {% if 'type' in visible_columns %}<td>{{ item.type|title }}</td>{% endif %}
-          {% if 'quantity' in visible_columns %}<td>{{ item.quantity }}</td>{% endif %}
-          {% if 'unit' in visible_columns %}<td>{{ item.unit }}</td>{% endif %}
-          {% if 'cost' in visible_columns %}<td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>{% endif %}
+          <td>{{ item.name }}</td>
+          <td>{{ item.storage_amount or 'N/A' }}</td>
+          <td>{{ item.storage_unit or 'N/A' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
             <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
