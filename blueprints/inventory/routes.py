@@ -111,7 +111,7 @@ def adjust_inventory(id):
 
     # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
     remaining = qty_change if qty_change > 0 else 0
-    
+
     if qty_change < 0:
         success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
         if not success:
@@ -123,11 +123,12 @@ def adjust_inventory(id):
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
-                quantity_change=-deduction_amount,
+                quantity_change=qty_change,
                 source_fifo_id=entry_id,
                 unit_cost=unit_cost,
                 note=notes,
-                created_by=current_user.id
+                created_by=current_user.id,
+                quantity_used=abs(qty_change)  # Track the quantity used for FIFO
             )
             db.session.add(history)
 
