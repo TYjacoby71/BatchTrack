@@ -113,18 +113,19 @@ def adjust_inventory(id):
     # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
     remaining = qty_change if qty_change > 0 else 0
 
+    history = InventoryHistory(
+        inventory_item_id=item.id,
+        change_type=change_type,
+        quantity_change=qty_change,
+        remaining_quantity=remaining,  # Track remaining quantity for FIFO
+        unit_cost=cost_per_unit,
+        note=notes,
+        quantity_used=0,
+        created_by=current_user.id
+    )
+    db.session.add(history)
+
     if change_type == 'recount':
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type=change_type,
-            quantity_change=qty_change,
-            remaining_quantity=remaining,  # Track remaining quantity for FIFO
-            unit_cost=cost_per_unit,
-            note=notes,
-            quantity_used=0,
-            created_by=current_user.id
-        )
-        db.session.add(history)
         item.quantity = quantity
     elif change_type in ['spoil', 'trash']:
         from blueprints.fifo.services import deduct_fifo
