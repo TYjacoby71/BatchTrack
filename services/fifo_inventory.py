@@ -1,40 +1,45 @@
 
-from models import ProductInventory, db
+from models import InventoryHistory, db
 from sqlalchemy import and_
 
-def get_fifo_inventory():
+def deduct_fifo(inventory_item_id, quantity_requested):
     """
-    Gets all active FIFO inventory entries ordered by timestamp.
-    """
-    return ProductInventory.query.filter(
-        ProductInventory.quantity > 0
-    ).order_by(ProductInventory.timestamp.asc()).all()
-
-def deduct_product_fifo(product_id, variant, unit, quantity_requested):
-    """
-    Deducts inventory from the oldest batches using FIFO logic.
-    Returns a list of (batch_id, quantity_deducted) pairs.
+    Deducts inventory using FIFO logic for any inventory type
+    Returns a list of (history_id, quantity_deducted) pairs
     """
     remaining = quantity_requested
-    used_batches = []
+    used_entries = []
 
-    inventory_rows = ProductInventory.query.filter(
+    # Get valid inventory entries ordered by timestamp
+    inventory_rows = InventoryHistory.query.filter(
         and_(
-            ProductInventory.product_id == product_id,
-            ProductInventory.variant == variant,
-            ProductInventory.unit == unit,
-            ProductInventory.quantity > 0
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
         )
-    ).order_by(ProductInventory.timestamp.asc()).all()
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     for row in inventory_rows:
         if remaining <= 0:
             break
 
-        deduction = min(row.quantity, remaining)
-        row.quantity -= deduction
+        deduction = min(row.remaining_quantity or row.quantity_change, remaining)
+        row.remaining_quantity = (row.remaining_quantity or row.quantity_change) - deduction
         remaining -= deduction
-        used_batches.append((row.batch_id, deduction))
+        used_entries.append((row.id, deduction))
+
+    if remaining > 0:
+        return None  # Not enough stock
 
     db.session.commit()
-    return used_batches
+    return used_entries
+
+def get_fifo_entries(inventory_item_id):
+    """
+    Gets all active FIFO inventory entries ordered by timestamp
+    """
+    return InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).order_by(InventoryHistory.timestamp.asc()).all()

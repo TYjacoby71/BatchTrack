@@ -154,8 +154,12 @@ class InventoryHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     change_type = db.Column(db.String(32), nullable=False)  # batch, refunded, restock, spoil, trash, recount
     quantity_change = db.Column(db.Float, nullable=False)
+    remaining_quantity = db.Column(db.Float)  # Tracks remaining from this entry
     unit_cost = db.Column(db.Float)  # Only for purchases
     source = db.Column(db.String(128))  # Vendor name or batch number
+    is_perishable = db.Column(db.Boolean, default=False)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
     used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -238,7 +242,6 @@ class InventoryItem(db.Model):
     cost_per_unit = db.Column(db.Float, default=0.0)
     intermediate = db.Column(db.Boolean, default=False)
     expiration_date = db.Column(db.Date, nullable=True)
-    perishable = db.Column(db.Boolean, default=False)
     low_stock_threshold = db.Column(db.Float, default=0)
     is_perishable = db.Column(db.Boolean, default=False)
     storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
