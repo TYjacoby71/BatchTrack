@@ -32,7 +32,8 @@ def deduct_fifo(inventory_item_id, quantity_requested, source_type, source_refer
             quantity_change=-deduction,
             source=source_reference,
             source_fifo_id=entry.id,
-            unit_cost=entry.unit_cost
+            unit_cost=entry.unit_cost,
+            quantity_used=deduction  # Add required quantity_used field
         )
         db.session.add(history)
         deduction_records.append(history)
