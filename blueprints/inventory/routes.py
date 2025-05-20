@@ -1,4 +1,3 @@
-# Applying the cost override handling to the edit_ingredient route.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
@@ -112,38 +111,40 @@ def adjust_inventory(id):
 
     # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
     remaining = qty_change if qty_change > 0 else 0
+    
+    if qty_change < 0:
+        success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
+        if not success:
+            flash('Insufficient stock for FIFO deduction', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
 
-    history = InventoryHistory(
-        inventory_item_id=item.id,
-        change_type=change_type,
-        quantity_change=qty_change,
-        remaining_quantity=remaining,  # Track remaining quantity for FIFO
-        unit_cost=cost_per_unit,
-        note=notes,
-        quantity_used=0,
-        created_by=current_user.id
-    )
-    db.session.add(history)
+        # Execute the FIFO deduction plan
+        for entry_id, deduction_amount, unit_cost in deduction_plan:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type=change_type,
+                quantity_change=-deduction_amount,
+                source_fifo_id=entry_id,
+                unit_cost=unit_cost,
+                note=notes,
+                created_by=current_user.id
+            )
+            db.session.add(history)
 
-    if change_type == 'recount':
-        item.quantity = quantity
-    elif change_type in ['spoil', 'trash']:
-        item.quantity -= abs(quantity)  # Deduct for spoilage and trash
-        cost_per_unit = -abs(item.cost_per_unit)  # Make cost negative for deductions
-        history.unit_cost = cost_per_unit  # Set the history entry cost
+        item.quantity += qty_change
     else:
-        # For restocks, calculate weighted average cost
-        if cost_per_unit:
-            # Calculate new weighted average cost
-            old_total_value = item.quantity * item.cost_per_unit if item.cost_per_unit else 0
-            new_value = quantity * cost_per_unit
-            new_total_quantity = item.quantity + quantity
-
-            # Update cost with weighted average
-            if new_total_quantity > 0:
-                item.cost_per_unit = (old_total_value + new_value) / new_total_quantity
-
-        item.quantity += quantity  # Add for restocks
+        history = InventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=qty_change,
+            remaining_quantity=remaining,  # Track remaining quantity for FIFO
+            unit_cost=cost_per_unit,
+            note=notes,
+            quantity_used=0,
+            created_by=current_user.id
+        )
+        db.session.add(history)
+        item.quantity += qty_change
 
     db.session.commit()
     flash('Inventory adjusted successfully')
@@ -254,3 +255,52 @@ def delete_inventory(id):
     db.session.commit()
     flash('Inventory item deleted successfully.')
     return redirect(url_for('inventory.list_inventory'))
+
+def deduct_fifo(item_id, quantity, change_type, notes):
+    """
+    Deducts quantity from the oldest inventory entries using FIFO.
+
+    Args:
+        item_id (int): The ID of the inventory item.
+        quantity (float): The quantity to deduct.
+        change_type (str): The type of change (e.g., 'use', 'spoil').
+        notes (str): Additional notes for the history.
+
+    Returns:
+        tuple: (success, deduction_plan)
+            success (bool): True if deduction was successful, False otherwise.
+            deduction_plan (list): A list of tuples, where each tuple contains:
+                (history_entry_id, quantity_deducted, unit_cost)
+    """
+
+    deduction_plan = []
+    total_deducted = 0
+
+    # Get the oldest inventory history entries with remaining quantity
+    fifo_entries = InventoryHistory.query.filter_by(inventory_item_id=item_id) \
+        .filter(InventoryHistory.remaining_quantity > 0) \
+        .order_by(InventoryHistory.timestamp.asc()).all()
+
+    if not fifo_entries:
+        return False, []  # Insufficient stock
+
+    for entry in fifo_entries:
+        if total_deducted >= quantity:
+            break
+
+        deduct_from_entry = min(quantity - total_deducted, entry.remaining_quantity)
+        entry.remaining_quantity -= deduct_from_entry
+        total_deducted += deduct_from_entry
+
+        deduction_plan.append((entry.id, deduct_from_entry, entry.unit_cost))
+
+    if total_deducted < quantity:
+        # Restore remaining quantities to prevent partial deductions
+        for entry_id, deducted_amount, _ in deduction_plan:
+            entry = InventoryHistory.query.get(entry_id)
+            entry.remaining_quantity += deducted_amount
+        db.session.rollback()  # Rollback changes
+        return False, []  # Insufficient stock
+
+    db.session.commit()
+    return True, deduction_plan
