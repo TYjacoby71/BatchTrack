@@ -1,6 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer
+from models import (
+    db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, 
+    BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, 
+    ExtraBatchContainer, InventoryHistory
+)
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
@@ -116,7 +120,6 @@ def start_batch():
                     unit_cost=unit_cost,
                     note=f"Used in batch #{new_batch.id} (From FIFO #{entry_id})",
                     created_by=current_user.id if current_user else None,
-                    quantity_used=deduct_amount,
                     used_for_batch_id=new_batch.id
                 )
                 db.session.add(history)
@@ -124,15 +127,6 @@ def start_batch():
             # Update main inventory quantity
             ingredient.quantity -= required_converted
             db.session.add(ingredient)
-
-            batch_ingredient = BatchIngredient(
-                batch_id=new_batch.id,
-                ingredient_id=ingredient.id,
-                amount_used=required_converted,
-                unit=ingredient.unit,
-                cost_per_unit=ingredient.cost_per_unit
-            )
-            db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
