@@ -2,7 +2,7 @@
 import pytest
 from app import app, db
 from models import InventoryItem, IngredientCategory, Unit, Batch, BatchIngredient
-from services.unit_conversion import UnitConversionService
+from services.unit_conversion import ConversionEngine
 from routes.batches import adjust_inventory_deltas
 from datetime import datetime
 
@@ -98,7 +98,7 @@ def test_cancel_batch_restores_containers(setup_inventory):
         adjust_inventory_deltas(batch.id, new_ingredients, new_containers)
 
         sugar = InventoryItem.query.get(1)
-        converted = UnitConversionService.convert(0.5, 'lb', 'gram')
+        converted = ConversionEngine.convert_units(0.5, 'lb', 'gram')
         assert round(sugar.quantity, 2) == round(1000.0 - converted, 2)
 
 
