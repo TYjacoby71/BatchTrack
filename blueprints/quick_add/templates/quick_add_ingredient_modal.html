@@ -25,6 +25,10 @@
               </button>
             </div>
           </div>
+          
+          {% with id_prefix='quickAdd' %}
+            {% include 'partials/perishable_fields.html' %}
+          {% endwith %}
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="cancelQuickIngredient" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary">Add Ingredient</button>
