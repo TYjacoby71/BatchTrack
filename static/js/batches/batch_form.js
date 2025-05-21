@@ -159,10 +159,11 @@ function saveExtraContainers() {
   })
   .then(data => {
     if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.container}: ${err.message} (Available: ${err.available})`
-      ).join('\n');
-      alert("Cannot save extra containers:\n" + errorMsg);
+      const message = data.errors.map(err => 
+        `❌ ${err.container}: Not enough inventory to add extra ${err.container}` +
+        (err.needed ? ` (Needed: ${err.needed})` : '')
+      ).join("\n\n");
+      alert("Cannot save extra containers:\n\n" + message);
     } else {
       alert("Extra containers saved successfully");
       window.location.reload();
@@ -203,18 +204,14 @@ function saveExtras() {
   })
   .then(data => {
     if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
-      ).join('\n');
-      function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
-
-        alert("Save failed:\n\n" + message);
-      }
-
-      displayErrors(data.errors);
+      const message = data.errors.map(err => {
+        let msg = `❌ ${err.ingredient}: Not enough inventory to add extra ${err.ingredient}`;
+        if (err.needed && err.needed_unit) {
+          msg += ` (Needed: ${err.needed} ${err.needed_unit})`;
+        }
+        return msg;
+      }).join("\n\n");
+      alert("Cannot save extras:\n\n" + message);
     } else {
       alert("Extra ingredients saved successfully");
       window.location.reload();
