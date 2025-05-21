@@ -35,6 +35,7 @@ def view_inventory(id):
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    from datetime import datetime
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
@@ -44,7 +45,8 @@ def view_inventory(id):
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
-                         InventoryHistory=InventoryHistory)
+                         InventoryHistory=InventoryHistory,
+                         now=datetime.utcnow())
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -225,7 +227,7 @@ def edit_inventory(id):
     is_perishable = request.form.get('is_perishable') == 'on'
     was_perishable = item.is_perishable
     item.is_perishable = is_perishable
-    
+
     if is_perishable:
         shelf_life_days = int(request.form.get('shelf_life_days', 0))
         item.shelf_life_days = shelf_life_days
