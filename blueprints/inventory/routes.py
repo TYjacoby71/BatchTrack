@@ -110,8 +110,12 @@ def adjust_inventory(id):
     change_type = request.form.get('change_type')
     input_quantity = float(request.form.get('quantity', 0))
     input_unit = request.form.get('input_unit')
-    # Convert quantity to item's base unit if different
-    if input_unit != item.unit:
+    
+    # Skip unit conversion for containers
+    if item.type == 'container':
+        quantity = input_quantity
+    # Convert quantity to item's base unit if different and not a container
+    elif input_unit != item.unit:
         from services.conversion_wrapper import safe_convert
         conversion = safe_convert(input_quantity, input_unit, item.unit, ingredient_id=item.id)
         if not conversion['ok']:
@@ -204,7 +208,9 @@ def update_inventory():
                 change_type='adjustment',
                 quantity_change=amount,
                 cost_per_unit=item.cost_per_unit,
-                notes=notes
+                note=notes,
+                created_by=current_user.id,
+                quantity_used=0
             )
             db.session.add(history)
 
@@ -213,6 +219,27 @@ def update_inventory():
             db.session.commit()
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Item not found'})
+    else:
+        # Handle form submission for bulk updates
+        for item_data in request.form.getlist('items[]'):
+            item_id = int(item_data.get('id'))
+            amount = float(item_data.get('amount', 0))
+            item = InventoryItem.query.get(item_id)
+            if item:
+                history = InventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type='bulk_adjustment',
+                    quantity_change=amount,
+                    cost_per_unit=item.cost_per_unit,
+                    note='Bulk update',
+                    created_by=current_user.id,
+                    quantity_used=0
+                )
+                db.session.add(history)
+                item.quantity += amount
+        db.session.commit()
+        flash('Inventory updated successfully')
+        return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
