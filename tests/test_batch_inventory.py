@@ -1,4 +1,3 @@
-
 import pytest
 from unittest.mock import patch
 from app import app, db
@@ -13,12 +12,12 @@ class TestBatchInventory(unittest.TestCase):
     def setUpClass(cls):
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        
+
     def setUp(self):
         self.ctx = app.test_request_context()
         self.ctx.push()
         db.create_all()
-        
+
         # Set up test data
         category = IngredientCategory(name="Test Powder", default_density=0.8)
         db.session.add(category)
@@ -50,11 +49,17 @@ class TestBatchInventory(unittest.TestCase):
     def test_adjust_inventory_with_conversion(self, mock_current_user):
         mock_current_user.is_authenticated = False
         mock_current_user.id = None
-        
+
         batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
         db.session.add(batch)
         db.session.commit()
 
+        initial_quantity = 1000.0
+        sugar = InventoryItem.query.get(1)
+        sugar.quantity = initial_quantity
+        db.session.commit()
+
+        # Simulate using 0.5 lb of sugar
         new_ingredients = [{
             'id': 1,
             'amount': 0.5,
@@ -62,15 +67,17 @@ class TestBatchInventory(unittest.TestCase):
         }]
         adjust_inventory_deltas(batch.id, new_ingredients, [])
 
+        # Verify the change
         sugar = InventoryItem.query.get(1)
-        result = ConversionEngine.convert_units(0.5, 'lb', 'gram')
-        assert round(sugar.quantity, 2) == round(1000.0 - result['converted_value'], 2)
+        conversion_result = ConversionEngine.convert_units(0.5, 'lb', 'gram', ingredient_id=1)
+        expected_remaining = initial_quantity - conversion_result['converted_value']
+        assert round(sugar.quantity, 2) == round(expected_remaining, 2)
 
     @patch('flask_login.current_user')
     def test_cancel_batch_restores_inventory(self, mock_current_user):
         mock_current_user.is_authenticated = False
         mock_current_user.id = None
-        
+
         batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
         db.session.add(batch)
         db.session.commit()
