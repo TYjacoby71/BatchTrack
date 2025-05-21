@@ -3,7 +3,7 @@ import pytest
 from app import app, db
 from models import InventoryItem, IngredientCategory, Unit, Batch, BatchIngredient
 from services.unit_conversion import ConversionEngine
-from routes.batches import adjust_inventory_deltas
+from routes.batch_routes import adjust_inventory_deltas
 from datetime import datetime
 
 @pytest.fixture
