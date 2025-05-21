@@ -11,7 +11,7 @@ class TestBatchInventory(unittest.TestCase):
         with app.app_context():
             db.drop_all()
             db.create_all()
-            
+
             # Clear any existing categories
             IngredientCategory.query.delete()
             db.session.commit()
@@ -38,7 +38,7 @@ class TestBatchInventory(unittest.TestCase):
 
     def test_adjust_inventory_with_conversion(self):
         with app.app_context():
-            batch = Batch(id=1, recipe_id=1, status='in_progress', started_at=datetime.utcnow())
+            batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
             db.session.add(batch)
             db.session.commit()
 
@@ -73,7 +73,7 @@ class TestBatchInventory(unittest.TestCase):
             db.session.commit()
 
             # Create batch and add container usage
-            batch = Batch(id=3, recipe_id=1, status='in_progress', started_at=datetime.utcnow())
+            batch = Batch(id=3, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
             db.session.add(batch)
             db.session.commit()
 
@@ -110,7 +110,7 @@ class TestBatchInventory(unittest.TestCase):
 
     def test_cancel_batch_restores_inventory(self):
         with app.app_context():
-            batch = Batch(id=1, recipe_id=1, status='in_progress', started_at=datetime.utcnow())
+            batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
             db.session.add(batch)
             db.session.commit()
 
