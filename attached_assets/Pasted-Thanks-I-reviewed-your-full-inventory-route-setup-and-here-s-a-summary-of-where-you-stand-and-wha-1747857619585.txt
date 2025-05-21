@@ -1,0 +1,82 @@
+Thanks — I reviewed your full inventory route setup, and here’s a summary of where you stand and what to clean up:
+
+✅ What You’ve Done Well
+FIFO logic is cleanly centralized with deduct_fifo()
+
+History entries track: remaining_quantity, fifo_reference_id, unit_cost, etc.
+
+Perishability logic is handled in both InventoryItem and InventoryHistory
+
+You're using flush() to get IDs before committing (good for history linkage)
+
+Recount adjusts FIFO correctly on the backend
+
+🧩 Where It’s Getting “Inflated”
+You’re merging:
+
+Inventory management (add/edit/update/delete)
+
+Stock movement tracking (restock/spoil/recount)
+
+FIFO deduction logic
+
+Perishable handling
+
+Batch prep hooks (e.g. you mentioned trying to “start a batch” here)
+
+This makes the route feel overwhelming.
+
+🎯 What To Do Now
+1. Keep Inventory Routes Focused
+Inventory pages should only:
+
+Add/update/delete items
+
+Adjust stock via restock, spoil, recount, etc.
+
+Show history and perishable status
+
+Do NOT include batch start logic here. That belongs in blueprints/batches/ or blueprints/production/.
+
+2. Split FIFO into Its Own Module
+Right now deduct_fifo() is defined in this file. Move it to:
+
+py
+Copy
+Edit
+blueprints/fifo/services.py
+This keeps your inventory route lean and reusable.
+
+3. Audit Perishable Logic Flow
+You’re tracking expiration_date in both InventoryItem and InventoryHistory. Good. But simplify:
+
+Let InventoryItem store default shelf_life_days
+
+Compute and store expiration_date only in the InventoryHistory entries where it matters
+
+→ Want help writing a decorator or function for that?
+
+4. Confirm Your FIFO Deduction Works Cleanly
+Test cases:
+
+Add restock 10
+
+Add restock 5
+
+Use 12
+
+View FIFO → should deduct 10 from first, 2 from second
+
+5. UX Simplification Advice
+Once this logic is done, the inventory UI should follow the same calm logic:
+
+“Adjust Quantity” should feel like a conversation:
+
+Add Stock
+
+Remove Stock (spoil/trash)
+
+Recount
+
+Recount should explain visually what it did (i.e. “Recounted to 15. Added +2 to oldest FIFO record #36”)
+
