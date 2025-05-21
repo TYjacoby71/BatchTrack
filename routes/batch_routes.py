@@ -63,6 +63,20 @@ def start_batch():
                         cost_each=container_item.cost_per_unit
                     )
                     db.session.add(bc)
+                    
+                    # Add container history entry
+                    history = InventoryHistory(
+                        inventory_item_id=container_id,
+                        change_type='batch',
+                        quantity_change=-quantity,
+                        remaining_quantity=0,
+                        unit_cost=container_item.cost_per_unit,
+                        note=f"Used in batch #{new_batch.id}",
+                        created_by=current_user.id if current_user else None,
+                        used_for_batch_id=new_batch.id,
+                        quantity_used=quantity
+                    )
+                    db.session.add(history)
                 else:
                     container_errors.append(f"Not enough {container_item.name} in stock.")
 
