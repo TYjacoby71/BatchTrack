@@ -110,8 +110,12 @@ def adjust_inventory(id):
     change_type = request.form.get('change_type')
     input_quantity = float(request.form.get('quantity', 0))
     input_unit = request.form.get('input_unit')
-    # Convert quantity to item's base unit if different
-    if input_unit != item.unit:
+    
+    # Skip unit conversion for containers
+    if item.type == 'container':
+        quantity = input_quantity
+    # Convert quantity to item's base unit if different and not a container
+    elif input_unit != item.unit:
         from services.conversion_wrapper import safe_convert
         conversion = safe_convert(input_quantity, input_unit, item.unit, ingredient_id=item.id)
         if not conversion['ok']:
