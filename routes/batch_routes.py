@@ -1,6 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer
+from models import (
+    db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, 
+    BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, 
+    ExtraBatchContainer, InventoryHistory
+)
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
@@ -82,45 +86,47 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            if ingredient.intermediate:
-                # Handle FIFO deduction for intermediate ingredients
-                success, used_batches = FIFOService.deduct_intermediate_fifo(
-                    ingredient.name,
-                    ingredient.unit,
-                    required_converted
-                )
-                if not success:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
-                    continue
+            from blueprints.fifo.services import deduct_fifo
 
-                # Create BatchIngredient records for each used batch
-                for batch_id, amount in used_batches:
-                    batch_ingredient = BatchIngredient(
-                        batch_id=new_batch.id,
-                        ingredient_id=ingredient.id,
-                        amount_used=amount,
-                        unit=ingredient.unit,
-                        cost_per_unit=ingredient.cost_per_unit,
-                        source_batch_id=batch_id
-                    )
-                    db.session.add(batch_ingredient)
-            else:
-                # Regular inventory deduction
-                if ingredient.quantity < required_converted:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
-                    continue
+            # Use FIFO deduction for all ingredients
+            success, deduction_plan = deduct_fifo(
+                ingredient.id, 
+                required_converted,
+                'batch',
+                f'Used in batch #{new_batch.id}'
+            )
 
-                ingredient.quantity -= required_converted
-                db.session.add(ingredient)
+            if not success:
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                continue
 
+            # Create BatchIngredient records and history entries for FIFO deductions
+            for entry_id, deduct_amount, unit_cost in deduction_plan:
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
                     ingredient_id=ingredient.id,
-                    amount_used=required_converted,
+                    amount_used=deduct_amount,
                     unit=ingredient.unit,
-                    cost_per_unit=ingredient.cost_per_unit
+                    cost_per_unit=unit_cost
                 )
                 db.session.add(batch_ingredient)
+
+                # Add history entry for this FIFO deduction
+                history = InventoryHistory(
+                    inventory_item_id=ingredient.id,
+                    change_type='batch',
+                    quantity_change=-deduct_amount,
+                    fifo_reference_id=entry_id,
+                    unit_cost=unit_cost,
+                    note=f"Used in batch #{new_batch.id} (From FIFO #{entry_id})",
+                    created_by=current_user.id if current_user else None,
+                    used_for_batch_id=new_batch.id
+                )
+                db.session.add(history)
+
+            # Update main inventory quantity
+            ingredient.quantity -= required_converted
+            db.session.add(ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
