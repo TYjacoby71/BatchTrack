@@ -70,12 +70,17 @@
                 <div class="form-group">
                   <label>Quantity Change</label>
                   <div class="input-group">
-                    <input type="number" class="form-control" name="quantity" step="0.01" required>
+                    <input type="number" class="form-control" name="quantity" step="1" {% if item.type == 'container' %}min="1"{% else %}step="0.01"{% endif %} required>
+                    {% if item.type != 'container' %}
                     <select class="form-control" name="input_unit" required>
                       {% for unit in get_global_unit_list() %}
                         <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
                       {% endfor %}
                     </select>
+                    {% endif %}
+                    {% if item.type == 'container' %}
+                    <input type="hidden" name="input_unit" value="count">
+                    {% endif %}
                   </div>
                 </div>
               </div>
