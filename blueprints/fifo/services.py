@@ -84,27 +84,37 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         
     # Handle increase in quantity    
     else:
-        # First, fill any remaining capacity in existing FIFO entries
+        # First, fill existing FIFO entries up to their original quantity
         remaining_to_add = difference
-        for entry in current_entries:
-            if entry.remaining_quantity < entry.quantity_change:
-                can_fill = entry.quantity_change - entry.remaining_quantity
+        sorted_entries = sorted(current_entries, key=lambda x: x.timestamp)
+        
+        for entry in sorted_entries:
+            original_quantity = entry.quantity_change
+            if entry.remaining_quantity < original_quantity:
+                can_fill = original_quantity - entry.remaining_quantity
                 fill_amount = min(can_fill, remaining_to_add)
+                
                 # Create credited recount entry
                 history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
                     quantity_change=fill_amount,
-                    remaining_quantity=0,
+                    remaining_quantity=fill_amount,  # This should match the amount we're adding
                     fifo_reference_id=entry.id,
                     note=f"Recount credit to FIFO entry #{entry.id}",
                     created_by=user_id,
-                    quantity_used=fill_amount,
-                    timestamp=datetime.utcnow()
+                    quantity_used=0,  # Nothing used yet
+                    timestamp=datetime.utcnow(),
+                    is_perishable=item.is_perishable,
+                    shelf_life_days=item.shelf_life_days,
+                    expiration_date=expiration_date
                 )
                 db.session.add(history)
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
+                
+                if remaining_to_add <= 0:
+                    break
                 
         # If there's still quantity to add, create new FIFO entry
         if remaining_to_add > 0:
