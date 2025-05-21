@@ -77,11 +77,9 @@
                         <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
                       {% endfor %}
                     </select>
-                    {% else %}
+                    {% endif %}
+                    {% if item.type == 'container' %}
                     <input type="hidden" name="input_unit" value="count">
-                    <div class="input-group-append">
-                      <span class="input-group-text">units</span>
-                    </div>
                     {% endif %}
                   </div>
                 </div>
