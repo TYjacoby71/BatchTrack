@@ -266,7 +266,7 @@
               <label for="shelf_life_days">Shelf Life (days)</label>
               <input type="number" class="form-control" id="shelf_life_days" name="shelf_life_days" 
                      min="1" :required="showShelfLife"
-                     value="{{ (item.expiration_date - item.created_at.date()).days if item.expiration_date else '' }}">
+                     value="{{ item.shelf_life_days or '' }}">
             </div>
           </div>
 
