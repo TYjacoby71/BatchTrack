@@ -120,7 +120,8 @@ def start_batch():
                     unit_cost=unit_cost,
                     note=f"Used in batch #{new_batch.id} (From FIFO #{entry_id})",
                     created_by=current_user.id if current_user else None,
-                    used_for_batch_id=new_batch.id
+                    used_for_batch_id=new_batch.id,
+                    quantity_used=deduct_amount
                 )
                 db.session.add(history)
 
