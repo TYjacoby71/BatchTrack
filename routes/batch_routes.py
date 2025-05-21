@@ -477,19 +477,10 @@ def save_extra_ingredients(batch_id):
                 continue
 
             needed_amount = conversion["result"]["converted_value"]
-
-            # Test FIFO deduction first (using 'test' type to prevent actual deduction)
-            success, _ = deduct_fifo(
-                ingredient.id,
-                needed_amount,
-                'test',
-                'Test deduction'
-            )
-
-            if not success:
+            if needed_amount > ingredient.quantity:
                 errors.append({
                     "ingredient": ingredient.name,
-                    "message": "Not enough in stock (FIFO)",
+                    "message": "Not enough in stock",
                     "needed": needed_amount,
                     "needed_unit": ingredient.unit
                 })
