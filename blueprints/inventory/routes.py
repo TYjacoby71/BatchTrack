@@ -241,16 +241,17 @@ def edit_inventory(id):
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        # Simulate form data for recount
-        from werkzeug.datastructures import ImmutableMultiDict
-        recount_data = ImmutableMultiDict([
-            ('quantity', str(new_quantity)),
-            ('change_type', 'recount'),
-            ('notes', 'Manual quantity update via inventory edit'),
-            ('input_unit', item.unit)
-        ])
-        request.form = recount_data
-        return adjust_inventory(id)
+        from blueprints.fifo.services import recount_fifo
+        success = recount_fifo(
+            inventory_item_id=id,
+            new_quantity=new_quantity,
+            note='Manual quantity update via inventory edit',
+            user_id=current_user.id
+        )
+        if not success:
+            flash('Failed to update quantity through FIFO tracking', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+        item.quantity = new_quantity
 
     # Handle cost override
     new_cost = float(request.form.get('cost_per_unit', 0))
