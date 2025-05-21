@@ -21,8 +21,14 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
         notes: Description of change
         batch_id: Optional batch ID for attribution
     """
+    from models import InventoryItem
+    
     remaining = quantity
     deduction_plan = []
+    inventory_item = InventoryItem.query.get(inventory_item_id)
+
+    if not inventory_item:
+        return False, []
 
     fifo_entries = get_fifo_entries(inventory_item_id)
 
@@ -38,10 +44,12 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
     if remaining > 0:
         return False, []
 
-    # Execute deductions
+    # Execute deductions and update inventory
+    total_deducted = 0
     for entry_id, deduct_amount, unit_cost in deduction_plan:
         entry = InventoryHistory.query.get(entry_id)
         entry.remaining_quantity -= deduct_amount
+        total_deducted += deduct_amount
         
         # Create history entry for deduction
         history = InventoryHistory(
@@ -56,6 +64,10 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
             quantity_used=deduct_amount
         )
         db.session.add(history)
+
+    # Update main inventory quantity
+    inventory_item.quantity -= total_deducted
+    db.session.add(inventory_item)
 
     return True, deduction_plan
 
