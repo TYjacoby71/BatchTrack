@@ -239,13 +239,18 @@ def edit_inventory(id):
                 from blueprints.fifo.services import update_fifo_perishable_status
                 update_fifo_perishable_status(item.id, shelf_life_days)
 
-    # Handle recount if quantity changed through adjust_inventory route
+    # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        return adjust_inventory(id, recount_data={
-            'quantity': new_quantity,
-            'change_type': 'recount',
-            'notes': 'Manual quantity update via inventory edit'
-        })
+        # Simulate form data for recount
+        from werkzeug.datastructures import ImmutableMultiDict
+        recount_data = ImmutableMultiDict([
+            ('quantity', str(new_quantity)),
+            ('change_type', 'recount'),
+            ('notes', 'Manual quantity update via inventory edit'),
+            ('input_unit', item.unit)
+        ])
+        request.form = recount_data
+        return adjust_inventory(id)
 
     # Handle cost override
     new_cost = float(request.form.get('cost_per_unit', 0))
