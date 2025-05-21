@@ -1,6 +1,8 @@
+
 import json
 from app import app, db
 from models import InventoryItem, IngredientCategory, InventoryHistory
+from datetime import datetime
 
 # Path to your legacy inventory export
 JSON_PATH = 'inventory_export_20250502_225444.json'
@@ -30,7 +32,9 @@ def load_legacy_inventory():
                 intermediate=item.get('intermediate', False),
                 low_stock_threshold=item.get('low_stock_threshold', 0.0),
                 storage_amount=item.get('storage_amount', 0.0),
-                storage_unit=item.get('storage_unit', '')
+                storage_unit=item.get('storage_unit', ''),
+                shelf_life_days=item.get('shelf_life_days'),
+                is_perishable=item.get('is_perishable', False)
             )
 
             # Look up density from reference data
@@ -55,13 +59,12 @@ def load_legacy_inventory():
                     quantity_change=new_item.quantity,
                     remaining_quantity=new_item.quantity,
                     unit_cost=new_item.cost_per_unit,
-                    source='Legacy Import',
-                    created_by=1,  # System user
                     quantity_used=0,
                     note='Initial import',
                     is_perishable=new_item.is_perishable,
-                    expiration_date=new_item.expiration_date,
-                    shelf_life_days=None
+                    expiration_date=datetime.utcnow() if new_item.is_perishable else None,
+                    shelf_life_days=new_item.shelf_life_days,
+                    created_by=1  # System user
                 )
                 db.session.add(history)
                 print(f'[HISTORY] Created initial FIFO entry for {new_item.quantity} {new_item.unit}')
