@@ -478,13 +478,12 @@ def save_extra_ingredients(batch_id):
 
             needed_amount = conversion["result"]["converted_value"]
 
-            # Test FIFO deduction first
+            # Test FIFO deduction first (using 'test' type to prevent actual deduction)
             success, _ = deduct_fifo(
                 ingredient.id,
                 needed_amount,
-                'extra',
-                f'Extra ingredient for batch {batch.label_code}',
-                batch_id=batch.id
+                'test',
+                'Test deduction'
             )
 
             if not success:
