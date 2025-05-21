@@ -5,6 +5,7 @@ from models import (
     BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, 
     ExtraBatchContainer, InventoryHistory
 )
+from models import InventoryHistory
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
