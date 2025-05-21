@@ -60,19 +60,19 @@
     </form>
 
     <!-- Add New Ingredient Form -->
-    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;">
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="ingredient">
       <div class="row g-3 align-items-end">
-        <div class="col">
+        <div class="col-md-3">
           <label class="form-label">Name</label>
           <input type="text" name="name" class="form-control" required>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Quantity</label>
           <input type="number" step="0.01" name="quantity" class="form-control" required>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Unit</label>
           <select name="unit" class="form-select" required>
             {% for unit in units %}
@@ -80,25 +80,29 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col">
-          <label class="form-label">Perishable</label>
-          <div class="form-check mt-2">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable">
-            <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
-          </div>
-          <details class="mt-2">
-            <summary>Shelf Life</summary>
-            <div class="mt-2">
-              <label class="form-label">Shelf Life (days)</label>
-              <input type="number" name="shelf_life_days" class="form-control" min="1">
+        <div class="col-md-3">
+          <div x-data="{ isPerishable: false }">
+            <h5 class="mb-2">Perishable</h5>
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
+              </div>
+              <input type="number" name="shelf_life_days" class="form-control" 
+                     placeholder="Shelf Life (days)" min="1"
+                     :required="isPerishable"
+                     :disabled="!isPerishable"
+                     :class="{ 'bg-light': !isPerishable }">
             </div>
-          </details>
+          </div>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Cost/Unit</label>
-          <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          </div>
         </div>
-        <div class="col">
+        <div class="col-auto">
           <button type="submit" class="btn btn-success">Save</button>
           <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
         </div>
