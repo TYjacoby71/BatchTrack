@@ -188,4 +188,3 @@ def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
         entry.is_perishable = True
         entry.shelf_life_days = shelf_life_days
         entry.expiration_date = expiration_date
-```
