@@ -11,9 +11,15 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type, notes):
+def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
+    Args:
+        inventory_item_id: ID of inventory item
+        quantity: Amount to deduct
+        change_type: Type of change (batch, spoil, etc)
+        notes: Description of change
+        batch_id: Optional batch ID for attribution
     """
     remaining = quantity
     deduction_plan = []
@@ -33,9 +39,23 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
         return False, []
 
     # Execute deductions
-    for entry_id, deduct_amount, _ in deduction_plan:
+    for entry_id, deduct_amount, unit_cost in deduction_plan:
         entry = InventoryHistory.query.get(entry_id)
         entry.remaining_quantity -= deduct_amount
+        
+        # Create history entry for deduction
+        history = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type=change_type,
+            quantity_change=-deduct_amount,
+            remaining_quantity=0,
+            fifo_reference_id=entry_id,
+            unit_cost=unit_cost,
+            note=f"{notes} (From FIFO #{entry_id})",
+            used_for_batch_id=batch_id,
+            quantity_used=deduct_amount
+        )
+        db.session.add(history)
 
     return True, deduction_plan
 
