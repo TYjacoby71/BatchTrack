@@ -193,7 +193,7 @@
                 </td>
                 <td>{{ entry.id }}</td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
-                    class="{% if entry.remaining_quantity > 0 and entry.expiration_date < now.date() %}bg-warning{% endif %}"
+                    class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
                     {% endif %}>
                     {{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}
                 </td>
