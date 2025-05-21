@@ -60,7 +60,7 @@
     </form>
 
     <!-- Add New Ingredient Form -->
-    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;">
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="ingredient">
       <div class="row g-3 align-items-end">
@@ -83,16 +83,13 @@
         <div class="col">
           <label class="form-label">Perishable</label>
           <div class="form-check mt-2">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable">
+            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-on:change="showShelfLife = $event.target.checked">
             <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
           </div>
-          <details class="mt-2">
-            <summary>Shelf Life</summary>
-            <div class="mt-2">
-              <label class="form-label">Shelf Life (days)</label>
-              <input type="number" name="shelf_life_days" class="form-control" min="1">
-            </div>
-          </details>
+          <div class="mt-2" x-show="showShelfLife">
+            <label class="form-label">Shelf Life (days)</label>
+            <input type="number" name="shelf_life_days" class="form-control" min="1" :required="showShelfLife">
+          </div>
         </div>
         <div class="col">
           <label class="form-label">Cost/Unit</label>
