@@ -56,6 +56,7 @@ def add_inventory():
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
     low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
     is_perishable = request.form.get('is_perishable', 'false') == 'true'
+    shelf_life_days = int(request.form.get('shelf_life_days', 0)) if is_perishable else None
 
     item = InventoryItem(
         name=name,
@@ -64,7 +65,8 @@ def add_inventory():
         type=item_type,
         cost_per_unit=cost_per_unit,
         low_stock_threshold=low_stock_threshold,
-        is_perishable=is_perishable
+        is_perishable=is_perishable,
+        shelf_life_days=shelf_life_days
     )
     db.session.add(item)
     db.session.flush()  # Get the ID without committing
@@ -93,7 +95,19 @@ def add_inventory():
 def adjust_inventory(id):
     item = InventoryItem.query.get_or_404(id)
     change_type = request.form.get('change_type')
-    quantity = float(request.form.get('quantity', 0))
+    input_quantity = float(request.form.get('quantity', 0))
+    input_unit = request.form.get('input_unit')
+    # Convert quantity to item's base unit if different
+    if input_unit != item.unit:
+        from services.conversion_wrapper import safe_convert
+        conversion = safe_convert(input_quantity, input_unit, item.unit, ingredient_id=item.id)
+        if not conversion['ok']:
+            flash(f'Unit conversion error: {conversion["error"]}', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+        quantity = conversion['result']['converted_value']
+    else:
+        quantity = input_quantity
+
     # If no cost provided, use existing item cost for restocks, None for other types
     input_cost = request.form.get('cost_per_unit')
     if input_cost:

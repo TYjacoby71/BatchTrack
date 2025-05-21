@@ -60,14 +60,20 @@
                     <option value="restock">Restock</option>
                     <option value="spoil">Spoilage</option>
                     <option value="trash">Trash</option>
-                    <option value="recount">Recount</option>
                   </select>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="form-group">
                   <label>Quantity Change</label>
-                  <input type="number" class="form-control" name="quantity" step="0.01" required>
+                  <div class="input-group">
+                    <input type="number" class="form-control" name="quantity" step="0.01" required>
+                    <select class="form-control" name="input_unit" required>
+                      {% for unit in get_global_unit_list() %}
+                        <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
                 </div>
               </div>
               <div class="col-md-4">
@@ -244,6 +250,14 @@
               <option value="container" {% if item.type == 'container' %}selected{% endif %}>Container</option>
               <option value="packaging" {% if item.type == 'packaging' %}selected{% endif %}>Packaging</option>
             </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="is_perishable">Perishable:</label>
+            <div class="form-check">
+              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" {% if item.is_perishable %}checked{% endif %}>
+              <label class="form-check-label" for="is_perishable">Is Perishable</label>
+            </div>
           </div>
 
           <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
