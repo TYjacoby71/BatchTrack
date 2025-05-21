@@ -32,26 +32,7 @@ def view_inventory(id):
     page = request.args.get('page', 1, type=int)
     per_page = 5
     item = InventoryItem.query.get_or_404(id)
-    
-    # Get filter parameters
-    change_type = request.args.get('change_type', '')
-    date_from = request.args.get('date_from', '')
-    date_to = request.args.get('date_to', '')
-    created_by = request.args.get('created_by', '')
-    
-    # Build query with filters
-    history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
-    
-    if change_type:
-        history_query = history_query.filter_by(change_type=change_type)
-    if date_from:
-        history_query = history_query.filter(InventoryHistory.timestamp >= date_from)
-    if date_to:
-        history_query = history_query.filter(InventoryHistory.timestamp <= date_to + ' 23:59:59')
-    if created_by:
-        history_query = history_query.filter_by(created_by=created_by)
-        
-    history_query = history_query.order_by(InventoryHistory.timestamp.desc())
+    history_query = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
     return render_template('inventory/view.html',
