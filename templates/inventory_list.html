@@ -83,10 +83,10 @@
         <div class="col">
           <label class="form-label">Perishable</label>
           <div class="form-check mt-2">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable">
+            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" onchange="this.nextElementSibling.nextElementSibling.style.display = this.checked ? 'block' : 'none'">
             <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
           </div>
-          <div class="mt-2">
+          <div class="mt-2" style="display: none;">
             <label class="form-label">Shelf Life (days)</label>
             <input type="number" name="shelf_life_days" class="form-control" min="1">
           </div>
