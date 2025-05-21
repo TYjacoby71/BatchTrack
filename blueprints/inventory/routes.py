@@ -89,7 +89,10 @@ def add_inventory():
             unit_cost=cost_per_unit,
             note='Initial stock creation',
             created_by=current_user.id if current_user else None,
-            quantity_used=0  # Required field for FIFO tracking
+            quantity_used=0,  # Required field for FIFO tracking
+            is_perishable=is_perishable,
+            shelf_life_days=shelf_life_days,
+            expiration_date=expiration_date
         )
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
