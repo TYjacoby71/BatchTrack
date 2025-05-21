@@ -223,13 +223,19 @@ def edit_inventory(id):
 
     # Handle expiration date if item is perishable
     is_perishable = request.form.get('is_perishable') == 'on'
+    was_perishable = item.is_perishable
     item.is_perishable = is_perishable
+    
     if is_perishable:
         shelf_life_days = int(request.form.get('shelf_life_days', 0))
         item.shelf_life_days = shelf_life_days
         from datetime import datetime, timedelta
         if shelf_life_days > 0:
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+            # If item wasn't perishable before, update existing FIFO entries
+            if not was_perishable:
+                from blueprints.fifo.services import update_fifo_perishable_status
+                update_fifo_perishable_status(item.id, shelf_life_days)
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:

@@ -150,3 +150,18 @@ def reverse_recount(entry_id, user_id):
     db.session.add(reversal)
     db.session.commit()
     return True
+def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
+    """Updates perishable status for all FIFO entries with remaining quantity"""
+    from datetime import datetime, timedelta
+    entries = InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).all()
+    
+    expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
+    for entry in entries:
+        entry.is_perishable = True
+        entry.shelf_life_days = shelf_life_days
+        entry.expiration_date = expiration_date
