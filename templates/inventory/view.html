@@ -40,7 +40,7 @@
               <p><strong>Category:</strong> {{ item.category.name }}</p>
               {% endif %}
               {% if item.is_perishable %}
-              <p><strong>Shelf Life:</strong> {{ ((item.expiration_date - item.created_at.date()).days if item.expiration_date else 0) }} days</p>
+              <p><strong>Shelf Life:</strong> {{ item.shelf_life_days or 0 }} days</p>
               {% endif %}
             </div>
           </div>
