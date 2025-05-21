@@ -83,13 +83,16 @@
         <div class="col">
           <label class="form-label">Perishable</label>
           <div class="form-check mt-2">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" onclick="this.nextElementSibling.nextElementSibling.hidden = !this.checked">
+            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable">
             <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
           </div>
-          <div class="mt-2" hidden>
-            <label class="form-label">Shelf Life (days)</label>
-            <input type="number" name="shelf_life_days" class="form-control" min="1">
-          </div>
+          <details class="mt-2">
+            <summary>Shelf Life</summary>
+            <div class="mt-2">
+              <label class="form-label">Shelf Life (days)</label>
+              <input type="number" name="shelf_life_days" class="form-control" min="1">
+            </div>
+          </details>
         </div>
         <div class="col">
           <label class="form-label">Cost/Unit</label>
