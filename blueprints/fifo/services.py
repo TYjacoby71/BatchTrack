@@ -68,6 +68,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
         # Create separate history entries for each FIFO deduction
         for entry_id, deduct_amount, unit_cost in deductions:
+            source_entry = InventoryHistory.query.get(entry_id)
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
@@ -77,7 +78,10 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 unit_cost=unit_cost,
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
-                quantity_used=deduct_amount
+                quantity_used=deduct_amount,
+                is_perishable=source_entry.is_perishable,
+                shelf_life_days=source_entry.shelf_life_days,
+                expiration_date=source_entry.expiration_date
             )
             db.session.add(history)
 
