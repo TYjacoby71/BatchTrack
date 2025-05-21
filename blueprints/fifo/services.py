@@ -126,30 +126,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     db.session.commit()
     return True
 
-def reverse_recount(entry_id, user_id):
-    """
-    Reverses a recount entry if it hasn't been used
-    """
-    entry = InventoryHistory.query.get(entry_id)
-    
-    if not entry or entry.change_type != 'recount' or entry.remaining_quantity != entry.quantity_change:
-        return False
-        
-    reversal = InventoryHistory(
-        inventory_item_id=entry.inventory_item_id,
-        change_type='recount',
-        quantity_change=-entry.quantity_change,
-        remaining_quantity=0,
-        credited_to_fifo_id=entry.id,
-        note=f'Reversal of recount #{entry.id}',
-        created_by=user_id,
-        quantity_used=abs(entry.quantity_change)
-    )
-    
-    entry.remaining_quantity = 0
-    db.session.add(reversal)
-    db.session.commit()
-    return True
+
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""
     from datetime import datetime, timedelta
