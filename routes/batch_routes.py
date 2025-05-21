@@ -105,22 +105,30 @@ def start_batch():
                     )
                     db.session.add(batch_ingredient)
             else:
-                # Regular inventory deduction
-                if ingredient.quantity < required_converted:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
-                    continue
-                
-                ingredient.quantity -= required_converted
-                db.session.add(ingredient)
-
-                batch_ingredient = BatchIngredient(
-                    batch_id=new_batch.id,
-                    ingredient_id=ingredient.id,
-                    amount_used=required_converted,
-                    unit=ingredient.unit,
-                    cost_per_unit=ingredient.cost_per_unit
+                # Regular inventory deduction using FIFO
+                from blueprints.fifo.services import deduct_fifo
+                success, deductions = deduct_fifo(
+                    ingredient.id,
+                    required_converted,
+                    'batch',
+                    f"Used in batch {label_code}",
+                    batch_id=new_batch.id
                 )
-                db.session.add(batch_ingredient)
+                
+                if not success:
+                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                    continue
+
+                # Create BatchIngredient records for each FIFO deduction
+                for entry_id, deduct_amount, unit_cost in deductions:
+                    batch_ingredient = BatchIngredient(
+                        batch_id=new_batch.id,
+                        ingredient_id=ingredient.id,
+                        amount_used=deduct_amount,
+                        unit=ingredient.unit,
+                        cost_per_unit=unit_cost
+                    )
+                    db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
