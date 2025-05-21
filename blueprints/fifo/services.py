@@ -1,3 +1,4 @@
+
 from models import InventoryHistory, db
 from sqlalchemy import and_, desc
 from datetime import datetime
@@ -19,7 +20,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
     deduction_plan = []
 
     fifo_entries = get_fifo_entries(inventory_item_id)
-
+    
     for entry in fifo_entries:
         if remaining <= 0:
             break
@@ -28,7 +29,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
         remaining -= deduction
 
         deduction_plan.append((entry.id, deduction, entry.unit_cost))
-
+        
     if remaining > 0:
         return False, []
 
@@ -45,30 +46,29 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
-
+    
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
     current_total = sum(entry.remaining_quantity for entry in current_entries)
-
+    
     # Calculate expiration if item is perishable
     expiration_date = None
     if item.is_perishable and item.shelf_life_days:
         expiration_date = datetime.utcnow() + timedelta(days=item.shelf_life_days)
-
+    
     difference = new_quantity - current_total
-
+    
     if difference == 0:
         return True
-
+        
     # Handle reduction in quantity
     if difference < 0:
         success, deductions = deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
         if not success:
             return False
-
+            
         # Create separate history entries for each FIFO deduction
         for entry_id, deduct_amount, unit_cost in deductions:
-            source_entry = InventoryHistory.query.get(entry_id)
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
@@ -78,47 +78,34 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 unit_cost=unit_cost,
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
-                quantity_used=deduct_amount,
-                is_perishable=source_entry.is_perishable,
-                shelf_life_days=source_entry.shelf_life_days,
-                expiration_date=source_entry.expiration_date
+                quantity_used=deduct_amount
             )
             db.session.add(history)
-
+        
     # Handle increase in quantity    
     else:
-        # First, fill existing FIFO entries up to their original quantity
+        # First, fill any remaining capacity in existing FIFO entries
         remaining_to_add = difference
-        sorted_entries = sorted(current_entries, key=lambda x: x.timestamp)
-
-        for entry in sorted_entries:
-            original_quantity = entry.quantity_change
-            if entry.remaining_quantity < original_quantity:
-                can_fill = original_quantity - entry.remaining_quantity
+        for entry in current_entries:
+            if entry.remaining_quantity < entry.quantity_change:
+                can_fill = entry.quantity_change - entry.remaining_quantity
                 fill_amount = min(can_fill, remaining_to_add)
-
                 # Create credited recount entry
                 history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
                     quantity_change=fill_amount,
-                    remaining_quantity=fill_amount,  # This should match the amount we're adding
+                    remaining_quantity=0,
                     fifo_reference_id=entry.id,
                     note=f"Recount credit to FIFO entry #{entry.id}",
                     created_by=user_id,
-                    quantity_used=0,  # Nothing used yet
-                    timestamp=datetime.utcnow(),
-                    is_perishable=item.is_perishable,
-                    shelf_life_days=item.shelf_life_days,
-                    expiration_date=expiration_date
+                    quantity_used=fill_amount,
+                    timestamp=datetime.utcnow()
                 )
                 db.session.add(history)
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
-
-                if remaining_to_add <= 0:
-                    break
-
+                
         # If there's still quantity to add, create new FIFO entry
         if remaining_to_add > 0:
             history = InventoryHistory(
@@ -135,21 +122,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 expiration_date=expiration_date
             )
             db.session.add(history)
-
-    # Verify inventory quantity matches FIFO entries
-    fifo_total = sum(entry.remaining_quantity for entry in 
-        InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
-            )
-        ).all())
-
-    item = InventoryItem.query.get(inventory_item_id)
-    if abs(fifo_total - item.quantity) > 0.001:  # Allow small float rounding differences
-        db.session.rollback()
-        return False
-
+        
     db.session.commit()
     return True
 
@@ -158,10 +131,10 @@ def reverse_recount(entry_id, user_id):
     Reverses a recount entry if it hasn't been used
     """
     entry = InventoryHistory.query.get(entry_id)
-
+    
     if not entry or entry.change_type != 'recount' or entry.remaining_quantity != entry.quantity_change:
         return False
-
+        
     reversal = InventoryHistory(
         inventory_item_id=entry.inventory_item_id,
         change_type='recount',
@@ -172,7 +145,7 @@ def reverse_recount(entry_id, user_id):
         created_by=user_id,
         quantity_used=abs(entry.quantity_change)
     )
-
+    
     entry.remaining_quantity = 0
     db.session.add(reversal)
     db.session.commit()
@@ -186,7 +159,7 @@ def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
             InventoryHistory.remaining_quantity > 0
         )
     ).all()
-
+    
     expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
     for entry in entries:
         entry.is_perishable = True
