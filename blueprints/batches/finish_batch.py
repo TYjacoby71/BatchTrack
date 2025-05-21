@@ -87,52 +87,20 @@ def complete_batch(batch_id):
             ).first()
 
             if ingredient:  # update
-                history = InventoryHistory(
-                    inventory_item_id=ingredient.id,
-                    change_type='batch',
-                    quantity_change=final_quantity,
-                    remaining_quantity=final_quantity,
-                    unit_cost=unit_cost,
-                    note=f'Created from batch #{batch.id}',
-                    created_by=current_user.id,
-                    quantity_used=0,
-                    is_perishable=batch.is_perishable,
-                    shelf_life_days=batch.shelf_life_days,
-                    expiration_date=batch.expiration_date,
-                    used_for_batch_id=batch.id
-                )
-                db.session.add(history)
+                total_qty = ingredient.quantity + final_quantity
+                ingredient.cost_per_unit = ((ingredient.quantity * ingredient.cost_per_unit) + 
+                                            (final_quantity * unit_cost)) / total_qty
                 ingredient.quantity += final_quantity
             else:  # create
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
                     intermediate=True,
-                    quantity=0,  # Start at 0, updated by history
+                    quantity=final_quantity,
                     unit=output_unit,
-                    cost_per_unit=unit_cost,
-                    is_perishable=batch.is_perishable,
-                    shelf_life_days=batch.shelf_life_days
+                    cost_per_unit=unit_cost
                 )
                 db.session.add(ingredient)
-                db.session.flush()  # Get ID
-                
-                history = InventoryHistory(
-                    inventory_item_id=ingredient.id,
-                    change_type='batch',
-                    quantity_change=final_quantity,
-                    remaining_quantity=final_quantity,
-                    unit_cost=unit_cost,
-                    note=f'Initial creation from batch #{batch.id}',
-                    created_by=current_user.id,
-                    quantity_used=0,
-                    is_perishable=batch.is_perishable,
-                    shelf_life_days=batch.shelf_life_days,
-                    expiration_date=batch.expiration_date,
-                    used_for_batch_id=batch.id
-                )
-                db.session.add(history)
-                ingredient.quantity = final_quantity
 
         # Finalize
         batch.status = 'completed'

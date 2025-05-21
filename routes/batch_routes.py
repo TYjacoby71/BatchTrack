@@ -109,7 +109,7 @@ def start_batch():
                 if ingredient.quantity < required_converted:
                     ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
                     continue
-
+                
                 ingredient.quantity -= required_converted
                 db.session.add(ingredient)
 
@@ -243,10 +243,10 @@ def view_batch_in_progress(batch_identifier):
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
-
+        
     # Recipe data comes through the batch relationship
     recipe = batch.recipe  # Use the relationship
-
+    
     # Get units for dropdown
     from datetime import datetime, timedelta
     from utils.unit_utils import get_global_unit_list
@@ -290,19 +290,15 @@ def cancel_batch(batch_id):
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
-        # Handle ingredient restoration using FIFO refund
-        from blueprints.fifo.services import recount_fifo
+        # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
-            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            ingredient = batch_ing.ingredient
             if ingredient:
-                current_qty = ingredient.quantity
-                new_qty = current_qty + batch_ing.amount_used
-                recount_fifo(
-                    ingredient.id,
-                    new_qty,
-                    f"Refund from cancelled batch #{batch.id}",
-                    current_user.id if current_user else None
-                )
+                if batch_ing.unit == ingredient.unit:
+                    ingredient.quantity += batch_ing.amount_used
+                else:
+                    ingredient.quantity += batch_ing.amount_used  # You may still want unit conversion logic here
+                db.session.add(ingredient)
 
         # Credit extra ingredients back to inventory
         for extra_ing in extra_ingredients:

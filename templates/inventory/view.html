@@ -71,7 +71,11 @@
                   <label>Quantity Change</label>
                   <div class="input-group">
                     <input type="number" class="form-control" name="quantity" step="0.01" required>
-                    <input type="hidden" name="input_unit" value="{{ item.unit }}">
+                    <select class="form-control" name="input_unit" required>
+                      {% for unit in get_global_unit_list() %}
+                        <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
+                      {% endfor %}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -261,31 +265,18 @@
             </select>
           </div>
 
-          <div class="mb-3" x-data="{ 
-  showShelfLife: {{ 'true' if item.is_perishable else 'false' }},
-  updateExpirationDate() {
-    if (this.showShelfLife) {
-      const days = document.getElementById('shelf_life_days').value;
-      if (days) {
-        const date = new Date();
-        date.setDate(date.getDate() + parseInt(days));
-        document.getElementById('expiration_date').value = date.toISOString().split('T')[0];
-      }
-    }
-  }
-}">
+          <div class="mb-3" x-data="{ showShelfLife: {{ 'true' if item.is_perishable else 'false' }} }">
             <label for="is_perishable">Perishable:</label>
             <div class="form-check">
               <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" 
                      x-model="showShelfLife" {% if item.is_perishable %}checked{% endif %}>
               <label class="form-check-label" for="is_perishable">Is Perishable</label>
-                        </div>
+            </div>
             <div x-show="showShelfLife" class="mt-2">
               <label for="shelf_life_days">Shelf Life (days)</label>
               <input type="number" class="form-control" id="shelf_life_days" name="shelf_life_days" 
                      min="1" :required="showShelfLife"
-                     value="{{ item.shelf_life_days or '' }}"
-                     @input="updateExpirationDate">
+                     value="{{ item.shelf_life_days or '' }}">
             </div>
           </div>
 
