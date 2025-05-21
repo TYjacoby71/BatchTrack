@@ -57,7 +57,7 @@ def add_inventory():
     low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
     is_perishable = request.form.get('is_perishable') == 'on'
     expiration_date = None
-    
+
     shelf_life_days = None
     if is_perishable:
         shelf_life_days = int(request.form.get('shelf_life_days', 0))
@@ -138,6 +138,12 @@ def adjust_inventory(id):
     # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
     remaining = qty_change if qty_change > 0 else 0
 
+    # Set expiration date for restock history entry
+    expiration_date = None
+    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+        from datetime import datetime, timedelta
+        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+
     if qty_change < 0:
         success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
         if not success:
@@ -168,7 +174,8 @@ def adjust_inventory(id):
             unit_cost=cost_per_unit,
             note=notes,
             quantity_used=0,
-            created_by=current_user.id
+            created_by=current_user.id,
+            expiration_date=expiration_date
         )
         db.session.add(history)
         item.quantity += qty_change
@@ -209,11 +216,11 @@ def update_inventory():
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
-    
+
     # Handle expiration date if item is perishable
     is_perishable = request.form.get('is_perishable') == 'on'
     item.is_perishable = is_perishable
