@@ -63,8 +63,8 @@ class TestBatchInventory(unittest.TestCase):
         adjust_inventory_deltas(batch.id, new_ingredients, [])
 
         sugar = InventoryItem.query.get(1)
-        result = ConversionEngine.convert_units(0.5, 'lb', 'gram', ingredient_id=1)
-        assert round(sugar.quantity, 2) == round(1000.0 - result['converted_value'], 2)
+        conversion_result = ConversionEngine.convert_units(0.5, 'lb', 'gram', ingredient_id=1)
+        assert round(sugar.quantity, 2) == round(1000.0 - conversion_result['converted_value'], 2)
 
     @patch('flask_login.current_user')
     def test_cancel_batch_restores_inventory(self, mock_current_user):
