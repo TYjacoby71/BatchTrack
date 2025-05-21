@@ -166,6 +166,9 @@
                 <th>Total Cost</th>
                 <th>Used For</th>
                 <th>Credited/Debited To</th>
+                <th>FIFO ID</th>
+                <th>Exp Date</th>
+                <th>Quantity Used</th>
                 <th>Created By</th>
               </tr>
             </thead>
@@ -186,6 +189,9 @@
                     -
                   {% endif %}
                 </td>
+                <td>{{ entry.id }}</td>
+                <td>{{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}</td>
+                <td>{{ entry.quantity_used if entry.quantity_used is not none else '-' }}</td>
                 <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
