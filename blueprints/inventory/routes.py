@@ -58,11 +58,12 @@ def add_inventory():
     is_perishable = request.form.get('is_perishable') == 'on'
     expiration_date = None
     
+    shelf_life_days = None
     if is_perishable:
-        shelf_life = int(request.form.get('shelf_life_days', 0))
-        if shelf_life > 0:
+        shelf_life_days = int(request.form.get('shelf_life_days', 0))
+        if shelf_life_days > 0:
             from datetime import datetime, timedelta
-            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life)
+            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
     item = InventoryItem(
         name=name,
@@ -72,6 +73,7 @@ def add_inventory():
         cost_per_unit=cost_per_unit,
         low_stock_threshold=low_stock_threshold,
         is_perishable=is_perishable,
+        shelf_life_days=shelf_life_days,
         expiration_date=expiration_date
     )
     db.session.add(item)
