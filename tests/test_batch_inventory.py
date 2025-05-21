@@ -42,8 +42,10 @@ class TestBatchInventory(unittest.TestCase):
             db.session.add(batch)
             db.session.commit()
 
-            # Add lb unit first
+            # Add required units
+            gram_unit = Unit(name='gram', type='weight', base_unit='gram', multiplier_to_base=1.0)
             lb_unit = Unit(name='lb', type='weight', base_unit='gram', multiplier_to_base=453.592)
+            db.session.add(gram_unit)
             db.session.add(lb_unit)
             db.session.commit()
 
