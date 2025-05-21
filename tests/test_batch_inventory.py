@@ -1,4 +1,3 @@
-
 import pytest
 from unittest.mock import patch
 from app import app, db
@@ -13,12 +12,12 @@ class TestBatchInventory(unittest.TestCase):
     def setUpClass(cls):
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        
+
     def setUp(self):
         self.ctx = app.test_request_context()
         self.ctx.push()
         db.create_all()
-        
+
         # Set up test data
         category = IngredientCategory(name="Test Powder", default_density=0.8)
         db.session.add(category)
@@ -50,27 +49,28 @@ class TestBatchInventory(unittest.TestCase):
     def test_adjust_inventory_with_conversion(self, mock_current_user):
         mock_current_user.is_authenticated = False
         mock_current_user.id = None
-        
+
         batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
         db.session.add(batch)
         db.session.commit()
 
+        # Simulate a user entering 0.5 lb of sugar (inventory is in grams)
         new_ingredients = [{
-            'id': 1,
+            'id': 1,               # sugar
             'amount': 0.5,
             'unit': 'lb'
         }]
         adjust_inventory_deltas(batch.id, new_ingredients, [])
 
         sugar = InventoryItem.query.get(1)
-        result = ConversionEngine.convert_units(0.5, 'lb', 'gram')
+        result = ConversionEngine.convert_units(0.5, 'lb', 'gram', ingredient_id=1)
         assert round(sugar.quantity, 2) == round(1000.0 - result['converted_value'], 2)
 
     @patch('flask_login.current_user')
     def test_cancel_batch_restores_inventory(self, mock_current_user):
         mock_current_user.is_authenticated = False
         mock_current_user.id = None
-        
+
         batch = Batch(id=1, recipe_id=1, batch_type='ingredient', status='in_progress', started_at=datetime.utcnow())
         db.session.add(batch)
         db.session.commit()
