@@ -177,9 +177,11 @@ function saveExtraContainers() {
 function saveExtras() {
   const rows = document.querySelectorAll(".extra-row");
   const extras = Array.from(rows).map(row => ({
-    ingredient_id: parseInt(row.querySelector(".ingredient-select").value),
+    ingredient_id: row.querySelector(".ingredient-select").value,
     quantity: parseFloat(row.querySelector(".qty").value) || 0,
-    unit: row.querySelector(".unit").value
+    unit: row.querySelector(".unit").value,
+    cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
+    ingredient_name: row.querySelector(".ingredient-select option:checked").text
   }));
 
   const batchId = window.location.pathname.split('/').pop();
