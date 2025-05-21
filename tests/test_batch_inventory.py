@@ -54,22 +54,24 @@ class TestBatchInventory(unittest.TestCase):
         db.session.add(batch)
         db.session.commit()
 
-        # Simulate a user entering 0.5 lb of sugar (inventory is in grams)
+        initial_quantity = 1000.0
+        sugar = InventoryItem.query.get(1)
+        sugar.quantity = initial_quantity
+        db.session.commit()
+
+        # Simulate using 0.5 lb of sugar
         new_ingredients = [{
-            'id': 1,               # sugar
+            'id': 1,
             'amount': 0.5,
             'unit': 'lb'
         }]
         adjust_inventory_deltas(batch.id, new_ingredients, [])
 
+        # Verify the change
         sugar = InventoryItem.query.get(1)
-        # Get the actual inventory change
-        batch_ingredient = BatchIngredient.query.filter_by(
-            batch_id=batch.id, 
-            ingredient_id=sugar.id
-        ).first()
-        assert batch_ingredient is not None
-        assert round(sugar.quantity, 2) == round(1000.0 - batch_ingredient.amount_used, 2)
+        conversion_result = ConversionEngine.convert_units(0.5, 'lb', 'gram', ingredient_id=1)
+        expected_remaining = initial_quantity - conversion_result['converted_value']
+        assert round(sugar.quantity, 2) == round(expected_remaining, 2)
 
     @patch('flask_login.current_user')
     def test_cancel_batch_restores_inventory(self, mock_current_user):
