@@ -9,10 +9,16 @@ import unittest
 class TestBatchInventory(unittest.TestCase):
     def setUp(self):
         with app.app_context():
+            db.drop_all()
             db.create_all()
+            
+            # Clear any existing categories
+            IngredientCategory.query.delete()
+            db.session.commit()
 
-            category = IngredientCategory(name="Powder", default_density=0.8)
+            category = IngredientCategory(name="Test Powder", default_density=0.8)
             db.session.add(category)
+            db.session.flush()
 
             sugar = InventoryItem(
                 id=1,
@@ -23,8 +29,6 @@ class TestBatchInventory(unittest.TestCase):
                 type="ingredient"
             )
             db.session.add(sugar)
-
-            # Units already seeded (e.g., gram, lb)
             db.session.commit()
 
     def tearDown(self):
