@@ -42,10 +42,19 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
 
 def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
-    Handles recounts with proper FIFO integrity
+    Handles recounts with proper FIFO integrity and expiration tracking
     """
+    from models import InventoryItem
+    from datetime import datetime, timedelta
+    
+    item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
     current_total = sum(entry.remaining_quantity for entry in current_entries)
+    
+    # Calculate expiration if item is perishable
+    expiration_date = None
+    if item.is_perishable and item.shelf_life_days:
+        expiration_date = datetime.utcnow() + timedelta(days=item.shelf_life_days)
     
     difference = new_quantity - current_total
     
@@ -107,7 +116,10 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"Recount yielded {remaining_to_add} more than could be filled in existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.utcnow(),
+                is_perishable=item.is_perishable,
+                shelf_life_days=item.shelf_life_days,
+                expiration_date=expiration_date
             )
             db.session.add(history)
         
