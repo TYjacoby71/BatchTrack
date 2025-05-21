@@ -39,6 +39,9 @@
               {% if item.category %}
               <p><strong>Category:</strong> {{ item.category.name }}</p>
               {% endif %}
+              {% if item.is_perishable %}
+              <p><strong>Shelf Life:</strong> {{ ((item.expiration_date - item.created_at.date()).days if item.expiration_date else 0) }} days</p>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -252,11 +255,18 @@
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" x-data="{ showShelfLife: {{ 'true' if item.is_perishable else 'false' }} }">
             <label for="is_perishable">Perishable:</label>
             <div class="form-check">
-              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" {% if item.is_perishable %}checked{% endif %}>
+              <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" 
+                     x-model="showShelfLife" {% if item.is_perishable %}checked{% endif %}>
               <label class="form-check-label" for="is_perishable">Is Perishable</label>
+            </div>
+            <div x-show="showShelfLife" class="mt-2">
+              <label for="shelf_life_days">Shelf Life (days)</label>
+              <input type="number" class="form-control" id="shelf_life_days" name="shelf_life_days" 
+                     min="1" :required="showShelfLife"
+                     value="{{ (item.expiration_date - item.created_at.date()).days if item.expiration_date else '' }}">
             </div>
           </div>
 
