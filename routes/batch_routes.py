@@ -4,6 +4,7 @@ from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, Produ
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
+from blueprints.fifo.services import deduct_fifo
 import uuid, os
 from werkzeug.utils import secure_filename
 from services.unit_conversion import ConversionEngine
