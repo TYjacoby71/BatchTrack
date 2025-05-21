@@ -82,9 +82,9 @@
         </div>
         <div class="col">
           <div x-data="{ showShelfLife: false }">
+            <h5 class="mb-2">Perishable</h5>
             <div class="form-check mb-2">
               <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="showShelfLife">
-              <label class="form-check-label fs-5" for="addIngredientPerishable">Perishable</label>
             </div>
             <div x-show="showShelfLife" x-transition>
               <input type="number" name="shelf_life_days" class="form-control" placeholder="Shelf Life (days)" min="1" :required="showShelfLife">
