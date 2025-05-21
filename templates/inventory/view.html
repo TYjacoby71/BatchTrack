@@ -40,7 +40,7 @@
               <p><strong>Category:</strong> {{ item.category.name }}</p>
               {% endif %}
               {% if item.is_perishable %}
-              <p><strong>Shelf Life:</strong> {{ ((item.expiration_date - item.created_at.date()).days if item.expiration_date else 0) }} days</p>
+              <p><strong>Shelf Life:</strong> {{ item.shelf_life_days or 0 }} days</p>
               {% endif %}
             </div>
           </div>
@@ -166,6 +166,9 @@
                 <th>Total Cost</th>
                 <th>Used For</th>
                 <th>Credited/Debited To</th>
+                <th>FIFO ID</th>
+                <th>Exp Date</th>
+                <th>Quantity Used</th>
                 <th>Created By</th>
               </tr>
             </thead>
@@ -186,6 +189,13 @@
                     -
                   {% endif %}
                 </td>
+                <td>{{ entry.id }}</td>
+                <td {% if entry.is_perishable and entry.expiration_date %}
+                    class="{% if entry.remaining_quantity > 0 and entry.expiration_date < now.date() %}bg-warning{% endif %}"
+                    {% endif %}>
+                    {{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}
+                </td>
+                <td>{{ entry.quantity_used if entry.quantity_used is not none else '-' }}</td>
                 <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
@@ -266,7 +276,7 @@
               <label for="shelf_life_days">Shelf Life (days)</label>
               <input type="number" class="form-control" id="shelf_life_days" name="shelf_life_days" 
                      min="1" :required="showShelfLife"
-                     value="{{ (item.expiration_date - item.created_at.date()).days if item.expiration_date else '' }}">
+                     value="{{ item.shelf_life_days or '' }}">
             </div>
           </div>
 

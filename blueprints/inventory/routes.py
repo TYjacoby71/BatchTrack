@@ -35,6 +35,7 @@ def view_inventory(id):
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    from datetime import datetime
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
@@ -44,7 +45,8 @@ def view_inventory(id):
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
-                         InventoryHistory=InventoryHistory)
+                         InventoryHistory=InventoryHistory,
+                         now=datetime.utcnow())
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -57,7 +59,7 @@ def add_inventory():
     low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
     is_perishable = request.form.get('is_perishable') == 'on'
     expiration_date = None
-    
+
     shelf_life_days = None
     if is_perishable:
         shelf_life_days = int(request.form.get('shelf_life_days', 0))
@@ -89,7 +91,10 @@ def add_inventory():
             unit_cost=cost_per_unit,
             note='Initial stock creation',
             created_by=current_user.id if current_user else None,
-            quantity_used=0  # Required field for FIFO tracking
+            quantity_used=0,  # Required field for FIFO tracking
+            is_perishable=is_perishable,
+            shelf_life_days=shelf_life_days,
+            expiration_date=expiration_date
         )
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
@@ -135,6 +140,12 @@ def adjust_inventory(id):
     # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
     remaining = qty_change if qty_change > 0 else 0
 
+    # Set expiration date for restock history entry
+    expiration_date = None
+    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+        from datetime import datetime, timedelta
+        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+
     if qty_change < 0:
         success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
         if not success:
@@ -165,7 +176,8 @@ def adjust_inventory(id):
             unit_cost=cost_per_unit,
             note=notes,
             quantity_used=0,
-            created_by=current_user.id
+            created_by=current_user.id,
+            expiration_date=expiration_date
         )
         db.session.add(history)
         item.quantity += qty_change
@@ -206,10 +218,26 @@ def update_inventory():
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
+
+    # Handle expiration date if item is perishable
+    is_perishable = request.form.get('is_perishable') == 'on'
+    was_perishable = item.is_perishable
+    item.is_perishable = is_perishable
+
+    if is_perishable:
+        shelf_life_days = int(request.form.get('shelf_life_days', 0))
+        item.shelf_life_days = shelf_life_days
+        from datetime import datetime, timedelta
+        if shelf_life_days > 0:
+            item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+            # If item wasn't perishable before, update existing FIFO entries
+            if not was_perishable:
+                from blueprints.fifo.services import update_fifo_perishable_status
+                update_fifo_perishable_status(item.id, shelf_life_days)
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
