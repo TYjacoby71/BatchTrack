@@ -309,23 +309,6 @@ def cancel_batch(batch_id):
             if ingredient:
                 current_qty = ingredient.quantity
                 new_qty = current_qty + batch_ing.amount_used
-                
-                # Create refund history entry
-                history = InventoryHistory(
-                    inventory_item_id=ingredient.id,
-                    change_type='refunded',
-                    quantity_change=batch_ing.amount_used,
-                    remaining_quantity=batch_ing.amount_used,
-                    unit_cost=batch_ing.cost_per_unit,
-                    note=f"Refund from cancelled batch #{batch.id}",
-                    created_by=current_user.id if current_user else None,
-                    is_perishable=ingredient.is_perishable,
-                    shelf_life_days=ingredient.shelf_life_days,
-                    used_for_batch_id=batch.id
-                )
-                db.session.add(history)
-                
-                # Update FIFO tracking
                 recount_fifo(
                     ingredient.id,
                     new_qty,
