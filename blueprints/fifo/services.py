@@ -1,4 +1,3 @@
-
 from models import InventoryHistory, db
 from sqlalchemy import and_, desc
 from datetime import datetime
@@ -20,7 +19,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
     deduction_plan = []
 
     fifo_entries = get_fifo_entries(inventory_item_id)
-    
+
     for entry in fifo_entries:
         if remaining <= 0:
             break
@@ -29,7 +28,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes):
         remaining -= deduction
 
         deduction_plan.append((entry.id, deduction, entry.unit_cost))
-        
+
     if remaining > 0:
         return False, []
 
@@ -46,27 +45,22 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
-    
+
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
     current_total = sum(entry.remaining_quantity for entry in current_entries)
-    
-    # Calculate expiration if item is perishable
-    expiration_date = None
-    if item.is_perishable and item.shelf_life_days:
-        expiration_date = datetime.utcnow() + timedelta(days=item.shelf_life_days)
-    
+
     difference = new_quantity - current_total
-    
+
     if difference == 0:
         return True
-        
+
     # Handle reduction in quantity
     if difference < 0:
         success, deductions = deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
         if not success:
             return False
-            
+
         # Create separate history entries for each FIFO deduction
         for entry_id, deduct_amount, unit_cost in deductions:
             history = InventoryHistory(
@@ -81,7 +75,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 quantity_used=deduct_amount
             )
             db.session.add(history)
-        
+
     # Handle increase in quantity    
     else:
         # First, fill any remaining capacity in existing FIFO entries
@@ -105,7 +99,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 db.session.add(history)
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
-                
+
         # If there's still quantity to add, create new FIFO entry
         if remaining_to_add > 0:
             history = InventoryHistory(
@@ -117,12 +111,9 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 created_by=user_id,
                 quantity_used=0,
                 timestamp=datetime.utcnow(),
-                is_perishable=item.is_perishable,
-                shelf_life_days=item.shelf_life_days,
-                expiration_date=expiration_date
             )
             db.session.add(history)
-        
+
     db.session.commit()
     return True
 
@@ -136,7 +127,7 @@ def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
             InventoryHistory.remaining_quantity > 0
         )
     ).all()
-    
+
     expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
     for entry in entries:
         entry.is_perishable = True
