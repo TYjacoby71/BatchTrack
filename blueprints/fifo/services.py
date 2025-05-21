@@ -65,8 +65,9 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
         )
         db.session.add(history)
 
-    # Update main inventory quantity
-    inventory_item.quantity -= total_deducted
+    # Verify FIFO matches inventory
+    total_remaining = sum(entry.remaining_quantity for entry in get_fifo_entries(inventory_item_id))
+    inventory_item.quantity = total_remaining
     db.session.add(inventory_item)
 
     return True, deduction_plan
