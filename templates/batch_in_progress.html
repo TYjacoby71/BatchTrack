@@ -1,22 +1,5 @@
 {% extends 'layout.html' %}
 {% block content %}
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('batchForm', () => ({
-        showShelfLife: false,
-        expirationDate: null,
-        shelfLifeDays: null,
-        
-        updateExpirationDate() {
-            if (this.shelfLifeDays) {
-                const date = new Date();
-                date.setDate(date.getDate() + parseInt(this.shelfLifeDays));
-                this.expirationDate = date.toISOString().split('T')[0];
-            }
-        }
-    }));
-});
-</script>
 <h2>Batch In Progress</h2>
 
 <div class="batch-details">
