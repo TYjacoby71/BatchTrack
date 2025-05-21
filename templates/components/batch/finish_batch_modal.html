@@ -59,7 +59,19 @@
             </div>
           </div>
 
-          <div id="shelfLifeField" class="form-group mb-3" style="display: none;">
+          <script>
+function updateExpirationDate() {
+  const days = document.getElementById('shelf_life_days').value;
+  if (days) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+    const formattedDate = expirationDate.toISOString().split('T')[0];
+    document.getElementById('expiration_date_display').value = formattedDate;
+    document.getElementById('expiration_date').value = formattedDate;
+  }
+}
+</script>
+<div id="shelfLifeField" class="form-group mb-3" style="display: none;">
             <label for="shelf_life_days">Shelf Life (days)</label>
             <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" onchange="updateExpirationDate()">
             <div class="mt-2">
