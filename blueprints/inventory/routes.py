@@ -55,8 +55,14 @@ def add_inventory():
     item_type = request.form.get('type', 'ingredient')
     cost_per_unit = float(request.form.get('cost_per_unit', 0))
     low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-    is_perishable = request.form.get('is_perishable', 'false') == 'true'
-    shelf_life_days = int(request.form.get('shelf_life_days', 0)) if is_perishable else None
+    is_perishable = request.form.get('is_perishable') == 'on'
+    expiration_date = None
+    
+    if is_perishable:
+        shelf_life = int(request.form.get('shelf_life_days', 0))
+        if shelf_life > 0:
+            from datetime import datetime, timedelta
+            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life)
 
     item = InventoryItem(
         name=name,
@@ -66,7 +72,7 @@ def add_inventory():
         cost_per_unit=cost_per_unit,
         low_stock_threshold=low_stock_threshold,
         is_perishable=is_perishable,
-        shelf_life_days=shelf_life_days
+        expiration_date=expiration_date
     )
     db.session.add(item)
     db.session.flush()  # Get the ID without committing
