@@ -82,13 +82,15 @@
         </div>
         <div class="col">
           <label class="form-label">Perishable</label>
-          <div class="form-check mt-2">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-on:change="showShelfLife = $event.target.checked">
-            <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
-          </div>
-          <div class="mt-2" x-show="showShelfLife">
-            <label class="form-label">Shelf Life (days)</label>
-            <input type="number" name="shelf_life_days" class="form-control" min="1" :required="showShelfLife">
+          <div class="d-flex align-items-center gap-3">
+            <div class="form-check">
+              <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-on:change="showShelfLife = $event.target.checked">
+              <label class="form-check-label" for="addIngredientPerishable">Is Perishable</label>
+            </div>
+            <div x-show="showShelfLife">
+              <label class="form-label mb-0">Shelf Life (days)</label>
+              <input type="number" name="shelf_life_days" class="form-control form-control-sm" min="1" :required="showShelfLife">
+            </div>
           </div>
         </div>
         <div class="col">
