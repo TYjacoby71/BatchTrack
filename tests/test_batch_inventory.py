@@ -1,4 +1,4 @@
-
+# Correcting the import path to resolve the import error.
 import pytest
 from app import app, db
 from models import InventoryItem, IngredientCategory, Unit, Batch, BatchIngredient
@@ -49,7 +49,7 @@ def test_cancel_batch_restores_containers(setup_inventory):
         # Set up a container in inventory
         container_category = IngredientCategory(name="Container", default_density=1.0)
         db.session.add(container_category)
-        
+
         jar = InventoryItem(
             id=2,
             name="Glass Jar",
@@ -115,7 +115,7 @@ def test_cancel_batch_restores_inventory(setup_inventory):
             'unit': 'lb'
         }]
         adjust_inventory_deltas(batch.id, new_ingredients, [])
-        
+
         # Then simulate cancelling by reversing the delta
         reversed_ingredients = [{
             'id': 1,
