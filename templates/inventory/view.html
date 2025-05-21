@@ -266,12 +266,7 @@
               <label for="shelf_life_days">Shelf Life (days)</label>
               <input type="number" class="form-control" id="shelf_life_days" name="shelf_life_days" 
                      min="1" :required="showShelfLife"
-                     value="{{ item.shelf_life_days or '' }}"
-                     @input="updateExpirationDate">
-              <div class="mt-2">
-                <label for="expiration_date_display">Expiration Date</label>
-                <input type="date" id="expiration_date_display" class="form-control" readonly>
-              </div>
+                     value="{{ item.shelf_life_days or '' }}">
             </div>
           </div>
 
