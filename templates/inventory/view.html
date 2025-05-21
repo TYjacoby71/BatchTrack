@@ -71,11 +71,7 @@
                   <label>Quantity Change</label>
                   <div class="input-group">
                     <input type="number" class="form-control" name="quantity" step="0.01" required>
-                    <select class="form-control" name="input_unit" required>
-                      {% for unit in get_global_unit_list() %}
-                        <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
-                      {% endfor %}
-                    </select>
+                    <input type="hidden" name="input_unit" value="{{ item.unit }}">
                   </div>
                 </div>
               </div>
