@@ -42,6 +42,11 @@ class TestBatchInventory(unittest.TestCase):
             db.session.add(batch)
             db.session.commit()
 
+            # Add lb unit first
+            lb_unit = Unit(name='lb', type='weight', base_unit='gram', multiplier_to_base=453.592)
+            db.session.add(lb_unit)
+            db.session.commit()
+
             # Simulate a user entering 0.5 lb of sugar (inventory is in grams)
             new_ingredients = [{
                 'id': 1,               # sugar
@@ -51,8 +56,8 @@ class TestBatchInventory(unittest.TestCase):
             adjust_inventory_deltas(batch.id, new_ingredients, [])
 
             sugar = InventoryItem.query.get(1)
-            converted = ConversionEngine.convert_units(0.5, 'lb', 'gram')
-            assert round(sugar.quantity, 2) == round(1000.0 - converted, 2)
+            result = ConversionEngine.convert_units(0.5, 'lb', 'gram')
+            assert round(sugar.quantity, 2) == round(1000.0 - result['converted_value'], 2)
 
 
     def test_cancel_batch_restores_containers(self):
