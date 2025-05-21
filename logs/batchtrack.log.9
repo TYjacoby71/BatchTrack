@@ -1,4 +1,4 @@
-2025-05-20 22:49:47,441 ERROR: Exception on /inventory/view/21 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-20 22:50:05,726 ERROR: Exception on /inventory/view/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -76,5 +76,5 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inve
 FROM inventory_history 
 WHERE inventory_history.inventory_item_id = ? ORDER BY inventory_history.timestamp DESC
  LIMIT ? OFFSET ?]
-[parameters: (21, 5, 0)]
+[parameters: (1, 5, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
