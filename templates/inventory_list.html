@@ -64,15 +64,15 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="ingredient">
       <div class="row g-3 align-items-end">
-        <div class="col">
+        <div class="col-md-3">
           <label class="form-label">Name</label>
           <input type="text" name="name" class="form-control" required>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Quantity</label>
           <input type="number" step="0.01" name="quantity" class="form-control" required>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Unit</label>
           <select name="unit" class="form-select" required>
             {% for unit in units %}
@@ -80,22 +80,27 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col">
+        <div class="col-md-3">
           <div x-data="{ showShelfLife: false }">
             <h5 class="mb-2">Perishable</h5>
-            <div class="form-check mb-2">
-              <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="showShelfLife">
-            </div>
-            <div x-show="showShelfLife" x-transition>
-              <input type="number" name="shelf_life_days" class="form-control" placeholder="Shelf Life (days)" min="1" :required="showShelfLife">
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="showShelfLife">
+              </div>
+              <div x-show="showShelfLife" x-transition class="flex-grow-1">
+                <input type="number" name="shelf_life_days" class="form-control form-control-sm" placeholder="Days" min="1" :required="showShelfLife">
+              </div>
             </div>
           </div>
         </div>
-        <div class="col">
+        <div class="col-md-2">
           <label class="form-label">Cost/Unit</label>
-          <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          </div>
         </div>
-        <div class="col">
+        <div class="col-auto">
           <button type="submit" class="btn btn-success">Save</button>
           <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
         </div>
