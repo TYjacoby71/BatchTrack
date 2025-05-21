@@ -247,6 +247,7 @@ class InventoryItem(db.Model):
     storage_amount = db.Column(db.Float, default=0.0)  # How much this container holds
     storage_unit = db.Column(db.String(50), default="")  # e.g., oz, ml, count
     density = db.Column(db.Float, nullable=True)  # Per-item density override
+    shelf_life_days = db.Column(db.Integer, nullable=True)  # Track shelf life duration
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 
