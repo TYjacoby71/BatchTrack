@@ -23,7 +23,10 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 recipe_unit,
                 ingredient_id=ingredient.id
             )
-            available_converted = conversion_result['converted_value'] if isinstance(conversion_result, dict) else conversion_result
+            if isinstance(conversion_result, dict):
+                available_converted = conversion_result['converted_value']
+            else:
+                raise ValueError(f"Unexpected conversion result format for {ingredient.name}")
 
             # Determine status
             if available_converted >= needed_amount:
