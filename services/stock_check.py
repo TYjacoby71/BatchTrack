@@ -18,13 +18,6 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         density = ingredient.category.default_density if ingredient.category else 1.0
 
         try:
-            # Get density if needed for the conversion
-            density = None
-            if ingredient.density:
-                density = ingredient.density
-            elif ingredient.category and ingredient.category.default_density:
-                density = ingredient.category.default_density
-
             # Convert available stock to recipe unit using UUCS
             conversion_result = ConversionEngine.convert_units(
                 available,
