@@ -4,7 +4,14 @@
 {% block content %}
 <style>
   input[name="csrf_token"],
-  input[type="hidden"][name="csrf_token"] {
+  input[type="hidden"][name="csrf_token"],
+  .csrf-token,
+  .confirm-token,
+  [name="csrf_token"],
+  [name="confirm_token"],
+  form > .csrf_token,
+  form > .confirm-token,
+  .token-field {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
