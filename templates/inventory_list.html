@@ -14,30 +14,41 @@
     <!-- Multi-Adjust Inventory Form -->
     <form id="updateInventoryForm" style="display: none;" 
       x-data="{ 
-        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock'}],
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
         submitForm(e) {
           e.preventDefault();
           const promises = this.rows.map(row => {
             if (!row.id || !row.quantity) return null;
-            
+
             const formData = new FormData();
             formData.append('quantity', row.quantity);
             formData.append('input_unit', row.unit);
             formData.append('change_type', row.change_type);
+            formData.append('cost_entry_type', row.cost_entry_type);
+            formData.append('cost', row.cost);
             formData.append('csrf_token', '{{ csrf_token() }}');
-            
+
             return fetch('/inventory/adjust/' + row.id, {
               method: 'POST',
               body: formData
             });
           });
-          
+
           Promise.all(promises)
             .then(() => window.location.reload())
             .catch(err => alert('Error updating inventory'));
         },
         resetRows() {
-          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock'}];
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+        },
+        updateCostHelp(event, index) {
+          if (this.rows[index].cost_entry_type === 'per_unit') {
+            this.rows[index].costHelp = 'Enter the cost per unit.';
+          } else if (this.rows[index].cost_entry_type === 'total') {
+            this.rows[index].costHelp = 'Enter the total cost.';
+          } else {
+            this.rows[index].costHelp = '';
+          }
         }
       }">
 
@@ -68,6 +79,19 @@
             <label class="form-label">Type</label>
             <input type="text" x-model="row.change_type" class="form-control" value="restock" readonly required>
           </div>
+          <div class="col">
+            <label class="form-label">Cost Entry Type</label>
+            <select x-model="row.cost_entry_type" class="form-select" @change="updateCostHelp($event, index)">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
+            </select>
+            <div class="form-group mt-2">
+              <label>Cost</label>
+              <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+              <small class="form-text text-muted" x-text="row.costHelp"></small>
+            </div>
+          </div>
           <div class="col-auto d-flex align-items-end">
             <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
               <i class="fas fa-trash"></i>
@@ -77,7 +101,7 @@
       </template>
 
       <div class="mt-3">
-        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock'})">Add Another Item</button>
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
         <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
         <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
       </div>
