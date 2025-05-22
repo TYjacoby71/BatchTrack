@@ -5,6 +5,7 @@ from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
 from blueprints.fifo.services import deduct_fifo
+from blueprints.fifo.services import deduct_fifo
 from services.unit_conversion import ConversionEngine
 import uuid, os
 from werkzeug.utils import secure_filename
