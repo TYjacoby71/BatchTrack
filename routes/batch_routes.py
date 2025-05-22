@@ -408,6 +408,19 @@ def add_extra_to_batch(batch_id):
             total_cost = sum(qty * cost for _, qty, cost in deductions)
             avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
             
+            # Create history entry for container usage
+            history = InventoryHistory(
+                inventory_item_id=container_item.id,
+                change_type='batch',
+                quantity_change=-needed_amount,  # Negative for usage
+                remaining_quantity=container_item.quantity - needed_amount,
+                unit_cost=avg_cost,
+                note=f"Extra container for batch {batch.label_code}",
+                used_for_batch_id=batch.id,
+                quantity_used=needed_amount
+            )
+            db.session.add(history)
+            
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=container_item.id,
