@@ -151,10 +151,15 @@ function saveExtras() {
     }
   });
 
-  const extras = {
-    ingredients: ingredients,
-    containers: containers
-  };
+  const extras = [];
+  
+  ingredients.forEach(ing => {
+    extras.push(ing);
+  });
+  
+  containers.forEach(cont => {
+    extras.push(cont);
+  });
 
   const batchId = window.location.pathname.split('/').pop();
   fetch(`/batches/add-extra/${batchId}`, {
