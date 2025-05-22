@@ -102,8 +102,8 @@ function updateRowCost(selectElement) {
   }
 }
 
-function addExtraIngredientRow() {
-  const template = document.getElementById('extra-ingredient-template');
+function addExtraItemRow(type) {
+  const template = document.getElementById(`extra-${type}-template`);
   const clone = template.content.cloneNode(true);
   document.getElementById('extra-ingredients-container').appendChild(clone);
 
@@ -113,79 +113,33 @@ function addExtraIngredientRow() {
     dropdownAutoWidth: true
   });
 
-  const select = newRow.querySelector('.ingredient-select');
+  const select = newRow.querySelector('.item-select');
   if (select) {
     updateRowCost(select);
   }
 }
 
-function addExtraContainerRow() {
-  const template = document.getElementById('extra-container-template');
-  const clone = template.content.cloneNode(true);
-  document.getElementById('extra-containers-container').appendChild(clone);
-
-  const newRow = document.getElementById('extra-containers-container').lastElementChild;
-  $(newRow).find('.select2-input').select2({
-    width: 'resolve',
-    dropdownAutoWidth: true
-  });
-}
-
-function saveExtraContainers() {
-  const rows = document.querySelectorAll(".extra-container-row");
-  const extras = Array.from(rows).map(row => ({
-    container_id: parseInt(row.querySelector(".container-select").value),
-    quantity: parseInt(row.querySelector(".qty").value) || 0,
-    cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-    container_name: row.querySelector(".container-select option:checked").text
-  }));
-
-  const batchId = window.location.pathname.split('/').pop();
-  fetch(`/batches/extras-containers/${batchId}`, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
-    },
-    body: JSON.stringify({ extras })
-  })
-  .then(res => {
-    if (!res.ok) {
-      return res.json().then(err => {
-        throw new Error(err.error || 'Failed to save extra containers');
-      });
-    }
-    return res.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.container}: ${err.message} (Available: ${err.available})`
-      ).join('\n');
-      alert("Cannot save extra containers:\n" + errorMsg);
-    } else {
-      alert("Extra containers saved successfully");
-      window.location.reload();
-    }
-  })
-  .catch(err => {
-    alert(err.message);
-    console.error(err);
-  });
-}
-
 function saveExtras() {
   const rows = document.querySelectorAll(".extra-row");
-  const extras = Array.from(rows).map(row => ({
-    ingredient_id: row.querySelector(".ingredient-select").value,
-    quantity: parseFloat(row.querySelector(".qty").value) || 0,
-    unit: row.querySelector(".unit").value,
-    cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-    ingredient_name: row.querySelector(".ingredient-select option:checked").text
-  }));
+  const extras = Array.from(rows).map(row => {
+    const type = row.dataset.type;
+    const baseData = {
+      item_id: parseInt(row.querySelector(".item-select").value),
+      quantity: parseFloat(row.querySelector(".qty").value) || 0,
+      cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
+      type: type
+    };
+
+    // Add unit for ingredients only
+    if (type === 'ingredient') {
+      baseData.unit = row.querySelector(".unit").value;
+    }
+
+    return baseData;
+  });
 
   const batchId = window.location.pathname.split('/').pop();
-  fetch(`/batches/extras/${batchId}`, {
+  fetch(`/batches/add-extra/${batchId}`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",

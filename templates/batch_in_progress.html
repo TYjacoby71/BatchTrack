@@ -24,13 +24,14 @@
 <div class="mt-4">
     <h4>Extra Ingredients Used</h4>
     <div id="extra-ingredients-container"></div>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraIngredientRow()">➕ Add Extra Ingredient</button>
-    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save Extras</button>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('ingredient')">➕ Add Extra Ingredient</button>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('container')">➕ Add Extra Container</button>
+    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save All Extras</button>
 </div>
 
 <template id="extra-ingredient-template">
-    <div class="extra-row d-flex gap-2 mb-2">
-        <select class="form-select ingredient-select select2-input" style="width: 200px;" onchange="updateRowCost(this)">
+    <div class="extra-row d-flex gap-2 mb-2" data-type="ingredient">
+        <select class="form-select item-select select2-input" style="width: 200px;" onchange="updateRowCost(this)">
             {% for ing in all_ingredients if ing.type == 'ingredient' %}
             <option value="{{ ing.id }}" data-cost="{{ ing.cost_per_unit }}">{{ ing.name }}</option>
             {% endfor %}
@@ -46,13 +47,18 @@
     </div>
 </template>
 
-    <!-- EXTRA CONTAINERS SECTION -->
-<div class="mt-4">
-    <h4>Extra Containers Used</h4>
-    <div id="extra-containers-container"></div>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraContainerRow()">➕ Add Extra Container</button>
-    <button type="button" class="btn btn-primary" onclick="saveExtraContainers()">💾 Save Extra Containers</button>
-</div>
+<template id="extra-container-template">
+    <div class="extra-row d-flex gap-2 mb-2" data-type="container">
+        <select class="form-select item-select select2-input" style="width: 200px;" onchange="updateRowCost(this)">
+            {% for cont in inventory_items if cont.type == 'container' %}
+            <option value="{{ cont.id }}" data-cost="{{ cont.cost_per_unit }}">{{ cont.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" class="form-control qty" placeholder="Quantity" step="1" min="1" />
+        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✖</button>
+    </div>
+</template>
 
 <template id="extra-container-template">
     <div class="extra-container-row d-flex gap-2 mb-2">
