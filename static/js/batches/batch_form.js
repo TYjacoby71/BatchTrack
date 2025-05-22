@@ -133,6 +133,7 @@ function saveExtras() {
       type: type
     };
 
+    // Add unit for ingredients only
     if (type === 'ingredient') {
       baseData.unit = row.querySelector(".unit").value;
     }
@@ -159,29 +160,21 @@ function saveExtras() {
   })
   .then(data => {
     if (data.errors) {
+      const errorMsg = data.errors.map(err => 
+        `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
+      ).join('\n');
       function displayErrors(errors) {
         const message = errors.map(err =>
           `❌ ${err.ingredient}: ${err.message}`
         ).join("\n\n");
+
         alert("Save failed:\n\n" + message);
       }
+
       displayErrors(data.errors);
     } else {
-      // Clear the extra ingredients container
-      document.getElementById('extra-ingredients-container').innerHTML = '';
       alert("Extra ingredients saved successfully");
-      // Reload only the summary table section instead of full page
-      fetch(window.location.href)
-        .then(response => response.text())
-        .then(html => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          const newSummary = doc.querySelector('.batch-summary');
-          const currentSummary = document.querySelector('.batch-summary');
-          if (newSummary && currentSummary) {
-            currentSummary.innerHTML = newSummary.innerHTML;
-          }
-        });
+      window.location.reload();
     }
   })
   .catch(err => {
