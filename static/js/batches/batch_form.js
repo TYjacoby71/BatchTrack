@@ -108,9 +108,12 @@ function addExtraItemRow(type) {
   document.getElementById('extra-ingredients-container').appendChild(clone);
 
   const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
-  $(newRow).find('.select2-input').select2({
+  $(newRow).find('.select2').select2({
     width: 'resolve',
-    dropdownAutoWidth: true
+    dropdownAutoWidth: true,
+    placeholder: 'Select...',
+    allowClear: true,
+    theme: 'bootstrap-5'
   });
 
   const select = newRow.querySelector('.item-select');
