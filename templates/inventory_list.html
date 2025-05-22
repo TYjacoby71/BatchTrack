@@ -76,21 +76,18 @@
             </select>
           </div>
           <div class="col">
-            <label class="form-label">Type</label>
-            <input type="text" x-model="row.change_type" class="form-control" value="restock" readonly required>
-          </div>
-          <div class="col">
             <label class="form-label">Cost Entry Type</label>
             <select x-model="row.cost_entry_type" class="form-select" @change="updateCostHelp($event, index)">
               <option value="no_change">No Change</option>
               <option value="per_unit">Per Unit Cost</option>
               <option value="total">Total Cost</option>
             </select>
-            <div class="form-group mt-2">
-              <label>Cost</label>
-              <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
-              <small class="form-text text-muted" x-text="row.costHelp"></small>
-            </div>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost</label>
+            <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+            <small class="form-text text-muted" x-text="row.costHelp"></small>
+            <input type="hidden" x-model="row.change_type" value="restock">
           </div>
           <div class="col-auto d-flex align-items-end">
             <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
