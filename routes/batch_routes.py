@@ -50,7 +50,6 @@ def start_batch():
         if container_id and quantity:
             container_item = InventoryItem.query.get(container_id)
             if container_item:
-                # Use FIFO service for container deduction
                 success, deductions = deduct_fifo(
                     container_id,
                     quantity,
@@ -60,18 +59,14 @@ def start_batch():
                 )
                 
                 if success:
-                    # Calculate average cost from FIFO deductions
-                    total_cost = sum(cost * qty for _, qty, cost in deductions)
-                    avg_cost = total_cost / quantity if quantity > 0 else 0
-                    
-                    # Create batch container record
-                    bc = BatchContainer(
-                        batch_id=new_batch.id,
-                        container_id=container_id,
-                        quantity_used=quantity,
-                        cost_each=avg_cost
-                    )
-                    db.session.add(bc)
+                    # Create batch container record for each FIFO deduction
+                    for entry_id, deduct_amount, _ in deductions:
+                        bc = BatchContainer(
+                            batch_id=new_batch.id,
+                            container_id=container_id,
+                            quantity_used=deduct_amount
+                        )
+                        db.session.add(bc)
                 else:
                     container_errors.append(f"Not enough {container_item.name} in stock.")
 
