@@ -382,7 +382,41 @@ def add_extra_to_batch(batch_id):
     extra_containers = data.get("extra_containers", [])
     errors = []
 
-    # Handle extra ingredients
+    # Handle extra containers
+    for container in extra_containers:
+        container_item = InventoryItem.query.get(container["item_id"])
+        if not container_item:
+            continue
+
+        needed_amount = float(container["quantity"])
+        success, deductions = deduct_fifo(
+            container_item.id,
+            needed_amount,
+            'batch',
+            f'Extra container for batch {batch.label_code}',
+            batch_id=batch.id
+        )
+
+        if not success:
+            errors.append({
+                "item": container_item.name,
+                "message": "Not enough in stock (FIFO)",
+                "needed": needed_amount,
+                "needed_unit": "units"
+            })
+        else:
+            total_cost = sum(qty * cost for _, qty, cost in deductions)
+            avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
+            
+            new_extra = ExtraBatchContainer(
+                batch_id=batch.id,
+                container_id=container_item.id,
+                quantity_used=needed_amount,
+                cost_each=avg_cost
+            )
+            db.session.add(new_extra)
+
+    # Handle extra ingredients 
     for item in extra_ingredients:
         inventory_item = InventoryItem.query.get(item["item_id"])
         if not inventory_item:
@@ -404,7 +438,7 @@ def add_extra_to_batch(batch_id):
                 inventory_item.id,
                 needed_amount,
                 'batch',
-                f'Extra {item_type} for batch {batch.label_code}',
+                f'Extra ingredient for batch {batch.label_code}',
                 batch_id=batch.id
             )
 
@@ -420,22 +454,13 @@ def add_extra_to_batch(batch_id):
                 total_cost = sum(qty * cost for _, qty, cost in deductions)
                 avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
 
-                # Add record based on type
-                if item_type == 'ingredient':
-                    new_extra = ExtraBatchIngredient(
-                        batch_id=batch.id,
-                        inventory_item_id=inventory_item.id,
-                        quantity=needed_amount,
-                        unit=inventory_item.unit,
-                        cost_per_unit=avg_cost
-                    )
-                else:
-                    new_extra = ExtraBatchContainer(
-                        batch_id=batch.id,
-                        container_id=inventory_item.id,
-                        quantity_used=needed_amount,
-                        cost_each=avg_cost
-                    )
+                new_extra = ExtraBatchIngredient(
+                    batch_id=batch.id,
+                    inventory_item_id=inventory_item.id,
+                    quantity=needed_amount,
+                    unit=inventory_item.unit,
+                    cost_per_unit=avg_cost
+                )
                 db.session.add(new_extra)
 
         except ValueError as e:
