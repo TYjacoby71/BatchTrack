@@ -63,8 +63,9 @@
 </template>
 
 <template id="extra-container-template">
-    <div class="extra-container-row d-flex gap-2 mb-2">
-        <select class="form-select container-select select2-input" style="width: 200px;" onchange="updateRowCost(this)">
+    <div class="extra-row d-flex gap-2 mb-2" data-type="container">
+        <select class="form-select item-select select2" style="width: 200px;" onchange="updateRowCost(this)">
+            <option value="">Select container...</option>
             {% for cont in inventory_items if cont.type == 'container' %}
             <option value="{{ cont.id }}" data-cost="{{ cont.cost_per_unit }}">{{ cont.name }}</option>
             {% endfor %}
