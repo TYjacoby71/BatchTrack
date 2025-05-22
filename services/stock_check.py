@@ -15,6 +15,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         available = ingredient.quantity or 0
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
+        density = ingredient.density if ingredient.density else None
         try:
             # Convert available stock to recipe unit using UUCS
             conversion_result = ConversionEngine.convert_units(
