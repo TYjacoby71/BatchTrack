@@ -66,9 +66,7 @@
           </div>
           <div class="col">
             <label class="form-label">Type</label>
-            <select x-model="row.change_type" class="form-select" required>
-              <option value="restock">Restock</option>
-            </select>
+            <input type="text" x-model="row.change_type" class="form-control" value="restock" readonly required>
           </div>
           <div class="col-auto d-flex align-items-end">
             <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
