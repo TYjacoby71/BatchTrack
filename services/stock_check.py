@@ -15,20 +15,18 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         available = ingredient.quantity or 0
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
-        density = ingredient.category.default_density if ingredient.category else 1.0
 
         try:
-            # Convert available stock to recipe unit using UUCS
+            # Let UUCS handle all conversion logic and errors
             conversion_result = ConversionEngine.convert_units(
                 available,
                 stock_unit,
                 recipe_unit,
-                ingredient_id=ingredient.id,
-                density=density
+                ingredient_id=ingredient.id
             )
-            available_converted = conversion_result['converted_value'] if isinstance(conversion_result, dict) else conversion_result
+            available_converted = conversion_result['converted_value']
 
-            # Determine status
+            # Only handle inventory level checks here
             if available_converted >= needed_amount:
                 status = 'OK'
             elif available_converted >= needed_amount * 0.5:
@@ -55,14 +53,18 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
             error_msg = f"Cannot convert {recipe_unit} to {stock_unit}"
             if "density" in str(e).lower():
                 error_msg = f"Please Add Density to {ingredient.name}"
+            status = 'ERROR'
+            if "density" in str(e).lower():
+                status = 'DENSITY_MISSING'
+            
             results.append({
                 'type': 'ingredient',
                 'name': ingredient.name,
                 'needed': needed_amount,
                 'needed_unit': recipe_unit,
-                'available': 0,
+                'available': 'error',  # Use None instead of 0 to indicate invalid conversion
                 'available_unit': recipe_unit,
-                'status': 'ERROR',
+                'status': status,
                 'error': str(e)
             })
             all_ok = False
