@@ -1,3 +1,4 @@
+
 <div class="mt-4">
   <div class="card">
     <div class="card-header">
@@ -8,13 +9,17 @@
         <!-- Status Alert -->
         <div class="alert" :class="{
           'alert-success': stockCheckPassed,
-          'alert-warning': !stockCheckPassed
+          'alert-warning': !stockCheckPassed && !stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING'),
+          'alert-danger': !stockCheckPassed && stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')
         }">
           <template x-if="stockCheckPassed">
             <span>✅ All ingredients are available!</span>
           </template>
-          <template x-if="!stockCheckPassed">
+          <template x-if="!stockCheckPassed && !stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')">
             <span>⚠ Some ingredients are low or missing. Adjust inventory before proceeding.</span>
+          </template>
+          <template x-if="!stockCheckPassed && stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')">
+            <span>⚠ One or more ingredients failed to convert due to missing density. Please edit the ingredient or its category to supply a density value.</span>
           </template>
         </div>
 
@@ -33,12 +38,33 @@
               <tr>
                 <td x-text="item.name"></td>
                 <td x-text="item.needed + ' ' + item.needed_unit"></td>
-                <td x-text="(typeof item.available === 'object' ? item.available.converted_value : item.available) + ' ' + item.available_unit"></td>
-                <td :class="{
-                  'text-success': item.status === 'OK',
-                  'text-warning': item.status === 'LOW',
-                  'text-danger': item.status === 'NEEDED'
-                }" x-text="item.status"></td>
+                <td>
+                  <template x-if="item.status === 'DENSITY_MISSING'">
+                    <span class="text-danger">⚠ Missing Density</span>
+                  </template>
+                  <template x-if="item.status !== 'DENSITY_MISSING'">
+                    <span x-text="item.available + ' ' + item.available_unit"></span>
+                  </template>
+                </td>
+                <td>
+                  <div>
+                    <template x-if="item.status === 'OK'">
+                      <span class="text-success">✓ OK</span>
+                    </template>
+                    <template x-if="item.status === 'LOW'">
+                      <span class="text-warning">⚠ Low</span>
+                    </template>
+                    <template x-if="item.status === 'NEEDED'">
+                      <span class="text-danger">✗ Needed</span>
+                    </template>
+                    <template x-if="item.status === 'DENSITY_MISSING'">
+                      <span class="text-danger">⚠ Missing Density</span>
+                    </template>
+                    <template x-if="item.error">
+                      <div class="small text-danger" x-text="item.error"></div>
+                    </template>
+                  </div>
+                </td>
               </tr>
             </template>
           </tbody>

@@ -40,22 +40,24 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 all_ok = False
 
             # Append result for this ingredient
+            # Ensure consistent numeric formatting
             results.append({
                 'type': 'ingredient',
                 'name': ingredient.name,
-                'needed': needed_amount,
+                'needed': float(needed_amount),
                 'needed_unit': recipe_unit,
-                'available': available_converted,
+                'available': float(available_converted),
                 'available_unit': recipe_unit,
-                'raw_stock': available,
+                'raw_stock': float(available),
                 'stock_unit': stock_unit,
-                'status': status
+                'status': status,
+                'formatted_needed': f"{needed_amount:.2f} {recipe_unit}",
+                'formatted_available': f"{available_converted:.2f} {recipe_unit}"
             })
 
         except ValueError as e:
             error_msg = f"Cannot convert {recipe_unit} to {stock_unit}"
-            if "density" in str(e).lower():
-                error_msg = f"Please Add Density to {ingredient.name}"
+            status = 'DENSITY_MISSING' if "density" in str(e).lower() else 'ERROR'
             results.append({
                 'type': 'ingredient',
                 'name': ingredient.name,
@@ -63,7 +65,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 'needed_unit': recipe_unit,
                 'available': 0,
                 'available_unit': recipe_unit,
-                'status': 'ERROR',
+                'status': status,
                 'error': str(e)
             })
             all_ok = False

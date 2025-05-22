@@ -72,13 +72,11 @@ class ConversionEngine:
 
         # 4. Cross-type: volume ↔ weight
         elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
-            # Pull density if not passed
+            # Only use ingredient-level density
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
-                if ingredient:
-                    density = ingredient.density or None
-                    if density is None and ingredient.category:
-                        density = ingredient.category.default_density
+                if ingredient and ingredient.density:
+                    density = ingredient.density
             if density is None:
                 raise ValueError(f"Missing density for conversion from {from_u.name} to {to_u.name}")
             used_density = density
