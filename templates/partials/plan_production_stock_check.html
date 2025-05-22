@@ -47,16 +47,18 @@
                   </template>
                 </td>
                 <td>
-                  <div :class="{
-                    'text-success': item.status === 'OK',
-                    'text-warning': item.status === 'LOW',
-                    'text-danger': item.status === 'NEEDED' || item.status === 'DENSITY_MISSING'
-                  }">
-                    <template x-if="item.status === 'OK'">✅</template>
-                    <template x-if="item.status === 'LOW'">⚠️ Low</template>
-                    <template x-if="item.status === 'NEEDED'">❌ Needed</template>
+                  <div>
+                    <template x-if="item.status === 'OK'">
+                      <span class="text-success">✓ OK</span>
+                    </template>
+                    <template x-if="item.status === 'LOW'">
+                      <span class="text-warning">⚠ Low</span>
+                    </template>
+                    <template x-if="item.status === 'NEEDED'">
+                      <span class="text-danger">✗ Needed</span>
+                    </template>
                     <template x-if="item.status === 'DENSITY_MISSING'">
-                      <span class="badge bg-warning text-dark">Needs Density</span>
+                      <span class="text-danger">⚠ Missing Density</span>
                     </template>
                     <template x-if="item.error">
                       <div class="small text-danger" x-text="item.error"></div>
