@@ -436,9 +436,7 @@ def save_extra_containers(batch_id):
 
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
-                container_id=container_id,
-                quantity_used=new_quantity,
-                cost_each=avg_cost
+                container_id=container_id
             )
             db.session.add(new_extra)
 
