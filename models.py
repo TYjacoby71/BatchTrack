@@ -2,12 +2,6 @@ from datetime import datetime
 from flask_login import current_user, UserMixin
 from datetime import date
 from app import db
-import pytz
-
-def get_local_time():
-    """Returns the current time in the configured timezone."""
-    timezone = pytz.timezone('America/Los_Angeles')  # Replace with your desired timezone
-    return datetime.now(timezone)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,7 +39,7 @@ class ConversionLog(db.Model):
     __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    timestamp = db.Column(db.DateTime, default=get_local_time)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(64), nullable=False)
     to_unit = db.Column(db.String(64), nullable=False)
@@ -103,7 +97,7 @@ class Batch(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
-    started_at = db.Column(db.DateTime, default=get_local_time)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     failed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
@@ -160,7 +154,7 @@ class ExtraBatchContainer(db.Model):
 class InventoryHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=get_local_time)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     change_type = db.Column(db.String(32), nullable=False)  # batch, refunded, restock, spoil, trash, recount
     quantity_change = db.Column(db.Float, nullable=False)
     remaining_quantity = db.Column(db.Float, nullable=True)  # Only for FIFO trackable events
@@ -172,7 +166,7 @@ class InventoryHistory(db.Model):
     used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-
+    
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
     batch = db.relationship('Batch')
@@ -209,7 +203,7 @@ class Product(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     low_stock_threshold = db.Column(db.Float, default=0)
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
     inventory = db.relationship('ProductInventory', backref='product', lazy=True)
 
@@ -221,7 +215,7 @@ class ProductInventory(db.Model):
     quantity = db.Column(db.Float)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     notes = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=get_local_time)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expiration_date = db.Column(db.Date, nullable=True)
 
 class ProductVariation(db.Model):
@@ -230,14 +224,14 @@ class ProductVariation(db.Model):
     name = db.Column(db.String(128), nullable=False)
     sku = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ProductEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
     event_type = db.Column(db.String(64))
     note = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=get_local_time)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 
@@ -271,11 +265,11 @@ class BatchInventoryLog(db.Model):
     quantity_change = db.Column(db.Float, nullable=False)
     reason = db.Column(db.String(32), nullable=False)  # consumed, expired, lost, disposed
     notes = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.DateTime, default=get_local_time)
-
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
     batch = db.relationship('Batch', backref='inventory_logs')
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
