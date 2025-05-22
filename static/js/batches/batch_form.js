@@ -124,40 +124,22 @@ function addExtraItemRow(type) {
 
 function saveExtras() {
   const rows = document.querySelectorAll(".extra-row");
-  const ingredients = [];
-  const containers = [];
-  
-  Array.from(rows).forEach(row => {
+  const extras = Array.from(rows).map(row => {
     const type = row.dataset.type;
-    const itemId = parseInt(row.querySelector(".item-select").value);
-    const quantity = parseFloat(row.querySelector(".qty").value) || 0;
-    const cost = parseFloat(row.querySelector(".cost").value) || 0;
-    
-    if (type === 'ingredient') {
-      ingredients.push({
-        item_id: itemId,
-        quantity: quantity,
-        cost_per_unit: cost,
-        unit: row.querySelector(".unit").value,
-        type: 'ingredient'
-      });
-    } else if (type === 'container') {
-      containers.push({
-        item_id: itemId,
-        quantity_used: quantity,
-        cost_each: cost,
-        type: 'container'
-      });
-    }
-  });
+    const baseData = {
+      item_id: parseInt(row.querySelector(".item-select").value),
+      quantity: parseFloat(row.querySelector(".qty").value) || 0,
+      cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
+      type: type
+    };
 
-  const extras = ingredients.map(ing => ({
-    ...ing,
-    type: 'ingredient'
-  })).concat(containers.map(cont => ({
-    ...cont,
-    type: 'container'
-  })));
+    // Add unit for ingredients only
+    if (type === 'ingredient') {
+      baseData.unit = row.querySelector(".unit").value;
+    }
+
+    return baseData;
+  });
 
   const batchId = window.location.pathname.split('/').pop();
   fetch(`/batches/add-extra/${batchId}`, {
