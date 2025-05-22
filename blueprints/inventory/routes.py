@@ -190,56 +190,7 @@ def adjust_inventory(id):
     flash('Inventory adjusted successfully')
     return redirect(url_for('inventory.view_inventory', id=id))
 
-@inventory_bp.route('/update', methods=['POST'])
-@login_required
-def update_inventory():
-    if request.is_json:
-        # Handle AJAX inventory adjustment
-        data = request.get_json()
-        item_id = data.get('item_id')
-        amount = float(data.get('amount', 0))
-        notes = data.get('notes', '')
 
-        item = InventoryItem.query.get(item_id)
-        if item:
-            # Create history entry
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type='adjustment',
-                quantity_change=amount,
-                cost_per_unit=item.cost_per_unit,
-                note=notes,
-                created_by=current_user.id,
-                quantity_used=0
-            )
-            db.session.add(history)
-
-            # Update inventory
-            item.quantity += amount
-            db.session.commit()
-            return jsonify({'success': True})
-        return jsonify({'success': False, 'error': 'Item not found'})
-    else:
-        # Handle form submission for bulk updates
-        for item_data in request.form.getlist('items[]'):
-            item_id = int(item_data.get('id'))
-            amount = float(item_data.get('amount', 0))
-            item = InventoryItem.query.get(item_id)
-            if item:
-                history = InventoryHistory(
-                    inventory_item_id=item.id,
-                    change_type='bulk_adjustment',
-                    quantity_change=amount,
-                    cost_per_unit=item.cost_per_unit,
-                    note='Bulk update',
-                    created_by=current_user.id,
-                    quantity_used=0
-                )
-                db.session.add(history)
-                item.quantity += amount
-        db.session.commit()
-        flash('Inventory updated successfully')
-        return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required

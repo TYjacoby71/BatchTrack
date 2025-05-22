@@ -34,18 +34,7 @@ function toggleIngredientForm() {
   }
 }
 
-function toggleUpdateForm() {
-  const form = document.getElementById('updateInventoryForm');
-  const addForm = document.getElementById('addIngredientForm');
-  addForm.style.display = 'none';
-  
-  if (form.style.display === 'none') {
-    form.style.display = 'block';
-    form.reset();
-  } else {
-    form.style.display = 'none';
-  }
-}
+
 
 function updateClock() {
   const clock = document.getElementById('clock');
