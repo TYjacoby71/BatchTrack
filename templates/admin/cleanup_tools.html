@@ -2,10 +2,32 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<style>
+  input[name="csrf_token"],
+  input[type="hidden"][name="csrf_token"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    pointer-events: none !important;
+  }
+</style>
 <div class="container mt-4">
   <h2>Database Cleanup Tools</h2>
 
   <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Reset Database</h5>
+      <p class="card-text">Warning: This will delete ALL data and restore a fresh database with only default units and categories.</p>
+      <form method="POST" action="{{ url_for('admin.reset_database') }}" onsubmit="return confirm('Are you sure? This will permanently delete all data.')">
+        {{ csrf_token() }}
+        <button type="submit" class="btn btn-danger">Reset Database</button>
+      </form>
+    </div>
+  </div>
     <div class="card-body">
       <h5 class="card-title">Archive Zeroed Inventory</h5>
       <p class="card-text">Remove all product inventory entries with zero quantity. This helps keep your FIFO views clean.</p>
