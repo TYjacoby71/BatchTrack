@@ -92,30 +92,7 @@
         </div>
       </template>
 
-      <table class="table table-bordered table-sm mt-2">
-        <thead>
-          <tr>
-            <th>Ingredient</th>
-            <th>Required</th>
-            <th>Available</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="item in stockResults.stock_check" :key="item.name">
-            <tr>
-              <td x-text="item.name"></td>
-              <td x-text="`${item.needed.toFixed(2)} ${item.needed_unit}`"></td>
-              <td x-text="`${item.available.toFixed(2)} ${item.available_unit}`"></td>
-              <td>
-                <span x-show="item.status === 'OK'" class="text-success">✅</span>
-                <span x-show="item.status === 'LOW'" class="text-warning">⚠️</span>
-                <span x-show="item.status === 'NEEDED'" class="text-danger">❌</span>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+      {% include 'partials/plan_production_stock_check.html' %}
 
       <template x-if="!stockCheckPassed">
         <div class="mt-2">
