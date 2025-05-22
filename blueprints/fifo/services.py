@@ -1,4 +1,4 @@
-from models import InventoryHistory, db
+from models import InventoryHistory, db, get_local_time
 from sqlalchemy import and_, desc
 from datetime import datetime
 
@@ -159,7 +159,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0,
-                timestamp=datetime.now()
+                timestamp=get_local_time()
             )
             db.session.add(history)
 
