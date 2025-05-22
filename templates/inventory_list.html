@@ -8,7 +8,17 @@
 
     <div class="d-flex gap-2 mb-3">
       <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
     </div>
+
+    <!-- Update Inventory Form -->
+    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" 
+      x-data="{ 
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}'}],
+        resetRows() {
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}'}];
+        }
+      }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <template x-for="(row, index) in rows" :key="index">
