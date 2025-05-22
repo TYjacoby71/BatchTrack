@@ -32,9 +32,15 @@ def archive_zeroed_inventory():
         flash(f'Error archiving inventory: {str(e)}', 'error')
     return redirect(url_for('admin.cleanup_tools'))
 
+from flask import request
+from flask_wtf.csrf import generate_csrf
+
 @admin_bp.route('/reset_database', methods=['POST'])
 @login_required
 def reset_database():
+    if 'csrf_token' not in request.form:
+        flash('Missing CSRF token', 'error')
+        return redirect(url_for('admin.cleanup_tools'))
     """Reset the entire database to initial state"""
     try:
         # Drop all tables

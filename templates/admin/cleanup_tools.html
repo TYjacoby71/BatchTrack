@@ -30,7 +30,7 @@
       <h5 class="card-title">Reset Database</h5>
       <p class="card-text">Warning: This will delete ALL data and restore a fresh database with only default units and categories.</p>
       <form method="POST" action="{{ url_for('admin.reset_database') }}" onsubmit="return confirm('Are you sure? This will permanently delete all data.')">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <button type="submit" class="btn btn-danger">Reset Database</button>
       </form>
     </div>
