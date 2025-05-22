@@ -12,13 +12,23 @@
     </div>
 
     <!-- Update Inventory Form -->
-    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" 
-      x-data="{ 
-        rows: [{unit: '{{ get_global_unit_list()[0].name }}'}],
-        resetRows() {
-          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}'}];
-        }
-      }">
+    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;">
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <select name="item_id" class="form-select" required>
+            <option value="">Select Item</option>
+            {% for item in items %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <input type="number" name="amount" class="form-control" placeholder="Amount" step="0.01" required>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </div>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <template x-for="(row, index) in rows" :key="index">
