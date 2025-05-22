@@ -378,11 +378,12 @@ def cancel_batch(batch_id):
 def add_extra_to_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     data = request.get_json()
-    item_type = data.get("type")  # 'ingredient' or 'container'
-    extras = data.get("extras", [])
+    extra_ingredients = data.get("extra_ingredients", [])
+    extra_containers = data.get("extra_containers", [])
     errors = []
 
-    for item in extras:
+    # Handle ingredients
+    for item in extra_ingredients:
         inventory_item = InventoryItem.query.get(item["item_id"])
         if not inventory_item:
             continue
