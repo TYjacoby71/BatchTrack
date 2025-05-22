@@ -9,16 +9,16 @@
         <!-- Status Alert -->
         <div class="alert" :class="{
           'alert-success': stockCheckPassed,
-          'alert-warning': !stockCheckPassed && !stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING'),
-          'alert-danger': !stockCheckPassed && stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')
+          'alert-warning': !stockCheckPassed && !stockResults?.stock_check?.some(r => r.status === 'DENSITY_MISSING'),
+          'alert-danger': !stockCheckPassed && stockResults?.stock_check?.some(r => r.status === 'DENSITY_MISSING')
         }">
           <template x-if="stockCheckPassed">
             <span>✅ All ingredients are available!</span>
           </template>
-          <template x-if="!stockCheckPassed && !stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')">
+          <template x-if="!stockCheckPassed && !stockResults?.stock_check?.some(r => r.status === 'DENSITY_MISSING')">
             <span>⚠ Some ingredients are low or missing. Adjust inventory before proceeding.</span>
           </template>
-          <template x-if="!stockCheckPassed && stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')">
+          <template x-if="!stockCheckPassed && stockResults?.stock_check?.some(r => r.status === 'DENSITY_MISSING')">
             <span>⚠ One or more ingredients failed to convert due to missing density. Please edit the ingredient or its category to supply a density value.</span>
           </template>
         </div>
@@ -34,16 +34,16 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="item in stockResults.stock_check" :key="item.name">
+            <template x-for="item in stockResults?.stock_check" :key="item.name">
               <tr>
                 <td x-text="item.name"></td>
-                <td x-text="item.needed + ' ' + item.needed_unit"></td>
+                <td x-text="item.formatted_needed || `${item.needed} ${item.needed_unit}`"></td>
                 <td>
                   <template x-if="item.status === 'DENSITY_MISSING'">
                     <span class="text-danger">⚠ Missing Density</span>
                   </template>
                   <template x-if="item.status !== 'DENSITY_MISSING'">
-                    <span x-text="item.available + ' ' + item.available_unit"></span>
+                    <span x-text="item.formatted_available || `${item.available} ${item.available_unit}`"></span>
                   </template>
                 </td>
                 <td>

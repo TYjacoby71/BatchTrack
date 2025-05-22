@@ -86,12 +86,6 @@
           ✅ All ingredients are available!
         </div>
       </template>
-      <template x-if="!stockCheckPassed">
-        <div class="alert alert-warning mt-2">
-          ⚠ Some ingredients are low or missing. Adjust inventory before proceeding.
-        </div>
-      </template>
-
       {% include 'partials/plan_production_stock_check.html' %}
 
       <template x-if="!stockCheckPassed">
