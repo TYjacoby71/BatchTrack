@@ -2,7 +2,6 @@
 // Inventory adjustment functionality
 document.addEventListener('DOMContentLoaded', function() {
   const adjustForm = document.getElementById('inventoryAdjustForm');
-  const updateForm = document.getElementById('updateInventoryForm');
   
   if (adjustForm) {
     adjustForm.addEventListener('submit', function(e) {
