@@ -406,6 +406,12 @@ def add_extra_to_batch(batch_id):
                     })
                     continue
                 needed_amount = conversion["result"]["converted_value"]
+            except ValueError as e:
+                errors.append({
+                    "item": inventory_item.name,
+                    "message": str(e)
+                })
+                continue
         else:
             inventory_item = InventoryItem.query.get(item["container_id"])
             if not inventory_item:
