@@ -382,153 +382,89 @@ def cancel_batch(batch_id):
     return redirect(url_for('batches.list_batches'))
 
 
-@batches_bp.route('/extras-containers/<int:batch_id>', methods=['POST'])
+@batches_bp.route('/add-extra/<int:batch_id>', methods=['POST'])
 @login_required
-def save_extra_containers(batch_id):
+def add_extra_to_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
-    extras = request.get_json().get("extras", [])
+    data = request.get_json()
+    item_type = data.get("type")  # 'ingredient' or 'container'
+    extras = data.get("extras", [])
     errors = []
 
-    # First check stock for all containers using FIFO
     for item in extras:
-        container = InventoryItem.query.get(item["container_id"])
-        if not container:
-            continue
-
-        needed_amount = item["quantity"]
-        # Test FIFO deduction without actually doing it
-        success, _ = deduct_fifo(
-            container.id,
-            needed_amount,
-            'test',
-            'Test deduction'
-        )
-
-        if not success:
-            errors.append({
-                "container": container.name,
-                "message": f"Not enough in stock (FIFO)",
-                "needed": needed_amount
-            })
-
-    # If any errors, return them
-    if errors:
-        return jsonify({"status": "error", "errors": errors}), 400
-
-    # If all good, save the extras using FIFO
-    for item in extras:
-        container_id = item["container_id"]
-        new_quantity = item["quantity"]
-
-        # Use FIFO service for actual deduction
-        success, deductions = deduct_fifo(
-            container_id,
-            new_quantity,
-            'batch',
-            f'Extra container for batch {batch.label_code}',
-            batch_id=batch.id
-        )
-
-        if success:
-            # Calculate average cost from FIFO deductions
-            total_cost = sum(qty * cost for _, qty, cost in deductions)
-            avg_cost = total_cost / new_quantity if new_quantity > 0 else 0
-
-            new_extra = ExtraBatchContainer(
-                batch_id=batch.id,
-                container_id=container_id
-            )
-            db.session.add(new_extra)
-
-    db.session.commit()
-    return jsonify({"status": "success"})
-
-@batches_bp.route('/extras/<int:batch_id>', methods=['POST'])
-@login_required
-def save_extra_ingredients(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
-    extras = request.get_json().get("extras", [])
-    errors = []
-
-    # First check stock for all ingredients
-    for item in extras:
-        ingredient = InventoryItem.query.get(item["ingredient_id"])
-        if not ingredient:
+        inventory_item = InventoryItem.query.get(item["item_id"])
+        if not inventory_item:
             continue
 
         try:
-            # Convert requested amount to inventory unit
-            from services.conversion_wrapper import safe_convert
+            if item_type == 'ingredient':
+                # Handle ingredient conversion
+                conversion = safe_convert(
+                    item["quantity"],
+                    item["unit"],
+                    inventory_item.unit,
+                    ingredient_id=inventory_item.id,
+                    density=inventory_item.density or (inventory_item.category.default_density if inventory_item.category else None)
+                )
+                if not conversion["ok"]:
+                    errors.append({
+                        "item": inventory_item.name,
+                        "message": conversion["error"],
+                        "type": "conversion"
+                    })
+                    continue
+                needed_amount = conversion["result"]["converted_value"]
+            else:
+                # Containers don't need conversion
+                needed_amount = item["quantity"]
 
-            conversion = safe_convert(
-                item["quantity"],
-                item["unit"],
-                ingredient.unit,
-                ingredient_id=ingredient.id,
-                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            # Check FIFO availability
+            success, deductions = deduct_fifo(
+                inventory_item.id,
+                needed_amount,
+                'batch',
+                f'Extra {item_type} for batch {batch.label_code}',
+                batch_id=batch.id
             )
 
-            if not conversion["ok"]:
+            if not success:
                 errors.append({
-                    "ingredient": ingredient.name,
-                    "message": conversion["error"],
-                    "type": "conversion"
-                })
-                continue
-
-            needed_amount = conversion["result"]["converted_value"]
-            if needed_amount > ingredient.quantity:
-                errors.append({
-                    "ingredient": ingredient.name,
-                    "message": "Not enough in stock",
+                    "item": inventory_item.name,
+                    "message": "Not enough in stock (FIFO)",
                     "needed": needed_amount,
-                    "needed_unit": ingredient.unit
+                    "needed_unit": inventory_item.unit
                 })
+            else:
+                # Calculate average cost
+                total_cost = sum(qty * cost for _, qty, cost in deductions)
+                avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
+
+                # Add record based on type
+                if item_type == 'ingredient':
+                    new_extra = ExtraBatchIngredient(
+                        batch_id=batch.id,
+                        inventory_item_id=inventory_item.id,
+                        quantity=needed_amount,
+                        unit=inventory_item.unit,
+                        cost_per_unit=avg_cost
+                    )
+                else:
+                    new_extra = ExtraBatchContainer(
+                        batch_id=batch.id,
+                        container_id=inventory_item.id,
+                        quantity_used=needed_amount,
+                        cost_each=avg_cost
+                    )
+                db.session.add(new_extra)
 
         except ValueError as e:
             errors.append({
-                "ingredient": ingredient.name,
+                "item": inventory_item.name,
                 "message": str(e)
             })
 
-    # If any errors, return them
     if errors:
         return jsonify({"status": "error", "errors": errors}), 400
-
-    # If all good, save the extras using FIFO
-    for item in extras:
-        ingredient = InventoryItem.query.get(item["ingredient_id"])
-        conversion_result = ConversionEngine.convert_units(
-            item["quantity"],
-            item["unit"],
-            ingredient.unit,
-            ingredient_id=ingredient.id,
-            density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-        )
-        converted_qty = conversion_result['converted_value']
-
-        # Use FIFO service for deduction
-        success, deductions = deduct_fifo(
-            ingredient.id,
-            converted_qty,
-            'batch',
-            f'Extra ingredient for batch {batch.label_code}',
-            batch_id=batch.id
-        )
-
-        if success:
-            # Calculate average cost from FIFO deductions
-            total_cost = sum(qty * cost for _, qty, cost in deductions)
-            avg_cost = total_cost / converted_qty if converted_qty > 0 else 0
-
-            new_extra = ExtraBatchIngredient(
-                batch_id=batch.id,
-                inventory_item_id=ingredient.id,
-                quantity=converted_qty,
-                unit=ingredient.unit,
-                cost_per_unit=avg_cost
-            )
-            db.session.add(new_extra)
 
     db.session.commit()
     return jsonify({"status": "success"})

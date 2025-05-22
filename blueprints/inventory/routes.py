@@ -324,13 +324,30 @@ def update_details(id):
     flash('Item details updated successfully')
     return redirect(url_for('inventory.view_inventory', id=id))
 
-@inventory_bp.route('/delete/<int:id>')
+@inventory_bp.route('/archive/<int:id>')
 @login_required
-def delete_inventory(id):
+def archive_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    db.session.delete(item)
-    db.session.commit()
-    flash('Inventory item deleted successfully.')
+    try:
+        item.is_archived = True
+        db.session.commit()
+        flash('Inventory item archived successfully.')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error archiving item: {str(e)}', 'error')
+    return redirect(url_for('inventory.list_inventory'))
+
+@inventory_bp.route('/restore/<int:id>')
+@login_required
+def restore_inventory(id):
+    item = InventoryItem.query.get_or_404(id)
+    try:
+        item.is_archived = False
+        db.session.commit()
+        flash('Inventory item restored successfully.')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
 def deduct_fifo(item_id, quantity, change_type, notes):
