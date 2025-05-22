@@ -32,9 +32,15 @@
             <template x-for="item in stockResults.stock_check" :key="item.name">
               <tr>
                 <td x-text="item.name"></td>
-                <td x-text="`${item.needed.toFixed(2)} ${item.needed_unit}`"></td>
-                <td x-text="item.available === null ? 'N/A' : `${item.available.toFixed(2)} ${item.available_unit}`"></td>
-                <td x-text="item.status"></td>
+                <td x-text="item.needed ? `${Number(item.needed).toFixed(2)} ${item.needed_unit}` : 'N/A'"></td>
+                <td x-text="item.available !== null ? `${Number(item.available).toFixed(2)} ${item.available_unit}` : 'N/A'"></td>
+                <td>
+                  <span :class="{
+                    'text-success': item.status === 'OK',
+                    'text-warning': item.status === 'LOW',
+                    'text-danger': item.status === 'NEEDED' || item.status === 'DENSITY_MISSING'
+                  }" x-text="item.status"></span>
+                </td>
               </tr>
             </template>
           </tbody>
