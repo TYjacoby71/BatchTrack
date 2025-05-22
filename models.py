@@ -6,8 +6,9 @@ import pytz
 
 def get_local_time():
     """Returns the current time in the configured timezone."""
-    timezone = pytz.timezone('America/Los_Angeles')  # Replace with your desired timezone
-    return datetime.now(timezone)
+    timezone = pytz.timezone('America/Los_Angeles')
+    local_time = datetime.now(timezone)
+    return local_time.replace(tzinfo=None)  # Return naive datetime for consistency
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

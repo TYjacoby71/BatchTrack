@@ -158,7 +158,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now()
             )
             db.session.add(history)
 
