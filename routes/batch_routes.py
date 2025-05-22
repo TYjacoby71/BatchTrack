@@ -419,49 +419,50 @@ def add_extra_to_batch(batch_id):
             needed_amount = item["quantity_used"]
 
             # Check FIFO availability
-            success, deductions = deduct_fifo(
-                inventory_item.id,
-                needed_amount,
-                'batch',
-                f'Extra {item_type} for batch {batch.label_code}',
-                batch_id=batch.id
-            )
+            try:
+                success, deductions = deduct_fifo(
+                    inventory_item.id,
+                    needed_amount,
+                    'batch',
+                    f'Extra {item_type} for batch {batch.label_code}',
+                    batch_id=batch.id
+                )
 
-            if not success:
+                if not success:
+                    errors.append({
+                        "item": inventory_item.name,
+                        "message": "Not enough in stock (FIFO)",
+                        "needed": needed_amount,
+                        "needed_unit": inventory_item.unit
+                    })
+                else:
+                    # Calculate average cost
+                    total_cost = sum(qty * cost for _, qty, cost in deductions)
+                    avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
+
+                    # Add record based on type
+                    if item_type == 'ingredient':
+                        new_extra = ExtraBatchIngredient(
+                            batch_id=batch.id,
+                            inventory_item_id=inventory_item.id,
+                            quantity=needed_amount,
+                            unit=inventory_item.unit,
+                            cost_per_unit=avg_cost
+                        )
+                    else:
+                        new_extra = ExtraBatchContainer(
+                            batch_id=batch.id,
+                            container_id=inventory_item.id,
+                            quantity_used=needed_amount,
+                            cost_each=avg_cost
+                        )
+                    db.session.add(new_extra)
+
+            except ValueError as e:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock (FIFO)",
-                    "needed": needed_amount,
-                    "needed_unit": inventory_item.unit
+                    "message": str(e)
                 })
-            else:
-                # Calculate average cost
-                total_cost = sum(qty * cost for _, qty, cost in deductions)
-                avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
-
-                # Add record based on type
-                if item_type == 'ingredient':
-                    new_extra = ExtraBatchIngredient(
-                        batch_id=batch.id,
-                        inventory_item_id=inventory_item.id,
-                        quantity=needed_amount,
-                        unit=inventory_item.unit,
-                        cost_per_unit=avg_cost
-                    )
-                else:
-                    new_extra = ExtraBatchContainer(
-                        batch_id=batch.id,
-                        container_id=inventory_item.id,
-                        quantity_used=needed_amount,
-                        cost_each=avg_cost
-                    )
-                db.session.add(new_extra)
-
-        except ValueError as e:
-            errors.append({
-                "item": inventory_item.name,
-                "message": str(e)
-            })
 
     if errors:
         return jsonify({"status": "error", "errors": errors}), 400
