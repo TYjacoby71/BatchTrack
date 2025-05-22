@@ -60,13 +60,10 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 'name': ingredient.name,
                 'needed': needed_amount,
                 'needed_unit': recipe_unit,
-                'available': {
-                    'converted_value': 0,
-                    'original_value': 0,
-                    'error': str(e)
-                },
+                'available': 0,
                 'available_unit': recipe_unit,
-                'status': status
+                'status': status,
+                'error': str(e)
             })
             all_ok = False
 
