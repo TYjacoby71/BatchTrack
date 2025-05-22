@@ -43,16 +43,28 @@ def reset_database():
         return redirect(url_for('admin.cleanup_tools'))
     """Reset the entire database to initial state"""
     try:
+        # Store existing users
+        existing_users = User.query.all()
+        user_data = [(u.username, u.password_hash, u.role) for u in existing_users]
+        
         # Drop all tables
         db.drop_all()
         # Recreate tables
         db.create_all()
+        
+        # Restore users
+        for username, password_hash, role in user_data:
+            user = User(username=username, password_hash=password_hash, role=role)
+            db.session.add(user)
+        
         # Reseed initial data
         from seeders.unit_seeder import seed_units
         from seeders.ingredient_category_seeder import seed_categories
         seed_units()
         seed_categories()
-        flash('Database has been reset successfully.')
+        
+        db.session.commit()
+        flash('Database has been reset successfully while preserving user accounts.')
     except Exception as e:
         flash(f'Error resetting database: {str(e)}', 'error')
     return redirect(url_for('admin.cleanup_tools'))
