@@ -151,7 +151,7 @@ def adjust_inventory(id):
         expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
 
     if qty_change < 0:
-        success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes, created_by=current_user.id)
+        success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
         if not success:
             flash('Insufficient stock for FIFO deduction', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))

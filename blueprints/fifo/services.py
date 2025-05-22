@@ -1,4 +1,4 @@
-from models import InventoryHistory, db, get_local_time
+from models import InventoryHistory, db
 from sqlalchemy import and_, desc
 from datetime import datetime
 
@@ -11,7 +11,7 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, created_by=None):
+def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
     Args:
@@ -61,8 +61,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, 
             unit_cost=unit_cost,
             note=f"{notes} (From FIFO #{entry_id})",
             used_for_batch_id=batch_id,
-            quantity_used=deduct_amount,
-            created_by=created_by
+            quantity_used=deduct_amount
         )
         db.session.add(history)
 
@@ -159,7 +158,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0,
-                timestamp=get_local_time()
+                timestamp=datetime.utcnow()
             )
             db.session.add(history)
 
