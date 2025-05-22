@@ -15,18 +15,21 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         available = ingredient.quantity or 0
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
-
+        density = ingredient.density if ingredient.density else None
         try:
-            # Let UUCS handle all conversion logic and errors
+            # Convert available stock to recipe unit using UUCS
             conversion_result = ConversionEngine.convert_units(
                 available,
                 stock_unit,
                 recipe_unit,
                 ingredient_id=ingredient.id
             )
-            available_converted = conversion_result['converted_value']
+            if isinstance(conversion_result, dict):
+                available_converted = conversion_result['converted_value']
+            else:
+                raise ValueError(f"Unexpected conversion result format for {ingredient.name}")
 
-            # Only handle inventory level checks here
+            # Determine status
             if available_converted >= needed_amount:
                 status = 'OK'
             elif available_converted >= needed_amount * 0.5:
@@ -53,16 +56,15 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
             error_msg = f"Cannot convert {recipe_unit} to {stock_unit}"
             if "density" in str(e).lower():
                 error_msg = f"Please Add Density to {ingredient.name}"
-            status = 'DENSITY_MISSING' if "density" in str(e).lower() else 'ERROR'
             results.append({
                 'type': 'ingredient',
                 'name': ingredient.name,
                 'needed': needed_amount,
                 'needed_unit': recipe_unit,
-                'available': None,  # Use None to indicate error
+                'available': 0,
                 'available_unit': recipe_unit,
-                'status': status,
-                'error': str(e)  # Match the error field name used in template
+                'status': 'ERROR',
+                'error': str(e)
             })
             all_ok = False
 
