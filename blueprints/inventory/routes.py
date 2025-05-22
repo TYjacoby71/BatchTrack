@@ -328,9 +328,16 @@ def update_details(id):
 @login_required
 def delete_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    db.session.delete(item)
-    db.session.commit()
-    flash('Inventory item deleted successfully.')
+    try:
+        # For containers, first delete related history records
+        if item.type == 'container':
+            InventoryHistory.query.filter_by(inventory_item_id=id).delete()
+        db.session.delete(item)
+        db.session.commit()
+        flash('Inventory item deleted successfully.')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
 def deduct_fifo(item_id, quantity, change_type, notes):
