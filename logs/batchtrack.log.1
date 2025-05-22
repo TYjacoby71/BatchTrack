@@ -1,4 +1,4 @@
-2025-05-22 00:49:53,327 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-22 00:49:55,992 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -102,14 +102,8 @@ Traceback (most recent call last):
     _configure_registries({self.registry}, cascade=True)
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4214, in _configure_registries
     _do_configure_registries(registries, cascade)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4255, in _do_configure_registries
-    mapper._post_configure_properties()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2418, in _post_configure_properties
-    prop.init()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/interfaces.py", line 589, in init
-    self.do_init()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 1661, in do_init
-    self._generate_backref()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 2089, in _generate_backref
-    raise sa_exc.ArgumentError(
-sqlalchemy.exc.ArgumentError: Error creating backref 'extra_batch_containers' on relationship 'InventoryHistory.container': property of that name exists on mapper 'Mapper[InventoryItem(inventory_item)]'
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4251, in _do_configure_registries
+    raise e
+sqlalchemy.exc.InvalidRequestError: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[InventoryHistory(inventory_history)]'. Original exception was: Error creating backref 'extra_batch_containers' on relationship 'InventoryHistory.container': property of that name exists on mapper 'Mapper[InventoryItem(inventory_item)]'
+2025-05-22 00:50:27,022 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-22 00:50:32,005 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
