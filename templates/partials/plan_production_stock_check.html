@@ -37,8 +37,13 @@
                 <td :class="{
                   'text-success': item.status === 'OK',
                   'text-warning': item.status === 'LOW',
-                  'text-danger': item.status === 'NEEDED'
-                }" x-text="item.status"></td>
+                  'text-danger': item.status === 'NEEDED' || item.status === 'ARCHIVED'
+                }">
+                  <span x-text="item.status"></span>
+                  <template x-if="item.status === 'ARCHIVED'">
+                    <small class="d-block text-muted">(Item is archived)</small>
+                  </template>
+                </td>
               </tr>
             </template>
           </tbody>
