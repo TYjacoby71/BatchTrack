@@ -9,8 +9,8 @@
         <!-- Status Alert -->
         <div class="alert" :class="{
           'alert-success': stockCheckPassed,
-          'alert-warning': !stockCheckPassed && !stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING'),
-          'alert-danger': !stockCheckPassed && stockResults.stock_check.some(r => r.status === 'DENSITY_MISSING')
+          'alert-warning': !stockCheckPassed && !(stockResults?.stock_check || []).some(r => r.status === 'DENSITY_MISSING'),
+          'alert-danger': !stockCheckPassed && (stockResults?.stock_check || []).some(r => r.status === 'DENSITY_MISSING')
         }">
           <template x-if="stockCheckPassed">
             <span>✅ All ingredients are available!</span>
@@ -43,7 +43,7 @@
                     <span class="text-danger">⚠ Missing Density</span>
                   </template>
                   <template x-if="item.status !== 'DENSITY_MISSING'">
-                    <span x-text="item.available + ' ' + item.available_unit"></span>
+                    <span x-text="item.formatted_available || `${item.available} ${item.available_unit}`"></span>
                   </template>
                 </td>
                 <td>
