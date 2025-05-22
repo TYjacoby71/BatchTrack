@@ -4,6 +4,7 @@ from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, Produ
 from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
+from blueprints.fifo.services import deduct_fifo
 import uuid, os
 from werkzeug.utils import secure_filename
 from services.unit_conversion import ConversionEngine
@@ -476,19 +477,10 @@ def save_extra_ingredients(batch_id):
                 continue
 
             needed_amount = conversion["result"]["converted_value"]
-
-            # Test FIFO deduction
-            success, _ = deduct_fifo(
-                ingredient.id,
-                needed_amount,
-                'test',
-                'Test deduction'
-            )
-
-            if not success:
+            if needed_amount > ingredient.quantity:
                 errors.append({
                     "ingredient": ingredient.name,
-                    "message": "Not enough in stock (FIFO)",
+                    "message": "Not enough in stock",
                     "needed": needed_amount,
                     "needed_unit": ingredient.unit
                 })
