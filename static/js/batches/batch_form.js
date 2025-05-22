@@ -135,7 +135,7 @@ function saveExtras() {
     
     if (type === 'ingredient') {
       ingredients.push({
-        item_id: itemId,
+        inventory_item_id: itemId,
         quantity: quantity,
         cost_per_unit: cost,
         unit: row.querySelector(".unit").value,
@@ -143,7 +143,7 @@ function saveExtras() {
       });
     } else if (type === 'container') {
       containers.push({
-        item_id: itemId,
+        container_id: itemId,
         quantity_used: quantity,
         cost_each: cost,
         type: 'container'

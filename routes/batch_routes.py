@@ -383,15 +383,16 @@ def add_extra_to_batch(batch_id):
     errors = []
 
     for item in extras:
-        inventory_item = InventoryItem.query.get(item["item_id"])
-        if not inventory_item:
-            continue
+        if item["type"] == "ingredient":
+            inventory_item = InventoryItem.query.get(item["inventory_item_id"])
+            if not inventory_item:
+                continue
 
-        try:
-            if item_type == 'ingredient':
+            try:
                 # Handle ingredient conversion
+                needed_amount = item["quantity"]
                 conversion = safe_convert(
-                    item["quantity"],
+                    needed_amount,
                     item["unit"],
                     inventory_item.unit,
                     ingredient_id=inventory_item.id,
@@ -405,9 +406,11 @@ def add_extra_to_batch(batch_id):
                     })
                     continue
                 needed_amount = conversion["result"]["converted_value"]
-            else:
-                # Containers don't need conversion
-                needed_amount = item["quantity"]
+        else:
+            inventory_item = InventoryItem.query.get(item["container_id"])
+            if not inventory_item:
+                continue
+            needed_amount = item["quantity_used"]
 
             # Check FIFO availability
             success, deductions = deduct_fifo(
