@@ -124,22 +124,37 @@ function addExtraItemRow(type) {
 
 function saveExtras() {
   const rows = document.querySelectorAll(".extra-row");
-  const extras = Array.from(rows).map(row => {
+  const ingredients = [];
+  const containers = [];
+  
+  Array.from(rows).forEach(row => {
     const type = row.dataset.type;
-    const baseData = {
-      item_id: parseInt(row.querySelector(".item-select").value),
-      quantity: parseFloat(row.querySelector(".qty").value) || 0,
-      cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-      type: type
-    };
-
-    // Add unit for ingredients only
+    const itemId = parseInt(row.querySelector(".item-select").value);
+    const quantity = parseFloat(row.querySelector(".qty").value) || 0;
+    const cost = parseFloat(row.querySelector(".cost").value) || 0;
+    
     if (type === 'ingredient') {
-      baseData.unit = row.querySelector(".unit").value;
+      ingredients.push({
+        item_id: itemId,
+        quantity: quantity,
+        cost_per_unit: cost,
+        unit: row.querySelector(".unit").value,
+        type: 'ingredient'
+      });
+    } else if (type === 'container') {
+      containers.push({
+        item_id: itemId,
+        quantity_used: quantity,
+        cost_each: cost,
+        type: 'container'
+      });
     }
-
-    return baseData;
   });
+
+  const extras = {
+    ingredients: ingredients,
+    containers: containers
+  };
 
   const batchId = window.location.pathname.split('/').pop();
   fetch(`/batches/add-extra/${batchId}`, {
