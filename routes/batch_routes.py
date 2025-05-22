@@ -98,21 +98,21 @@ def start_batch():
                 f"Used in batch {label_code}",
                 batch_id=new_batch.id
             )
-                
-                if not success:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
-                    continue
+            
+            if not success:
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                continue
 
-                # Create BatchIngredient records for each FIFO deduction
-                for entry_id, deduct_amount, unit_cost in deductions:
-                    batch_ingredient = BatchIngredient(
-                        batch_id=new_batch.id,
-                        ingredient_id=ingredient.id,
-                        amount_used=deduct_amount,
-                        unit=ingredient.unit,
-                        cost_per_unit=unit_cost
-                    )
-                    db.session.add(batch_ingredient)
+            # Create BatchIngredient records for each FIFO deduction
+            for entry_id, deduct_amount, unit_cost in deductions:
+                batch_ingredient = BatchIngredient(
+                    batch_id=new_batch.id,
+                    ingredient_id=ingredient.id,
+                    amount_used=deduct_amount,
+                    unit=ingredient.unit,
+                    cost_per_unit=unit_cost
+                )
+                db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
