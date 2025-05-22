@@ -50,7 +50,6 @@ def start_batch():
         if container_id and quantity:
             container_item = InventoryItem.query.get(container_id)
             if container_item:
-                # Use FIFO service for container deduction
                 success, deductions = deduct_fifo(
                     container_id,
                     quantity,
@@ -60,18 +59,14 @@ def start_batch():
                 )
                 
                 if success:
-                    # Calculate average cost from FIFO deductions
-                    total_cost = sum(cost * qty for _, qty, cost in deductions)
-                    avg_cost = total_cost / quantity if quantity > 0 else 0
-                    
-                    # Create batch container record
-                    bc = BatchContainer(
-                        batch_id=new_batch.id,
-                        container_id=container_id,
-                        quantity_used=quantity,
-                        cost_each=avg_cost
-                    )
-                    db.session.add(bc)
+                    # Create batch container record for each FIFO deduction
+                    for entry_id, deduct_amount, _ in deductions:
+                        bc = BatchContainer(
+                            batch_id=new_batch.id,
+                            container_id=container_id,
+                            quantity_used=deduct_amount
+                        )
+                        db.session.add(bc)
                 else:
                     container_errors.append(f"Not enough {container_item.name} in stock.")
 
@@ -95,60 +90,44 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            if ingredient.intermediate:
-                # Handle FIFO deduction for intermediate ingredients
-                success, used_batches = FIFOService.deduct_intermediate_fifo(
-                    ingredient.name,
-                    ingredient.unit,
-                    required_converted
-                )
-                if not success:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
-                    continue
+            # Use consistent FIFO deduction for all ingredients
+            success, deductions = deduct_fifo(
+                ingredient.id,
+                required_converted,
+                'batch',
+                f"Used in batch {label_code}",
+                batch_id=new_batch.id
+            )
+            
+            if not success:
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                continue
 
-                # Create BatchIngredient records for each used batch
-                for batch_id, amount in used_batches:
-                    batch_ingredient = BatchIngredient(
-                        batch_id=new_batch.id,
-                        ingredient_id=ingredient.id,
-                        amount_used=amount,
-                        unit=ingredient.unit,
-                        cost_per_unit=ingredient.cost_per_unit,
-                        source_batch_id=batch_id
-                    )
-                    db.session.add(batch_ingredient)
-            else:
-                # Regular inventory deduction using FIFO
-                from blueprints.fifo.services import deduct_fifo
-                success, deductions = deduct_fifo(
-                    ingredient.id,
-                    required_converted,
-                    'batch',
-                    f"Used in batch {label_code}",
-                    batch_id=new_batch.id
+            # Create BatchIngredient records for each FIFO deduction
+            for entry_id, deduct_amount, unit_cost in deductions:
+                batch_ingredient = BatchIngredient(
+                    batch_id=new_batch.id,
+                    ingredient_id=ingredient.id,
+                    amount_used=deduct_amount,
+                    unit=ingredient.unit,
+                    cost_per_unit=unit_cost
                 )
-                
-                if not success:
-                    ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
-                    continue
-
-                # Create BatchIngredient records for each FIFO deduction
-                for entry_id, deduct_amount, unit_cost in deductions:
-                    batch_ingredient = BatchIngredient(
-                        batch_id=new_batch.id,
-                        ingredient_id=ingredient.id,
-                        amount_used=deduct_amount,
-                        unit=ingredient.unit,
-                        cost_per_unit=unit_cost
-                    )
-                    db.session.add(batch_ingredient)
+                db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
     if ingredient_errors:
         flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
     else:
-        flash("Batch started and inventory deducted.", "success")
+        # Build ingredients summary
+        deduction_summary = []
+        for ing in batch.ingredients:
+            deduction_summary.append(f"{ing.amount_used} {ing.unit} of {ing.ingredient.name}")
+        for cont in batch.containers:
+            deduction_summary.append(f"{cont.quantity_used} {cont.container.unit} of {cont.container.name}")
+        
+        deducted_items = ", ".join(deduction_summary)
+        flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
