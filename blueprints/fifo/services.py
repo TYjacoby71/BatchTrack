@@ -11,7 +11,7 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
+def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, created_by=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
     Args:
@@ -61,7 +61,8 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
             unit_cost=unit_cost,
             note=f"{notes} (From FIFO #{entry_id})",
             used_for_batch_id=batch_id,
-            quantity_used=deduct_amount
+            quantity_used=deduct_amount,
+            created_by=created_by
         )
         db.session.add(history)
 
