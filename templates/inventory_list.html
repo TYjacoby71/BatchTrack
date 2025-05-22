@@ -153,7 +153,11 @@
           <td>{{ item.category.name if item.category else 'None' }}</td>
           <td>
             <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
-            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+            {% if not item.is_archived %}
+              <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+            {% else %}
+              <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" class="btn btn-sm btn-success">Restore</a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -220,7 +224,11 @@
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
             <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
-            <a href="{{ url_for('inventory.delete_inventory', id=item.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+            {% if not item.is_archived %}
+              <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+            {% else %}
+              <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" class="btn btn-sm btn-success">Restore</a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

@@ -239,6 +239,7 @@ class InventoryItem(db.Model):
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
+    is_archived = db.Column(db.Boolean, default=False)
     quantity = db.Column(db.Float, default=0)
     unit = db.Column(db.String(32))
     type = db.Column(db.String(32), default="ingredient")
