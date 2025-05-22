@@ -279,4 +279,3 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
     created_at = db.Column(db.DateTime, default=get_local_time)
-```
