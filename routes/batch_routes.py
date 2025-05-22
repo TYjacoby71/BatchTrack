@@ -389,40 +389,58 @@ def save_extra_containers(batch_id):
     extras = request.get_json().get("extras", [])
     errors = []
 
-    # First check stock for all containers
+    # First check stock for all containers using FIFO
     for item in extras:
         container = InventoryItem.query.get(item["container_id"])
         if not container:
             continue
 
         needed_amount = item["quantity"]
-        if container.quantity < needed_amount:
+        # Test FIFO deduction without actually doing it
+        success, _ = deduct_fifo(
+            container.id,
+            needed_amount,
+            'test',
+            'Test deduction'
+        )
+
+        if not success:
             errors.append({
                 "container": container.name,
-                "message": "Not enough in stock",
-                "needed": needed_amount,
-                "available": container.quantity
+                "message": f"Not enough in stock (FIFO)",
+                "needed": needed_amount
             })
 
     # If any errors, return them
     if errors:
         return jsonify({"status": "error", "errors": errors}), 400
 
-    # If all good, process the deductions
+    # If all good, save the extras using FIFO
     for item in extras:
         container_id = item["container_id"]
-        container = InventoryItem.query.get(container_id)
         new_quantity = item["quantity"]
-        
-        container.quantity -= new_quantity
-        
-        new_extra = ExtraBatchContainer(
-            batch_id=batch.id,
-            container_id=container_id,
-            quantity_used=new_quantity,
-            cost_each=container.cost_per_unit
+
+        # Use FIFO service for actual deduction
+        success, deductions = deduct_fifo(
+            container_id,
+            new_quantity,
+            'batch',
+            f'Extra container for batch {batch.label_code}',
+            batch_id=batch.id
         )
-        db.session.add(new_extra)
+
+        if success:
+            # Calculate average cost from FIFO deductions
+            total_cost = sum(qty * cost for _, qty, cost in deductions)
+            avg_cost = total_cost / new_quantity if new_quantity > 0 else 0
+
+            new_extra = ExtraBatchContainer(
+                batch_id=batch.id,
+                container_id=container_id,
+                quantity_used=new_quantity,
+                cost_each=avg_cost
+            )
+            db.session.add(new_extra)
 
     db.session.commit()
     return jsonify({"status": "success"})
