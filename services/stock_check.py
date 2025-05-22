@@ -9,20 +9,6 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     # Check each ingredient in the recipe
     for recipe_ingredient in recipe.recipe_ingredients:
         ingredient = recipe_ingredient.inventory_item
-        if ingredient.is_archived:
-            results.append({
-                'type': 'ingredient',
-                'name': ingredient.name,
-                'needed': recipe_ingredient.amount * scale,
-                'needed_unit': recipe_ingredient.unit,
-                'available': 0,
-                'available_unit': recipe_ingredient.unit,
-                'status': 'ARCHIVED',
-                'error': 'Item is archived'
-            })
-            all_ok = False
-            continue
-            
         needed_amount = recipe_ingredient.amount * scale
 
         # Get current inventory details
