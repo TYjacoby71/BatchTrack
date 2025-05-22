@@ -47,7 +47,18 @@ function toggleUpdateForm() {
   }
 }
 
+function updateClock() {
+  const clock = document.getElementById('clock');
+  if (clock) {
+    const now = new Date();
+    clock.textContent = '🕐 ' + now.toLocaleTimeString();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize clock
+  updateClock();
+  setInterval(updateClock, 1000);
   // Initialize all Select2 dropdowns
   const select2Config = {
     placeholder: 'Select...',
