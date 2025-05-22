@@ -147,6 +147,9 @@ class ExtraBatchContainer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity_used = db.Column(db.Integer, nullable=False)
+    cost_each = db.Column(db.Float)
+    container = db.relationship('InventoryItem', backref=db.backref('extra_batch_containers', overlaps="history,inventory_item"))
 
 class InventoryHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
