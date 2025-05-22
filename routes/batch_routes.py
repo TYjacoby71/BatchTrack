@@ -119,7 +119,15 @@ def start_batch():
     if ingredient_errors:
         flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
     else:
-        flash("Batch started and inventory deducted.", "success")
+        # Build ingredients summary
+        deduction_summary = []
+        for ing in batch.ingredients:
+            deduction_summary.append(f"{ing.amount_used} {ing.unit} of {ing.ingredient.name}")
+        for cont in batch.containers:
+            deduction_summary.append(f"{cont.quantity_used} {cont.container.unit} of {cont.container.name}")
+        
+        deducted_items = ", ".join(deduction_summary)
+        flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
