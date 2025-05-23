@@ -87,12 +87,12 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
     # Handle increase in quantity    
     else:
-        # Get all FIFO entries ordered by newest first that aren't at capacity
+        # Get only restock entries that aren't at capacity
         unfilled_entries = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                InventoryHistory.quantity_change > 0  # Only get FIFO storage entries
+                InventoryHistory.change_type == 'restock'  # Only fill restock events
             )
         ).order_by(InventoryHistory.timestamp.desc()).all()
 
