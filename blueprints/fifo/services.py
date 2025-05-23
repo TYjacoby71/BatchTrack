@@ -11,25 +11,23 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, created_by=None):
+def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
     Args:
         inventory_item_id: ID of inventory item
         quantity: Amount to deduct
-        change_type: Type of change (batch, spoil, etc)
-        notes: Description of change
-        batch_id: Optional batch ID for attribution
+        change_type: Type of change (optional)
+        notes: Change notes (optional) 
+        batch_id: Associated batch ID (optional)
+        created_by: User ID who created change (optional)
+    Returns:
+        tuple: (success, deduction_plan)
+            success (bool): True if deduction was successful
+            deduction_plan: List of tuples (entry_id, deduct_amount, unit_cost)
     """
-    from models import InventoryItem
-    
     remaining = quantity
     deduction_plan = []
-    inventory_item = InventoryItem.query.get(inventory_item_id)
-
-    if not inventory_item:
-        return False, []
-
     fifo_entries = get_fifo_entries(inventory_item_id)
 
     for entry in fifo_entries:
@@ -38,36 +36,15 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, 
 
         deduction = min(entry.remaining_quantity, remaining)
         remaining -= deduction
-
-        deduction_plan.append((entry.id, deduction))
+        deduction_plan.append((entry.id, deduction, entry.unit_cost))
 
     if remaining > 0:
         return False, []
 
-    # Execute deductions and update inventory
-    total_deducted = 0
-    for entry_id, deduct_amount in deduction_plan:
+    # Only update remaining quantities
+    for entry_id, deduct_amount, _ in deduction_plan:
         entry = InventoryHistory.query.get(entry_id)
         entry.remaining_quantity -= deduct_amount
-        total_deducted += deduct_amount
-        
-        # Create history entry for deduction
-        history = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type=change_type,
-            quantity_change=-deduct_amount,
-            remaining_quantity=0,
-            fifo_reference_id=entry_id,
-            note=f"{notes} (From FIFO #{entry_id})",
-            used_for_batch_id=batch_id,
-            quantity_used=deduct_amount
-        )
-        db.session.add(history)
-
-    # Verify FIFO matches inventory
-    total_remaining = sum(entry.remaining_quantity for entry in get_fifo_entries(inventory_item_id))
-    inventory_item.quantity = total_remaining
-    db.session.add(inventory_item)
 
     return True, deduction_plan
 
@@ -94,14 +71,14 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
             return False
 
         # Create separate history entries for each FIFO deduction
-        for entry_id, deduct_amount, unit_cost in deductions:
+        for entry_id, deduct_amount in deductions:
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
                 quantity_change=-deduct_amount,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
-                unit_cost=unit_cost,
+                unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
                 quantity_used=deduct_amount
