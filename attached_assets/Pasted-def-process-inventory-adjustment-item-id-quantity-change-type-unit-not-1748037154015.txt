@@ -1,0 +1,84 @@
+def process_inventory_adjustment(
+    item_id,
+    quantity,
+    change_type,
+    unit,
+    notes='',
+    batch_id=None,
+    created_by=None,
+    cost_override=None,
+):
+    """
+    Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
+    """
+    item = InventoryItem.query.get_or_404(item_id)
+
+    # Convert units if needed (except for containers)
+    if item.type != 'container' and unit != item.unit:
+        from services.conversion_wrapper import safe_convert
+        conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
+        if not conversion['ok']:
+            raise ValueError(conversion['error'])
+        quantity = conversion['result']['converted_value']
+
+    # Determine quantity change
+    if change_type == 'recount':
+        qty_change = quantity - item.quantity
+    elif change_type in ['spoil', 'trash']:
+        qty_change = -abs(quantity)
+    else:
+        qty_change = quantity
+
+    # Handle expiration
+    expiration_date = None
+    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+        from datetime import datetime, timedelta
+        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+
+    # Get cost
+    cost_per_unit = (
+        cost_override if cost_override is not None
+        else item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount']
+        else None
+    )
+
+    # Deductions
+    if qty_change < 0:
+        from blueprints.fifo.services import deduct_fifo
+        success, deductions = deduct_fifo(item.id, abs(qty_change), change_type, notes)
+        if not success:
+            raise ValueError("Insufficient FIFO stock")
+
+        for entry_id, deduction_amount in deductions:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type=change_type,
+                quantity_change=-deduction_amount,
+                fifo_reference_id=entry_id,
+                unit_cost=cost_per_unit,
+                note=f"{notes} (From FIFO #{entry_id})",
+                created_by=created_by,
+                quantity_used=deduction_amount,
+                used_for_batch_id=batch_id
+            )
+            db.session.add(history)
+        item.quantity += qty_change
+
+    else:
+        # Additions (restock or recount or adjustment up)
+        history = InventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=qty_change,
+            remaining_quantity=qty_change if change_type == 'restock' else None,
+            unit_cost=cost_per_unit,
+            note=notes,
+            quantity_used=0,
+            created_by=created_by,
+            expiration_date=expiration_date,
+            used_for_batch_id=batch_id
+        )
+        db.session.add(history)
+        item.quantity += qty_change
+
+    db.session.commit()
