@@ -83,12 +83,13 @@ def add_inventory():
 
     # Create initial history entry for FIFO tracking
     if quantity > 0:
+        unit_cost = float(cost_per_unit) if cost_per_unit else 0.0
         history = InventoryHistory(
             inventory_item_id=item.id,
             change_type='restock',
             quantity_change=quantity,
             remaining_quantity=quantity,  # For FIFO tracking
-            unit_cost=cost_per_unit,
+            unit_cost=unit_cost,
             note='Initial stock creation',
             created_by=current_user.id if current_user else None,
             quantity_used=0,  # Required field for FIFO tracking
@@ -98,6 +99,7 @@ def add_inventory():
         )
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
+        item.cost_per_unit = unit_cost  # Set initial cost
 
     db.session.commit()
     flash('Inventory item added successfully.')
@@ -158,12 +160,13 @@ def adjust_inventory(id):
 
         # Create separate history entries for each FIFO deduction
         for entry_id, deduction_amount, unit_cost in deduction_plan:
+            current_cost = unit_cost if unit_cost is not None else item.cost_per_unit
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,  # Negative since it's a deduction
                 fifo_reference_id=entry_id,
-                unit_cost=unit_cost,
+                unit_cost=current_cost,
                 note=f"{notes} (From FIFO #{entry_id})",
                 created_by=current_user.id,
                 quantity_used=deduction_amount
