@@ -416,7 +416,9 @@ def add_extra_to_batch(batch_id):
                 remaining_quantity=container_item.quantity - needed_amount,
                 unit_cost=avg_cost,
                 note=f"Extra container for batch {batch.label_code}",
-                used_for_batch_id=batch.id
+                used_for_batch_id=batch.id,
+                quantity_used=needed_amount,  # Add the quantity used field
+                cost_each=avg_cost  # Add the cost each field
             )
             db.session.add(history)
             
