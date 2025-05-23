@@ -50,26 +50,25 @@ def start_batch():
         if container_id and quantity:
             container_item = InventoryItem.query.get(container_id)
             if container_item:
-                success, deductions = deduct_fifo(
+                # Use the inventory adjustment route
+                result = adjust_inventory(
                     container_id,
-                    quantity,
-                    'batch',
-                    f"Used in batch {label_code}",
-                    batch_id=new_batch.id,
-                    created_by=current_user.id
+                    change_type='batch',
+                    quantity=-quantity,  # Negative for deduction
+                    input_unit=container_item.unit,
+                    notes=f"Used in batch {label_code}",
+                    batch_id=new_batch.id
                 )
 
-                if success:
-                    # Create batch container record for each FIFO deduction
-                    for entry_id, deduct_amount in deductions:
-                        container_item = InventoryItem.query.get(container_id)
-                        bc = BatchContainer(
-                            batch_id=new_batch.id,
-                            container_id=container_id,
-                            quantity_used=deduct_amount,
-                            cost_each=container_item.cost_per_unit
-                        )
-                        db.session.add(bc)
+                if result.get('success'):
+                    # Create single BatchContainer record
+                    bc = BatchContainer(
+                        batch_id=new_batch.id,
+                        container_id=container_id,
+                        quantity_used=quantity,
+                        cost_each=container_item.cost_per_unit
+                    )
+                    db.session.add(bc)
                 else:
                     container_errors.append(f"Not enough {container_item.name} in stock.")
 
