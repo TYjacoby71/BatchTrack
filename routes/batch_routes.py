@@ -61,7 +61,7 @@ def start_batch():
 
                 if success:
                     # Create batch container record for each FIFO deduction
-                    for entry_id, deduct_amount in deductions:
+                    for entry_id, deduct_amount, _ in deductions:
                         container_item = InventoryItem.query.get(container_id)
                         bc = BatchContainer(
                             batch_id=new_batch.id,
@@ -100,7 +100,7 @@ def start_batch():
                 'batch',
                 f"Used in batch {label_code}",
                 batch_id=new_batch.id,
-                created_by=current_user.id
+                created_by=current_user.id  # Ensure current user ID is passed
             )
 
             if not success:

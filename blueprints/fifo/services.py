@@ -71,7 +71,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
             return False
 
         # Create separate history entries for each FIFO deduction
-        for entry_id, deduct_amount in deductions:
+        for entry_id, deduct_amount, _ in deductions:
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
@@ -87,25 +87,25 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
     # Handle increase in quantity    
     else:
-        # Get all FIFO entries ordered by newest first that aren't at capacity
+        # Get only restock entries that aren't at capacity
         unfilled_entries = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                InventoryHistory.quantity_change > 0  # Only get FIFO storage entries
+                InventoryHistory.change_type == 'restock'  # Only fill restock events
             )
         ).order_by(InventoryHistory.timestamp.desc()).all()
 
         remaining_to_add = difference
-        
+
         # First try to fill existing FIFO entries
         for entry in unfilled_entries:
             if remaining_to_add <= 0:
                 break
-                
+
             available_capacity = entry.quantity_change - entry.remaining_quantity
             fill_amount = min(available_capacity, remaining_to_add)
-            
+
             if fill_amount > 0:
                 # Log the recount but don't create new FIFO entry
                 history = InventoryHistory(
@@ -119,7 +119,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     quantity_used=0
                 )
                 db.session.add(history)
-                
+
                 # Update the original FIFO entry
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
