@@ -141,8 +141,8 @@ def adjust_inventory(id):
     else:
         qty_change = quantity
 
-    # For restocks and positive adjustments, remaining_quantity starts equal to the quantity added
-    remaining = qty_change if qty_change > 0 else 0
+    # Only restock events should track remaining quantity
+    remaining = qty_change if change_type == 'restock' else None
 
     # Set expiration date for restock history entry
     expiration_date = None
