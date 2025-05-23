@@ -46,7 +46,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, 
 
     # Execute deductions and update inventory
     total_deducted = 0
-    for entry_id, deduct_amount in deduction_plan:
+    for entry_id, deduct_amount, unit_cost in deduction_plan:
         entry = InventoryHistory.query.get(entry_id)
         entry.remaining_quantity -= deduct_amount
         total_deducted += deduct_amount
