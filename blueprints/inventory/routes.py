@@ -160,15 +160,12 @@ def adjust_inventory(id):
 
         # Create separate history entries for each FIFO deduction
         for entry_id, deduction_amount in deduction_plan:
-            # For deductions, always use current item cost
-            current_cost = item.cost_per_unit if change_type == 'restock' else None
-            
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,  # Negative since it's a deduction
                 fifo_reference_id=entry_id,
-                unit_cost=current_cost,
+                unit_cost=item.cost_per_unit,  # Always use current item cost
                 note=f"{notes} (From FIFO #{entry_id})",
                 created_by=current_user.id,
                 quantity_used=deduction_amount
