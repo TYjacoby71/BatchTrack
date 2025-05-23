@@ -94,14 +94,14 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
             return False
 
         # Create separate history entries for each FIFO deduction
-        for entry_id, deduct_amount, unit_cost in deductions:
+        for entry_id, deduct_amount in deductions:
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
                 quantity_change=-deduct_amount,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
-                unit_cost=unit_cost,
+                unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
                 quantity_used=deduct_amount
