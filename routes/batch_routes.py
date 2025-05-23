@@ -410,7 +410,7 @@ def add_extra_to_batch(batch_id):
                 created_by=current_user.id
             )
 
-        if not result.get('success'):
+        if not result:
             errors.append({
                 "item": container_item.name,
                 "message": "Not enough in stock",
@@ -455,10 +455,10 @@ def add_extra_to_batch(batch_id):
                 created_by=current_user.id
             )
 
-            if not result.get('success'):
+            if not result:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock",
+                    "message": "Not enough in stock", 
                     "needed": needed_amount,
                     "needed_unit": inventory_item.unit
                 })
