@@ -11,7 +11,7 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None):
+def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, created_by=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
     Args:

@@ -55,9 +55,10 @@ def start_batch():
                     quantity,
                     'batch',
                     f"Used in batch {label_code}",
-                    batch_id=new_batch.id
+                    batch_id=new_batch.id,
+                    created_by=current_user.id
                 )
-                
+
                 if success:
                     # Create batch container record for each FIFO deduction
                     for entry_id, deduct_amount, _ in deductions:
@@ -96,9 +97,10 @@ def start_batch():
                 required_converted,
                 'batch',
                 f"Used in batch {label_code}",
-                batch_id=new_batch.id
+                batch_id=new_batch.id,
+                created_by=current_user.id
             )
-            
+
             if not success:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
                 continue
@@ -125,7 +127,7 @@ def start_batch():
             deduction_summary.append(f"{ing.amount_used} {ing.unit} of {ing.ingredient.name}")
         for cont in new_batch.containers:
             deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
-        
+
         deducted_items = ", ".join(deduction_summary)
         flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
 
@@ -243,10 +245,10 @@ def view_batch_in_progress(batch_identifier):
     if batch.status != 'in_progress':
         flash('This batch is already completed.')
         return redirect(url_for('batches.list_batches'))
-        
+
     # Recipe data comes through the batch relationship
     recipe = batch.recipe  # Use the relationship
-    
+
     # Get units for dropdown
     from datetime import datetime, timedelta
     from utils.unit_utils import get_global_unit_list
@@ -394,7 +396,8 @@ def add_extra_to_batch(batch_id):
             needed_amount,
             'batch',
             f'Extra container for batch {batch.label_code}',
-            batch_id=batch.id
+            batch_id=batch.id,
+            created_by=current_user.id
         )
 
         if not success:
@@ -407,7 +410,7 @@ def add_extra_to_batch(batch_id):
         else:
             total_cost = sum(qty * cost for _, qty, cost in deductions)
             avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
-            
+
             # FIFO deduction creates history entry automatically
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
@@ -440,7 +443,8 @@ def add_extra_to_batch(batch_id):
                 needed_amount,
                 'batch',
                 f'Extra ingredient for batch {batch.label_code}',
-                batch_id=batch.id
+                batch_id=batch.id,
+                created_by=current_user.id
             )
 
             if not success:
