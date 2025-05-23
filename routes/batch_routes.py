@@ -410,12 +410,12 @@ def add_extra_to_batch(batch_id):
                 "needed_unit": "units"
             })
         else:
-            # FIFO deduction creates history entry automatically
+            # Use container's current cost
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=container_item.id,
                 quantity_used=needed_amount,
-                cost_each=avg_cost
+                cost_each=container_item.cost_per_unit
             )
             db.session.add(new_extra)
 
