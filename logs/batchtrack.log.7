@@ -1,10 +1,10 @@
-2025-05-22 15:36:21,334 ERROR: Exception on /inventory/delete/18 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-05-22 15:36:27,243 ERROR: Exception on /inventory/delete/17 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.inventory_item_id
+sqlite3.IntegrityError: NOT NULL constraint failed: batch_ingredient.ingredient_id
 
 The above exception was the direct cause of the following exception:
 
@@ -80,7 +80,10 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.inventory_item_id
-[SQL: UPDATE inventory_history SET inventory_item_id=? WHERE inventory_history.id = ?]
-[parameters: (None, 141)]
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: batch_ingredient.ingredient_id
+[SQL: UPDATE batch_ingredient SET ingredient_id=? WHERE batch_ingredient.id = ?]
+[parameters: (None, 17)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-05-22 15:36:47,566 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-22 15:57:58,891 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-05-22 16:06:49,977 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
