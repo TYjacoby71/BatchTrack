@@ -100,7 +100,7 @@ def start_batch():
                 'batch',
                 f"Used in batch {label_code}",
                 batch_id=new_batch.id,
-                created_by=current_user.id
+                created_by=current_user.id  # Ensure current user ID is passed
             )
 
             if not success:
