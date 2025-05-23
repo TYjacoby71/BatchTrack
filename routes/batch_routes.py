@@ -95,13 +95,14 @@ def start_batch():
 
             # Use inventory adjustment route for consistent FIFO handling
             from blueprints.inventory.routes import adjust_inventory
-            success = adjust_inventory(
-                ingredient.id,
-                change_type='batch',
-                quantity=required_converted,
-                notes=f"Used in batch {label_code}",
-                batch_id=new_batch.id
-            )
+            from flask import request
+            request.form = type('obj', (), {
+                'change_type': 'batch',
+                'quantity': -required_converted,
+                'notes': f"Used in batch {label_code}",
+                'batch_id': new_batch.id
+            })()
+            success = adjust_inventory(ingredient.id)
 
             if not success:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
