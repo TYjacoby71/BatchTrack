@@ -454,16 +454,13 @@ def add_extra_to_batch(batch_id):
                     "needed_unit": inventory_item.unit
                 })
             else:
-                # Calculate average cost
-                total_cost = sum(qty * cost for _, qty, cost in deductions)
-                avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
-
+                # Use current inventory cost
                 new_extra = ExtraBatchIngredient(
                     batch_id=batch.id,
                     inventory_item_id=inventory_item.id,
                     quantity=needed_amount,
                     unit=inventory_item.unit,
-                    cost_per_unit=avg_cost
+                    cost_per_unit=inventory_item.cost_per_unit
                 )
                 db.session.add(new_extra)
 
