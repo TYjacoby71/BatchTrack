@@ -413,12 +413,13 @@ def add_extra_to_batch(batch_id):
                 inventory_item_id=container_item.id,
                 change_type='batch',
                 quantity_change=-needed_amount,  # Negative for usage
-                remaining_quantity=container_item.quantity - needed_amount,
+                remaining_quantity=None,  # Deductions don't track remaining
                 unit_cost=avg_cost,
                 note=f"Extra container for batch {batch.label_code}",
                 used_for_batch_id=batch.id,
-                quantity_used=needed_amount,  # Add the quantity used field
-                cost_each=avg_cost  # Add the cost each field
+                quantity_used=needed_amount,
+                cost_each=avg_cost,
+                fifo_reference_id=deductions[0][0] if deductions else None  # Link to source
             )
             db.session.add(history)
             
