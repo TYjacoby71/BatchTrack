@@ -1,20 +1,18 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, session, request
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
-from utils import get_setting
-from sqlalchemy import extract
-from services.unit_conversion import ConversionEngine
-from blueprints.fifo.services import deduct_fifo
-import uuid, os
-from werkzeug.utils import secure_filename
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
 @batches_bp.route('/start_batch', methods=['POST'])
 @login_required
 def start_batch():
-    data = request.get_json()
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form
+
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     scale = float(data['scale'])
 
