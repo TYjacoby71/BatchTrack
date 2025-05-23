@@ -14,9 +14,13 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 @batches_bp.route('/start_batch', methods=['POST'])
 @login_required
 def start_batch():
-    data = request.get_json()
-    recipe = Recipe.query.get_or_404(data['recipe_id'])
-    scale = float(data['scale'])
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form
+
+    recipe = Recipe.query.get_or_404(data.get('recipe_id'))
+    scale = float(data.get('scale', 1.0))
 
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
