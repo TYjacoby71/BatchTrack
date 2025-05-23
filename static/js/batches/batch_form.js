@@ -124,21 +124,36 @@ function addExtraItemRow(type) {
 
 function saveExtras() {
   const rows = document.querySelectorAll(".extra-row");
-  const extras = Array.from(rows).map(row => {
-    const type = row.dataset.type;
-    const baseData = {
-      item_id: parseInt(row.querySelector(".item-select").value),
-      quantity: parseFloat(row.querySelector(".qty").value) || 0,
-      cost_per_unit: parseFloat(row.querySelector(".cost").value) || 0,
-      type: type
-    };
+  const extraIngredients = [];
+  const extraContainers = [];
 
-    // Add unit for ingredients only
-    if (type === 'ingredient') {
-      baseData.unit = row.querySelector(".unit").value;
+  // Separate ingredients and containers
+  rows.forEach(row => {
+    const type = row.dataset.type;
+    const itemSelect = row.querySelector(".item-select");
+    const qtyInput = row.querySelector(".qty");
+    const costInput = row.querySelector(".cost");
+
+    if (!itemSelect.value || !qtyInput.value) {
+      return;
     }
 
-    return baseData;
+    const baseData = {
+      item_id: parseInt(itemSelect.value),
+      quantity: parseFloat(qtyInput.value),
+      cost_per_unit: parseFloat(costInput.value) || 0
+    };
+
+    if (type === 'ingredient') {
+      const unitSelect = row.querySelector(".unit");
+      if (!unitSelect.value) {
+        return;
+      }
+      baseData.unit = unitSelect.value;
+      extraIngredients.push(baseData);
+    } else if (type === 'container') {
+      extraContainers.push(baseData);
+    }
   });
 
   const batchId = window.location.pathname.split('/').pop();
@@ -148,7 +163,10 @@ function saveExtras() {
       "Content-Type": "application/json",
       "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
     },
-    body: JSON.stringify({ extras })
+    body: JSON.stringify({ 
+      extra_ingredients: extraIngredients,
+      extra_containers: extraContainers 
+    })
   })
   .then(res => {
     if (!res.ok) {

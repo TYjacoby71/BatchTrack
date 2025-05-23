@@ -147,7 +147,7 @@
                 <tr>
                     <td>{{ extra.ingredient.name }}</td>
                     <td>{{ "%.3f"|format(extra.quantity|float or 0) }}</td>
-                    <td>{{ extra.unit or extra.ingredient.unit }}</td>
+                    <td>{{ extra.unit }}</td>
                     <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
                 </tr>
@@ -165,7 +165,7 @@
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
                     <td>{{ container.container.name }}</td>
-                    <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
+                    <td>{{ container.quantity_used }}</td>
                     <td></td>
                     <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                     <td>${{ "%.2f"|format(line_cost) }}</td>
