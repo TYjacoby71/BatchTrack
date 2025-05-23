@@ -106,88 +106,38 @@ def add_inventory():
 @inventory_bp.route('/adjust/<int:id>', methods=['POST'])
 @login_required
 def adjust_inventory(id):
-    item = InventoryItem.query.get_or_404(id)
-    change_type = request.form.get('change_type')
-    input_quantity = float(request.form.get('quantity', 0))
-    input_unit = request.form.get('input_unit')
-    
-    # Skip unit conversion for containers
-    if item.type == 'container':
-        quantity = input_quantity
-    # Convert quantity to item's base unit if different and not a container
-    elif input_unit != item.unit:
-        from services.conversion_wrapper import safe_convert
-        conversion = safe_convert(input_quantity, input_unit, item.unit, ingredient_id=item.id)
-        if not conversion['ok']:
-            flash(f'Unit conversion error: {conversion["error"]}', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
-        quantity = conversion['result']['converted_value']
-    else:
-        quantity = input_quantity
+    try:
+        change_type = request.form.get('change_type')
+        input_quantity = float(request.form.get('quantity', 0))
+        input_unit = request.form.get('input_unit')
+        notes = request.form.get('notes', '')
 
-    # If no cost provided, use existing item cost for restocks, None for other types
-    input_cost = request.form.get('cost_per_unit')
-    if input_cost:
-        cost_per_unit = float(input_cost)
-    else:
-        cost_per_unit = item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount'] else None
-    notes = request.form.get('notes', '')
+        # Handle cost override
+        input_cost = request.form.get('cost_per_unit')
+        cost_override = float(input_cost) if input_cost else None
 
-    # Calculate the quantity change
-    if change_type == 'recount':
-        qty_change = quantity - item.quantity
-    elif change_type in ['spoil', 'trash']:
-        qty_change = -abs(quantity)
-    else:
-        qty_change = quantity
-
-    # Only restock events should track remaining quantity
-    remaining = qty_change if change_type == 'restock' else None
-
-    # Set expiration date for restock history entry
-    expiration_date = None
-    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
-        from datetime import datetime, timedelta
-        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
-
-    if qty_change < 0:
-        success, deduction_plan = deduct_fifo(item.id, abs(qty_change), change_type, notes)
-        if not success:
-            flash('Insufficient stock for FIFO deduction', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
-
-        # Create separate history entries for each FIFO deduction
-        for entry_id, deduction_amount, unit_cost in deduction_plan:
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type=change_type,
-                quantity_change=-deduction_amount,  # Negative since it's a deduction
-                fifo_reference_id=entry_id,
-                unit_cost=unit_cost,
-                note=f"{notes} (From FIFO #{entry_id})",
-                created_by=current_user.id,
-                quantity_used=deduction_amount
-            )
-            db.session.add(history)
-
-        item.quantity += qty_change
-    else:
-        history = InventoryHistory(
-            inventory_item_id=item.id,
+        # Use centralized adjustment service
+        from services.inventory_adjustment import process_inventory_adjustment
+        success = process_inventory_adjustment(
+            item_id=id,
+            quantity=input_quantity,
             change_type=change_type,
-            quantity_change=qty_change,
-            remaining_quantity=remaining,  # Track remaining quantity for FIFO
-            unit_cost=cost_per_unit,
-            note=notes,
-            quantity_used=0,
+            unit=input_unit,
+            notes=notes,
             created_by=current_user.id,
-            expiration_date=expiration_date
+            cost_override=cost_override
         )
-        db.session.add(history)
-        item.quantity += qty_change
 
-    db.session.commit()
-    flash('Inventory adjusted successfully')
+        if success:
+            flash('Inventory adjusted successfully')
+        else:
+            flash('Error adjusting inventory', 'error')
+
+    except ValueError as e:
+        flash(f'Error: {str(e)}', 'error')
+    except Exception as e:
+        flash(f'Unexpected error: {str(e)}', 'error')
+
     return redirect(url_for('inventory.view_inventory', id=id))
 
 
