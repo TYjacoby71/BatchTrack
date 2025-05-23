@@ -8,6 +8,7 @@ from services.unit_conversion import ConversionEngine
 from blueprints.inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
+from services.inventory_adjustment import process_inventory_adjustment
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
@@ -51,26 +52,30 @@ def start_batch():
             container_item = InventoryItem.query.get(container_id)
             if container_item:
                 # Use the inventory adjustment route
-                result = adjust_inventory(
-                    container_id,
-                    change_type='batch',
-                    quantity=-quantity,  # Negative for deduction
-                    input_unit=container_item.unit,
-                    notes=f"Used in batch {label_code}",
-                    batch_id=new_batch.id
-                )
-
-                if result.get('success'):
-                    # Create single BatchContainer record
-                    bc = BatchContainer(
+                try:
+                    result = process_inventory_adjustment(
+                        container_id,
+                        -quantity,  # Negative for deduction
+                        'batch',
+                        container_item.unit,
+                        notes=f"Used in batch {label_code}",
                         batch_id=new_batch.id,
-                        container_id=container_id,
-                        quantity_used=quantity,
-                        cost_each=container_item.cost_per_unit
+                        created_by=current_user.id
                     )
-                    db.session.add(bc)
-                else:
-                    container_errors.append(f"Not enough {container_item.name} in stock.")
+
+                    if result.get('success'):
+                        # Create single BatchContainer record
+                        bc = BatchContainer(
+                            batch_id=new_batch.id,
+                            container_id=container_id,
+                            quantity_used=quantity,
+                            cost_each=container_item.cost_per_unit
+                        )
+                        db.session.add(bc)
+                    else:
+                        container_errors.append(f"Not enough {container_item.name} in stock.")
+                except Exception as e:
+                    container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
 
     # Deduct ingredient inventory at start of batch
     ingredient_errors = []
