@@ -54,16 +54,16 @@ def start_batch():
                 # Use the inventory adjustment route
                 try:
                     result = process_inventory_adjustment(
-                        container_id,
-                        -quantity,  # Negative for deduction
-                        'batch',
-                        container_item.unit,
+                        item_id=container_id,
+                        quantity=-quantity,  # Negative for deduction
+                        change_type='batch',
+                        unit=container_item.unit,
                         notes=f"Used in batch {label_code}",
                         batch_id=new_batch.id,
                         created_by=current_user.id
                     )
 
-                    if result.get('success'):
+                    if result:
                         # Create single BatchContainer record
                         bc = BatchContainer(
                             batch_id=new_batch.id,
@@ -111,7 +111,7 @@ def start_batch():
                 created_by=current_user.id
             )
 
-            if not result.get('success'):
+            if not result:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
                 continue
 
