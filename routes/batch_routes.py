@@ -392,19 +392,18 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        success, deductions = deduct_fifo(
-            container_item.id,
-            needed_amount,
-            'batch',
-            f'Extra container for batch {batch.label_code}',
-            batch_id=batch.id,
-            created_by=current_user.id
-        )
+        success = adjust_inventory(
+                container_item.id,
+                change_type='batch',
+                quantity=needed_amount,
+                notes=f'Extra container for batch {batch.label_code}',
+                batch_id=batch.id
+            )
 
         if not success:
             errors.append({
                 "item": container_item.name,
-                "message": "Not enough in stock (FIFO)",
+                "message": "Not enough in stock",
                 "needed": needed_amount,
                 "needed_unit": "units"
             })
