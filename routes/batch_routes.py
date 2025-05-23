@@ -108,13 +108,13 @@ def start_batch():
                 continue
 
             # Create BatchIngredient records for each FIFO deduction
-            for entry_id, deduct_amount, unit_cost in deductions:
+            for entry_id, deduct_amount in deductions:
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
                     ingredient_id=ingredient.id,
                     amount_used=deduct_amount,
                     unit=ingredient.unit,
-                    cost_per_unit=unit_cost
+                    cost_per_unit=ingredient.cost_per_unit  # Use current ingredient cost
                 )
                 db.session.add(batch_ingredient)
         except ValueError as e:
