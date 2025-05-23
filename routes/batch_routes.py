@@ -93,30 +93,33 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            # Use consistent FIFO deduction for all ingredients
-            success, deductions = deduct_fifo(
-                ingredient.id,
-                required_converted,
-                'batch',
-                f"Used in batch {label_code}",
-                batch_id=new_batch.id,
-                created_by=current_user.id  # Ensure current user ID is passed
-            )
+            # Use inventory adjustment route for consistent FIFO handling
+            from flask import request
+            from blueprints.inventory.routes import adjust_inventory
+            
+            # Set up the form data for inventory adjustment
+            request.form = type('obj', (), {
+                'change_type': 'batch',
+                'quantity': required_converted,
+                'notes': f"Used in batch {label_code}",
+                'input_unit': ingredient.unit
+            })()
+            
+            success = adjust_inventory(ingredient.id)
 
             if not success:
-                ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
                 continue
 
-            # Create BatchIngredient records for each FIFO deduction
-            for entry_id, deduct_amount in deductions:
-                batch_ingredient = BatchIngredient(
-                    batch_id=new_batch.id,
-                    ingredient_id=ingredient.id,
-                    amount_used=deduct_amount,
-                    unit=ingredient.unit,
-                    cost_per_unit=ingredient.cost_per_unit  # Use current ingredient cost
-                )
-                db.session.add(batch_ingredient)
+            # Create BatchIngredient record
+            batch_ingredient = BatchIngredient(
+                batch_id=new_batch.id,
+                ingredient_id=ingredient.id,
+                amount_used=required_converted,
+                unit=ingredient.unit,
+                cost_per_unit=ingredient.cost_per_unit
+            )
+            db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
@@ -393,19 +396,18 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        success, deductions = deduct_fifo(
-            container_item.id,
-            needed_amount,
-            'batch',
-            f'Extra container for batch {batch.label_code}',
-            batch_id=batch.id,
-            created_by=current_user.id
-        )
+        success = adjust_inventory(
+                container_item.id,
+                change_type='batch',
+                quantity=needed_amount,
+                notes=f'Extra container for batch {batch.label_code}',
+                batch_id=batch.id
+            )
 
         if not success:
             errors.append({
                 "item": container_item.name,
-                "message": "Not enough in stock (FIFO)",
+                "message": "Not enough in stock",
                 "needed": needed_amount,
                 "needed_unit": "units"
             })
@@ -436,20 +438,19 @@ def add_extra_to_batch(batch_id):
             )
             needed_amount = conversion['converted_value']
 
-            # Check FIFO availability
-            success, deductions = deduct_fifo(
+            # Use inventory adjustment route for consistent FIFO handling
+            success = adjust_inventory(
                 inventory_item.id,
-                needed_amount,
-                'batch',
-                f'Extra ingredient for batch {batch.label_code}',
-                batch_id=batch.id,
-                created_by=current_user.id
+                change_type='batch',
+                quantity=needed_amount,
+                notes=f'Extra ingredient for batch {batch.label_code}',
+                batch_id=batch.id
             )
 
             if not success:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock (FIFO)",
+                    "message": "Not enough in stock",
                     "needed": needed_amount,
                     "needed_unit": inventory_item.unit
                 })
