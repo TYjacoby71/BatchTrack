@@ -39,7 +39,7 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, 
         deduction = min(entry.remaining_quantity, remaining)
         remaining -= deduction
 
-        deduction_plan.append((entry.id, deduction, entry.unit_cost))
+        deduction_plan.append((entry.id, deduction))
 
     if remaining > 0:
         return False, []
@@ -58,7 +58,6 @@ def deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id=None, 
             quantity_change=-deduct_amount,
             remaining_quantity=0,
             fifo_reference_id=entry_id,
-            unit_cost=unit_cost,
             note=f"{notes} (From FIFO #{entry_id})",
             used_for_batch_id=batch_id,
             quantity_used=deduct_amount
