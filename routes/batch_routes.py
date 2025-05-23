@@ -434,20 +434,19 @@ def add_extra_to_batch(batch_id):
             )
             needed_amount = conversion['converted_value']
 
-            # Check FIFO availability
-            success, deductions = deduct_fifo(
+            # Use inventory adjustment route for consistent FIFO handling
+            success = adjust_inventory(
                 inventory_item.id,
-                needed_amount,
-                'batch',
-                f'Extra ingredient for batch {batch.label_code}',
-                batch_id=batch.id,
-                created_by=current_user.id
+                change_type='batch',
+                quantity=needed_amount,
+                notes=f'Extra ingredient for batch {batch.label_code}',
+                batch_id=batch.id
             )
 
             if not success:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock (FIFO)",
+                    "message": "Not enough in stock",
                     "needed": needed_amount,
                     "needed_unit": inventory_item.unit
                 })
