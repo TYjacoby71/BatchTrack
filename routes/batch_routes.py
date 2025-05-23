@@ -61,7 +61,7 @@ def start_batch():
 
                 if success:
                     # Create batch container record for each FIFO deduction
-                    for entry_id, deduct_amount, _ in deductions:
+                    for entry_id, deduct_amount in deductions:
                         bc = BatchContainer(
                             batch_id=new_batch.id,
                             container_id=container_id,
