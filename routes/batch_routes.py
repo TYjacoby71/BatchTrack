@@ -408,9 +408,6 @@ def add_extra_to_batch(batch_id):
                 "needed_unit": "units"
             })
         else:
-            total_cost = sum(qty * cost for _, qty, cost in deductions)
-            avg_cost = total_cost / needed_amount if needed_amount > 0 else 0
-
             # FIFO deduction creates history entry automatically
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
