@@ -1,0 +1,28 @@
+ # Handle container deduction first
+  container_errors = []
+  for container in data.get('containers', []):
+      container_id = container.get('id')
+      quantity = container.get('quantity', 0)
+
+      if container_id and quantity:
+          container_item = InventoryItem.query.get(container_id)
+          if container_item:
+              success, deductions = deduct_fifo(
+                  container_id,
+                  quantity,
+                  'batch',
+                  f"Used in batch {label_code}",
+                  batch_id=new_batch.id
+              )
+
+              if success:
+                  # Create batch container record for each FIFO deduction
+                  for entry_id, deduct_amount, _ in deductions:
+                      bc = BatchContainer(
+                          batch_id=new_batch.id,
+                          container_id=container_id,
+                          quantity_used=deduct_amount
+                      )
+                      db.session.add(bc)
+              else:
+                  container_errors.append(f"Not enough {container_item.name} in stock.")

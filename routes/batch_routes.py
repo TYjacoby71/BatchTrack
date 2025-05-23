@@ -413,12 +413,13 @@ def add_extra_to_batch(batch_id):
                 inventory_item_id=container_item.id,
                 change_type='batch',
                 quantity_change=-needed_amount,  # Negative for usage
-                remaining_quantity=container_item.quantity - needed_amount,
+                remaining_quantity=None,  # Deductions don't track remaining
                 unit_cost=avg_cost,
                 note=f"Extra container for batch {batch.label_code}",
                 used_for_batch_id=batch.id,
-                quantity_used=needed_amount,  # Add the quantity used field
-                cost_each=avg_cost  # Add the cost each field
+                quantity_used=needed_amount,
+                cost_each=avg_cost,
+                fifo_reference_id=deductions[0][0] if deductions else None  # Link to source
             )
             db.session.add(history)
             
@@ -492,42 +493,4 @@ def add_extra_to_batch(batch_id):
 
 
 
-def adjust_inventory_deltas(batch_id, new_ingredients, new_containers):
-    existing_ings = {bi.ingredient_id: bi for bi in BatchIngredient.query.filter_by(batch_id=batch_id)}
-    existing_conts = {bc.container_id: bc for bc in BatchContainer.query.filter_by(batch_id=batch_id)}
-
-    # Handle Ingredients
-    for item in new_ingredients:
-        ing_id = item['id']
-        new_amt = float(item['amount'])
-        unit_used = item['unit']
-
-        existing = existing_ings.get(ing_id)
-        old_amt = existing.amount_used if existing else 0
-        delta = new_amt - old_amt
-
-        inventory = InventoryItem.query.get(ing_id)
-        if inventory:
-            stock_unit = inventory.unit
-            try:
-                converted_delta = ConversionEngine.convert(abs(delta), unit_used, stock_unit, density=inventory.category.default_density)
-                if delta < 0:
-                    inventory.quantity += converted_delta
-                else:
-                    inventory.quantity -= converted_delta
-                db.session.add(inventory)
-            except Exception as e:
-                print(f"[Conversion Error] Ingredient {ing_id}: {e}")
-
-    # Handle Containers (assumes same unit - count)
-    for item in new_containers:
-        cid = item['id']
-        new_qty = int(item['qty'])
-        existing = existing_conts.get(cid)
-        old_qty = existing.quantity_used if existing else 0
-        delta = new_qty - old_qty
-
-        container = InventoryItem.query.get(cid)
-        if container:
-            container.quantity -= delta
-            db.session.add(container)
+# Inventory adjustments now handled through FIFO system
