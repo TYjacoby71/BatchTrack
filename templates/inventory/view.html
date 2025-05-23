@@ -180,7 +180,7 @@
                 <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ entry.change_type|title }}</td>
                 <td>{{ entry.quantity_change }} {{ item.unit }}</td>
-                <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type in ['restock', 'recount'] else 'N/A' }}</td>
+                <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else '-' }}</td>
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else '-' }}</td>
                 <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}-{% endif %}</td>
                 <td>{{ entry.batch.label_code if entry.batch else '-' }}</td>
