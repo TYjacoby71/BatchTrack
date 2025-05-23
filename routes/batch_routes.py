@@ -108,7 +108,7 @@ def start_batch():
                 continue
 
             # Create BatchIngredient records for each FIFO deduction
-            for entry_id, deduct_amount in deductions:
+            for entry_id, deduct_amount, _ in deductions:
                 batch_ingredient = BatchIngredient(
                     batch_id=new_batch.id,
                     ingredient_id=ingredient.id,
