@@ -100,14 +100,15 @@ def start_batch():
             # Use consistent FIFO deduction for all ingredients
             from blueprints.inventory.routes import adjust_inventory
 
-            # Use the inventory adjustment route
-            result = adjust_inventory(
-                ingredient.id,
-                change_type='batch',
+            # Use centralized inventory adjustment 
+            result = process_inventory_adjustment(
+                item_id=ingredient.id,
                 quantity=-required_converted,  # Negative for deduction
-                input_unit=ingredient.unit,
+                change_type='batch',
+                unit=ingredient.unit,
                 notes=f"Used in batch {label_code}",
-                batch_id=new_batch.id
+                batch_id=new_batch.id,
+                created_by=current_user.id
             )
 
             if not result.get('success'):
