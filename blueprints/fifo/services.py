@@ -11,12 +11,16 @@ def get_fifo_entries(inventory_item_id):
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity):
+def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
     """
     Deducts quantity using FIFO logic, returns deduction plan
     Args:
         inventory_item_id: ID of inventory item
         quantity: Amount to deduct
+        change_type: Type of change (optional)
+        notes: Change notes (optional) 
+        batch_id: Associated batch ID (optional)
+        created_by: User ID who created change (optional)
     Returns:
         tuple: (success, deduction_plan)
             success (bool): True if deduction was successful
