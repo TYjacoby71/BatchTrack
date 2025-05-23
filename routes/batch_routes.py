@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, session, request
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, ProductUnit, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
@@ -14,13 +14,9 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 @batches_bp.route('/start_batch', methods=['POST'])
 @login_required
 def start_batch():
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form
-
-    recipe = Recipe.query.get_or_404(data.get('recipe_id'))
-    scale = float(data.get('scale', 1.0))
+    data = request.get_json()
+    recipe = Recipe.query.get_or_404(data['recipe_id'])
+    scale = float(data['scale'])
 
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
@@ -99,14 +95,13 @@ def start_batch():
 
             # Use inventory adjustment route for consistent FIFO handling
             from blueprints.inventory.routes import adjust_inventory
-            from flask import request
-            request.form = type('obj', (), {
-                'change_type': 'batch',
-                'quantity': -required_converted,
-                'notes': f"Used in batch {label_code}",
-                'batch_id': new_batch.id
-            })()
-            success = adjust_inventory(ingredient.id)
+            success = adjust_inventory(
+                ingredient.id,
+                change_type='batch',
+                quantity=required_converted,
+                notes=f"Used in batch {label_code}",
+                batch_id=new_batch.id
+            )
 
             if not success:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
