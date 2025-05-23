@@ -93,30 +93,29 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            # Use consistent FIFO deduction for all ingredients
-            success, deductions = deduct_fifo(
+            # Use inventory adjustment route for consistent FIFO handling
+            from blueprints.inventory.routes import adjust_inventory
+            success = adjust_inventory(
                 ingredient.id,
-                required_converted,
-                'batch',
-                f"Used in batch {label_code}",
-                batch_id=new_batch.id,
-                created_by=current_user.id  # Ensure current user ID is passed
+                change_type='batch',
+                quantity=required_converted,
+                notes=f"Used in batch {label_code}",
+                batch_id=new_batch.id
             )
 
             if not success:
-                ingredient_errors.append(f"Not enough {ingredient.name} in stock (FIFO).")
+                ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
                 continue
 
-            # Create BatchIngredient records for each FIFO deduction
-            for entry_id, deduct_amount, _ in deductions:
-                batch_ingredient = BatchIngredient(
-                    batch_id=new_batch.id,
-                    ingredient_id=ingredient.id,
-                    amount_used=deduct_amount,
-                    unit=ingredient.unit,
-                    cost_per_unit=ingredient.cost_per_unit  # Use current ingredient cost
-                )
-                db.session.add(batch_ingredient)
+            # Create BatchIngredient record
+            batch_ingredient = BatchIngredient(
+                batch_id=new_batch.id,
+                ingredient_id=ingredient.id,
+                amount_used=required_converted,
+                unit=ingredient.unit,
+                cost_per_unit=ingredient.cost_per_unit
+            )
+            db.session.add(batch_ingredient)
         except ValueError as e:
             ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
 
