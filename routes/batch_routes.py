@@ -399,14 +399,15 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        result = adjust_inventory(
-            container_item.id,
-            change_type='batch',
-            quantity=-needed_amount,  # Negative for deduction
-            input_unit=container_item.unit,
-            notes=f"Extra container for batch {batch.label_code}",
-            batch_id=batch.id
-        )
+        result = process_inventory_adjustment(
+                item_id=container_item.id,
+                quantity=-needed_amount,  # Negative for deduction
+                change_type='batch',
+                unit=container_item.unit,
+                notes=f"Extra container for batch {batch.label_code}",
+                batch_id=batch.id,
+                created_by=current_user.id
+            )
 
         if not result.get('success'):
             errors.append({
