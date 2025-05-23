@@ -96,19 +96,17 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            # Use inventory adjustment route for consistent FIFO handling
-            from flask import request
-            from blueprints.inventory.routes import adjust_inventory
+            # Use FIFO deduction directly for consistent handling
+            from blueprints.fifo.services import deduct_fifo
             
-            # Set up the form data for inventory adjustment
-            request.form = type('obj', (), {
-                'change_type': 'batch',
-                'quantity': required_converted,
-                'notes': f"Used in batch {label_code}",
-                'input_unit': ingredient.unit
-            })()
-            
-            success = adjust_inventory(ingredient.id)
+            success, deductions = deduct_fifo(
+                ingredient.id,
+                required_converted,
+                'batch',
+                f"Used in batch {label_code}",
+                batch_id=new_batch.id,
+                created_by=current_user.id
+            )
 
             if not success:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
