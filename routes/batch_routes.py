@@ -444,14 +444,15 @@ def add_extra_to_batch(batch_id):
             )
             needed_amount = conversion['converted_value']
 
-            # Check FIFO availability
-            result = adjust_inventory(
-                inventory_item.id,
-                change_type='batch',
+            # Use centralized inventory adjustment
+            result = process_inventory_adjustment(
+                item_id=inventory_item.id,
                 quantity=-needed_amount,  # Negative for deduction
-                input_unit=inventory_item.unit,
+                change_type='batch',
+                unit=inventory_item.unit,
                 notes=f"Extra ingredient for batch {batch.label_code}",
-                batch_id=batch.id
+                batch_id=batch.id,
+                created_by=current_user.id
             )
 
             if not result.get('success'):
