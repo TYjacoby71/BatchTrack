@@ -127,12 +127,10 @@ function saveExtras() {
   const extraIngredients = [];
   const extraContainers = [];
 
-  // Separate ingredients and containers
   rows.forEach(row => {
     const type = row.dataset.type;
     const itemSelect = row.querySelector(".item-select");
     const qtyInput = row.querySelector(".qty");
-    const costInput = row.querySelector(".cost");
 
     if (!itemSelect.value || !qtyInput.value) {
       return;
@@ -140,8 +138,7 @@ function saveExtras() {
 
     const baseData = {
       item_id: parseInt(itemSelect.value),
-      quantity: parseFloat(qtyInput.value),
-      cost_per_unit: parseFloat(costInput.value) || 0
+      quantity: parseFloat(qtyInput.value)
     };
 
     if (type === 'ingredient') {
@@ -168,35 +165,20 @@ function saveExtras() {
       extra_containers: extraContainers 
     })
   })
-  .then(res => {
-    if (!res.ok) {
-      return res.json().then(err => {
-        throw new Error(err.error || 'Failed to save extras');
-      });
-    }
-    return res.json();
-  })
+  .then(res => res.json())
   .then(data => {
-    if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
-      ).join('\n');
-      function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
-
-        alert("Save failed:\n\n" + message);
-      }
-
-      displayErrors(data.errors);
+    if (data.status === 'error' && data.errors) {
+      const message = data.errors.map(err =>
+        `❌ ${err.item}: ${err.message}`
+      ).join("\n\n");
+      alert("Save failed:\n\n" + message);
     } else {
       alert("Extra ingredients saved successfully");
       window.location.reload();
     }
   })
   .catch(err => {
-    alert(err.message);
+    alert("Failed to save extras: " + err.message);
     console.error(err);
   });
 }
