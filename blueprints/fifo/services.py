@@ -97,15 +97,15 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         ).order_by(InventoryHistory.timestamp.desc()).all()
 
         remaining_to_add = difference
-
+        
         # First try to fill existing FIFO entries
         for entry in unfilled_entries:
             if remaining_to_add <= 0:
                 break
-
+                
             available_capacity = entry.quantity_change - entry.remaining_quantity
             fill_amount = min(available_capacity, remaining_to_add)
-
+            
             if fill_amount > 0:
                 # Log the recount but don't create new FIFO entry
                 history = InventoryHistory(
@@ -119,7 +119,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     quantity_used=0
                 )
                 db.session.add(history)
-
+                
                 # Update the original FIFO entry
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount
