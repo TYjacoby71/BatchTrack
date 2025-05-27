@@ -301,44 +301,41 @@ def cancel_batch(batch_id):
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
-        # Use centralized inventory adjustment service for all refunds
-        from services.inventory_adjustment import process_inventory_adjustment
-
-        # Credit batch ingredients back to inventory
+        # Credit batch ingredients back to inventory using centralized service
         for batch_ing in batch_ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
                 process_inventory_adjustment(
                     item_id=ingredient.id,
-                    quantity=batch_ing.amount_used,  # Positive for addition
+                    quantity=batch_ing.amount_used,  # Positive for credit
                     change_type='refunded',
-                    unit=ingredient.unit,
+                    unit=batch_ing.unit,
                     notes=f"Refunded from cancelled batch {batch.label_code}",
                     batch_id=batch.id,
                     created_by=current_user.id
                 )
 
-        # Credit extra ingredients back to inventory
+        # Credit extra ingredients back to inventory using centralized service
         for extra_ing in extra_ingredients:
             ingredient = extra_ing.ingredient
             if ingredient:
                 process_inventory_adjustment(
                     item_id=ingredient.id,
-                    quantity=extra_ing.quantity,  # Positive for addition
+                    quantity=extra_ing.quantity,  # Positive for credit
                     change_type='refunded',
-                    unit=ingredient.unit,
+                    unit=extra_ing.unit,
                     notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
                     batch_id=batch.id,
                     created_by=current_user.id
                 )
 
-        # Credit regular containers back to inventory
+        # Credit regular containers back to inventory using centralized service
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
                 process_inventory_adjustment(
                     item_id=container.id,
-                    quantity=batch_container.quantity_used,  # Positive for addition
+                    quantity=batch_container.quantity_used,  # Positive for credit
                     change_type='refunded',
                     unit=container.unit,
                     notes=f"Container refunded from cancelled batch {batch.label_code}",
@@ -346,13 +343,13 @@ def cancel_batch(batch_id):
                     created_by=current_user.id
                 )
 
-        # Credit extra containers back to inventory
+        # Credit extra containers back to inventory using centralized service
         for extra_container in extra_containers:
             container = extra_container.container
             if container:
                 process_inventory_adjustment(
                     item_id=container.id,
-                    quantity=extra_container.quantity_used,  # Positive for addition
+                    quantity=extra_container.quantity_used,  # Positive for credit
                     change_type='refunded',
                     unit=container.unit,
                     notes=f"Extra container refunded from cancelled batch {batch.label_code}",
