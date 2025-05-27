@@ -301,60 +301,63 @@ def cancel_batch(batch_id):
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
-        # Credit batch ingredients back to inventory using centralized service
+        # Use recount_fifo with refunded change type to properly restore FIFO integrity
+        from blueprints.fifo.services import recount_fifo_with_change_type
+
+        # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
-                process_inventory_adjustment(
-                    item_id=ingredient.id,
-                    quantity=batch_ing.amount_used,  # Positive for credit
-                    change_type='refunded',
-                    unit=batch_ing.unit,
-                    notes=f"Refunded from cancelled batch {batch.label_code}",
-                    batch_id=batch.id,
-                    created_by=current_user.id
+                # Get current quantity and add back what was used
+                new_quantity = ingredient.quantity + batch_ing.amount_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=ingredient.id,
+                    new_quantity=new_quantity,
+                    note=f"Refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
                 )
 
-        # Credit extra ingredients back to inventory using centralized service
+        # Credit extra ingredients back to inventory
         for extra_ing in extra_ingredients:
             ingredient = extra_ing.ingredient
             if ingredient:
-                process_inventory_adjustment(
-                    item_id=ingredient.id,
-                    quantity=extra_ing.quantity,  # Positive for credit
-                    change_type='refunded',
-                    unit=extra_ing.unit,
-                    notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
-                    batch_id=batch.id,
-                    created_by=current_user.id
+                # Get current quantity and add back what was used
+                new_quantity = ingredient.quantity + extra_ing.quantity
+                recount_fifo_with_change_type(
+                    inventory_item_id=ingredient.id,
+                    new_quantity=new_quantity,
+                    note=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
                 )
 
-        # Credit regular containers back to inventory using centralized service
+        # Credit regular containers back to inventory
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
-                process_inventory_adjustment(
-                    item_id=container.id,
-                    quantity=batch_container.quantity_used,  # Positive for credit
-                    change_type='refunded',
-                    unit=container.unit,
-                    notes=f"Container refunded from cancelled batch {batch.label_code}",
-                    batch_id=batch.id,
-                    created_by=current_user.id
+                # Get current quantity and add back what was used
+                new_quantity = container.quantity + batch_container.quantity_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=container.id,
+                    new_quantity=new_quantity,
+                    note=f"Container refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
                 )
 
-        # Credit extra containers back to inventory using centralized service
+        # Credit extra containers back to inventory
         for extra_container in extra_containers:
             container = extra_container.container
             if container:
-                process_inventory_adjustment(
-                    item_id=container.id,
-                    quantity=extra_container.quantity_used,  # Positive for credit
-                    change_type='refunded',
-                    unit=container.unit,
-                    notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                    batch_id=batch.id,
-                    created_by=current_user.id
+                # Get current quantity and add back what was used
+                new_quantity = container.quantity + extra_container.quantity_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=container.id,
+                    new_quantity=new_quantity,
+                    note=f"Extra container refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
                 )
 
         # Update batch status
