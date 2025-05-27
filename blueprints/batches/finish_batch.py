@@ -108,20 +108,42 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
                 
-                total_qty = ingredient.quantity + converted_quantity
-                ingredient.cost_per_unit = ((ingredient.quantity * ingredient.cost_per_unit) + 
-                                            (converted_quantity * unit_cost)) / total_qty
-                ingredient.quantity += converted_quantity
+                # Use centralized inventory adjustment to properly add FIFO entries
+                from services.inventory_adjustment import process_inventory_adjustment
+                process_inventory_adjustment(
+                    item_id=ingredient.id,
+                    quantity=converted_quantity,
+                    change_type='restock',
+                    unit=ingredient.unit,
+                    notes=f"Batch {batch.label_code} completed",
+                    batch_id=batch.id,
+                    created_by=batch.created_by,
+                    cost_override=unit_cost
+                )
             else:  # create new
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
                     intermediate=True,
-                    quantity=final_quantity,
+                    quantity=0,  # Will be set by process_inventory_adjustment
                     unit=output_unit,
                     cost_per_unit=unit_cost
                 )
                 db.session.add(ingredient)
+                db.session.flush()  # Get the ID
+                
+                # Use centralized inventory adjustment to properly add FIFO entries
+                from services.inventory_adjustment import process_inventory_adjustment
+                process_inventory_adjustment(
+                    item_id=ingredient.id,
+                    quantity=final_quantity,
+                    change_type='restock',
+                    unit=output_unit,
+                    notes=f"Initial stock from batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=batch.created_by,
+                    cost_override=unit_cost
+                )
 
         # Finalize
         batch.status = 'completed'
