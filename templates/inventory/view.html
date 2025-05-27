@@ -191,7 +191,21 @@
                     -
                   {% endif %}
                 </td>
-                <td>{{ entry.id }}</td>
+                <td>
+                        {% if entry.fifo_reference_id %}
+                            <a href="#" title="References FIFO entry #{{ entry.fifo_reference_id }}">
+                                #{{ entry.fifo_reference_id }}
+                            </a>
+                        {% elif entry.remaining_quantity and entry.remaining_quantity > 0 %}
+                            {% if entry.used_for_batch_id and entry.batch %}
+                                <span class="badge badge-info">{{ entry.batch.label_code }}</span>
+                            {% else %}
+                                <span class="badge badge-success">#{{ entry.id }}</span>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
                     class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
                     {% endif %}>
