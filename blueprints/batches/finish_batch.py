@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
 
@@ -107,7 +107,7 @@ def complete_batch(batch_id):
                         ingredient.unit = output_unit
                 else:
                     converted_quantity = final_quantity
-                
+
                 # Use centralized inventory adjustment to properly add FIFO entries
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
@@ -117,7 +117,7 @@ def complete_batch(batch_id):
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
-                    created_by=batch.created_by,
+                    created_by=current_user.id,
                     cost_override=unit_cost
                 )
             else:  # create new
@@ -131,7 +131,7 @@ def complete_batch(batch_id):
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
-                
+
                 # Use centralized inventory adjustment to properly add FIFO entries
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
@@ -141,7 +141,7 @@ def complete_batch(batch_id):
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code}",
                     batch_id=batch.id,
-                    created_by=batch.created_by,
+                    created_by=current_user.id,
                     cost_override=unit_cost
                 )
 
