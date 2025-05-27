@@ -61,7 +61,7 @@ def process_inventory_adjustment(
                 quantity_change=-deduction_amount,
                 fifo_reference_id=entry_id,
                 unit_cost=cost_per_unit,
-                note=used_for_note,
+                note=f"{used_for_note} (From FIFO #{entry_id})",
                 created_by=created_by,
                 quantity_used=deduction_amount,
                 used_for_batch_id=batch_id
@@ -103,7 +103,7 @@ def process_inventory_adjustment(
                         remaining_quantity=0,  # Credits don't create new FIFO entries
                         unit_cost=cost_per_unit,
                         fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
-                        note=notes,
+                        note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         created_by=created_by,
                         quantity_used=0,
                         used_for_batch_id=batch_id
@@ -119,7 +119,7 @@ def process_inventory_adjustment(
                     quantity_change=remaining_to_credit,
                     remaining_quantity=remaining_to_credit,
                     unit_cost=cost_per_unit,
-                    note=notes,
+                    note=f"{notes} (Excess credit - no original FIFO found)",
                     created_by=created_by,
                     quantity_used=0,
                     expiration_date=expiration_date,
@@ -128,7 +128,15 @@ def process_inventory_adjustment(
                 db.session.add(excess_history)
         else:
             # Regular additions (restock or recount or adjustment up)
-            note_with_source = notes
+            # For intermediate ingredients from batches, include batch source info
+            if change_type == 'restock' and batch_id and item.intermediate:
+                # Get the batch info to show source
+                from models import Batch
+                batch = Batch.query.get(batch_id)
+                batch_label = batch.label_code if batch else f"Batch #{batch_id}"
+                note_with_source = f"{notes} (Source: {batch_label})"
+            else:
+                note_with_source = notes
 
             history = InventoryHistory(
                 inventory_item_id=item.id,
