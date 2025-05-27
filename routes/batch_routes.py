@@ -54,16 +54,16 @@ def start_batch():
                 # Use the inventory adjustment route
                 try:
                     result = process_inventory_adjustment(
-                        container_id,
-                        -quantity,  # Negative for deduction
-                        'batch',
-                        container_item.unit,
+                        item_id=container_id,
+                        quantity=-quantity,  # Negative for deduction
+                        change_type='batch',
+                        unit=container_item.unit,
                         notes=f"Used in batch {label_code}",
                         batch_id=new_batch.id,
                         created_by=current_user.id
                     )
 
-                    if result.get('success'):
+                    if result:
                         # Create single BatchContainer record
                         bc = BatchContainer(
                             batch_id=new_batch.id,
@@ -100,17 +100,18 @@ def start_batch():
             # Use consistent FIFO deduction for all ingredients
             from blueprints.inventory.routes import adjust_inventory
 
-            # Use the inventory adjustment route
-            result = adjust_inventory(
-                ingredient.id,
-                change_type='batch',
+            # Use centralized inventory adjustment 
+            result = process_inventory_adjustment(
+                item_id=ingredient.id,
                 quantity=-required_converted,  # Negative for deduction
-                input_unit=ingredient.unit,
+                change_type='batch',
+                unit=ingredient.unit,
                 notes=f"Used in batch {label_code}",
-                batch_id=new_batch.id
+                batch_id=new_batch.id,
+                created_by=current_user.id
             )
 
-            if not result.get('success'):
+            if not result:
                 ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
                 continue
 
@@ -300,40 +301,64 @@ def cancel_batch(batch_id):
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
+        # Use recount_fifo with refunded change type to properly restore FIFO integrity
+        from blueprints.fifo.services import recount_fifo_with_change_type
+
         # Credit batch ingredients back to inventory
         for batch_ing in batch_ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
-                if batch_ing.unit == ingredient.unit:
-                    ingredient.quantity += batch_ing.amount_used
-                else:
-                    ingredient.quantity += batch_ing.amount_used  # You may still want unit conversion logic here
-                db.session.add(ingredient)
+                # Get current quantity and add back what was used
+                new_quantity = ingredient.quantity + batch_ing.amount_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=ingredient.id,
+                    new_quantity=new_quantity,
+                    note=f"Refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
+                )
 
         # Credit extra ingredients back to inventory
         for extra_ing in extra_ingredients:
             ingredient = extra_ing.ingredient
             if ingredient:
-                if extra_ing.unit == ingredient.unit:
-                    ingredient.quantity += extra_ing.quantity
-                else:
-                    ingredient.quantity += extra_ing.quantity  # Using same unit handling as regular ingredients
-                db.session.add(ingredient)
+                # Get current quantity and add back what was used
+                new_quantity = ingredient.quantity + extra_ing.quantity
+                recount_fifo_with_change_type(
+                    inventory_item_id=ingredient.id,
+                    new_quantity=new_quantity,
+                    note=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
+                )
 
         # Credit regular containers back to inventory
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
-                container.quantity += batch_container.quantity_used
-                db.session.add(container)
+                # Get current quantity and add back what was used
+                new_quantity = container.quantity + batch_container.quantity_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=container.id,
+                    new_quantity=new_quantity,
+                    note=f"Container refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
+                )
 
         # Credit extra containers back to inventory
-        batch_extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
-        for extra_container in batch_extra_containers:
+        for extra_container in extra_containers:
             container = extra_container.container
             if container:
-                container.quantity += extra_container.quantity_used
-                db.session.add(container)
+                # Get current quantity and add back what was used
+                new_quantity = container.quantity + extra_container.quantity_used
+                recount_fifo_with_change_type(
+                    inventory_item_id=container.id,
+                    new_quantity=new_quantity,
+                    note=f"Extra container refunded from cancelled batch {batch.label_code}",
+                    user_id=current_user.id,
+                    change_type='refunded'
+                )
 
         # Update batch status
         batch.status = 'cancelled'
@@ -370,11 +395,7 @@ def cancel_batch(batch_id):
         else:
             flash("Batch cancelled successfully", "success")
 
-        # Verify inventory restoration
-        for batch_ing in batch_ingredients:
-            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
-            if ingredient and ingredient.quantity < 0:
-                flash(f"Warning: {ingredient.name} has negative quantity after restoration!", "error")
+        # Inventory restoration is handled by centralized service
 
     except Exception as e:
         db.session.rollback()
@@ -399,16 +420,17 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        result = adjust_inventory(
-            container_item.id,
-            change_type='batch',
-            quantity=-needed_amount,  # Negative for deduction
-            input_unit=container_item.unit,
-            notes=f"Extra container for batch {batch.label_code}",
-            batch_id=batch.id
-        )
+        result = process_inventory_adjustment(
+                item_id=container_item.id,
+                quantity=-needed_amount,  # Negative for deduction
+                change_type='batch',
+                unit=container_item.unit,
+                notes=f"Extra container for batch {batch.label_code}",
+                batch_id=batch.id,
+                created_by=current_user.id
+            )
 
-        if not result.get('success'):
+        if not result:
             errors.append({
                 "item": container_item.name,
                 "message": "Not enough in stock",
@@ -442,20 +464,21 @@ def add_extra_to_batch(batch_id):
             )
             needed_amount = conversion['converted_value']
 
-            # Check FIFO availability
-            result = adjust_inventory(
-                inventory_item.id,
-                change_type='batch',
+            # Use centralized inventory adjustment
+            result = process_inventory_adjustment(
+                item_id=inventory_item.id,
                 quantity=-needed_amount,  # Negative for deduction
-                input_unit=inventory_item.unit,
+                change_type='batch',
+                unit=inventory_item.unit,
                 notes=f"Extra ingredient for batch {batch.label_code}",
-                batch_id=batch.id
+                batch_id=batch.id,
+                created_by=current_user.id
             )
 
-            if not result.get('success'):
+            if not result:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock",
+                    "message": "Not enough in stock", 
                     "needed": needed_amount,
                     "needed_unit": inventory_item.unit
                 })

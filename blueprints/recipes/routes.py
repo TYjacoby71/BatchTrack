@@ -320,6 +320,11 @@ def edit_recipe(recipe_id):
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+    
+    # Check if there are existing batches for this recipe
+    from models import Batch
+    existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
+    
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
 
@@ -373,4 +378,6 @@ def edit_recipe(recipe_id):
     return render_template('recipe_form.html', 
                          recipe=recipe,
                          all_ingredients=all_ingredients,
-                         inventory_units=inventory_units, edit_mode=True)
+                         inventory_units=inventory_units, 
+                         edit_mode=True,
+                         existing_batches=existing_batches)
