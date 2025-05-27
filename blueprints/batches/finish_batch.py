@@ -86,12 +86,33 @@ def complete_batch(batch_id):
                 name=batch.recipe.name, type='ingredient', intermediate=True
             ).first()
 
-            if ingredient:  # update
-                total_qty = ingredient.quantity + final_quantity
+            if ingredient:  # update existing - convert units if needed
+                if output_unit != ingredient.unit:
+                    # Convert new yield to match existing ingredient's unit
+                    from services.unit_conversion import ConversionEngine
+                    try:
+                        conversion = ConversionEngine.convert_units(
+                            final_quantity,
+                            output_unit,
+                            ingredient.unit,
+                            ingredient_id=ingredient.id,
+                            density=ingredient.density
+                        )
+                        converted_quantity = conversion['converted_value']
+                        flash(f"Converted {final_quantity} {output_unit} to {converted_quantity} {ingredient.unit} for existing ingredient", "info")
+                    except ValueError as e:
+                        flash(f"Unit conversion error: {str(e)}. Using original units.", "warning")
+                        converted_quantity = final_quantity
+                        # Update ingredient unit to match new yield
+                        ingredient.unit = output_unit
+                else:
+                    converted_quantity = final_quantity
+                
+                total_qty = ingredient.quantity + converted_quantity
                 ingredient.cost_per_unit = ((ingredient.quantity * ingredient.cost_per_unit) + 
-                                            (final_quantity * unit_cost)) / total_qty
-                ingredient.quantity += final_quantity
-            else:  # create
+                                            (converted_quantity * unit_cost)) / total_qty
+                ingredient.quantity += converted_quantity
+            else:  # create new
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
