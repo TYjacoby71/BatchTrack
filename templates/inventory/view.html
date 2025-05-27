@@ -171,6 +171,7 @@
                 <th>FIFO ID</th>
                 <th>Exp Date</th>
                 <th>Quantity Used</th>
+                <th>Notes</th>
                 <th>Created By</th>
               </tr>
             </thead>
@@ -212,6 +213,7 @@
                     {{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}
                 </td>
                 <td>{{ entry.quantity_used if entry.quantity_used is not none and entry.quantity_used != 0 else 'NA' }}</td>
+                <td>{{ entry.note if entry.note else '-' }}</td>
                 <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
