@@ -301,40 +301,61 @@ def cancel_batch(batch_id):
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
 
-        # Credit batch ingredients back to inventory
+        # Credit batch ingredients back to inventory using centralized service
         for batch_ing in batch_ingredients:
             ingredient = batch_ing.ingredient
             if ingredient:
-                if batch_ing.unit == ingredient.unit:
-                    ingredient.quantity += batch_ing.amount_used
-                else:
-                    ingredient.quantity += batch_ing.amount_used  # You may still want unit conversion logic here
-                db.session.add(ingredient)
+                process_inventory_adjustment(
+                    item_id=ingredient.id,
+                    quantity=batch_ing.amount_used,  # Positive for credit
+                    change_type='refunded',
+                    unit=batch_ing.unit,
+                    notes=f"Refunded from cancelled batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id
+                )
 
-        # Credit extra ingredients back to inventory
+        # Credit extra ingredients back to inventory using centralized service
         for extra_ing in extra_ingredients:
             ingredient = extra_ing.ingredient
             if ingredient:
-                if extra_ing.unit == ingredient.unit:
-                    ingredient.quantity += extra_ing.quantity
-                else:
-                    ingredient.quantity += extra_ing.quantity  # Using same unit handling as regular ingredients
-                db.session.add(ingredient)
+                process_inventory_adjustment(
+                    item_id=ingredient.id,
+                    quantity=extra_ing.quantity,  # Positive for credit
+                    change_type='refunded',
+                    unit=extra_ing.unit,
+                    notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id
+                )
 
-        # Credit regular containers back to inventory
+        # Credit regular containers back to inventory using centralized service
         for batch_container in batch_containers:
             container = batch_container.container
             if container:
-                container.quantity += batch_container.quantity_used
-                db.session.add(container)
+                process_inventory_adjustment(
+                    item_id=container.id,
+                    quantity=batch_container.quantity_used,  # Positive for credit
+                    change_type='refunded',
+                    unit=container.unit,
+                    notes=f"Container refunded from cancelled batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id
+                )
 
-        # Credit extra containers back to inventory
-        batch_extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
-        for extra_container in batch_extra_containers:
+        # Credit extra containers back to inventory using centralized service
+        for extra_container in extra_containers:
             container = extra_container.container
             if container:
-                container.quantity += extra_container.quantity_used
-                db.session.add(container)
+                process_inventory_adjustment(
+                    item_id=container.id,
+                    quantity=extra_container.quantity_used,  # Positive for credit
+                    change_type='refunded',
+                    unit=container.unit,
+                    notes=f"Extra container refunded from cancelled batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id
+                )
 
         # Update batch status
         batch.status = 'cancelled'
@@ -371,11 +392,7 @@ def cancel_batch(batch_id):
         else:
             flash("Batch cancelled successfully", "success")
 
-        # Verify inventory restoration
-        for batch_ing in batch_ingredients:
-            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
-            if ingredient and ingredient.quantity < 0:
-                flash(f"Warning: {ingredient.name} has negative quantity after restoration!", "error")
+        # Inventory restoration is handled by centralized service
 
     except Exception as e:
         db.session.rollback()
