@@ -58,6 +58,11 @@
             <option value="{{ unit.name }}" {% if recipe and recipe.predicted_yield_unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
             {% endfor %}
         </select>
+        {% if edit_mode and existing_batches and existing_batches > 0 %}
+        <div class="alert alert-warning mt-2" id="yieldUnitWarning" style="display: none;">
+            <small><strong>⚠️ Warning:</strong> You have already made {{ existing_batches }} batch{{ 'es' if existing_batches > 1 else '' }} using this recipe. If you change the yield unit, future batch outputs will be converted to match the storage unit in the inventory manager when creating intermediate ingredients.</small>
+        </div>
+        {% endif %}
     </div>
 
     <hr>
@@ -196,6 +201,9 @@
 let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
 let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
 let ingredientReturnContext = 'main';
+{% if edit_mode and existing_batches and existing_batches > 0 %}
+let originalYieldUnit = '{{ recipe.predicted_yield_unit if recipe else '' }}';
+{% endif %}
 
 document.addEventListener('DOMContentLoaded', function() {
     if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
@@ -262,6 +270,22 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => alert('Failed to add container: ' + err.message));
         });
     }
+
+    {% if edit_mode and existing_batches and existing_batches > 0 %}
+    // Show warning when yield unit is changed
+    const yieldUnitSelect = document.getElementById('predicted_yield_unit');
+    const yieldWarning = document.getElementById('yieldUnitWarning');
+    
+    if (yieldUnitSelect && yieldWarning) {
+        yieldUnitSelect.addEventListener('change', function() {
+            if (this.value !== originalYieldUnit && this.value !== '') {
+                yieldWarning.style.display = 'block';
+            } else {
+                yieldWarning.style.display = 'none';
+            }
+        });
+    }
+    {% endif %}
 });
 
 function addIngredient(preselectId = null, presetUnit = null) {
