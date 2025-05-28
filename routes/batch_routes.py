@@ -491,13 +491,9 @@ def add_extra_to_batch(batch_id):
                 db.session.add(new_extra)
 
         except ValueError as e:
-            error_message = str(e)
             errors.append({
                 "item": inventory_item.name,
-                "message": error_message,
-                "needed": item["quantity"],
-                "needed_unit": item["unit"],
-                "stock_unit": inventory_item.unit
+                "message": str(e)
             })
 
     if errors:
