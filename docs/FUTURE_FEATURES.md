@@ -35,3 +35,9 @@
 - Link to batch production
 - Interface with product pricing
 - Integrate with inventory updates
+
+### Comunity for makers
+- sell m-m maker to maker
+- recipies? process?
+- ability to upload recipies in certain format
+- 

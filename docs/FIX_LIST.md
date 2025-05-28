@@ -37,3 +37,9 @@
   - Improve flex mode visibility
   - Fix stock check button behavior
   - Update container selection interface
+
+## Micro Transaction Slip
+- * Micro transactions slip and either go unoticed or create entries with 0 chagne
+
+## DESYNC Risk
+- * Need to add wrapper to all adjustment routes and events to confirm inventroy/fifo sync after change event or dissallow the function. 

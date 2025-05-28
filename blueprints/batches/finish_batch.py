@@ -113,7 +113,7 @@ def complete_batch(batch_id):
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
-                    change_type='restock',
+                    change_type='finished_batch',
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
@@ -137,7 +137,7 @@ def complete_batch(batch_id):
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
-                    change_type='restock',
+                    change_type='finished_batch',
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code}",
                     batch_id=batch.id,
