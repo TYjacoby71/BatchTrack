@@ -110,6 +110,13 @@ def add_inventory():
 @login_required
 def adjust_inventory(id):
     try:
+        # Pre-validation check
+        from services.inventory_adjustment import validate_inventory_fifo_sync
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+        if not is_valid:
+            flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+        
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')

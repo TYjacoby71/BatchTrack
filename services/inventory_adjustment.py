@@ -1,8 +1,27 @@
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
-from blueprints.fifo.services import deduct_fifo
+from blueprints.fifo.services import deduct_fifo, get_fifo_entries
 import base64
+
+def validate_inventory_fifo_sync(item_id):
+    """
+    Validates that inventory quantity matches sum of FIFO remaining quantities
+    Returns: (is_valid, error_message, inventory_qty, fifo_total)
+    """
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found", 0, 0
+    
+    fifo_entries = get_fifo_entries(item_id)
+    fifo_total = sum(entry.remaining_quantity for entry in fifo_entries)
+    
+    # Allow small floating point differences (0.001)
+    if abs(item.quantity - fifo_total) > 0.001:
+        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total})"
+        return False, error_msg, item.quantity, fifo_total
+    
+    return True, "", item.quantity, fifo_total
 
 def generate_fifo_code(prefix):
     """Generates a base-32 encoded FIFO code with a prefix."""
@@ -156,4 +175,12 @@ def process_inventory_adjustment(
         item.quantity += qty_change
 
     db.session.commit()
+    
+    # Validate inventory/FIFO sync after adjustment
+    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+    if not is_valid:
+        # Rollback the transaction
+        db.session.rollback()
+        raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
+    
     return True
