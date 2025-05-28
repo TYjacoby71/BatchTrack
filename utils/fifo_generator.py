@@ -1,4 +1,3 @@
-
 # Base-32 FIFO ID Generator
 # Replaces integer auto-increment with structured base-32 codes
 
@@ -22,7 +21,7 @@ def int_to_base32(number):
     """Convert integer to base-32 string"""
     if number == 0:
         return '0'
-    
+
     result = ''
     while number > 0:
         result = BASE32_CHARS[number % 32] + result
@@ -32,20 +31,20 @@ def int_to_base32(number):
 def generate_fifo_id(change_type):
     """Generate next FIFO ID for given change type"""
     from models import db, InventoryHistory
-    
+
     prefix = get_change_type_prefix(change_type)
-    
+
     # Get the highest sequence number across all prefixes
     # This ensures global uniqueness across all change types
     latest_entry = db.session.query(InventoryHistory.id).order_by(InventoryHistory.id.desc()).first()
-    
+
     if latest_entry:
         next_sequence = latest_entry[0] + 1
     else:
         next_sequence = 1
-    
+
     sequence_base32 = int_to_base32(next_sequence).zfill(5)  # Pad to 5 characters
-    
+
     return f"{prefix}-{sequence_base32}"
 
 def base32_to_int(base32_str):
@@ -59,13 +58,13 @@ def validate_fifo_id(fifo_id):
     """Validate FIFO ID format"""
     if not fifo_id or '-' not in fifo_id:
         return False
-    
+
     parts = fifo_id.split('-')
     if len(parts) != 2:
         return False
-    
+
     prefix, sequence = parts
-    
+
     # Check if all characters in sequence are valid base-32
     try:
         for char in sequence:

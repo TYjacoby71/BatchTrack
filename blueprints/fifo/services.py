@@ -54,7 +54,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
-    from utils.fifo_generator import generate_fifo_code
+    from utils.fifo_generator import generate_fifo_id
 
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
