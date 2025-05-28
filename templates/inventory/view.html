@@ -176,7 +176,7 @@
             </thead>
             <tbody>
               {% for entry in history %}
-              <tr>
+              <tr id="entry-{{ entry.id }}">
                 <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ entry.change_type|title }}</td>
                 <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ item.unit }}{% endif %}</td>
@@ -185,14 +185,14 @@
                 <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
                 <td>
                   {% if entry.change_type in ['batch', 'spoil', 'trash'] and entry.batch %}
-                    {{ entry.batch.label_code }}
+                    <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                   {% else %}
                     NA
                   {% endif %}
                 </td>
                 <td>
                   {% if entry.fifo_reference_id %}
-                    FIFO #{{ entry.fifo_reference_id }}
+                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">FIFO #{{ entry.fifo_reference_id }}</a>
                   {% else %}
                     -
                   {% endif %}
