@@ -54,7 +54,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
-    from utils.fifo_generator import generate_fifo_code
+    from utils.fifo_generator import generate_fifo_id
 
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
@@ -79,7 +79,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 quantity_change=-deduct_amount,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
-                fifo_code=generate_fifo_code('recount'),
+                
                 unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,

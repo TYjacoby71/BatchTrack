@@ -168,7 +168,34 @@
                 <th>Total Cost</th>
                 <th>Used For</th>
                 <th>Credited/Debited To</th>
-                <th>FIFO ID</th>
+                <th>FIFO ID 
+                  <i class="fas fa-info-circle text-muted ms-1" 
+                     data-bs-toggle="popover" 
+                     data-bs-placement="top"
+                     data-bs-trigger="click"
+                     data-bs-html="true"
+                     data-bs-content="
+                       <div class='fifo-prefix-guide'>
+                         <h6 class='mb-2'>FIFO ID Prefixes</h6>
+                         <div class='row'>
+                           <div class='col-6'>
+                             <strong>RSK</strong> - Restock<br>
+                             <strong>BTC</strong> - Batch<br>
+                             <strong>SPL</strong> - Spoilage<br>
+                             <strong>TRS</strong> - Trash
+                           </div>
+                           <div class='col-6'>
+                             <strong>RCN</strong> - Recount<br>
+                             <strong>FIN</strong> - Finished Batch<br>
+                             <strong>REF</strong> - Refunded<br>
+                             <strong>CST</strong> - Cost Override
+                           </div>
+                         </div>
+                       </div>"
+                     title="FIFO ID Reference"
+                     style="cursor: pointer;">
+                  </i>
+                </th>
                 <th>Exp Date</th>
                 <th>Quantity Used</th>
                 <th>Created By</th>
@@ -206,10 +233,8 @@
                 <td>
                   {% if entry.change_type == 'finished_batch' and entry.batch %}
                     {{ entry.batch.label_code }}
-                  {% elif entry.fifo_code %}
-                    {{ entry.fifo_code }}
                   {% else %}
-                    #{{ entry.id }}
+                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base32(entry.id).zfill(5) }}
                   {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
@@ -484,6 +509,28 @@ document.getElementById('categorySelect').addEventListener('change', function() 
         densityInput.value = defaultDensity;
         densityInput.disabled = true;
     }
+});
+
+// Initialize popovers for FIFO ID helper after DOM and Bootstrap are loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit to ensure Bootstrap is fully loaded
+    setTimeout(function() {
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                container: 'body'
+            });
+        });
+
+        // Close popover when clicking elsewhere
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-bs-toggle="popover"]')) {
+                popoverList.forEach(function(popover) {
+                    popover.hide();
+                });
+            }
+        });
+    }, 100);
 });
 </script>
 {% endblock %}
