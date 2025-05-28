@@ -108,7 +108,7 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Use centralized inventory adjustment to properly add FIFO entries
+                # Use centralized inventory adjustment with weighted average
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
@@ -118,7 +118,7 @@ def complete_batch(batch_id):
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost  # This will trigger weighted average in the service
                 )
             else:  # create new
                 ingredient = InventoryItem(
@@ -132,7 +132,7 @@ def complete_batch(batch_id):
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
-                # Use centralized inventory adjustment to properly add FIFO entries
+                # Use centralized inventory adjustment with weighted average
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
@@ -142,7 +142,7 @@ def complete_batch(batch_id):
                     notes=f"Initial stock from batch {batch.label_code}",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost  # This will trigger weighted average in the service
                 )
 
         # Finalize
