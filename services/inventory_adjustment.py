@@ -1,3 +1,4 @@
+
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
@@ -54,7 +55,7 @@ def process_inventory_adjustment(
         for entry_id, deduction_amount, _ in deductions:
             # Show clearer description for batch cancellations
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
-
+            
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
@@ -79,22 +80,22 @@ def process_inventory_adjustment(
                 InventoryHistory.quantity_change < 0,
                 InventoryHistory.fifo_reference_id.isnot(None)
             ).order_by(InventoryHistory.timestamp.desc()).all()
-
+            
             remaining_to_credit = qty_change
-
+            
             # Credit back to the original FIFO entries
             for deduction in original_deductions:
                 if remaining_to_credit <= 0:
                     break
-
+                    
                 original_fifo_entry = InventoryHistory.query.get(deduction.fifo_reference_id)
                 if original_fifo_entry:
                     credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
-
+                    
                     # Credit back to the original FIFO entry's remaining quantity
                     original_fifo_entry.remaining_quantity += credit_amount
                     remaining_to_credit -= credit_amount
-
+                    
                     # Create credit history entry
                     credit_history = InventoryHistory(
                         inventory_item_id=item.id,
@@ -109,7 +110,7 @@ def process_inventory_adjustment(
                         used_for_batch_id=batch_id
                     )
                     db.session.add(credit_history)
-
+            
             # If there's still quantity to credit (shouldn't happen in normal cases)
             if remaining_to_credit > 0:
                 # Create new FIFO entry for any excess
@@ -128,30 +129,20 @@ def process_inventory_adjustment(
                 db.session.add(excess_history)
         else:
             # Regular additions (restock or recount or adjustment up)
-            # For intermediate ingredients from batches, include batch source info
-            if change_type == 'restock' and batch_id and item.intermediate:
-                # Get the batch info to show source
-                from models import Batch
-                batch = Batch.query.get(batch_id)
-                batch_label = batch.label_code if batch else f"Batch #{batch_id}"
-                note_with_source = f"{notes} (Source: {batch_label})"
-            else:
-                note_with_source = notes
-
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=qty_change,
                 remaining_quantity=qty_change if change_type == 'restock' else None,
                 unit_cost=cost_per_unit,
-                note=note_with_source,
+                note=notes,
                 quantity_used=0,
                 created_by=created_by,
                 expiration_date=expiration_date,
                 used_for_batch_id=batch_id
             )
             db.session.add(history)
-
+        
         item.quantity += qty_change
 
     db.session.commit()
