@@ -171,6 +171,7 @@
                 <th>FIFO ID</th>
                 <th>Exp Date</th>
                 <th>Quantity Used</th>
+                <th>Notes</th>
                 <th>Created By</th>
               </tr>
             </thead>
@@ -183,7 +184,13 @@
                 <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type == 'restock' else 'NA' }}</td>
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
                 <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
-                <td>{{ entry.batch.label_code if entry.batch else 'NA' }}</td>
+                <td>
+                    {% if entry.quantity_change < 0 and entry.used_for_batch_id and entry.batch %}
+                        {{ entry.batch.label_code }}
+                    {% else %}
+                        NA
+                    {% endif %}
+                </td>
                 <td>
                   {% if entry.fifo_reference_id %}
                     FIFO #{{ entry.fifo_reference_id }}
@@ -191,13 +198,28 @@
                     -
                   {% endif %}
                 </td>
-                <td>{{ entry.id }}</td>
+                <td>
+                        {% if entry.fifo_reference_id %}
+                            <a href="#" title="References FIFO entry #{{ entry.fifo_reference_id }}">
+                                #{{ entry.fifo_reference_id }}
+                            </a>
+                        {% elif entry.remaining_quantity and entry.remaining_quantity > 0 %}
+                            {% if entry.change_type == 'restock' and entry.used_for_batch_id and entry.batch %}
+                                <span class="badge badge-info">{{ entry.batch.label_code }}</span>
+                            {% else %}
+                                <span class="badge badge-success">#{{ entry.id }}</span>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
                     class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
                     {% endif %}>
                     {{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}
                 </td>
                 <td>{{ entry.quantity_used if entry.quantity_used is not none and entry.quantity_used != 0 else 'NA' }}</td>
+                <td>{{ entry.note if entry.note else '-' }}</td>
                 <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>
               </tr>
               {% endfor %}
