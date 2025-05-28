@@ -435,8 +435,7 @@ def add_extra_to_batch(batch_id):
                 "needed_unit": "units"
             })
         else:
-            # Use container's current cost (after any weighted average updates)
-            container_item = InventoryItem.query.get(container_item.id)  # Refresh to get updated cost
+            # Use container's current cost
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=container_item.id,
@@ -481,8 +480,7 @@ def add_extra_to_batch(batch_id):
                     "needed_unit": inventory_item.unit
                 })
             else:
-                # Use current inventory cost (after any weighted average updates)
-                inventory_item = InventoryItem.query.get(inventory_item.id)  # Refresh to get updated cost
+                # Use current inventory cost
                 new_extra = ExtraBatchIngredient(
                     batch_id=batch.id,
                     inventory_item_id=inventory_item.id,
