@@ -225,7 +225,7 @@
                         {% if ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                           {{ ref_entry.batch.label_code }}
                         {% else %}
-                          {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base32(ref_entry.id).zfill(6) }}
+                          {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                         {% endif %}
                       {% else %}
                         FIFO #{{ entry.fifo_reference_id }}
@@ -239,7 +239,7 @@
                   {% if entry.change_type == 'finished_batch' and entry.batch %}
                     {{ entry.batch.label_code }}
                   {% else %}
-                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base32(entry.id).zfill(6) }}
+                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
                   {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
