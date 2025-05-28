@@ -133,13 +133,13 @@ def process_inventory_adjustment(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=qty_change,
-                remaining_quantity=qty_change if change_type == 'restock' else None,
+                remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,
                 quantity_used=0,
                 created_by=created_by,
                 expiration_date=expiration_date,
-                used_for_batch_id=batch_id if change_type != 'restock' else None  # Don't set used_for for restocks
+                used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
             )
             db.session.add(history)
         
