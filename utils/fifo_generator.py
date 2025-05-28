@@ -43,7 +43,7 @@ def generate_fifo_id(change_type):
     else:
         next_sequence = 1
 
-    sequence_base32 = int_to_base32(next_sequence).ljust(5, '0')  # Pad to 5 characters
+    sequence_base32 = int_to_base32(next_sequence).zfill(6)  # Pad to 6 characters
 
     return f"{prefix}-{sequence_base32}"
 
