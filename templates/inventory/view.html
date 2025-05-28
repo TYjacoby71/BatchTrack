@@ -192,7 +192,7 @@
                 </td>
                 <td>
                   {% if entry.fifo_reference_id %}
-                    FIFO #{{ entry.fifo_reference_id }}
+                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">FIFO #{{ entry.fifo_reference_id }}</a>
                   {% else %}
                     -
                   {% endif %}
