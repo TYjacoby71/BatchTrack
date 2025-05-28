@@ -1,9 +1,8 @@
-
 <!-- Summary Card -->
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align_items-center">
-    <h5 class="mb-0">Inventory Item Details</h5>
-    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDetailsModal">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h4>Inventory Item Details</h4>
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDetailsModal">
       Edit Details
     </button>
   </div>
@@ -12,23 +11,13 @@
       <div class="col-md-6">
         <p><strong>Name:</strong> {{ item.name }}</p>
         <p><strong>Type:</strong> {{ item.type|title }}</p>
-        {% if item.type == 'container' %}
-        <p><strong>Storage Amount:</strong> {{ item.storage_amount }} {{ item.storage_unit }}</p>
-        {% else %}
         <p><strong>Unit:</strong> {{ item.unit }}</p>
-        {% if item.density %}
-        <p><strong>Density:</strong> {{ item.density }}</p>
-        {% endif %}
-        {% endif %}
       </div>
       <div class="col-md-6">
-        <p><strong>Current Quantity:</strong> {{ item.quantity }} {% if item.type == 'container' %}units{% else %}{{ item.unit }}{% endif %}</p>
-        <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit or 0) }}</p>
-        {% if item.category %}
-        <p><strong>Category:</strong> {{ item.category.name }}</p>
-        {% endif %}
-        {% if item.is_perishable %}
-        <p><strong>Shelf Life:</strong> {{ item.shelf_life_days or 0 }} days</p>
+        <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
+        <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit) }}</p>
+        {% if item.shelf_life_days %}
+        <p><strong>Shelf Life:</strong> {{ item.shelf_life_days }} days</p>
         {% endif %}
       </div>
     </div>
