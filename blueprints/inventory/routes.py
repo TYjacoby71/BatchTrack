@@ -70,6 +70,13 @@ def add_inventory():
             from datetime import datetime, timedelta
             expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
+    # Handle container-specific fields
+    storage_amount = None
+    storage_unit = None
+    if item_type == 'container':
+        storage_amount = float(request.form.get('storage_amount', 0))
+        storage_unit = request.form.get('storage_unit')
+
     item = InventoryItem(
         name=name,
         quantity=0,  # Start at 0, will be updated by history
@@ -79,7 +86,9 @@ def add_inventory():
         low_stock_threshold=low_stock_threshold,
         is_perishable=is_perishable,
         shelf_life_days=shelf_life_days,
-        expiration_date=expiration_date
+        expiration_date=expiration_date,
+        storage_amount=storage_amount,
+        storage_unit=storage_unit
     )
     db.session.add(item)
     db.session.flush()  # Get the ID without committing
