@@ -139,7 +139,7 @@ def process_inventory_adjustment(
                 quantity_used=0,
                 created_by=created_by,
                 expiration_date=expiration_date,
-                used_for_batch_id=batch_id
+                used_for_batch_id=batch_id if change_type != 'restock' else None  # Don't set used_for for restocks
             )
             db.session.add(history)
         
