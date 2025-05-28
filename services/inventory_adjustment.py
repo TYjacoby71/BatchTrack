@@ -1,8 +1,27 @@
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
-from blueprints.fifo.services import deduct_fifo
+from blueprints.fifo.services import deduct_fifo, get_fifo_entries
 import base64
+
+def validate_inventory_fifo_sync(item_id):
+    """
+    Validates that inventory quantity matches sum of FIFO remaining quantities
+    Returns: (is_valid, error_message, inventory_qty, fifo_total)
+    """
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found", 0, 0
+    
+    fifo_entries = get_fifo_entries(item_id)
+    fifo_total = sum(entry.remaining_quantity for entry in fifo_entries)
+    
+    # Allow small floating point differences (0.001)
+    if abs(item.quantity - fifo_total) > 0.001:
+        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total})"
+        return False, error_msg, item.quantity, fifo_total
+    
+    return True, "", item.quantity, fifo_total
 
 def generate_fifo_code(prefix):
     """Generates a base-32 encoded FIFO code with a prefix."""
@@ -46,12 +65,28 @@ def process_inventory_adjustment(
     if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
         expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
 
-    # Get cost
-    cost_per_unit = (
-        cost_override if cost_override is not None
-        else item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount']
-        else None
-    )
+    # Get cost - handle weighted average vs override
+    if change_type in ['spoil', 'trash']:
+        # For spoilage/trash, don't assign a cost
+        cost_per_unit = None
+    elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+        # For new stock additions, calculate weighted average
+        current_value = item.quantity * item.cost_per_unit
+        new_value = qty_change * (cost_override or item.cost_per_unit)
+        total_quantity = item.quantity + qty_change
+        
+        if total_quantity > 0:
+            weighted_avg_cost = (current_value + new_value) / total_quantity
+            # Update the item's cost_per_unit to the new weighted average
+            item.cost_per_unit = weighted_avg_cost
+        
+        cost_per_unit = cost_override or item.cost_per_unit
+    elif cost_override is not None and change_type == 'cost_override':
+        # Only use cost_override for manual edits from the edit modal (true overrides)
+        cost_per_unit = cost_override
+    else:
+        # For other operations, use current cost
+        cost_per_unit = item.cost_per_unit
 
     # Deductions
     if qty_change < 0:
@@ -156,4 +191,12 @@ def process_inventory_adjustment(
         item.quantity += qty_change
 
     db.session.commit()
+    
+    # Validate inventory/FIFO sync after adjustment
+    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+    if not is_valid:
+        # Rollback the transaction
+        db.session.rollback()
+        raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
+    
     return True

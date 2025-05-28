@@ -1,5 +1,6 @@
-from flask import Blueprint, redirect, url_for
+from flask import Blueprint, redirect, url_for, request, flash, render_template
 from flask_login import login_required
+from models import ProductInventory, db, User
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -7,9 +8,6 @@ admin_bp = Blueprint('admin', __name__)
 @login_required
 def unit_manager():
     return redirect(url_for('conversion_bp.manage_units'))
-from models import ProductInventory, db
-from flask import flash
-from flask import render_template
 
 @admin_bp.route('/admin/tools/cleanup')
 @login_required

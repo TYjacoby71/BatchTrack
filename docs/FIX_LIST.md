@@ -42,4 +42,7 @@
 - * Micro transactions slip and either go unoticed or create entries with 0 chagne
 
 ## DESYNC Risk
-- * Need to add wrapper to all adjustment routes and events to confirm inventroy/fifo sync after change event or dissallow the function. 
+- * Need to add wrapper to all adjustment routes and events to confirm inventroy/fifo sync after change event or dissallow the function.
+
+## Fail Add Messages
+- *when adding extra ingredient with bad unit conversion or lacking custom mapping, it fails and shows failed with no other message of why. 

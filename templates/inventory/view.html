@@ -221,9 +221,14 @@
                   {% if entry.fifo_reference_id %}
                     {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
                     <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                      FIFO #{{ entry.fifo_reference_id }}
-                      {% if ref_entry and ref_entry.batch %}
-                        ({{ ref_entry.batch.label_code }})
+                      {% if ref_entry %}
+                        {% if ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
+                          {{ ref_entry.batch.label_code }}
+                        {% else %}
+                          {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
+                        {% endif %}
+                      {% else %}
+                        FIFO #{{ entry.fifo_reference_id }}
                       {% endif %}
                     </a>
                   {% else %}
@@ -234,7 +239,7 @@
                   {% if entry.change_type == 'finished_batch' and entry.batch %}
                     {{ entry.batch.label_code }}
                   {% else %}
-                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base32(entry.id).zfill(5) }}
+                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
                   {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}

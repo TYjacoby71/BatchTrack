@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
-from utils.fifo_generator import get_change_type_prefix, int_to_base32
+from utils.fifo_generator import get_change_type_prefix, int_to_base36
 from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
@@ -49,7 +49,7 @@ def view_inventory(id):
                          InventoryHistory=InventoryHistory,
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
-                         int_to_base32=int_to_base32)
+                         int_to_base36=int_to_base36)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -70,6 +70,13 @@ def add_inventory():
             from datetime import datetime, timedelta
             expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
+    # Handle container-specific fields
+    storage_amount = None
+    storage_unit = None
+    if item_type == 'container':
+        storage_amount = float(request.form.get('storage_amount', 0))
+        storage_unit = request.form.get('storage_unit')
+
     item = InventoryItem(
         name=name,
         quantity=0,  # Start at 0, will be updated by history
@@ -79,7 +86,9 @@ def add_inventory():
         low_stock_threshold=low_stock_threshold,
         is_perishable=is_perishable,
         shelf_life_days=shelf_life_days,
-        expiration_date=expiration_date
+        expiration_date=expiration_date,
+        storage_amount=storage_amount,
+        storage_unit=storage_unit
     )
     db.session.add(item)
     db.session.flush()  # Get the ID without committing
@@ -110,14 +119,30 @@ def add_inventory():
 @login_required
 def adjust_inventory(id):
     try:
+        # Pre-validation check
+        from services.inventory_adjustment import validate_inventory_fifo_sync
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+        if not is_valid:
+            flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+        
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
         notes = request.form.get('notes', '')
 
-        # Handle cost override
+        # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
-        cost_override = float(input_cost) if input_cost else None
+        cost_entry_type = request.form.get('cost_entry_type', 'no_change')
+        
+        restock_cost = None
+        if input_cost and change_type == 'restock':
+            cost_value = float(input_cost)
+            if cost_entry_type == 'total':
+                # Divide total cost by quantity to get per-unit cost
+                restock_cost = cost_value / input_quantity if input_quantity > 0 else 0
+            elif cost_entry_type == 'per_unit':
+                restock_cost = cost_value
 
         # Use centralized adjustment service
         from services.inventory_adjustment import process_inventory_adjustment
@@ -128,7 +153,7 @@ def adjust_inventory(id):
             unit=input_unit,
             notes=notes,
             created_by=current_user.id,
-            cost_override=cost_override
+            cost_override=restock_cost  # Only pass cost for restocks, not overrides
         )
 
         if success:
@@ -180,15 +205,16 @@ def edit_inventory(id):
             return redirect(url_for('inventory.view_inventory', id=id))
         item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
 
-    # Handle cost override
+    # Handle cost override (only for manual cost changes from edit modal)
     new_cost = float(request.form.get('cost_per_unit', 0))
     if request.form.get('override_cost') and new_cost != item.cost_per_unit:
+        # This is a true cost override - bypasses weighted average
         history = InventoryHistory(
             inventory_item_id=item.id,
             change_type='cost_override',
             quantity_change=0,
             unit_cost=new_cost,
-            note=f'Cost manually changed from {item.cost_per_unit} to {new_cost}',
+            note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,
             quantity_used=0
         )
