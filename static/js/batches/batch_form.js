@@ -178,15 +178,16 @@ function saveExtras() {
   })
   .then(data => {
     if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
-      ).join('\n');
       function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
+        const message = errors.map(err => {
+          let errorText = `❌ ${err.item}: ${err.message}`;
+          if (err.needed && err.needed_unit && err.stock_unit) {
+            errorText += `\n(Requested: ${err.needed} ${err.needed_unit} → Stock unit: ${err.stock_unit})`;
+          }
+          return errorText;
+        }).join("\n\n");
 
-        alert("Save failed:\n\n" + message);
+        alert("Error adding extra ingredients:\n\n" + message);
       }
 
       displayErrors(data.errors);
