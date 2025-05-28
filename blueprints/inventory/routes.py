@@ -133,7 +133,16 @@ def adjust_inventory(id):
 
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
-        restock_cost = float(input_cost) if input_cost and change_type == 'restock' else None
+        cost_entry_type = request.form.get('cost_entry_type', 'no_change')
+        
+        restock_cost = None
+        if input_cost and change_type == 'restock':
+            cost_value = float(input_cost)
+            if cost_entry_type == 'total':
+                # Divide total cost by quantity to get per-unit cost
+                restock_cost = cost_value / input_quantity if input_quantity > 0 else 0
+            elif cost_entry_type == 'per_unit':
+                restock_cost = cost_value
 
         # Use centralized adjustment service
         from services.inventory_adjustment import process_inventory_adjustment
