@@ -198,11 +198,15 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if entry.batch and entry.batch.label_code %}
-                    {{ entry.batch.label_code }}
-                  {% else %}
-                    {{ entry.id }}
-                  {% endif %}
+                  {% if entry.fifo_reference_id %}
+                            #{{ entry.fifo_reference_id }}
+                        {% elif entry.batch and entry.change_type == 'finished_batch' %}
+                            {{ entry.batch.label_code }}
+                        {% elif entry.remaining_quantity is not none %}
+                            #{{ entry.id }}
+                        {% else %}
+                            N/A
+                        {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
                     class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
