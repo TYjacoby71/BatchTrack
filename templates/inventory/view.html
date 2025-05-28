@@ -198,7 +198,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if entry.change_type == 'restock' and entry.batch %}
+                  {% if entry.batch and entry.batch.label_code %}
                     {{ entry.batch.label_code }}
                   {% else %}
                     {{ entry.id }}
