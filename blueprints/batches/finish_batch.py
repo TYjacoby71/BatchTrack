@@ -123,7 +123,8 @@ def complete_batch(batch_id):
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
-                    created_by=current_user.id
+                    created_by=current_user.id,
+                    batch_unit_cost=unit_cost  # Use calculated batch unit cost for history
                 )
             else:  # create new
                 ingredient = InventoryItem(
@@ -146,7 +147,8 @@ def complete_batch(batch_id):
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code}",
                     batch_id=batch.id,
-                    created_by=current_user.id
+                    created_by=current_user.id,
+                    batch_unit_cost=unit_cost  # Use calculated batch unit cost for history
                 )
 
         # Finalize
