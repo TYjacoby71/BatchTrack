@@ -45,6 +45,7 @@ def generate_fifo_id(change_type):
         next_sequence = 1
 
     sequence_base32 = int_to_base32(next_sequence).zfill(6)  # Pad to 6 characters
+    print(f"DEBUG: Generated sequence {next_sequence} -> '{sequence_base32}' (length: {len(sequence_base32)})")
 
     return f"{prefix}-{sequence_base32}"
 
