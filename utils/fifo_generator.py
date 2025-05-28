@@ -44,9 +44,15 @@ def generate_fifo_id(change_type):
     else:
         next_sequence = 1
 
-    sequence_base32 = int_to_base32(next_sequence).zfill(6)  # Pad to 6 characters
+    # Convert to base-36 first
+    base36_raw = int_to_base32(next_sequence)
+    print(f"DEBUG: Raw base-36 conversion {next_sequence} -> '{base36_raw}' (length: {len(base36_raw)})")
+    
+    # Apply padding
+    sequence_base32 = base36_raw.zfill(6)  # Pad to 6 characters
+    print(f"DEBUG: After zfill(6): '{sequence_base32}' (length: {len(sequence_base32)})")
+    
     full_fifo_id = f"{prefix}-{sequence_base32}"
-    print(f"DEBUG: Generated sequence {next_sequence} -> '{sequence_base32}' (length: {len(sequence_base32)})")
     print(f"DEBUG: Full FIFO ID: '{full_fifo_id}' (total length: {len(full_fifo_id)})")
     print(f"DEBUG: Characters in sequence: {[char for char in sequence_base32]}")
 
