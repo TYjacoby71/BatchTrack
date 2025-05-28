@@ -45,11 +45,9 @@ def generate_fifo_id(change_type):
         next_sequence = 1
 
     sequence_base32 = int_to_base32(next_sequence).zfill(6)  # Pad to 6 characters
-    full_fifo_id = f"{prefix}-{sequence_base32}"
     print(f"DEBUG: Generated sequence {next_sequence} -> '{sequence_base32}' (length: {len(sequence_base32)})")
-    print(f"DEBUG: Full FIFO ID: '{full_fifo_id}' (total length: {len(full_fifo_id)})")
 
-    return full_fifo_id
+    return f"{prefix}-{sequence_base32}"
 
 def base32_to_int(base32_str):
     """Convert base-36 string back to integer"""
