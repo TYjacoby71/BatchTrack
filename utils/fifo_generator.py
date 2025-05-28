@@ -1,7 +1,7 @@
 # Base-32 FIFO ID Generator
 # Replaces integer auto-increment with structured base-32 codes
 
-BASE32_CHARS = '0123456789abcdefghijklmnopqrstuv'
+BASE32_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 def get_change_type_prefix(change_type):
     """Get 3-letter prefix for change type"""
