@@ -185,7 +185,7 @@
                 <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
                 <td>
                   {% if entry.change_type in ['batch', 'spoil', 'trash'] and entry.batch %}
-                    {{ entry.batch.label_code }}
+                    <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                   {% else %}
                     NA
                   {% endif %}
