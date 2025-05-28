@@ -54,6 +54,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
+    from utils.fifo_generator import generate_fifo_code
 
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
@@ -78,6 +79,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 quantity_change=-deduct_amount,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
+                fifo_code=generate_fifo_code('recount'),
                 unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
@@ -97,15 +99,15 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         ).order_by(InventoryHistory.timestamp.desc()).all()
 
         remaining_to_add = difference
-        
+
         # First try to fill existing FIFO entries
         for entry in unfilled_entries:
             if remaining_to_add <= 0:
                 break
-                
+
             available_capacity = entry.quantity_change - entry.remaining_quantity
             fill_amount = min(available_capacity, remaining_to_add)
-            
+
             if fill_amount > 0:
                 # Log the recount but don't create new FIFO entry
                 history = InventoryHistory(
@@ -119,7 +121,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     quantity_used=0
                 )
                 db.session.add(history)
-                
+
                 # Update the original FIFO entry
                 entry.remaining_quantity += fill_amount
                 remaining_to_add -= fill_amount

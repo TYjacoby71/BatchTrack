@@ -206,6 +206,8 @@
                 <td>
                   {% if entry.change_type == 'finished_batch' and entry.batch %}
                     {{ entry.batch.label_code }}
+                  {% elif entry.fifo_code %}
+                    {{ entry.fifo_code }}
                   {% else %}
                     #{{ entry.id }}
                   {% endif %}

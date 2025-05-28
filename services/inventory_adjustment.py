@@ -1,8 +1,15 @@
-
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
 from blueprints.fifo.services import deduct_fifo
+import base64
+
+def generate_fifo_code(prefix):
+    """Generates a base-32 encoded FIFO code with a prefix."""
+    import time
+    timestamp = int(time.time() * 1000)  # Millisecond precision
+    encoded_timestamp = base64.b32encode(str(timestamp).encode()).decode('utf-8').lower()
+    return f"{prefix[:3].upper()}-{encoded_timestamp}"  # Use first 3 chars of prefix
 
 def process_inventory_adjustment(
     item_id,
@@ -55,12 +62,15 @@ def process_inventory_adjustment(
         for entry_id, deduction_amount, _ in deductions:
             # Show clearer description for batch cancellations
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
-            
+
+            # Create deduction history for each FIFO entry used
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,
+                remaining_quantity=0,
                 fifo_reference_id=entry_id,
+                fifo_code=generate_fifo_code(change_type),
                 unit_cost=cost_per_unit,
                 note=f"{used_for_note} (From FIFO #{entry_id})",
                 created_by=created_by,
@@ -80,22 +90,22 @@ def process_inventory_adjustment(
                 InventoryHistory.quantity_change < 0,
                 InventoryHistory.fifo_reference_id.isnot(None)
             ).order_by(InventoryHistory.timestamp.desc()).all()
-            
+
             remaining_to_credit = qty_change
-            
+
             # Credit back to the original FIFO entries
             for deduction in original_deductions:
                 if remaining_to_credit <= 0:
                     break
-                    
+
                 original_fifo_entry = InventoryHistory.query.get(deduction.fifo_reference_id)
                 if original_fifo_entry:
                     credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
-                    
+
                     # Credit back to the original FIFO entry's remaining quantity
                     original_fifo_entry.remaining_quantity += credit_amount
                     remaining_to_credit -= credit_amount
-                    
+
                     # Create credit history entry
                     credit_history = InventoryHistory(
                         inventory_item_id=item.id,
@@ -110,7 +120,7 @@ def process_inventory_adjustment(
                         used_for_batch_id=batch_id
                     )
                     db.session.add(credit_history)
-            
+
             # If there's still quantity to credit (shouldn't happen in normal cases)
             if remaining_to_credit > 0:
                 # Create new FIFO entry for any excess
@@ -129,12 +139,14 @@ def process_inventory_adjustment(
                 db.session.add(excess_history)
         else:
             # Regular additions (restock or recount or adjustment up)
+            # Create new stock entry
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=qty_change,
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
+                fifo_code=generate_fifo_code(change_type),
                 note=notes,
                 quantity_used=0,
                 created_by=created_by,
@@ -142,7 +154,7 @@ def process_inventory_adjustment(
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
             )
             db.session.add(history)
-        
+
         item.quantity += qty_change
 
     db.session.commit()
