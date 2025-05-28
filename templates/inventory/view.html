@@ -183,13 +183,7 @@
                 <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type == 'restock' else 'NA' }}</td>
                 <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
                 <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
-                <td>
-                  {% if entry.change_type in ['batch', 'spoil', 'trash'] and entry.batch %}
-                    {{ entry.batch.label_code }}
-                  {% else %}
-                    NA
-                  {% endif %}
-                </td>
+                <td>{{ entry.batch.label_code if entry.batch else 'NA' }}</td>
                 <td>
                   {% if entry.fifo_reference_id %}
                     FIFO #{{ entry.fifo_reference_id }}
@@ -197,13 +191,7 @@
                     -
                   {% endif %}
                 </td>
-                <td>
-                  {% if entry.change_type == 'restock' and entry.batch %}
-                    {{ entry.batch.label_code }}
-                  {% else %}
-                    {{ entry.id }}
-                  {% endif %}
-                </td>
+                <td>{{ entry.id }}</td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
                     class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
                     {% endif %}>
