@@ -206,10 +206,8 @@
                 <td>
                   {% if entry.change_type == 'finished_batch' and entry.batch %}
                     {{ entry.batch.label_code }}
-                  {% elif entry.fifo_code %}
-                    {{ entry.fifo_code }}
                   {% else %}
-                    #{{ entry.id }}
+                    {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base32(entry.id).zfill(5) }}
                   {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}

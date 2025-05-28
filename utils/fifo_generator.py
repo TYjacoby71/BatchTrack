@@ -1,55 +1,49 @@
 
-import string
-from models import InventoryHistory, db
+# Base-32 FIFO ID Generator
+# Replaces integer auto-increment with structured base-32 codes
 
-# Base-32 character set (excluding ambiguous characters)
-BASE32_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+BASE32_CHARS = '0123456789abcdefghijklmnopqrstuv'
 
 def get_change_type_prefix(change_type):
-    """Map change types to prefixes"""
+    """Get 3-letter prefix for change type"""
     prefix_map = {
         'restock': 'RSK',
         'batch': 'BTC', 
         'spoil': 'SPL',
         'trash': 'TRS',
         'recount': 'RCN',
-        'refunded': 'RFD',
-        'adjustment': 'ADJ'
+        'finished_batch': 'FIN',
+        'refunded': 'REF',
+        'cost_override': 'CST'
     }
     return prefix_map.get(change_type, 'UNK')
 
 def int_to_base32(number):
     """Convert integer to base-32 string"""
     if number == 0:
-        return BASE32_CHARS[0]
+        return '0'
     
-    result = ""
+    result = ''
     while number > 0:
         result = BASE32_CHARS[number % 32] + result
         number //= 32
     return result
 
-def generate_fifo_code(change_type):
-    """Generate next FIFO code for given change type"""
+def generate_fifo_id(change_type):
+    """Generate next FIFO ID for given change type"""
+    from models import db, InventoryHistory
+    
     prefix = get_change_type_prefix(change_type)
     
-    # Get the highest sequence number for this prefix
-    existing_codes = db.session.query(InventoryHistory.fifo_code).filter(
-        InventoryHistory.fifo_code.like(f'{prefix}-%')
-    ).all()
+    # Get the highest sequence number across all prefixes
+    # This ensures global uniqueness across all change types
+    latest_entry = db.session.query(InventoryHistory.id).order_by(InventoryHistory.id.desc()).first()
     
-    max_sequence = 0
-    for (code,) in existing_codes:
-        if code and '-' in code:
-            try:
-                sequence_part = code.split('-')[1]
-                # Convert base-32 back to integer to find max
-                sequence_num = base32_to_int(sequence_part)
-                max_sequence = max(max_sequence, sequence_num)
-            except (ValueError, IndexError):
-                continue
+    if latest_entry:
+        next_sequence = latest_entry[0] + 1
+    else:
+        next_sequence = 1
     
-    next_sequence = max_sequence + 1
     sequence_base32 = int_to_base32(next_sequence).zfill(5)  # Pad to 5 characters
     
     return f"{prefix}-{sequence_base32}"
@@ -61,12 +55,12 @@ def base32_to_int(base32_str):
         result = result * 32 + BASE32_CHARS.index(char)
     return result
 
-def validate_fifo_code(fifo_code):
-    """Validate FIFO code format"""
-    if not fifo_code or '-' not in fifo_code:
+def validate_fifo_id(fifo_id):
+    """Validate FIFO ID format"""
+    if not fifo_id or '-' not in fifo_id:
         return False
     
-    parts = fifo_code.split('-')
+    parts = fifo_id.split('-')
     if len(parts) != 2:
         return False
     

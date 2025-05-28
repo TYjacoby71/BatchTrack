@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
+from utils.fifo_generator import get_change_type_prefix, int_to_base32
 from utils.unit_utils import get_global_unit_list
 
 inventory_bp = Blueprint('inventory', __name__)
@@ -46,7 +47,9 @@ def view_inventory(id):
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
                          InventoryHistory=InventoryHistory,
-                         now=datetime.utcnow())
+                         now=datetime.utcnow(),
+                         get_change_type_prefix=get_change_type_prefix,
+                         int_to_base32=int_to_base32)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
