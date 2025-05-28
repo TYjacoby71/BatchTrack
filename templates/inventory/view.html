@@ -192,21 +192,23 @@
                 </td>
                 <td>
                   {% if entry.fifo_reference_id %}
-                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">FIFO #{{ entry.fifo_reference_id }}</a>
+                    {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
+                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                      FIFO #{{ entry.fifo_reference_id }}
+                      {% if ref_entry and ref_entry.batch %}
+                        ({{ ref_entry.batch.label_code }})
+                      {% endif %}
+                    </a>
                   {% else %}
                     -
                   {% endif %}
                 </td>
                 <td>
-                  {% if entry.fifo_reference_id %}
-                            #{{ entry.fifo_reference_id }}
-                        {% elif entry.batch and entry.change_type == 'finished_batch' %}
-                            {{ entry.batch.label_code }}
-                        {% elif entry.remaining_quantity is not none %}
-                            #{{ entry.id }}
-                        {% else %}
-                            N/A
-                        {% endif %}
+                  {% if entry.change_type == 'finished_batch' and entry.batch %}
+                    {{ entry.batch.label_code }}
+                  {% else %}
+                    #{{ entry.id }}
+                  {% endif %}
                 </td>
                 <td {% if entry.is_perishable and entry.expiration_date %}
                     class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
