@@ -65,12 +65,28 @@ def process_inventory_adjustment(
     if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
         expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
 
-    # Get cost
-    cost_per_unit = (
-        cost_override if cost_override is not None
-        else item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount']
-        else None
-    )
+    # Get cost - handle weighted average vs override
+    if cost_override is not None:
+        # Only use cost_override for manual edits from the edit modal
+        cost_per_unit = cost_override
+    elif change_type in ['spoil', 'trash']:
+        # For spoilage/trash, don't assign a cost
+        cost_per_unit = None
+    elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+        # For new stock additions, calculate weighted average
+        current_value = item.quantity * item.cost_per_unit
+        new_value = qty_change * (cost_override or item.cost_per_unit)
+        total_quantity = item.quantity + qty_change
+        
+        if total_quantity > 0:
+            weighted_avg_cost = (current_value + new_value) / total_quantity
+            # Update the item's cost_per_unit to the new weighted average
+            item.cost_per_unit = weighted_avg_cost
+        
+        cost_per_unit = cost_override or item.cost_per_unit
+    else:
+        # For other operations, use current cost
+        cost_per_unit = item.cost_per_unit
 
     # Deductions
     if qty_change < 0:

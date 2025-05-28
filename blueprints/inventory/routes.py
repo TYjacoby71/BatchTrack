@@ -122,9 +122,9 @@ def adjust_inventory(id):
         input_unit = request.form.get('input_unit')
         notes = request.form.get('notes', '')
 
-        # Handle cost override
+        # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
-        cost_override = float(input_cost) if input_cost else None
+        restock_cost = float(input_cost) if input_cost and change_type == 'restock' else None
 
         # Use centralized adjustment service
         from services.inventory_adjustment import process_inventory_adjustment
@@ -135,7 +135,7 @@ def adjust_inventory(id):
             unit=input_unit,
             notes=notes,
             created_by=current_user.id,
-            cost_override=cost_override
+            cost_override=restock_cost  # Only pass cost for restocks, not overrides
         )
 
         if success:
@@ -187,15 +187,16 @@ def edit_inventory(id):
             return redirect(url_for('inventory.view_inventory', id=id))
         item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
 
-    # Handle cost override
+    # Handle cost override (only for manual cost changes from edit modal)
     new_cost = float(request.form.get('cost_per_unit', 0))
     if request.form.get('override_cost') and new_cost != item.cost_per_unit:
+        # This is a true cost override - bypasses weighted average
         history = InventoryHistory(
             inventory_item_id=item.id,
             change_type='cost_override',
             quantity_change=0,
             unit_cost=new_cost,
-            note=f'Cost manually changed from {item.cost_per_unit} to {new_cost}',
+            note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,
             quantity_used=0
         )
