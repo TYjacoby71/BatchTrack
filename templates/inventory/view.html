@@ -192,7 +192,13 @@
                 </td>
                 <td>
                   {% if entry.fifo_reference_id %}
-                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">FIFO #{{ entry.fifo_reference_id }}</a>
+                    {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
+                    <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                      FIFO #{{ entry.fifo_reference_id }}
+                      {% if ref_entry and ref_entry.batch %}
+                        ({{ ref_entry.batch.label_code }})
+                      {% endif %}
+                    </a>
                   {% else %}
                     -
                   {% endif %}
