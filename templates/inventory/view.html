@@ -511,21 +511,26 @@ document.getElementById('categorySelect').addEventListener('change', function() 
     }
 });
 
-// Initialize popovers for FIFO ID helper
-const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-    return new bootstrap.Popover(popoverTriggerEl, {
-        container: 'body'
-    });
-});
-
-// Close popover when clicking elsewhere
-document.addEventListener('click', function (e) {
-    if (!e.target.closest('[data-bs-toggle="popover"]')) {
-        popoverList.forEach(function(popover) {
-            popover.hide();
+// Initialize popovers for FIFO ID helper after DOM and Bootstrap are loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit to ensure Bootstrap is fully loaded
+    setTimeout(function() {
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                container: 'body'
+            });
         });
-    }
+
+        // Close popover when clicking elsewhere
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-bs-toggle="popover"]')) {
+                popoverList.forEach(function(popover) {
+                    popover.hide();
+                });
+            }
+        });
+    }, 100);
 });
 </script>
 {% endblock %}
