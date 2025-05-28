@@ -48,7 +48,7 @@ checkStock() {
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         try {
-          const response = await fetch('/batches/start_batch', {
+          const response = await fetch('/start-batch/start_batch', {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
