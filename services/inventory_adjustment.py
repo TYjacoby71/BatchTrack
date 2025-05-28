@@ -38,7 +38,7 @@ def process_inventory_adjustment(
     notes='',
     batch_id=None,
     created_by=None,
-    batch_unit_cost=None,
+    cost_override=None,
 ):
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
@@ -67,7 +67,7 @@ def process_inventory_adjustment(
 
     # Get cost
     cost_per_unit = (
-        batch_unit_cost if batch_unit_cost is not None
+        cost_override if cost_override is not None
         else item.cost_per_unit if change_type not in ['spoil', 'trash', 'recount']
         else None
     )

@@ -108,12 +108,6 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Calculate weighted average cost for existing ingredient
-                old_total_value = ingredient.quantity * ingredient.cost_per_unit
-                new_total_value = converted_quantity * unit_cost
-                new_total_quantity = ingredient.quantity + converted_quantity
-                ingredient.cost_per_unit = (old_total_value + new_total_value) / new_total_quantity if new_total_quantity > 0 else unit_cost
-
                 # Use centralized inventory adjustment to properly add FIFO entries
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
@@ -124,7 +118,7 @@ def complete_batch(batch_id):
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    batch_unit_cost=unit_cost  # Use calculated batch unit cost for history
+                    cost_override=unit_cost
                 )
             else:  # create new
                 ingredient = InventoryItem(
@@ -148,7 +142,7 @@ def complete_batch(batch_id):
                     notes=f"Initial stock from batch {batch.label_code}",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    batch_unit_cost=unit_cost  # Use calculated batch unit cost for history
+                    cost_override=unit_cost
                 )
 
         # Finalize
