@@ -1,7 +1,7 @@
 # Base-32 FIFO ID Generator
 # Replaces integer auto-increment with structured base-32 codes
 
-BASE32_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
+BASE32_CHARS = '0123456789abcdefghijklmnopqrstuv'
 
 def get_change_type_prefix(change_type):
     """Get 3-letter prefix for change type"""
@@ -18,15 +18,14 @@ def get_change_type_prefix(change_type):
     return prefix_map.get(change_type, 'UNK')
 
 def int_to_base32(number):
-    """Convert integer to base-36 string"""
+    """Convert integer to base-32 string"""
     if number == 0:
         return '0'
 
     result = ''
-    base = len(BASE32_CHARS)  # Now 36 characters
     while number > 0:
-        result = BASE32_CHARS[number % base] + result
-        number //= base
+        result = BASE32_CHARS[number % 32] + result
+        number //= 32
     return result
 
 def generate_fifo_id(change_type):
@@ -44,26 +43,15 @@ def generate_fifo_id(change_type):
     else:
         next_sequence = 1
 
-    # Convert to base-36 first
-    base36_raw = int_to_base32(next_sequence)
-    print(f"DEBUG: Raw base-36 conversion {next_sequence} -> '{base36_raw}' (length: {len(base36_raw)})")
-    
-    # Apply padding
-    sequence_base32 = base36_raw.zfill(6)  # Pad to 6 characters
-    print(f"DEBUG: After zfill(6): '{sequence_base32}' (length: {len(sequence_base32)})")
-    
-    full_fifo_id = f"{prefix}-{sequence_base32}"
-    print(f"DEBUG: Full FIFO ID: '{full_fifo_id}' (total length: {len(full_fifo_id)})")
-    print(f"DEBUG: Characters in sequence: {[char for char in sequence_base32]}")
+    sequence_base32 = int_to_base32(next_sequence).zfill(6)  # Pad to 6 characters
 
-    return full_fifo_id
+    return f"{prefix}-{sequence_base32}"
 
 def base32_to_int(base32_str):
-    """Convert base-36 string back to integer"""
+    """Convert base-32 string back to integer"""
     result = 0
-    base = len(BASE32_CHARS)  # Now 36 characters
     for char in base32_str:
-        result = result * base + BASE32_CHARS.index(char)
+        result = result * 32 + BASE32_CHARS.index(char)
     return result
 
 def validate_fifo_id(fifo_id):
