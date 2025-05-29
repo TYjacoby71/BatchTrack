@@ -56,7 +56,7 @@ from routes.bulk_stock_routes import bulk_stock_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
-from routes.product_routes import product_bp
+from blueprints.products.routes import products_bp
 from blueprints.fifo import fifo_bp
 from routes.expiration_routes import expiration_bp
 from routes.admin_routes import admin_bp
@@ -69,7 +69,7 @@ app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(product_bp)
+app.register_blueprint(products_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
