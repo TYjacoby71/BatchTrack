@@ -27,7 +27,7 @@ def start_batch():
     new_batch = Batch(
         recipe_id=recipe.id,
         label_code=label_code,
-        batch_type='product',
+        batch_type=data.get('output_type', 'product'),  # Use the selection from plan production
         scale=scale,
         notes=data.get('notes', ''),
         status='in_progress',

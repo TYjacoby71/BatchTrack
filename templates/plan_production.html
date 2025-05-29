@@ -19,10 +19,10 @@
   <!-- Output Type Selection -->
   <div class="row mb-4">
     <div class="col-md-6">
-      <label>Output Type:</label>
-      <select class="form-select" x-model="outputType" @change="handleOutputTypeChange">
-        <option value="intermediate">Intermediate Ingredient</option>
-        <option value="product">Final Product</option>
+      <label>Batch Type:</label>
+      <select x-model="batchType" class="form-control" required>
+        <option value="product">Product</option>
+        <option value="ingredient">Intermediate</option>
       </select>
     </div>
   </div>
@@ -111,7 +111,7 @@ function planProduction() {
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
-      outputType: 'product',
+      batchType: 'product',
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -128,7 +128,7 @@ function planProduction() {
       this.stockChecked = false;
       this.stockCheckPassed = false;
       this.stockResults = [];
-      
+
       // If switching to intermediate, clear containers
       if (this.outputType === 'intermediate') {
         this.containersSelected = [];
@@ -393,7 +393,7 @@ function planProduction() {
             recipe_id: this.recipeId,
             scale: this.scale,
             notes: '',
-            output_type: this.outputType,
+            output_type: this.batchType,
             containers: this.containersSelected.map(c => ({
               id: c.id,
               quantity: c.quantity
