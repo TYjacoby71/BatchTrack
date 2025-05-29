@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
@@ -15,6 +14,7 @@ def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     scale = float(data['scale'])
+    output_type = data.get('output_type', 'product')
 
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
@@ -28,7 +28,7 @@ def start_batch():
     new_batch = Batch(
         recipe_id=recipe.id,
         label_code=label_code,
-        batch_type='product',
+        batch_type=output_type,
         scale=scale,
         notes=data.get('notes', ''),
         status='in_progress',
@@ -41,38 +41,40 @@ def start_batch():
 
     # Handle container deduction first
     container_errors = []
-    for container in data.get('containers', []):
-        container_id = container.get('id')
-        quantity = container.get('quantity', 0)
+    # Handle containers only for product output type
+    if output_type == 'product':
+        for container in data.get('containers', []):
+            container_id = container.get('id')
+            quantity = container.get('quantity', 0)
 
-        if container_id and quantity:
-            container_item = InventoryItem.query.get(container_id)
-            if container_item:
-                # Use the inventory adjustment route
-                try:
-                    result = process_inventory_adjustment(
-                        item_id=container_id,
-                        quantity=-quantity,  # Negative for deduction
-                        change_type='batch',
-                        unit=container_item.unit,
-                        notes=f"Used in batch {label_code}",
-                        batch_id=new_batch.id,
-                        created_by=current_user.id
-                    )
-
-                    if result:
-                        # Create single BatchContainer record
-                        bc = BatchContainer(
+            if container_id and quantity:
+                container_item = InventoryItem.query.get(container_id)
+                if container_item:
+                    # Use the inventory adjustment route
+                    try:
+                        result = process_inventory_adjustment(
+                            item_id=container_id,
+                            quantity=-quantity,  # Negative for deduction
+                            change_type='batch',
+                            unit=container_item.unit,
+                            notes=f"Used in batch {label_code}",
                             batch_id=new_batch.id,
-                            container_id=container_id,
-                            quantity_used=quantity,
-                            cost_each=container_item.cost_per_unit
+                            created_by=current_user.id
                         )
-                        db.session.add(bc)
-                    else:
-                        container_errors.append(f"Not enough {container_item.name} in stock.")
-                except Exception as e:
-                    container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
+
+                        if result:
+                            # Create single BatchContainer record
+                            bc = BatchContainer(
+                                batch_id=new_batch.id,
+                                container_id=container_id,
+                                quantity_used=quantity,
+                                cost_each=container_item.cost_per_unit
+                            )
+                            db.session.add(bc)
+                        else:
+                            container_errors.append(f"Not enough {container_item.name} in stock.")
+                    except Exception as e:
+                        container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
 
     # Deduct ingredient inventory at start of batch
     ingredient_errors = []
