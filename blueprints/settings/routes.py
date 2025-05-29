@@ -53,6 +53,42 @@ def save_settings():
         flash('Error saving settings')
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@settings_bp.route('/update', methods=['POST'])
+@login_required
+def update_setting_route():
+    """Update a single setting via AJAX"""
+    try:
+        data = request.get_json()
+        key = data.get('key')
+        value = data.get('value')
+        
+        if not key:
+            return jsonify({"status": "error", "message": "Missing key"}), 400
+        
+        # Load existing settings
+        try:
+            with open("settings.json", "r") as f:
+                settings_data = json.load(f)
+        except FileNotFoundError:
+            settings_data = {}
+        
+        # Handle dot notation (e.g., 'alerts.show_inventory_refund')
+        keys = key.split('.')
+        current = settings_data
+        for k in keys[:-1]:
+            if k not in current:
+                current[k] = {}
+            current = current[k]
+        current[keys[-1]] = value
+        
+        # Save updated settings
+        with open("settings.json", "w") as f:
+            json.dump(settings_data, f, indent=2)
+        
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # Catch-all route for unimplemented settings
 @settings_bp.route('/<path:subpath>')
 @login_required

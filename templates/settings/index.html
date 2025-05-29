@@ -3,28 +3,147 @@
 <div class="container">
     <h2>Settings</h2>
     <div class="row">
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-md-8">
+            <!-- General Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>General Settings</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">System Settings</h5>
-
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6>Alerts</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="lowStockThreshold" class="form-label">Low Stock Threshold</label>
+                            <input type="number" class="form-control" id="lowStockThreshold" 
+                                   value="{{ settings.get('low_stock_threshold', 5) }}"
+                                   onchange="updateSetting('low_stock_threshold', parseInt(this.value))">
                         </div>
-                        <div class="card-body">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
-                                       {% if settings.alerts.show_inventory_refund %}checked{% endif %}
-                                       onchange="updateSetting('alerts.show_inventory_refund', this.checked)">
-                                <label class="form-check-label" for="showInventoryRefund">
-                                    Show inventory refund details
-                                </label>
-                            </div>
+                        <div class="col-md-6">
+                            <label for="perPage" class="form-label">Items Per Page</label>
+                            <input type="number" class="form-control" id="perPage" 
+                                   value="{{ settings.get('per_page', 20) }}"
+                                   onchange="updateSetting('per_page', parseInt(this.value))">
                         </div>
                     </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enableCsvExport" 
+                               {% if settings.get('enable_csv_export', true) %}checked{% endif %}
+                               onchange="updateSetting('enable_csv_export', this.checked)">
+                        <label class="form-check-label" for="enableCsvExport">
+                            Enable CSV Export
+                        </label>
+                    </div>
+                </div>
+            </div>
 
-                    <ul class="list-group">
+            <!-- Alerts Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Alerts & Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="alertsLowStockThreshold" class="form-label">Alert Low Stock Threshold</label>
+                            <input type="number" class="form-control" id="alertsLowStockThreshold" 
+                                   value="{{ settings.get('alerts', {}).get('low_stock_threshold', 5) }}"
+                                   onchange="updateSetting('alerts.low_stock_threshold', parseInt(this.value))">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="notificationType" class="form-label">Notification Type</label>
+                            <select class="form-control" id="notificationType" 
+                                    onchange="updateSetting('alerts.notification_type', this.value)">
+                                <option value="dashboard" {% if settings.get('alerts', {}).get('notification_type') == 'dashboard' %}selected{% endif %}>Dashboard</option>
+                                <option value="email" {% if settings.get('alerts', {}).get('notification_type') == 'email' %}selected{% endif %}>Email</option>
+                                <option value="both" {% if settings.get('alerts', {}).get('notification_type') == 'both' %}selected{% endif %}>Both</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
+                               {% if settings.get('alerts', {}).get('show_inventory_refund', true) %}checked{% endif %}
+                               onchange="updateSetting('alerts.show_inventory_refund', this.checked)">
+                        <label class="form-check-label" for="showInventoryRefund">
+                            Show inventory refund details
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Batch Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="defaultScale" class="form-label">Default Batch Scale</label>
+                            <input type="number" step="0.1" class="form-control" id="defaultScale" 
+                                   value="{{ settings.get('batch', {}).get('default_scale', 1.0) }}"
+                                   onchange="updateSetting('batch.default_scale', parseFloat(this.value))">
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="autoGenerateLabels" 
+                               {% if settings.get('batch', {}).get('auto_generate_labels', true) %}checked{% endif %}
+                               onchange="updateSetting('batch.auto_generate_labels', this.checked)">
+                        <label class="form-check-label" for="autoGenerateLabels">
+                            Auto-generate batch labels
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="requireContainers" 
+                               {% if settings.get('batch', {}).get('require_containers', false) %}checked{% endif %}
+                               onchange="updateSetting('batch.require_containers', this.checked)">
+                        <label class="form-check-label" for="requireContainers">
+                            Require containers for all batches
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Inventory Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="enableFifo" 
+                               {% if settings.get('inventory', {}).get('enable_fifo', true) %}checked{% endif %}
+                               onchange="updateSetting('inventory.enable_fifo', this.checked)">
+                        <label class="form-check-label" for="enableFifo">
+                            Enable FIFO (First In, First Out) tracking
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="trackExpiration" 
+                               {% if settings.get('inventory', {}).get('track_expiration', true) %}checked{% endif %}
+                               onchange="updateSetting('inventory.track_expiration', this.checked)">
+                        <label class="form-check-label" for="trackExpiration">
+                            Track expiration dates
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="autoArchiveExpired" 
+                               {% if settings.get('inventory', {}).get('auto_archive_expired', false) %}checked{% endif %}
+                               onchange="updateSetting('inventory.auto_archive_expired', this.checked)">
+                        <label class="form-check-label" for="autoArchiveExpired">
+                            Auto-archive expired items
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Management Links -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Management Tools</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
                         <li class="list-group-item">
                             <a href="{{ url_for('conversion_bp.manage_units') }}">Unit Management</a>
                         </li>
@@ -40,4 +159,31 @@
         </div>
     </div>
 </div>
+
+<script>
+function updateSetting(key, value) {
+    fetch('{{ url_for("settings.update_setting_route") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            key: key,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Show success feedback
+            console.log('Setting updated successfully');
+        } else {
+            console.error('Error updating setting:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
 {% endblock %}
