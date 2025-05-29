@@ -16,11 +16,11 @@
     </div>
   </div>
 
-  <!-- Output Type Selection -->
+  <!-- Batch Type Selection -->
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Type:</label>
-      <select x-model="batchType" class="form-control" required>
+      <select x-model="batchType" class="form-control" @change="handleBatchTypeChange" required>
         <option value="product">Product</option>
         <option value="ingredient">Intermediate</option>
       </select>
@@ -123,17 +123,17 @@ function planProduction() {
       this.fetchContainerPlan();
     },
 
-    handleOutputTypeChange() {
-      // Reset stock check when output type changes
+    handleBatchTypeChange() {
+      // Reset stock check when batch type changes
       this.stockChecked = false;
       this.stockCheckPassed = false;
       this.stockResults = [];
 
       // If switching to intermediate, clear containers
-      if (this.outputType === 'intermediate') {
+      if (this.batchType === 'ingredient') {
         this.containersSelected = [];
         this.updateProgress();
-      } else if (this.outputType === 'product' && this.recipeNeedsContainers) {
+      } else if (this.batchType === 'product' && this.recipeNeedsContainers) {
         // If switching to product and recipe needs containers, fetch container plan
         this.fetchContainerPlan();
       }
@@ -173,8 +173,8 @@ function planProduction() {
     },
 
     get shouldShowContainers() {
-      // Show containers if recipe needs them AND output type is product
-      return this.recipeNeedsContainers && this.outputType === 'product';
+      // Show containers if recipe needs them AND batch type is product
+      return this.recipeNeedsContainers && this.batchType === 'product';
     },
 
     fetchContainerPlan() {
@@ -393,7 +393,7 @@ function planProduction() {
             recipe_id: this.recipeId,
             scale: this.scale,
             notes: '',
-            output_type: this.batchType,
+            batch_type: this.batchType,
             containers: this.containersSelected.map(c => ({
               id: c.id,
               quantity: c.quantity
