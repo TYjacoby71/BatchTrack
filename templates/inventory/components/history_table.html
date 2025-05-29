@@ -80,7 +80,7 @@
                 </a>
               {% else %}
                 <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                  FIFO #{{ entry.fifo_reference_id }}
+                  {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                 </a>
               {% endif %}
             {% else %}
