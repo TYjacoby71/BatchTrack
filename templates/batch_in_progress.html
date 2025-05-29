@@ -30,49 +30,57 @@
 </div>
 
 <template id="extra-ingredient-template">
-    <div class="extra-row d-flex gap-2 mb-2" data-type="ingredient">
-        <select class="form-select item-select select2" style="width: 200px;" onchange="updateRowCost(this)">
-            <option value="">Select ingredient...</option>
-            {% for ing in all_ingredients if ing.type == 'ingredient' %}
-            <option value="{{ ing.id }}" data-cost="{{ ing.cost_per_unit }}">{{ ing.name }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
-        <select class="form-select unit select2" style="width: 120px;">
-            <option value="">Select unit...</option>
-            {% for unit in units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✖</button>
+    <div class="extra-row row g-2 mb-3 align-items-center" data-type="ingredient">
+        <div class="col-md-4">
+            <select class="form-select item-select select2">
+                <option value="">Select ingredient</option>
+                {% for ingredient in all_ingredients %}
+                    <option value="{{ ingredient.id }}" data-cost="{{ ingredient.cost_per_unit or 0 }}" data-unit="{{ ingredient.unit }}">{{ ingredient.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
+        </div>
+        <div class="col-md-2">
+            <select class="form-select unit select2">
+                {% for unit in units %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
 </template>
 
 <template id="extra-container-template">
-    <div class="extra-row d-flex gap-2 mb-2" data-type="container">
-        <select class="form-select item-select select2-input" style="width: 200px;" onchange="updateRowCost(this)">
-            {% for cont in inventory_items if cont.type == 'container' %}
-            <option value="{{ cont.id }}" data-cost="{{ cont.cost_per_unit }}">{{ cont.name }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" class="form-control qty" placeholder="Quantity" step="1" min="1" />
-        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✖</button>
-    </div>
-</template>
-
-<template id="extra-container-template">
-    <div class="extra-row d-flex gap-2 mb-2" data-type="container">
-        <select class="form-select item-select select2" style="width: 200px;" onchange="updateRowCost(this)">
-            <option value="">Select container...</option>
-            {% for cont in inventory_items if cont.type == 'container' %}
-            <option value="{{ cont.id }}" data-cost="{{ cont.cost_per_unit }}">{{ cont.name }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" class="form-control qty" placeholder="Quantity" step="1" min="1" />
-        <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✖</button>
+    <div class="extra-row row g-2 mb-3 align-items-center" data-type="container">
+        <div class="col-md-5">
+            <select class="form-select item-select select2">
+                <option value="">Select container</option>
+                {% for container in inventory_items if container.type == 'container' %}
+                    <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}">{{ container.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" class="form-control qty" placeholder="Quantity" min="1" />
+        </div>
+        <div class="col-md-4">
+            <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
 </template>
 
