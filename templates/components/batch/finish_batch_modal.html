@@ -9,13 +9,12 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <input type="hidden" name="output_type" value="{{ batch.output_type or 'product' }}">
-
           <div class="form-group mb-3">
-            <label class="form-label">Output Type</label>
-            <div class="form-control-plaintext">
-              {{ 'Intermediate Ingredient' if batch.output_type == 'intermediate' else 'Final Product' }}
-            </div>
+            <label for="output_type">Output Type</label>
+            <select name="output_type" id="output_type" class="form-select" required onchange="toggleOutputFields()">
+              <option value="ingredient">Intermediate Ingredient</option>
+              <option value="product">Final Product</option>
+            </select>
           </div>
 
           <div class="form-group mb-3">
@@ -33,7 +32,7 @@
             </div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
-
+              
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">
@@ -50,14 +49,6 @@
               <select name="variant_label" id="variant_label" class="form-select">
                 <option value="">No variants available</option>
               </select>
-            </div>
-          </div>
-
-          <div id="intermediateFields" style="display: none;">
-            <div class="mb-3">
-              <div class="alert alert-info">
-                <strong>Intermediate Ingredient:</strong> This batch will be added to inventory as an intermediate ingredient that can be used in other recipes.
-              </div>
             </div>
           </div>
 
@@ -87,49 +78,3 @@
     </div>
   </div>
 </div>
-
-<script>
-// Show/hide fields based on batch type
-document.addEventListener('DOMContentLoaded', function() {
-  const batchType = '{{ batch.batch_type }}';
-  console.log('Batch type:', batchType);
-  
-  const productFields = document.getElementById('productFields');
-  const intermediateFields = document.getElementById('intermediateFields');
-
-  if (batchType === 'intermediate') {
-    if (intermediateFields) {
-      intermediateFields.style.display = 'block';
-      console.log('Showing intermediate fields');
-    }
-    if (productFields) {
-      productFields.style.display = 'none';
-      console.log('Hiding product fields');
-    }
-  } else {
-    if (productFields) {
-      productFields.style.display = 'block';
-      console.log('Showing product fields');
-    }
-    if (intermediateFields) {
-      intermediateFields.style.display = 'none';
-      console.log('Hiding intermediate fields');
-    }
-  }
-});
-
-// Also handle when modal is shown (in case DOM wasn't ready)
-document.getElementById('finishBatchModal').addEventListener('shown.bs.modal', function () {
-  const batchType = '{{ batch.batch_type }}';
-  const productFields = document.getElementById('productFields');
-  const intermediateFields = document.getElementById('intermediateFields');
-
-  if (batchType === 'intermediate') {
-    if (intermediateFields) intermediateFields.style.display = 'block';
-    if (productFields) productFields.style.display = 'none';
-  } else {
-    if (productFields) productFields.style.display = 'block';
-    if (intermediateFields) intermediateFields.style.display = 'none';
-  }
-});
-</script>
