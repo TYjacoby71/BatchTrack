@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient

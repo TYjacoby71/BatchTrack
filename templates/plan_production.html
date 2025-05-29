@@ -16,8 +16,19 @@
     </div>
   </div>
 
+  <!-- Output Type Selection -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <label>Output Type:</label>
+      <select class="form-select" x-model="outputType" @change="handleOutputTypeChange">
+        <option value="intermediate">Intermediate Ingredient</option>
+        <option value="product">Final Product</option>
+      </select>
+    </div>
+  </div>
+
   <!-- Auto-Fill Toggle -->
-  <div class="row mb-4" x-show="recipeNeedsContainers">
+  <div class="row mb-4" x-show="shouldShowContainers">
     <div class="col-md-6">
       <input type="checkbox" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
       <label for="autoFill">Auto-Fill Containers</label>
@@ -25,7 +36,7 @@
   </div>
 
   <!-- Container Selection -->
-  <div class="card mb-4" x-show="recipeNeedsContainers">
+  <div class="card mb-4" x-show="shouldShowContainers">
     <div class="card-header d-flex justify-content-between">
       <h5>Selected Containers</h5>
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
@@ -100,6 +111,7 @@ function planProduction() {
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
+      outputType: 'product',
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -109,6 +121,22 @@ function planProduction() {
 
     init() {
       this.fetchContainerPlan();
+    },
+
+    handleOutputTypeChange() {
+      // Reset stock check when output type changes
+      this.stockChecked = false;
+      this.stockCheckPassed = false;
+      this.stockResults = [];
+      
+      // If switching to intermediate, clear containers
+      if (this.outputType === 'intermediate') {
+        this.containersSelected = [];
+        this.updateProgress();
+      } else if (this.outputType === 'product' && this.recipeNeedsContainers) {
+        // If switching to product and recipe needs containers, fetch container plan
+        this.fetchContainerPlan();
+      }
     },
 
     getRemainingStock(containerId, currentIndex) {
@@ -138,10 +166,15 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      if (this.recipeNeedsContainers) {
+      if (this.shouldShowContainers) {
         return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
       }
       return this.stockChecked && this.stockCheckPassed;
+    },
+
+    get shouldShowContainers() {
+      // Show containers if recipe needs them AND output type is product
+      return this.recipeNeedsContainers && this.outputType === 'product';
     },
 
     fetchContainerPlan() {
@@ -360,6 +393,7 @@ function planProduction() {
             recipe_id: this.recipeId,
             scale: this.scale,
             notes: '',
+            output_type: this.outputType,
             containers: this.containersSelected.map(c => ({
               id: c.id,
               quantity: c.quantity

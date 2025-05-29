@@ -9,12 +9,13 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+          <input type="hidden" name="output_type" value="{{ batch.output_type or 'product' }}">
+
           <div class="form-group mb-3">
-            <label for="output_type">Output Type</label>
-            <select name="output_type" id="output_type" class="form-select" required onchange="toggleOutputFields()">
-              <option value="ingredient">Intermediate Ingredient</option>
-              <option value="product">Final Product</option>
-            </select>
+            <label class="form-label">Output Type</label>
+            <div class="form-control-plaintext">
+              {{ 'Intermediate Ingredient' if batch.output_type == 'intermediate' else 'Final Product' }}
+            </div>
           </div>
 
           <div class="form-group mb-3">
@@ -32,7 +33,7 @@
             </div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
-              
+
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">

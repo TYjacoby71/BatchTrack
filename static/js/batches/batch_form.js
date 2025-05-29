@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
       const form = document.getElementById('finishBatchModalForm');
-      if (form && outputTypeSelect) {
+      if (form) {
         toggleOutputFields();
         toggleShelfLife();
       }
@@ -64,7 +64,8 @@ function toggleShelfLife() {
 }
 
 function toggleOutputFields() {
-  const type = document.getElementById('output_type').value;
+  const outputTypeInput = document.querySelector('input[name="output_type"]');
+  const type = outputTypeInput ? outputTypeInput.value : 'product';
   const productFields = document.getElementById('productFields');
   const productSelect = document.getElementById('product_id');
 
