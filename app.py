@@ -40,10 +40,10 @@ setup_logging(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Register all blueprints
-from routes.batch_routes import batches_bp
-from blueprints.batches.finish_batch import finish_batch_bp
+# Import and register blueprints
 from blueprints.batches.start_batch import start_batch_bp
+from blueprints.batches.finish_batch import finish_batch_bp
+from blueprints.batches.cancel_batch import cancel_batch_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
 from blueprints.conversion.routes import conversion_bp
@@ -79,8 +79,9 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
+app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
+app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
 
 # Initialize API routes
 init_api(app)
