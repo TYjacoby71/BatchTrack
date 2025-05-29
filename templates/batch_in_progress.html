@@ -32,7 +32,7 @@
 <template id="extra-ingredient-template">
     <div class="extra-row row g-2 mb-3 align-items-center" data-type="ingredient">
         <div class="col-md-4">
-            <select class="form-select item-select select2">
+            <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select ingredient</option>
                 {% for ingredient in all_ingredients %}
                     <option value="{{ ingredient.id }}" data-cost="{{ ingredient.cost_per_unit or 0 }}" data-unit="{{ ingredient.unit }}">{{ ingredient.name }}</option>
@@ -43,7 +43,7 @@
             <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
         </div>
         <div class="col-md-2">
-            <select class="form-select unit select2">
+            <select class="form-select unit">
                 {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
@@ -53,7 +53,7 @@
             <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
         </div>
         <div class="col-md-1">
-            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -63,7 +63,7 @@
 <template id="extra-container-template">
     <div class="extra-row row g-2 mb-3 align-items-center" data-type="container">
         <div class="col-md-5">
-            <select class="form-select item-select select2">
+            <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select container</option>
                 {% for container in inventory_items if container.type == 'container' %}
                     <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}">{{ container.name }}</option>
@@ -77,7 +77,7 @@
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
         <div class="col-md-1">
-            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
