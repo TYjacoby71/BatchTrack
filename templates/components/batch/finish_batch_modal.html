@@ -53,6 +53,14 @@
             </div>
           </div>
 
+          <div id="intermediateFields" style="display: none;">
+            <div class="mb-3">
+              <div class="alert alert-info">
+                <strong>Intermediate Ingredient:</strong> This batch will be added to inventory as an intermediate ingredient that can be used in other recipes.
+              </div>
+            </div>
+          </div>
+
           <div class="form-group mb-3">
             <div class="form-check">
               <input type="checkbox" id="is_perishable" name="is_perishable" class="form-check-input" onchange="toggleShelfLife()">
@@ -83,6 +91,35 @@
 <script>
 // Show/hide fields based on batch type
 document.addEventListener('DOMContentLoaded', function() {
+  const batchType = '{{ batch.batch_type }}';
+  console.log('Batch type:', batchType);
+  
+  const productFields = document.getElementById('productFields');
+  const intermediateFields = document.getElementById('intermediateFields');
+
+  if (batchType === 'intermediate') {
+    if (intermediateFields) {
+      intermediateFields.style.display = 'block';
+      console.log('Showing intermediate fields');
+    }
+    if (productFields) {
+      productFields.style.display = 'none';
+      console.log('Hiding product fields');
+    }
+  } else {
+    if (productFields) {
+      productFields.style.display = 'block';
+      console.log('Showing product fields');
+    }
+    if (intermediateFields) {
+      intermediateFields.style.display = 'none';
+      console.log('Hiding intermediate fields');
+    }
+  }
+});
+
+// Also handle when modal is shown (in case DOM wasn't ready)
+document.getElementById('finishBatchModal').addEventListener('shown.bs.modal', function () {
   const batchType = '{{ batch.batch_type }}';
   const productFields = document.getElementById('productFields');
   const intermediateFields = document.getElementById('intermediateFields');
