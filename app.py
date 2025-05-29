@@ -44,6 +44,7 @@ login_manager.login_view = 'login'
 from blueprints.batches.start_batch import start_batch_bp
 from blueprints.batches.finish_batch import finish_batch_bp
 from blueprints.batches.cancel_batch import cancel_batch_bp
+from blueprints.batches.add_extra import add_extra_bp
 from routes.batch_routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
@@ -83,6 +84,7 @@ app.register_blueprint(timers_bp, url_prefix='/timers')
 app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
 app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
+app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 
 # Initialize API routes
 init_api(app)

@@ -157,7 +157,7 @@ function saveExtras() {
   });
 
   const batchId = window.location.pathname.split('/').pop();
-  fetch(`/batches/add-extra/${batchId}`, {
+  fetch(`/add-extra/${batchId}`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
