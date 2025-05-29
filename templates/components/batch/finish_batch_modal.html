@@ -79,3 +79,20 @@
     </div>
   </div>
 </div>
+
+<script>
+// Show/hide fields based on batch type
+document.addEventListener('DOMContentLoaded', function() {
+  const batchType = '{{ batch.batch_type }}';
+  const productFields = document.getElementById('productFields');
+  const intermediateFields = document.getElementById('intermediateFields');
+
+  if (batchType === 'intermediate') {
+    if (intermediateFields) intermediateFields.style.display = 'block';
+    if (productFields) productFields.style.display = 'none';
+  } else {
+    if (productFields) productFields.style.display = 'block';
+    if (intermediateFields) intermediateFields.style.display = 'none';
+  }
+});
+</script>

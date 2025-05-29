@@ -42,15 +42,15 @@ def start_batch():
     container_errors = []
     batch_type = data.get('batch_type', 'product')
     containers_data = data.get('containers', [])
-    
+
     print(f"DEBUG: batch_type = {batch_type}")
     print(f"DEBUG: containers_data = {containers_data}")
-    
+
     if batch_type == 'product' and containers_data:
         for container in containers_data:
             container_id = container.get('id')
             quantity = container.get('quantity', 0)
-            
+
             print(f"DEBUG: Processing container_id={container_id}, quantity={quantity}")
 
             if container_id and quantity > 0:
@@ -148,7 +148,7 @@ def start_batch():
     if ingredient_errors or container_errors:
         all_errors = ingredient_errors + container_errors
         flash("Some items were not deducted due to errors: " + ", ".join(all_errors), "warning")
-    
+
     if deduction_summary:
         deducted_items = ", ".join(deduction_summary)
         flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")

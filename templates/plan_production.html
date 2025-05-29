@@ -22,7 +22,7 @@
       <label>Batch Type:</label>
       <select x-model="batchType" class="form-control" @change="handleBatchTypeChange" required>
         <option value="product">Product</option>
-        <option value="ingredient">Intermediate</option>
+        <option value="intermediate">Intermediate</option>
       </select>
     </div>
   </div>
@@ -130,7 +130,7 @@ function planProduction() {
       this.stockResults = [];
 
       // If switching to intermediate, clear containers
-      if (this.batchType === 'ingredient') {
+      if (this.batchType === 'intermediate') {
         this.containersSelected = [];
         this.updateProgress();
       } else if (this.batchType === 'product' && this.recipeNeedsContainers) {
