@@ -64,12 +64,12 @@ function toggleShelfLife() {
 }
 
 function toggleOutputFields() {
-  const outputType = document.getElementById('output_type').value;
+  const type = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
   const productSelect = document.getElementById('product_id');
 
   if (productFields && productSelect) {
-    const isProduct = outputType === 'product';
+    const isProduct = type === 'product';
     productFields.style.display = isProduct ? 'block' : 'none';
     productSelect.required = isProduct;
   }
