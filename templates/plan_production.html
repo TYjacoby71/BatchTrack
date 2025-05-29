@@ -6,11 +6,18 @@
 
   <!-- Scale + Yield -->
   <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-4">
       <label>Batch Scale:</label>
       <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
-    <div class="col-md-6">
+    <div class="col-md-4">
+      <label>Output Type:</label>
+      <select class="form-select" x-model="outputType" @change="handleOutputTypeChange">
+        <option value="intermediate">Intermediate Ingredient</option>
+        <option value="product">Final Product</option>
+      </select>
+    </div>
+    <div class="col-md-4">
       <label>Projected Yield:</label>
       <div class="form-control-plaintext" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
     </div>
@@ -25,7 +32,7 @@
   </div>
 
   <!-- Container Selection -->
-  <div class="card mb-4" x-show="recipeNeedsContainers">
+  <div class="card mb-4" x-show="shouldShowContainers">
     <div class="card-header d-flex justify-content-between">
       <h5>Selected Containers</h5>
       <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
@@ -100,6 +107,7 @@ function planProduction() {
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
+      outputType: 'product', // Default to product
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -138,10 +146,31 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      if (this.recipeNeedsContainers) {
+      if (this.shouldShowContainers) {
         return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
       }
       return this.stockChecked && this.stockCheckPassed;
+    },
+
+    get shouldShowContainers() {
+      // Show containers only if output type is product AND recipe requires containers
+      return this.outputType === 'product' && this.recipeNeedsContainers;
+    },
+
+    handleOutputTypeChange() {
+      // Reset stock check when output type changes
+      this.stockChecked = false;
+      this.stockCheckPassed = false;
+      this.stockResults = [];
+      
+      // If switching to intermediate, clear containers
+      if (this.outputType === 'intermediate') {
+        this.containersSelected = [];
+        this.updateProgress();
+      } else {
+        // If switching to product, fetch container plan
+        this.fetchContainerPlan();
+      }
     },
 
     fetchContainerPlan() {
@@ -359,6 +388,7 @@ function planProduction() {
           body: JSON.stringify({
             recipe_id: this.recipeId,
             scale: this.scale,
+            output_type: this.outputType,
             notes: '',
             containers: this.containersSelected.map(c => ({
               id: c.id,
