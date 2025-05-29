@@ -165,8 +165,7 @@ function updateSetting(key, value) {
     fetch('{{ url_for("settings.update_setting_route") }}', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             key: key,
