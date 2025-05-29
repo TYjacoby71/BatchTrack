@@ -1,65 +1,25 @@
 {% extends "layout.html" %}
-```
-```html
-{% block content %}
-```
-```html
-<div class="container mt-4">
-```
-```html
-  <div class="row">
-```
-```html
-    <div class="col-12">
-```
-```html
-      <nav aria-label="breadcrumb">
-```
-```html
-        <ol class="breadcrumb">
-```
-```html
-          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-```
-```html
-          <li class="breadcrumb-item active">{{ item.name }}</li>
-```
-```html
-        </ol>
-```
-```html
-      </nav>
-```
-```html
-      {% include "inventory/components/item_summary_card.html" %}
-```
-```html
-      {% include "inventory/components/adjustment_form.html" %}
-```
-```html
-      {% include "inventory/components/history_table.html" %}
-```
-```html
-    </div>
-```
-```html
-  </div>
-```
-```html
-</div>
-```
-```html
-{% include "inventory/components/edit_details_modal.html" %}
-```
-```html
-{% include "inventory/components/modals.html" %}
-```
-```html
-<script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
-```
-```html
-{% endblock %}
-```
 
-```
-</replit_final_file>
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+          <li class="breadcrumb-item active">{{ item.name }}</li>
+        </ol>
+      </nav>
+
+      {% include "inventory/components/item_summary_card.html" %}
+      {% include "inventory/components/adjustment_form.html" %}
+      {% include "inventory/components/history_table.html" %}
+    </div>
+  </div>
+</div>
+
+{% include "inventory/components/edit_details_modal.html" %}
+{% include "inventory/components/modals.html" %}
+
+<script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
+{% endblock %}
