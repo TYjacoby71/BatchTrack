@@ -222,7 +222,7 @@ function cancelBatch() {
     const batchId = window.location.pathname.split('/').pop();
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/batches/cancel/${batchId}`;
+    form.action = `/cancel/cancel/${batchId}`;
 
     const csrf = document.querySelector('.csrf-token').value;
     const csrfInput = document.createElement('input');
