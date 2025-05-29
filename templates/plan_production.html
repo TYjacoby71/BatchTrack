@@ -383,27 +383,9 @@ function planProduction() {
 
       const csrfToken = document.querySelector('input[name=csrf_token]').value;
       try {
-        const response = await fetch('/start-batch/start_batch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify({
-            recipe_id: this.recipeId,
-            scale: this.scale,
-            notes: '',
-            batch_type: this.batchType,
-            containers: this.containersSelected.map(c => ({
-              id: c.id,
-              quantity: c.quantity
-            }))
-          })
-        });
-
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.message || 'Network response was not ok');
+          throw new Error(error.message || 'Failed to start batch');
         }
 
         const data = await response.json();

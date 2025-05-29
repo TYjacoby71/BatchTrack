@@ -14,8 +14,70 @@ def start_batch():
     data = request.get_json()
     recipe = Recipe.query.get_or_404(data['recipe_id'])
     scale = float(data['scale'])
+    batch_type = data.get('batch_type', 'product')
+    containers_data = data.get('containers', [])
 
-    # Get current year and count of batches for this recipe this year
+    # VALIDATION WRAPPER - Check all stock before doing anything
+    validation_errors = []
+
+    # Check container stock (only for product batches)
+    if batch_type == 'product' and containers_data:
+        for container in containers_data:
+            container_id = container.get('id')
+            quantity = container.get('quantity', 0)
+
+            if container_id and quantity > 0:
+                container_item = InventoryItem.query.get(container_id)
+                if not container_item:
+                    validation_errors.append(f"Container with ID {container_id} not found")
+                    continue
+
+                # Check FIFO stock
+                from blueprints.fifo.services import get_fifo_entries
+                fifo_entries = get_fifo_entries(container_id)
+                fifo_available = sum(entry.remaining_quantity for entry in fifo_entries)
+
+                if fifo_available < quantity:
+                    validation_errors.append(f"Not enough {container_item.name} in stock. Available: {fifo_available}, needed: {quantity}")
+
+    # Check ingredient stock
+    for assoc in recipe.recipe_ingredients:
+        ingredient = assoc.inventory_item
+        if not ingredient:
+            continue
+
+        required_amount = assoc.amount * scale
+
+        try:
+            conversion_result = ConversionEngine.convert_units(
+                required_amount,
+                assoc.unit,
+                ingredient.unit,
+                ingredient_id=ingredient.id,
+                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            )
+            required_converted = conversion_result['converted_value']
+
+            # Check FIFO stock
+            from blueprints.fifo.services import get_fifo_entries
+            fifo_entries = get_fifo_entries(ingredient.id)
+            fifo_available = sum(entry.remaining_quantity for entry in fifo_entries)
+
+            if fifo_available < required_converted:
+                validation_errors.append(f"Not enough {ingredient.name} in stock. Available: {fifo_available} {ingredient.unit}, needed: {required_converted} {ingredient.unit}")
+
+        except ValueError as e:
+            validation_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
+
+    # Stop here if validation failed
+    if validation_errors:
+        return jsonify({
+            'error': True, 
+            'message': 'Cannot start batch due to stock issues',
+            'details': validation_errors
+        }), 400
+
+    # All validation passed - proceed with batch creation
     current_year = datetime.now().year
     year_batches = Batch.query.filter(
         Batch.recipe_id == recipe.id,
@@ -42,15 +104,15 @@ def start_batch():
     container_errors = []
     batch_type = data.get('batch_type', 'product')
     containers_data = data.get('containers', [])
-    
+
     print(f"DEBUG: batch_type = {batch_type}")
     print(f"DEBUG: containers_data = {containers_data}")
-    
+
     if batch_type == 'product' and containers_data:
         for container in containers_data:
             container_id = container.get('id')
             quantity = container.get('quantity', 0)
-            
+
             print(f"DEBUG: Processing container_id={container_id}, quantity={quantity}")
 
             if container_id and quantity > 0:
@@ -148,7 +210,7 @@ def start_batch():
     if ingredient_errors or container_errors:
         all_errors = ingredient_errors + container_errors
         flash("Some items were not deducted due to errors: " + ", ".join(all_errors), "warning")
-    
+
     if deduction_summary:
         deducted_items = ", ".join(deduction_summary)
         flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
