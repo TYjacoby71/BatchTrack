@@ -1,4 +1,3 @@
-
 """Add unit field to inventory_history
 
 Revision ID: add_unit_to_history
@@ -19,10 +18,10 @@ def upgrade():
     # Add is_archived column to inventory_item
     with op.batch_alter_table('inventory_item', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_archived', sa.Boolean(), nullable=True))
-    
+
     # Add unit column to inventory_history
     op.add_column('inventory_history', sa.Column('unit', sa.String(32), nullable=True))
-    
+
     # Backfill existing records with their inventory item's current unit
     connection = op.get_bind()
     connection.execute(sa.text("""
@@ -34,7 +33,7 @@ def upgrade():
         )
         WHERE unit IS NULL
     """))
-    
+
     # Make the column non-nullable after backfill
     op.alter_column('inventory_history', 'unit', nullable=False)
 

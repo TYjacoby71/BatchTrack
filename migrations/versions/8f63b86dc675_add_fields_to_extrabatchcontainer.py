@@ -2,7 +2,7 @@
 """Add fields to ExtraBatchContainer
 
 Revision ID: 8f63b86dc675
-Revises: 
+Revises: 8fcb0fda7b46
 Create Date: 2025-05-22 00:48:49.743505
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '8f63b86dc675'
-down_revision = None
+down_revision = '8fcb0fda7b46
 branch_labels = None
 depends_on = None
 
