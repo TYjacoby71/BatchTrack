@@ -11,15 +11,7 @@
         </ol>
       </nav>
 
-      <!-- Pending Unit Change Alert -->
-      {% if session.get('pending_unit_change') and session['pending_unit_change'].item_id == item.id %}
-      <div class="alert alert-info alert-dismissible fade show" role="alert">
-        <h5>Unit Change Pending Confirmation</h5>
-        <p>You are changing the unit from <strong>{{ session['pending_unit_change'].old_unit }}</strong> to <strong>{{ session['pending_unit_change'].new_unit }}</strong>.</p>
-        <p>Click "Edit Details" to confirm your choice about inventory conversion.</p>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endif %}
+      
 
       {% include "inventory/components/item_summary_card.html" %}
       {% include "inventory/components/adjustment_form.html" %}

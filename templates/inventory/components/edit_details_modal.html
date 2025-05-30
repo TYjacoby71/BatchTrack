@@ -112,19 +112,25 @@
             <button type="submit" class="btn btn-primary" id="saveDetailsButton">Save Changes</button>
           </div>
         </form>
+          <!-- Unit Change Warning Card -->
           <div id="unitChangeWarning" style="display: none;">
-              <div class="alert alert-warning">
-                  Changing the unit will affect all existing inventory records.
-                  Do you want to convert existing quantities to the new unit?
-                  <div>
-                      <label>
-                          <input type="radio" name="conversion_choice" value="convert" checked>
-                          Convert Quantities
-                      </label>
-                      <label>
-                          <input type="radio" name="conversion_choice" value="leave">
-                          Leave Quantities as is
-                      </label>
+              <div class="card mb-3 border-warning">
+                  <div class="card-header bg-warning text-dark">
+                      <h6 class="mb-0">⚠️ Unit Change Confirmation</h6>
+                  </div>
+                  <div class="card-body">
+                      <p class="mb-2">Changing the unit will affect all existing inventory records.</p>
+                      <p class="mb-3"><strong>History will remain unchanged</strong> in original units to preserve FIFO accuracy.</p>
+
+                      <div class="form-check">
+                          <input class="form-check-input" type="checkbox" id="convertInventory" name="convert_inventory">
+                          <label class="form-check-label" for="convertInventory">
+                              <strong>Convert existing inventory</strong> to new unit (if conversion is possible)
+                          </label>
+                          <small class="form-text text-muted d-block">
+                              If unchecked, only the unit will change and quantity will remain as-is.
+                          </small>
+                      </div>
                   </div>
               </div>
           </div>
