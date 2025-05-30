@@ -125,7 +125,7 @@ def adjust_inventory(id):
         if not is_valid:
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
-        
+
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
@@ -134,7 +134,7 @@ def adjust_inventory(id):
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-        
+
         restock_cost = None
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
@@ -185,7 +185,7 @@ def edit_inventory(id):
                 # Check if user confirmed the unit change
                 confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
                 convert_inventory = request.form.get('convert_inventory') == 'true'
-                
+
                 if not confirm_unit_change:
                     # User hasn't confirmed - show them the options
                     flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
@@ -198,32 +198,18 @@ def edit_inventory(id):
                     return redirect(url_for('inventory.view_inventory', id=id))
                 else:
                     # User confirmed - proceed with unit change
-                    if convert_inventory and item.quantity > 0:
+                    if convert_inventory:
                         # Try to convert existing inventory to new unit
                         try:
                             from services.unit_conversion import convert_unit
-                            converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
-                            item.quantity = converted_quantity
-                            
-                            # Log this conversion
-                            history = InventoryHistory(
-                                inventory_item_id=item.id,
-                                change_type='unit_conversion',
-                                quantity_change=0,  # No actual quantity change, just unit change
-                                unit=new_unit,  # Record in the new unit
-                                note=f'Unit converted from {item.unit} to {new_unit}. Quantity adjusted from {request.form.get("original_quantity", item.quantity)} {item.unit} to {converted_quantity} {new_unit}',
-                                created_by=current_user.id,
-                                quantity_used=0
-                            )
-                            db.session.add(history)
-                            flash(f'Unit changed and inventory converted: {item.quantity} {item.unit} → {converted_quantity} {new_unit}', 'success')
-                        except Exception as e:
-                            flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
+                            conversion_result = convert_unit(item.quantity, item.unit, new_unit, item.density)
+                            if conversion_result['success']:
+                                item.quantity = conversion_result['converted_quantity']
+                                flash(f'Unit changed and inventory converted: {item.quantity} {new_unit}', 'success')
+                            else:
+                                flash(f'Could not convert inventory to new unit: {conversion_result["error"]}. Unit changed but quantity kept as-is.', 'warning')
                     else:
-                        flash(f'Unit changed from {item.unit} to {new_unit}. Inventory quantity unchanged.', 'info')
-                    
-                    # Clear the pending change
-                    session.pop('pending_unit_change', None)
+                        flash(f'Unit changed to {new_unit}. Inventory quantity unchanged.', 'info')
 
     # Common fields for all types
     item.name = request.form.get('name')
