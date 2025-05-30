@@ -1,4 +1,3 @@
-
 <!-- Edit Ingredient Modal -->
 <div class="modal fade" id="editDetailsModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -130,9 +129,9 @@
 document.addEventListener('DOMContentLoaded', function() {
   const editUnitSelect = document.getElementById('editUnitSelect');
   const convertOption = document.getElementById('convertInventoryOption');
-  const originalUnit = editUnitSelect.value;
 
   if (editUnitSelect && convertOption) {
+    const originalUnit = editUnitSelect.value;
     editUnitSelect.addEventListener('change', function() {
       if (this.value !== originalUnit) {
         convertOption.style.display = 'block';
