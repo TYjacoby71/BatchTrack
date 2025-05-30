@@ -103,6 +103,7 @@ def process_inventory_adjustment(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,
+                unit=item.unit,  # Store current inventory unit
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
                 unit_cost=cost_per_unit,
@@ -145,6 +146,7 @@ def process_inventory_adjustment(
                         inventory_item_id=item.id,
                         change_type=change_type,
                         quantity_change=credit_amount,
+                        unit=item.unit,  # Store current inventory unit
                         remaining_quantity=0,  # Credits don't create new FIFO entries
                         unit_cost=cost_per_unit,
                         fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
@@ -162,6 +164,7 @@ def process_inventory_adjustment(
                     inventory_item_id=item.id,
                     change_type='restock',  # Treat excess as new stock
                     quantity_change=remaining_to_credit,
+                    unit=item.unit,  # Store current inventory unit
                     remaining_quantity=remaining_to_credit,
                     unit_cost=cost_per_unit,
                     note=f"{notes} (Excess credit - no original FIFO found)",
@@ -178,6 +181,7 @@ def process_inventory_adjustment(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=qty_change,
+                unit=item.unit,  # Store current inventory unit
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,

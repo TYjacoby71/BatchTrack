@@ -77,7 +77,7 @@ def view_batches_by_variant(product_id, variant, size, unit):
 
 @products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
-def add_variant():
+def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     if request.is_json:
         data = request.get_json()

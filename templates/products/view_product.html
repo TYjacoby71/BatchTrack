@@ -303,7 +303,7 @@ function addVariant() {
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
   
-  fetch("{{ url_for('products.add_variant') }}", {
+  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
