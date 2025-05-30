@@ -2,7 +2,7 @@
 """Add unit field to inventory_history
 
 Revision ID: add_unit_to_history
-Revises: 8f63b86dc675
+Revises: 4ff7f4b5ea62
 Create Date: 2025-05-30 19:30:00.000000
 
 """
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = 'a1b2c3d4e5f6'
-down_revision = '8f63b86dc675'
+revision = 'add_unit_to_history'
+down_revision = '4ff7f4b5ea62'
 branch_labels = None
 depends_on = None
 
