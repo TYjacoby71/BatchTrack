@@ -119,17 +119,73 @@
                       <h6 class="mb-0">⚠️ Unit Change Confirmation</h6>
                   </div>
                   <div class="card-body">
-                      <p class="mb-2">Changing the unit will affect all existing inventory records.</p>
+                      <p class="mb-2">Changing the unit will affect inventory records.</p>
                       <p class="mb-3"><strong>History will remain unchanged</strong> in original units to preserve FIFO accuracy.</p>
 
-                      <div class="form-check">
-                          <input class="form-check-input" type="checkbox" id="convertInventory" name="convert_inventory">
-                          <label class="form-check-label" for="convertInventory">
-                              <strong>Convert existing inventory</strong> to new unit (if conversion is possible)
-                          </label>
-                          <small class="form-text text-muted d-block">
-                              If unchecked, only the unit will change and quantity will remain as-is.
-                          </small>
+                      <div class="mb-3">
+                          <div class="form-check mb-2">
+                              <input class="form-check-input" type="radio" name="conversion_choice" id="convertChoice" value="convert" checked>
+                              <label class="form-check-label" for="convertChoice">
+                                  <strong>Convert existing inventory</strong> to new unit
+                              </label>
+                              <small class="form-text text-muted d-block">
+                                  Attempts to convert current quantity using unit conversion system.
+                              </small>
+                          </div>
+                          <div class="form-check mb-2">
+                              <input class="form-check-input" type="radio" name="conversion_choice" id="keepChoice" value="keep">
+                              <label class="form-check-label" for="keepChoice">
+                                  <strong>Keep current number</strong> but change unit
+                              </label>
+                              <small class="form-text text-muted d-block">
+                                  Changes unit but keeps the same quantity number (use if unit was selected accidentally).
+                              </small>
+                          </div>
+                          <div class="form-check">
+                              <input class="form-check-input" type="radio" name="conversion_choice" id="zeroChoice" value="zero">
+                              <label class="form-check-label" for="zeroChoice">
+                                  <strong>Zero inventory</strong> and perform manual recount
+                              </label>
+                              <small class="form-text text-muted d-block">
+                                  Sets inventory to 0 for you to manually recount in the new unit.
+                              </small>
+                          </div>
+                      </div>
+
+                      <div id="conversionStatus" class="alert" style="display: none;"></div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Conversion Incompatible Warning -->
+          <div id="conversionIncompatibleWarning" style="display: none;">
+              <div class="card mb-3 border-danger">
+                  <div class="card-header bg-danger text-white">
+                      <h6 class="mb-0">❌ Units Not Convertible</h6>
+                  </div>
+                  <div class="card-body">
+                      <p class="mb-2">The selected units cannot be automatically converted.</p>
+                      <p class="mb-3">Your options are:</p>
+
+                      <div class="mb-3">
+                          <div class="form-check mb-2">
+                              <input class="form-check-input" type="radio" name="conversion_choice" id="keepChoiceIncompat" value="keep" checked>
+                              <label class="form-check-label" for="keepChoiceIncompat">
+                                  <strong>Keep current number</strong> but change unit
+                              </label>
+                              <small class="form-text text-muted d-block">
+                                  Changes unit but keeps the same quantity number.
+                              </small>
+                          </div>
+                          <div class="form-check">
+                              <input class="form-check-input" type="radio" name="conversion_choice" id="zeroChoiceIncompat" value="zero">
+                              <label class="form-check-label" for="zeroChoiceIncompat">
+                                  <strong>Zero inventory</strong> and perform manual recount
+                              </label>
+                              <small class="form-text text-muted d-block">
+                                  Sets inventory to 0 for you to manually recount in the new unit.
+                              </small>
+                          </div>
                       </div>
                   </div>
               </div>

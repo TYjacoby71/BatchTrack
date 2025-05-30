@@ -198,19 +198,29 @@ def edit_inventory(id):
                     return redirect(url_for('inventory.view_inventory', id=id))
                 else:
                     # User confirmed - proceed with unit change
-                    if convert_inventory:
+                    conversion_choice = request.form.get('convert_inventory', 'keep')
+                    
+                    if conversion_choice == 'convert':
                         # Try to convert existing inventory to new unit
                         try:
-                            from services.unit_conversion import convert_unit
-                            conversion_result = convert_unit(item.quantity, item.unit, new_unit, item.density)
-                            if conversion_result['success']:
-                                item.quantity = conversion_result['converted_quantity']
-                                flash(f'Unit changed and inventory converted: {item.quantity} {new_unit}', 'success')
-                            else:
-                                flash(f'Could not convert inventory to new unit: {conversion_result["error"]}. Unit changed but quantity kept as-is.', 'warning')
+                            from services.unit_conversion import ConversionEngine
+                            conversion_result = ConversionEngine.convert_units(item.quantity, item.unit, new_unit, item.id, item.density)
+                            item.quantity = conversion_result['converted_value']
+                            flash(f'Unit changed and inventory converted: {item.quantity} {new_unit}', 'success')
                         except Exception as e:
                             flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
+                    elif conversion_choice == 'zero':
+                        # Zero out inventory for manual recount
+                        from blueprints.fifo.services import recount_fifo
+                        notes = f"Unit changed from {item.unit} to {new_unit} - inventory zeroed for manual recount"
+                        success = recount_fifo(item.id, 0, notes, current_user.id)
+                        if success:
+                            item.quantity = 0
+                            flash(f'Unit changed to {new_unit}. Inventory set to 0 for manual recount.', 'info')
+                        else:
+                            flash('Error zeroing inventory. Unit changed but quantity unchanged.', 'warning')
                     else:
+                        # Keep current number, just change unit
                         flash(f'Unit changed to {new_unit}. Inventory quantity unchanged.', 'info')
 
     # Common fields for all types
