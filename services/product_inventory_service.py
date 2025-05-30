@@ -9,46 +9,95 @@ class ProductInventoryService:
     
     @staticmethod
     def add_product_from_batch(batch_id: int, product_id: int, variant_label: Optional[str] = None, 
-                             size_label: Optional[str] = None, quantity: float = None) -> ProductInventory:
-        """Add product inventory from a finished batch"""
+                             size_label: Optional[str] = None, quantity: float = None, 
+                             container_id: Optional[int] = None) -> List[ProductInventory]:
+        """Add product inventory from a finished batch, handling containers as size variants"""
+        from models import BatchContainer, InventoryItem
+        
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
         
-        # Use batch final quantity if not specified
-        if quantity is None:
-            quantity = batch.final_quantity or batch.planned_quantity
+        inventory_entries = []
+        
+        # Get containers used in this batch
+        batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+        
+        if batch_containers:
+            # Create separate inventory entries for each container type
+            for container_usage in batch_containers:
+                container = container_usage.container
+                size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
+                
+                # Calculate cost per unit for this specific batch
+                batch_cost_per_unit = None
+                if batch.total_cost and batch.final_quantity:
+                    batch_cost_per_unit = batch.total_cost / batch.final_quantity
+                
+                inventory = ProductInventory(
+                    product_id=product_id,
+                    batch_id=batch_id,
+                    variant=variant_label or 'Default',
+                    size_label=size_label,
+                    unit='count',  # Container units are typically counted
+                    quantity=container_usage.quantity_used,
+                    container_id=container.id,
+                    batch_cost_per_unit=batch_cost_per_unit,
+                    timestamp=datetime.utcnow(),
+                    notes=f"From batch #{batch.id} using {container.name}"
+                )
+                
+                db.session.add(inventory)
+                inventory_entries.append(inventory)
+                
+                # Log product event
+                event_note = f"Added {container_usage.quantity_used} × {size_label}"
+                if variant_label:
+                    event_note += f" ({variant_label})"
+                event_note += f" from batch #{batch.id}"
+                
+                db.session.add(ProductEvent(
+                    product_id=product_id,
+                    event_type='inventory_addition',
+                    note=event_note
+                ))
+        else:
+            # Fallback to batch output unit if no containers
+            unit = product.default_unit
+            quantity_used = quantity or batch.final_quantity or batch.projected_yield
             
-        # Use product default unit if not specified
-        unit = product.default_unit
+            # Calculate cost per unit for this specific batch
+            batch_cost_per_unit = None
+            if batch.total_cost and batch.final_quantity:
+                batch_cost_per_unit = batch.total_cost / batch.final_quantity
+            
+            inventory = ProductInventory(
+                product_id=product_id,
+                batch_id=batch_id,
+                variant=variant_label or 'Default',
+                size_label='Bulk',
+                unit=unit,
+                quantity=quantity_used,
+                batch_cost_per_unit=batch_cost_per_unit,
+                timestamp=datetime.utcnow(),
+                notes=f"From batch #{batch.id} (no containers - bulk output)"
+            )
+            
+            db.session.add(inventory)
+            inventory_entries.append(inventory)
+            
+            # Log product event
+            event_note = f"Added {quantity_used} {unit} bulk"
+            if variant_label:
+                event_note += f" ({variant_label})"
+            event_note += f" from batch #{batch.id}"
+            
+            db.session.add(ProductEvent(
+                product_id=product_id,
+                event_type='inventory_addition',
+                note=event_note
+            ))
         
-        # Create product inventory entry
-        inventory = ProductInventory(
-            product_id=product_id,
-            batch_id=batch_id,
-            variant=variant_label,
-            quantity=quantity,
-            unit=unit,
-            timestamp=datetime.utcnow(),
-            notes=f"From batch #{batch.id} ({batch.label})"
-        )
-        
-        db.session.add(inventory)
-        
-        # Log product event
-        event_note = f"Added {quantity} {unit}"
-        if variant_label:
-            event_note += f" ({variant_label})"
-        if size_label:
-            event_note += f" - {size_label}"
-        event_note += f" from batch #{batch.id}"
-        
-        db.session.add(ProductEvent(
-            product_id=product_id,
-            event_type='inventory_addition',
-            note=event_note
-        ))
-        
-        return inventory
+        return inventory_entries
     
     @staticmethod
     def get_fifo_inventory_groups(product_id: int) -> Dict:

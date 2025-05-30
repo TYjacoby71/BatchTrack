@@ -20,15 +20,21 @@
           </div>
           <div class="card-body">
             <div class="row text-center">
-              <div class="col-6">
+              <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ "%.1f"|format(product.total_inventory) }}</h5>
-                  <small class="text-muted">Total Stock</small>
+                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</h5>
+                  <small class="text-muted">Total Units</small>
                 </div>
               </div>
-              <div class="col-6">
-                <h5 class="mb-0">{{ product.variant_count }}</h5>
-                <small class="text-muted">Variants</small>
+              <div class="col-4">
+                <div class="border-end">
+                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|groupby('variant')|list|length }}</h5>
+                  <small class="text-muted">Variants</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|groupby('size_label')|list|length }}</h5>
+                <small class="text-muted">Sizes</small>
               </div>
             </div>
             
