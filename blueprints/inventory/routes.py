@@ -175,6 +175,16 @@ def adjust_inventory(id):
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
 
+    # Protect against unit changes if item has history
+    if item.type != 'container':
+        new_unit = request.form.get('unit')
+        if new_unit != item.unit:
+            # Check if item has any history entries
+            history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
+            if history_count > 0:
+                flash(f'Cannot change unit from {item.unit} to {new_unit} - item has existing transaction history. This would break FIFO tracking.', 'error')
+                return redirect(url_for('inventory.view_inventory', id=id))
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
@@ -246,7 +256,17 @@ def edit_inventory(id):
 def update_details(id):
     item = InventoryItem.query.get_or_404(id)
     item.name = request.form.get('name')
-    item.unit = request.form.get('unit')
+    
+    # Protect against unit changes if item has history
+    new_unit = request.form.get('unit')
+    if new_unit != item.unit:
+        # Check if item has any history entries
+        history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
+        if history_count > 0:
+            flash(f'Cannot change unit from {item.unit} to {new_unit} - item has existing transaction history. This would break FIFO tracking.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+    
+    item.unit = new_unit
     item.density = float(request.form.get('density')) if request.form.get('density') else None
     if item.type == 'ingredient':
         item.category_id = request.form.get('category_id') or None
