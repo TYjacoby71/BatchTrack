@@ -25,8 +25,7 @@ class ProductInventoryService:
         inventory = ProductInventory(
             product_id=product_id,
             batch_id=batch_id,
-            variant_label=variant_label,
-            size_label=size_label,
+            variant=variant_label,
             quantity=quantity,
             unit=unit,
             timestamp=datetime.utcnow(),
@@ -59,10 +58,10 @@ class ProductInventoryService:
         inventory_groups = {}
         for inv in product.inventory:
             if inv.quantity > 0:
-                key = f"{inv.variant_label or 'Default'}_{inv.unit}"
+                key = f"{inv.variant or 'Default'}_{inv.unit}"
                 if key not in inventory_groups:
                     inventory_groups[key] = {
-                        'variant': inv.variant_label or 'Default',
+                        'variant': inv.variant or 'Default',
                         'unit': inv.unit,
                         'total_quantity': 0,
                         'batches': [],
@@ -98,7 +97,7 @@ class ProductInventoryService:
         # Get FIFO-ordered inventory for this variant
         inventory_items = ProductInventory.query.filter_by(
             product_id=product_id,
-            variant_label=variant_label,
+            variant=variant_label,
             unit=unit
         ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
         
@@ -148,7 +147,7 @@ class ProductInventoryService:
         """Get FIFO-ordered batches for a specific product variant"""
         return ProductInventory.query.filter_by(
             product_id=product_id,
-            variant_label=variant_label,
+            variant=variant_label,
             unit=unit
         ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
     
