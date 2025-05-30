@@ -3,12 +3,16 @@ import json
 from app import app, db
 from models import Recipe, RecipeIngredient, InventoryItem
 
-JSON_PATH = 'recipes_export_20250430_235506 (1).json'
-
-def load_legacy_recipes():
+def load_startup_recipes():
+    """Load startup recipes from export data"""
     with app.app_context():
-        with open(JSON_PATH, 'r') as f:
-            recipe_data = json.load(f)
+        # Check if we have the legacy export file
+        try:
+            with open('recipes_export_20250430_235506 (1).json', 'r') as f:
+                recipe_data = json.load(f)
+        except FileNotFoundError:
+            print("No recipe export file found - skipping recipe startup")
+            return
 
         for r in recipe_data:
             if Recipe.query.filter_by(name=r['name']).first():
@@ -25,13 +29,14 @@ def load_legacy_recipes():
                 allowed_containers=r.get('allowed_containers', [])
             )
             
-            # Auto-detect if recipe needs containers based on ingredients
+            # Auto-detect container requirements
             if any(i.get('type') == 'container' for i in r['ingredients']):
                 recipe.requires_containers = True
                 
             db.session.add(recipe)
-            db.session.flush()  # Assigns recipe.id
+            db.session.flush()
 
+            ingredient_count = 0
             for ing in r['ingredients']:
                 inventory_item = InventoryItem.query.filter_by(name=ing['inventory_item_name']).first()
                 if not inventory_item:
@@ -45,11 +50,12 @@ def load_legacy_recipes():
                     unit=ing['unit']
                 )
                 db.session.add(ri)
+                ingredient_count += 1
 
-            print(f"[ADDED] Recipe '{recipe.name}' with {len(r['ingredients'])} ingredients.")
+            print(f"[ADDED] Recipe '{recipe.name}' with {ingredient_count} ingredients.")
 
         db.session.commit()
-        print("✅ Legacy recipe import complete.")
+        print("✅ Startup recipe service complete")
 
 if __name__ == '__main__':
-    load_legacy_recipes()
+    load_startup_recipes()
