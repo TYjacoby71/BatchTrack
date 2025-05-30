@@ -125,7 +125,7 @@ def adjust_inventory(id):
         if not is_valid:
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
-
+        
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
@@ -134,7 +134,7 @@ def adjust_inventory(id):
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-
+        
         restock_cost = None
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
@@ -226,40 +226,7 @@ def edit_inventory(id):
         item.storage_amount = float(request.form.get('storage_amount'))
         item.storage_unit = request.form.get('storage_unit')
     else:
-        new_unit = request.form.get('unit')
-        convert_inventory = request.form.get('convert_inventory_on_unit_change')
-        old_unit = item.unit
-
-        # Handle unit change with proper validation
-        if new_unit != item.unit:
-            if not convert_inventory:
-                # Unit label change only - warn user but allow
-                flash(f'Unit changed from {old_unit} to {new_unit}. Quantity ({item.quantity}) unchanged.', 'warning')
-                item.unit = new_unit
-            else:
-                # Convert inventory quantity
-                from services.conversion_wrapper import safe_convert
-                old_quantity = item.quantity
-                conversion = safe_convert(item.quantity, item.unit, new_unit, ingredient_id=item.id)
-                if conversion['ok']:
-                    item.quantity = conversion['result']['converted_value']
-                    item.unit = new_unit
-
-                    # Create history entry for the unit conversion
-                    history = InventoryHistory(
-                        inventory_item_id=item.id,
-                        change_type='unit_conversion',
-                        quantity_change=0,  # No net change in actual inventory
-                        unit_cost=item.cost_per_unit,
-                        note=f'Unit conversion: {old_quantity} {old_unit} → {item.quantity} {new_unit}',
-                        created_by=current_user.id,
-                        quantity_used=0
-                    )
-                    db.session.add(history)
-                    flash(f'Inventory converted: {old_quantity} {old_unit} → {item.quantity} {new_unit}', 'success')
-                else:
-                    flash(f'Cannot convert {old_unit} to {new_unit}: {conversion["error"]}', 'error')
-                    return redirect(url_for('inventory.view_inventory', id=id))
+        item.unit = request.form.get('unit')
         item.category_id = request.form.get('category_id', None)
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
