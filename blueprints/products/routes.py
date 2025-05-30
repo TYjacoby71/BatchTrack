@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from models import db, Product, ProductVariation, ProductInventory, ProductEvent, Batch, InventoryItem
 from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
+from services.product_inventory_service import ProductInventoryService
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -10,13 +11,7 @@ products_bp = Blueprint('products', __name__, url_prefix='/products')
 @login_required
 def list_products():
     """List all products with inventory summary"""
-    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-
-    # Calculate inventory totals for each product
-    for product in products:
-        product.total_inventory = sum(inv.quantity for inv in product.inventory if inv.quantity > 0)
-        product.variant_count = len(product.variations)
-
+    products = ProductInventoryService.get_product_summary()
     return render_template('products/list_products.html', products=products)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
@@ -60,29 +55,8 @@ def new_product():
 def view_product(product_id):
     """View product details with FIFO inventory"""
     product = Product.query.get_or_404(product_id)
-
-    # Get FIFO-ordered inventory grouped by variant and size
-    inventory_groups = {}
-    for inv in product.inventory:
-        if inv.quantity > 0:
-            key = f"{inv.variant or 'Default'}_{inv.unit}"
-            if key not in inventory_groups:
-                inventory_groups[key] = {
-                    'variant': inv.variant or 'Default',
-                    'unit': inv.unit,
-                    'total_quantity': 0,
-                    'batches': [],
-                    'avg_cost': 0
-                }
-            inventory_groups[key]['batches'].append(inv)
-            inventory_groups[key]['total_quantity'] += inv.quantity
-
-    # Calculate average weighted cost for each group
-    for group in inventory_groups.values():
-        total_cost = sum(inv.quantity * (inv.batch.total_cost / inv.batch.final_quantity if inv.batch and inv.batch.final_quantity else 0) for inv in group['batches'])
-        group['avg_cost'] = total_cost / group['total_quantity'] if group['total_quantity'] > 0 else 0
-        group['batches'].sort(key=lambda x: x.timestamp)  # FIFO order
-
+    inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
+    
     return render_template('products/view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups)
@@ -92,12 +66,7 @@ def view_product(product_id):
 def view_batches_by_variant(product_id, variant, size, unit):
     """View FIFO-ordered batches for a specific product variant"""
     product = Product.query.get_or_404(product_id)
-
-    batches = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        unit=unit
-    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+    batches = ProductInventoryService.get_variant_batches(product_id, variant, unit)
 
     return render_template('products/batches_by_variant.html',
                          product=product,
@@ -147,7 +116,6 @@ def add_variant():
 @login_required
 def deduct_product(product_id):
     """Deduct product inventory using FIFO"""
-    product = Product.query.get_or_404(product_id)
     variant = request.form.get('variant', 'Default')
     unit = request.form.get('unit')
     quantity = float(request.form.get('quantity', 0))
@@ -158,51 +126,20 @@ def deduct_product(product_id):
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-    # Get FIFO-ordered inventory for this variant
-    inventory_items = ProductInventory.query.filter_by(
+    success = ProductInventoryService.deduct_fifo(
         product_id=product_id,
-        variant=variant,
-        unit=unit
-    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+        variant_label=variant,
+        unit=unit,
+        quantity=quantity,
+        reason=reason,
+        notes=notes
+    )
 
-    remaining_to_deduct = quantity
-    deducted_items = []
+    if success:
+        flash(f'Deducted {quantity} {unit} from {variant} using FIFO', 'success')
+    else:
+        flash('Not enough stock available', 'error')
 
-    for item in inventory_items:
-        if remaining_to_deduct <= 0:
-            break
-
-        if item.quantity <= remaining_to_deduct:
-            # Use entire item
-            deducted_items.append((item, item.quantity))
-            remaining_to_deduct -= item.quantity
-            item.quantity = 0
-        else:
-            # Partial use
-            deducted_items.append((item, remaining_to_deduct))
-            item.quantity -= remaining_to_deduct
-            remaining_to_deduct = 0
-
-    if remaining_to_deduct > 0:
-        flash(f'Not enough stock. Only {quantity - remaining_to_deduct} available', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
-
-    # Commit the deductions
-    db.session.commit()
-
-    # Log the event
-    event_note = f"FIFO deduction: {quantity} {unit} of {variant}. Items used: {len(deducted_items)}. Reason: {reason}"
-    if notes:
-        event_note += f". Notes: {notes}"
-
-    db.session.add(ProductEvent(
-        product_id=product_id,
-        event_type='inventory_deduction',
-        note=event_note
-    ))
-    db.session.commit()
-
-    flash(f'Deducted {quantity} {unit} from {variant} using FIFO', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/adjust', methods=['POST'])
@@ -251,6 +188,42 @@ def search_products():
         result.append(product_data)
 
     return jsonify({'products': result})
+
+@products_bp.route('/api/add-from-batch', methods=['POST'])
+@login_required
+def add_from_batch():
+    """Add product inventory from finished batch"""
+    data = request.get_json()
+    
+    batch_id = data.get('batch_id')
+    product_id = data.get('product_id') 
+    variant_label = data.get('variant_label')
+    size_label = data.get('size_label')
+    quantity = data.get('quantity')
+    
+    if not batch_id or not product_id:
+        return jsonify({'error': 'Batch ID and Product ID are required'}), 400
+    
+    try:
+        inventory = ProductInventoryService.add_product_from_batch(
+            batch_id=batch_id,
+            product_id=product_id,
+            variant_label=variant_label,
+            size_label=size_label,
+            quantity=quantity
+        )
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'inventory_id': inventory.id,
+            'message': f'Added {inventory.quantity} {inventory.unit} to product inventory'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @products_bp.route('/api/quick-add', methods=['POST'])
 @login_required
