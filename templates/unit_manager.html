@@ -66,33 +66,6 @@
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h3>Product Units</h3>
-    </div>
-    <div class="card-body">
-      <table class="table table-striped">
-        <thead>
-          <tr><th>Name</th></tr>
-        </thead>
-        <tbody>
-          {% for unit in product_units %}
-          <tr><td>{{ unit.name }}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <form method="post" action="/admin/units/add/product" class="mt-3">
-        <div class="row">
-          <div class="col">
-            <input name="name" placeholder="Product Unit" required class="form-control">
-          </div>
-          <div class="col">
-            <button type="submit" class="btn btn-primary">Add Product Unit</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
+  
 </div>
 {% endblock %}
