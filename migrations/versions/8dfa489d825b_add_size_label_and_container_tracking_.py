@@ -22,7 +22,7 @@ def upgrade():
         batch_op.add_column(sa.Column('size_label', sa.String(length=100), nullable=True))
         batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('batch_cost_per_unit', sa.Float(), nullable=True))
-        batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
+        batch_op.create_foreign_key('fk_product_inventory_container_id', 'inventory_item', ['container_id'], ['id'])
 
     # ### end Alembic commands ###
 
