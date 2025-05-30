@@ -32,7 +32,7 @@
             </div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
-              
+
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">
@@ -78,3 +78,161 @@
     </div>
   </div>
 </div>
+
+<script>
+// Show/hide fields based on batch type
+document.addEventListener('DOMContentLoaded', function() {
+  const batchType = '{{ batch.batch_type }}';
+  console.log('Batch type:', batchType);
+
+  const productFields = document.getElementById('productFields');
+  const intermediateFields = document.getElementById('intermediateFields');
+
+  if (batchType === 'intermediate') {
+    if (intermediateFields) {
+      intermediateFields.style.display = 'block';
+      console.log('Showing intermediate fields');
+    }
+    if (productFields) {
+      productFields.style.display = 'none';
+      console.log('Hiding product fields');
+    }
+  } else {
+    if (productFields) {
+      productFields.style.display = 'block';
+      console.log('Showing product fields');
+    }
+    if (intermediateFields) {
+      intermediateFields.style.display = 'none';
+      console.log('Hiding intermediate fields');
+    }
+  }
+});
+
+// Load variants for selected product
+function loadVariants() {
+  const productId = document.getElementById('product_id').value;
+  const variantSelect = document.getElementById('variant_label');
+
+  if (!productId) {
+    variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    return;
+  }
+
+  fetch(`/api/products/${productId}/variants`)
+    .then(response => response.json())
+    .then(data => {
+      variantSelect.innerHTML = '<option value="">Default (no variant)</option>';
+      data.variants.forEach(variant => {
+        variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
+      });
+    })
+    .catch(error => {
+      console.error('Error loading variants:', error);
+      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+    });
+}
+
+// Quick add product functions
+function showQuickAddProduct() {
+  document.getElementById('quickAddProductForm').style.display = 'block';
+}
+
+function hideQuickAddProduct() {
+  document.getElementById('quickAddProductForm').style.display = 'none';
+  document.getElementById('quickProductName').value = '';
+}
+
+function quickAddProduct() {
+  const name = document.getElementById('quickProductName').value;
+  const unit = document.getElementById('quickProductUnit').value;
+
+  if (!name || !unit) {
+    alert('Please enter product name and select unit');
+    return;
+  }
+
+  fetch('/api/products/quick-add', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+    },
+    body: JSON.stringify({
+      product_name: name,
+      default_unit: unit
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const productSelect = document.getElementById('product_id');
+      productSelect.innerHTML += `<option value="${data.product.id}">${data.product.name}</option>`;
+      productSelect.value = data.product.id;
+      loadVariants();
+      hideQuickAddProduct();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error adding product: ' + error);
+  });
+}
+
+// Quick add variant functions
+function showQuickAddVariant() {
+  const productId = document.getElementById('product_id').value;
+  if (!productId) {
+    alert('Please select a product first');
+    return;
+  }
+  document.getElementById('quickAddVariantForm').style.display = 'block';
+}
+
+function hideQuickAddVariant() {
+  document.getElementById('quickAddVariantForm').style.display = 'none';
+  document.getElementById('quickVariantName').value = '';
+}
+
+function quickAddVariant() {
+  const productId = document.getElementById('product_id').value;
+  const variantName = document.getElementById('quickVariantName').value;
+
+  if (!productId || !variantName) {
+    alert('Please select product and enter variant name');
+    return;
+  }
+
+  fetch('/api/products/quick-add', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+    },
+    body: JSON.stringify({
+      product_id: productId,
+      variant_name: variantName
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      loadVariants();
+      document.getElementById('variant_label').value = variantName;
+      hideQuickAddVariant();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error adding variant: ' + error);
+  });
+}
+
+// Also handle when modal is shown (in case DOM wasn't ready)
+document.getElementById('finishBatchModal').addEventListener('shown.bs.modal', function () {
+  const batchType = '{{ batch.batch_type }}';
+  const productFields = document.getElementById('productFields');
+  const intermediateFields = document.getElementById('intermediateFields');
+</script>

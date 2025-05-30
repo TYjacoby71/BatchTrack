@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Product, ProductVariation, ProductInventory, ProductEvent, Batch, InventoryItem
@@ -12,46 +11,56 @@ products_bp = Blueprint('products', __name__, url_prefix='/products')
 def list_products():
     """List all products with inventory summary"""
     products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-    
+
     # Calculate inventory totals for each product
     for product in products:
         product.total_inventory = sum(inv.quantity for inv in product.inventory if inv.quantity > 0)
         product.variant_count = len(product.variations)
-        
+
     return render_template('products/list_products.html', products=products)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_product():
-    """Create new product"""
     if request.method == 'POST':
         name = request.form.get('name')
         default_unit = request.form.get('default_unit')
-        low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-        
-        if Product.query.filter_by(name=name).first():
+        low_stock_threshold = request.form.get('low_stock_threshold', 0)
+
+        if not name or not default_unit:
+            flash('Name and default unit are required', 'error')
+            return redirect(url_for('products.new_product'))
+
+        # Check if product already exists
+        existing = Product.query.filter_by(name=name).first()
+        if existing:
             flash('Product with this name already exists', 'error')
-            return render_template('products/new_product.html')
-            
+            return redirect(url_for('products.new_product'))
+
         product = Product(
             name=name,
             default_unit=default_unit,
-            low_stock_threshold=low_stock_threshold
+            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0
         )
+
         db.session.add(product)
         db.session.commit()
-        
-        flash(f'Product "{name}" created successfully', 'success')
+
+        flash('Product created successfully', 'success')
         return redirect(url_for('products.view_product', product_id=product.id))
-        
-    return render_template('products/new_product.html')
+
+    # Get product units for dropdown
+    from models import ProductUnit
+    product_units = ProductUnit.query.all()
+
+    return render_template('products/new_product.html', product_units=product_units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
 def view_product(product_id):
     """View product details with FIFO inventory"""
     product = Product.query.get_or_404(product_id)
-    
+
     # Get FIFO-ordered inventory grouped by variant and size
     inventory_groups = {}
     for inv in product.inventory:
@@ -67,13 +76,13 @@ def view_product(product_id):
                 }
             inventory_groups[key]['batches'].append(inv)
             inventory_groups[key]['total_quantity'] += inv.quantity
-    
+
     # Calculate average weighted cost for each group
     for group in inventory_groups.values():
         total_cost = sum(inv.quantity * (inv.batch.total_cost / inv.batch.final_quantity if inv.batch and inv.batch.final_quantity else 0) for inv in group['batches'])
         group['avg_cost'] = total_cost / group['total_quantity'] if group['total_quantity'] > 0 else 0
         group['batches'].sort(key=lambda x: x.timestamp)  # FIFO order
-    
+
     return render_template('products/view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups)
@@ -83,7 +92,7 @@ def view_product(product_id):
 def view_batches_by_variant(product_id, variant, size, unit):
     """View FIFO-ordered batches for a specific product variant"""
     product = Product.query.get_or_404(product_id)
-    
+
     batches = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
@@ -107,13 +116,13 @@ def add_variant():
         variant_name = data.get('name')
         sku = data.get('sku')
         description = data.get('description')
-        
+
         product = Product.query.get_or_404(product_id)
-        
+
         # Check if variant already exists
         if ProductVariation.query.filter_by(product_id=product_id, name=variant_name).first():
             return jsonify({'error': 'Variant already exists'}), 400
-            
+
         variant = ProductVariation(
             product_id=product_id,
             name=variant_name,
@@ -122,7 +131,7 @@ def add_variant():
         )
         db.session.add(variant)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'variant': {
@@ -131,7 +140,7 @@ def add_variant():
                 'sku': variant.sku
             }
         })
-    
+
     return jsonify({'error': 'Invalid request'}), 400
 
 @products_bp.route('/<int:product_id>/deduct', methods=['POST'])
@@ -144,25 +153,25 @@ def deduct_product(product_id):
     quantity = float(request.form.get('quantity', 0))
     reason = request.form.get('reason', 'manual_deduction')
     notes = request.form.get('notes', '')
-    
+
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Get FIFO-ordered inventory for this variant
     inventory_items = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         unit=unit
     ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
-    
+
     remaining_to_deduct = quantity
     deducted_items = []
-    
+
     for item in inventory_items:
         if remaining_to_deduct <= 0:
             break
-            
+
         if item.quantity <= remaining_to_deduct:
             # Use entire item
             deducted_items.append((item, item.quantity))
@@ -173,26 +182,26 @@ def deduct_product(product_id):
             deducted_items.append((item, remaining_to_deduct))
             item.quantity -= remaining_to_deduct
             remaining_to_deduct = 0
-    
+
     if remaining_to_deduct > 0:
         flash(f'Not enough stock. Only {quantity - remaining_to_deduct} available', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Commit the deductions
     db.session.commit()
-    
+
     # Log the event
     event_note = f"FIFO deduction: {quantity} {unit} of {variant}. Items used: {len(deducted_items)}. Reason: {reason}"
     if notes:
         event_note += f". Notes: {notes}"
-        
+
     db.session.add(ProductEvent(
         product_id=product_id,
         event_type='inventory_deduction',
         note=event_note
     ))
     db.session.commit()
-    
+
     flash(f'Deducted {quantity} {unit} from {variant} using FIFO', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
 
@@ -204,16 +213,16 @@ def deduct_product(product_id):
 def search_products():
     """API endpoint for product/variant search in finish batch modal"""
     query = request.args.get('q', '').strip()
-    
+
     if len(query) < 2:
         return jsonify({'products': []})
-    
+
     # Search products by name
     products = Product.query.filter(
         Product.name.ilike(f'%{query}%'),
         Product.is_active == True
     ).limit(10).all()
-    
+
     result = []
     for product in products:
         product_data = {
@@ -222,7 +231,7 @@ def search_products():
             'default_unit': product.default_unit,
             'variants': []
         }
-        
+
         # Add existing variants
         for variant in product.variations:
             product_data['variants'].append({
@@ -230,7 +239,7 @@ def search_products():
                 'name': variant.name,
                 'sku': variant.sku
             })
-        
+
         # Add default variant if no variants exist
         if not product.variations:
             product_data['variants'].append({
@@ -238,9 +247,9 @@ def search_products():
                 'name': 'Default',
                 'sku': None
             })
-            
+
         result.append(product_data)
-    
+
     return jsonify({'products': result})
 
 @products_bp.route('/api/quick-add', methods=['POST'])
@@ -248,17 +257,17 @@ def search_products():
 def quick_add_product():
     """Quick add product and/or variant for finish batch modal"""
     data = request.get_json()
-    
+
     product_name = data.get('product_name')
     variant_name = data.get('variant_name')
     default_unit = data.get('default_unit', 'oz')
-    
+
     if not product_name:
         return jsonify({'error': 'Product name is required'}), 400
-    
+
     # Check if product exists
     product = Product.query.filter_by(name=product_name).first()
-    
+
     if not product:
         # Create new product
         product = Product(
@@ -267,7 +276,7 @@ def quick_add_product():
         )
         db.session.add(product)
         db.session.flush()  # Get the ID
-    
+
     variant = None
     if variant_name and variant_name.lower() != 'default':
         # Check if variant exists
@@ -275,7 +284,7 @@ def quick_add_product():
             product_id=product.id, 
             name=variant_name
         ).first()
-        
+
         if not variant:
             # Create new variant
             variant = ProductVariation(
@@ -284,9 +293,9 @@ def quick_add_product():
             )
             db.session.add(variant)
             db.session.flush()
-    
+
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'product': {
@@ -307,26 +316,26 @@ def adjust_inventory(product_id):
     adjustment_type = request.form.get('adjustment_type')  # spoil, trash, recount
     quantity_change = float(request.form.get('quantity_change'))
     notes = request.form.get('notes', '')
-    
+
     inventory_item = ProductInventory.query.get_or_404(inventory_id)
-    
+
     if inventory_item.product_id != product_id:
         flash('Invalid inventory item', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     old_quantity = inventory_item.quantity
-    
+
     if adjustment_type == 'recount':
         inventory_item.quantity = quantity_change
     else:
         inventory_item.quantity += quantity_change
-    
+
     # Ensure quantity doesn't go negative
     if inventory_item.quantity < 0:
         inventory_item.quantity = 0
-    
+
     db.session.commit()
-    
+
     # Log the adjustment
     db.session.add(ProductEvent(
         product_id=product_id,
@@ -334,6 +343,6 @@ def adjust_inventory(product_id):
         note=f'Batch {inventory_item.batch_id}: {old_quantity} → {inventory_item.quantity} {inventory_item.unit}. {notes}'
     ))
     db.session.commit()
-    
+
     flash(f'Inventory adjusted: {adjustment_type}', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
