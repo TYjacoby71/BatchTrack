@@ -212,12 +212,17 @@ class ProductInventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
     variant = db.Column(db.String(100))
+    size_label = db.Column(db.String(100))  # Container size (e.g., "4 oz Jar")
     unit = db.Column(db.String(50))
     quantity = db.Column(db.Float)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # Reference to container used
     notes = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expiration_date = db.Column(db.Date, nullable=True)
+    batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost from specific batch FIFO calculation
+    
+    container = db.relationship('InventoryItem', foreign_keys=[container_id])
 
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
