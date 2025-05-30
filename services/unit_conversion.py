@@ -1,12 +1,27 @@
-
 from datetime import datetime
 from flask_login import current_user
 from models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 
 class ConversionEngine:
     @staticmethod
-    def round_value(value, decimals=3):
-        return round(value, decimals)
+    def can_convert(from_unit, to_unit, item_density=None):
+        """
+        Check if two units can be converted to each other.
+
+        Args:
+            from_unit (str): Source unit
+            to_unit (str): Target unit  
+            item_density (float, optional): Item density for volume/weight conversions
+
+        Returns:
+            bool: True if conversion is possible, False otherwise
+        """
+        try:
+            # Try a test conversion with amount 1
+            result = ConversionEngine.convert_units(1.0, from_unit, to_unit, item_density=item_density)
+            return result.get('success', False)
+        except Exception:
+            return False
 
     @staticmethod
     def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
@@ -17,7 +32,7 @@ class ConversionEngine:
             raise ValueError(f"Invalid from_unit: {from_unit}")
         if not to_unit or not isinstance(to_unit, str):
             raise ValueError(f"Invalid to_unit: {to_unit}")
-            
+
         from_u = Unit.query.filter_by(name=from_unit).first()
         to_u = Unit.query.filter_by(name=to_unit).first()
 

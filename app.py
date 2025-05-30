@@ -1,3 +1,4 @@
+# Register the conversion API blueprint in the Flask app.
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -65,6 +66,10 @@ from blueprints.api import init_api
 from blueprints.timers import timers_bp
 
 # Register blueprints
+from blueprints.api.routes import api_bp
+from blueprints.api.conversion_routes import conversion_api_bp
+app.register_blueprint(api_bp, url_prefix='/api')
+app.register_blueprint(conversion_api_bp, url_prefix='/api/conversion')
 app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')

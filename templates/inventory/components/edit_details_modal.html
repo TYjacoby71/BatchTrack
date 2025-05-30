@@ -199,34 +199,75 @@
 document.addEventListener('DOMContentLoaded', function() {
     const unitSelect = document.getElementById('unitSelect');
     const unitChangeWarning = document.getElementById('unitChangeWarning');
+    const conversionIncompatibleWarning = document.getElementById('conversionIncompatibleWarning');
     const confirmUnitChange = document.getElementById('confirmUnitChange');
     const convertInventoryFlag = document.getElementById('convertInventoryFlag');
     const conversionChoices = document.querySelectorAll('input[name="conversion_choice"]');
     const saveButton = document.getElementById('saveDetailsButton');
     const originalUnit = '{{ item.unit }}';
     const hasHistory = {{ (item.history|length > 0)|lower }};
+    const itemId = {{ item.id }};
+
+    // Function to check if units are convertible
+    async function checkUnitsConvertible(fromUnit, toUnit) {
+        try {
+            const response = await fetch('/api/conversion/check-convertible', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify({
+                    from_unit: fromUnit,
+                    to_unit: toUnit,
+                    item_id: itemId
+                })
+            });
+            const data = await response.json();
+            return data.convertible;
+        } catch (error) {
+            console.log('Could not check unit compatibility:', error);
+            return false; // Assume not convertible if check fails
+        }
+    }
+
+    // Function to show appropriate warning based on convertibility
+    async function showUnitChangeWarning(newUnit) {
+        const isConvertible = await checkUnitsConvertible(originalUnit, newUnit);
+        
+        if (isConvertible) {
+            unitChangeWarning.style.display = 'block';
+            conversionIncompatibleWarning.style.display = 'none';
+        } else {
+            unitChangeWarning.style.display = 'none';
+            conversionIncompatibleWarning.style.display = 'block';
+        }
+        
+        confirmUnitChange.value = 'true';
+        
+        // Set up event listeners for conversion choices
+        const allChoices = document.querySelectorAll('input[name="conversion_choice"]');
+        allChoices.forEach(choice => {
+            choice.addEventListener('change', function() {
+                convertInventoryFlag.value = this.value;
+            });
+        });
+
+        // Set initial value based on checked choice
+        const checkedChoice = document.querySelector('input[name="conversion_choice"]:checked');
+        if (checkedChoice) {
+            convertInventoryFlag.value = checkedChoice.value;
+        }
+    }
 
     if (unitSelect && hasHistory) {
         unitSelect.addEventListener('change', function() {
             const newUnit = this.value;
             if (newUnit !== originalUnit) {
-                unitChangeWarning.style.display = 'block';
-                confirmUnitChange.value = 'true';
-
-                // Update conversion flag based on radio selection
-                conversionChoices.forEach(choice => {
-                    choice.addEventListener('change', function() {
-                        convertInventoryFlag.value = this.value === 'convert' ? 'true' : 'false';
-                    });
-                });
-
-                // Set initial value
-                const checkedChoice = document.querySelector('input[name="conversion_choice"]:checked');
-                if (checkedChoice) {
-                    convertInventoryFlag.value = checkedChoice.value === 'convert' ? 'true' : 'false';
-                }
+                showUnitChangeWarning(newUnit);
             } else {
                 unitChangeWarning.style.display = 'none';
+                conversionIncompatibleWarning.style.display = 'none';
                 confirmUnitChange.value = 'false';
                 convertInventoryFlag.value = 'false';
             }
@@ -238,11 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pendingChange = {{ session['pending_unit_change']|tojson }};
     if (pendingChange && pendingChange.item_id === {{ item.id }}) {
         unitSelect.value = pendingChange.new_unit;
-        unitChangeWarning.style.display = 'block';
-        confirmUnitChange.value = 'true';
-
-        // Trigger change event to set up handlers
-        unitSelect.dispatchEvent(new Event('change'));
+        showUnitChangeWarning(pendingChange.new_unit);
     }
     {% endif %}
 });
