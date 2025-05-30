@@ -2,7 +2,7 @@
 """Add unit field to inventory_history
 
 Revision ID: add_unit_to_history
-Revises: 8f63b86dc675
+Revises: 4ff7f4b5ea62
 Create Date: 2025-05-30 21:20:00.000000
 
 """
