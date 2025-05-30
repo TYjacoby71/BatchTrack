@@ -226,7 +226,20 @@ def edit_inventory(id):
         item.storage_amount = float(request.form.get('storage_amount'))
         item.storage_unit = request.form.get('storage_unit')
     else:
-        item.unit = request.form.get('unit')
+        new_unit = request.form.get('unit')
+        convert_inventory = request.form.get('convert_inventory_on_unit_change')
+        
+        # Handle unit change
+        if new_unit != item.unit and convert_inventory:
+            from services.conversion_wrapper import safe_convert
+            conversion = safe_convert(item.quantity, item.unit, new_unit, ingredient_id=item.id)
+            if conversion['ok']:
+                item.quantity = conversion['result']['converted_value']
+                flash(f'Inventory converted from {item.quantity} {item.unit} to {item.quantity} {new_unit}', 'info')
+            else:
+                flash(f'Could not convert inventory: {conversion["error"]}', 'warning')
+        
+        item.unit = new_unit
         item.category_id = request.form.get('category_id', None)
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
