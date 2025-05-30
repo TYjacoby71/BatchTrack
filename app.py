@@ -66,9 +66,7 @@ from blueprints.api import init_api
 from blueprints.timers import timers_bp
 
 # Register blueprints
-from blueprints.api.routes import api_bp
 from blueprints.api.conversion_routes import conversion_api_bp
-app.register_blueprint(api_bp, url_prefix='/api')
 app.register_blueprint(conversion_api_bp, url_prefix='/api/conversion')
 app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
