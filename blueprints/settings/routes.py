@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required
-from models import db, Unit, ProductUnit
+from models import db, Unit
 import json
 
 settings_bp = Blueprint('settings', __name__)
