@@ -125,7 +125,7 @@ def adjust_inventory(id):
         if not is_valid:
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
-
+        
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
@@ -134,7 +134,7 @@ def adjust_inventory(id):
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-
+        
         restock_cost = None
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
@@ -174,54 +174,6 @@ def adjust_inventory(id):
 @login_required
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-
-    # Handle unit changes with conversion confirmation
-    if item.type != 'container':
-        new_unit = request.form.get('unit')
-        if new_unit != item.unit:
-            # Check if item has any history entries
-            history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
-            if history_count > 0:
-                # Check if user confirmed the unit change
-                confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
-                convert_inventory = request.form.get('convert_inventory') == 'true'
-
-                if not confirm_unit_change:
-                    # User hasn't confirmed - show them the options
-                    flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
-                    session['pending_unit_change'] = {
-                        'item_id': id,
-                        'old_unit': item.unit,
-                        'new_unit': new_unit,
-                        'current_quantity': item.quantity
-                    }
-                    return redirect(url_for('inventory.view_inventory', id=id))
-                else:
-                    # User confirmed - proceed with unit change
-                    conversion_choice = request.form.get('convert_inventory', 'keep')
-                    
-                    if conversion_choice == 'convert':
-                        # Try to convert existing inventory to new unit
-                        try:
-                            from services.unit_conversion import ConversionEngine
-                            conversion_result = ConversionEngine.convert_units(item.quantity, item.unit, new_unit, item.id, item.density)
-                            item.quantity = conversion_result['converted_value']
-                            flash(f'Unit changed and inventory converted: {item.quantity} {new_unit}', 'success')
-                        except Exception as e:
-                            flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
-                    elif conversion_choice == 'zero':
-                        # Zero out inventory for manual recount
-                        from blueprints.fifo.services import recount_fifo
-                        notes = f"Unit changed from {item.unit} to {new_unit} - inventory zeroed for manual recount"
-                        success = recount_fifo(item.id, 0, notes, current_user.id)
-                        if success:
-                            item.quantity = 0
-                            flash(f'Unit changed to {new_unit}. Inventory set to 0 for manual recount.', 'info')
-                        else:
-                            flash('Error zeroing inventory. Unit changed but quantity unchanged.', 'warning')
-                    else:
-                        # Keep current number, just change unit
-                        flash(f'Unit changed to {new_unit}. Inventory quantity unchanged.', 'info')
 
     # Common fields for all types
     item.name = request.form.get('name')
@@ -289,7 +241,18 @@ def edit_inventory(id):
     flash(f'{item.type.title()} updated successfully.')
     return redirect(url_for('inventory.view_inventory', id=id))
 
-
+@inventory_bp.route('/update_details/<int:id>', methods=['POST'])
+@login_required
+def update_details(id):
+    item = InventoryItem.query.get_or_404(id)
+    item.name = request.form.get('name')
+    item.unit = request.form.get('unit')
+    item.density = float(request.form.get('density')) if request.form.get('density') else None
+    if item.type == 'ingredient':
+        item.category_id = request.form.get('category_id') or None
+    db.session.commit()
+    flash('Item details updated successfully')
+    return redirect(url_for('inventory.view_inventory', id=id))
 
 @inventory_bp.route('/archive/<int:id>')
 @login_required
