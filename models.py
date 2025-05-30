@@ -256,9 +256,7 @@ class InventoryItem(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True)
     category = db.relationship('IngredientCategory', backref='ingredients')
 
-class ProductUnit(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(32), unique=True)
+
 
 class BatchInventoryLog(db.Model):
     """Tracks changes to batch inventory quantities"""

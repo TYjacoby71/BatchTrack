@@ -44,11 +44,11 @@ def new_product():
         flash('Product created successfully', 'success')
         return redirect(url_for('products.view_product', product_id=product.id))
 
-    # Get product units for dropdown
-    from models import ProductUnit
-    product_units = ProductUnit.query.all()
+    # Get units for dropdown
+    from utils.unit_utils import get_global_unit_list
+    units = get_global_unit_list()
 
-    return render_template('products/new_product.html', product_units=product_units)
+    return render_template('products/new_product.html', product_units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -56,7 +56,7 @@ def view_product(product_id):
     """View product details with FIFO inventory"""
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
-    
+
     return render_template('products/view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups)
@@ -194,16 +194,16 @@ def search_products():
 def add_from_batch():
     """Add product inventory from finished batch"""
     data = request.get_json()
-    
+
     batch_id = data.get('batch_id')
     product_id = data.get('product_id') 
     variant_label = data.get('variant_label')
     size_label = data.get('size_label')
     quantity = data.get('quantity')
-    
+
     if not batch_id or not product_id:
         return jsonify({'error': 'Batch ID and Product ID are required'}), 400
-    
+
     try:
         inventory = ProductInventoryService.add_product_from_batch(
             batch_id=batch_id,
@@ -212,15 +212,15 @@ def add_from_batch():
             size_label=size_label,
             quantity=quantity
         )
-        
+
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'inventory_id': inventory.id,
             'message': f'Added {inventory.quantity} {inventory.unit} to product inventory'
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
