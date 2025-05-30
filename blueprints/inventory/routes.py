@@ -175,6 +175,56 @@ def adjust_inventory(id):
 def edit_inventory(id):
     item = InventoryItem.query.get_or_404(id)
 
+    # Handle unit changes with conversion confirmation
+    if item.type != 'container':
+        new_unit = request.form.get('unit')
+        if new_unit != item.unit:
+            # Check if item has any history entries
+            history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
+            if history_count > 0:
+                # Check if user confirmed the unit change
+                confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
+                convert_inventory = request.form.get('convert_inventory') == 'true'
+                
+                if not confirm_unit_change:
+                    # User hasn't confirmed - show them the options
+                    flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
+                    session['pending_unit_change'] = {
+                        'item_id': id,
+                        'old_unit': item.unit,
+                        'new_unit': new_unit,
+                        'current_quantity': item.quantity
+                    }
+                    return redirect(url_for('inventory.view_inventory', id=id))
+                else:
+                    # User confirmed - proceed with unit change
+                    if convert_inventory and item.quantity > 0:
+                        # Try to convert existing inventory to new unit
+                        try:
+                            from services.unit_conversion import convert_unit
+                            converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
+                            item.quantity = converted_quantity
+                            
+                            # Log this conversion
+                            history = InventoryHistory(
+                                inventory_item_id=item.id,
+                                change_type='unit_conversion',
+                                quantity_change=0,  # No actual quantity change, just unit change
+                                unit=new_unit,  # Record in the new unit
+                                note=f'Unit converted from {item.unit} to {new_unit}. Quantity adjusted from {request.form.get("original_quantity", item.quantity)} {item.unit} to {converted_quantity} {new_unit}',
+                                created_by=current_user.id,
+                                quantity_used=0
+                            )
+                            db.session.add(history)
+                            flash(f'Unit changed and inventory converted: {item.quantity} {item.unit} → {converted_quantity} {new_unit}', 'success')
+                        except Exception as e:
+                            flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
+                    else:
+                        flash(f'Unit changed from {item.unit} to {new_unit}. Inventory quantity unchanged.', 'info')
+                    
+                    # Clear the pending change
+                    session.pop('pending_unit_change', None)
+
     # Common fields for all types
     item.name = request.form.get('name')
     new_quantity = float(request.form.get('quantity'))
@@ -241,18 +291,7 @@ def edit_inventory(id):
     flash(f'{item.type.title()} updated successfully.')
     return redirect(url_for('inventory.view_inventory', id=id))
 
-@inventory_bp.route('/update_details/<int:id>', methods=['POST'])
-@login_required
-def update_details(id):
-    item = InventoryItem.query.get_or_404(id)
-    item.name = request.form.get('name')
-    item.unit = request.form.get('unit')
-    item.density = float(request.form.get('density')) if request.form.get('density') else None
-    if item.type == 'ingredient':
-        item.category_id = request.form.get('category_id') or None
-    db.session.commit()
-    flash('Item details updated successfully')
-    return redirect(url_for('inventory.view_inventory', id=id))
+
 
 @inventory_bp.route('/archive/<int:id>')
 @login_required

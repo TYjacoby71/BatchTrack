@@ -1,4 +1,3 @@
-
 <!-- Edit Ingredient Modal -->
 <div class="modal fade" id="editDetailsModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -74,7 +73,7 @@
           {% else %}
           <div class="mb-3">
             <label for="unit">Unit:</label>
-            <select name="unit" class="form-select select2" data-unit-select required>
+            <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required>
               {% for unit in get_global_unit_list() %}
                 <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
@@ -108,10 +107,81 @@
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <input type="hidden" name="confirm_unit_change" id="confirmUnitChange" value="false">
+            <input type="hidden" name="convert_inventory" id="convertInventoryFlag" value="false">
             <button type="submit" class="btn btn-primary" id="saveDetailsButton">Save Changes</button>
           </div>
         </form>
+          <div id="unitChangeWarning" style="display: none;">
+              <div class="alert alert-warning">
+                  Changing the unit will affect all existing inventory records.
+                  Do you want to convert existing quantities to the new unit?
+                  <div>
+                      <label>
+                          <input type="radio" name="conversion_choice" value="convert" checked>
+                          Convert Quantities
+                      </label>
+                      <label>
+                          <input type="radio" name="conversion_choice" value="leave">
+                          Leave Quantities as is
+                      </label>
+                  </div>
+              </div>
+          </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unitSelect = document.getElementById('unitSelect');
+    const unitChangeWarning = document.getElementById('unitChangeWarning');
+    const confirmUnitChange = document.getElementById('confirmUnitChange');
+    const convertInventoryFlag = document.getElementById('convertInventoryFlag');
+    const conversionChoices = document.querySelectorAll('input[name="conversion_choice"]');
+    const saveButton = document.getElementById('saveDetailsButton');
+    const originalUnit = '{{ item.unit }}';
+    const hasHistory = {{ (item.history|length > 0)|lower }};
+
+    if (unitSelect && hasHistory) {
+        unitSelect.addEventListener('change', function() {
+            const newUnit = this.value;
+            if (newUnit !== originalUnit) {
+                unitChangeWarning.style.display = 'block';
+                confirmUnitChange.value = 'true';
+
+                // Update conversion flag based on radio selection
+                conversionChoices.forEach(choice => {
+                    choice.addEventListener('change', function() {
+                        convertInventoryFlag.value = this.value === 'convert' ? 'true' : 'false';
+                    });
+                });
+
+                // Set initial value
+                const checkedChoice = document.querySelector('input[name="conversion_choice"]:checked');
+                if (checkedChoice) {
+                    convertInventoryFlag.value = checkedChoice.value === 'convert' ? 'true' : 'false';
+                }
+            } else {
+                unitChangeWarning.style.display = 'none';
+                confirmUnitChange.value = 'false';
+                convertInventoryFlag.value = 'false';
+            }
+        });
+    }
+
+    // Handle pending unit change from session
+    {% if session.get('pending_unit_change') %}
+    const pendingChange = {{ session['pending_unit_change']|tojson }};
+    if (pendingChange && pendingChange.item_id === {{ item.id }}) {
+        unitSelect.value = pendingChange.new_unit;
+        unitChangeWarning.style.display = 'block';
+        confirmUnitChange.value = 'true';
+
+        // Trigger change event to set up handlers
+        unitSelect.dispatchEvent(new Event('change'));
+    }
+    {% endif %}
+});
+</script>
