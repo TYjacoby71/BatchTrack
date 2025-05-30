@@ -1,0 +1,184 @@
+[
+  {
+    "name": "Fried Eggs",
+    "instructions": "",
+    "label_prefix": "FE",
+    "predicted_yield": 5.0,
+    "predicted_yield_unit": "count",
+    "requires_containers": true,
+    "allowed_containers": [
+      7,
+      4,
+      10
+    ],
+    "ingredients": [
+      {
+        "inventory_item_name": "Eggs",
+        "amount": 5.0,
+        "unit": "count"
+      },
+      {
+        "inventory_item_name": "salt",
+        "amount": 50.0,
+        "unit": "gram"
+      },
+      {
+        "inventory_item_name": "pepper",
+        "amount": 0.02,
+        "unit": "kg"
+      }
+    ]
+  },
+  {
+    "name": "lemon",
+    "instructions": "",
+    "label_prefix": "FE",
+    "predicted_yield": 5.0,
+    "predicted_yield_unit": "count",
+    "requires_containers": true,
+    "allowed_containers": [],
+    "ingredients": [
+      {
+        "inventory_item_name": "Eggs",
+        "amount": 5.0,
+        "unit": "count"
+      },
+      {
+        "inventory_item_name": "salt",
+        "amount": 50.0,
+        "unit": "gram"
+      },
+      {
+        "inventory_item_name": "pepper",
+        "amount": 0.02,
+        "unit": "lb"
+      },
+      {
+        "inventory_item_name": "lemon",
+        "amount": 50.0,
+        "unit": "ml"
+      }
+    ]
+  },
+  {
+    "name": "Copy of Fried Eggs",
+    "instructions": "",
+    "label_prefix": "FE",
+    "predicted_yield": 5.0,
+    "predicted_yield_unit": "count",
+    "requires_containers": true,
+    "allowed_containers": [],
+    "ingredients": [
+      {
+        "inventory_item_name": "Eggs",
+        "amount": 3.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "salt",
+        "amount": 50.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "pepper",
+        "amount": 0.02,
+        "unit": "acre"
+      }
+    ]
+  },
+  {
+    "name": "Copy of Fried Eggs",
+    "instructions": "",
+    "label_prefix": "FE",
+    "predicted_yield": 5.0,
+    "predicted_yield_unit": "count",
+    "requires_containers": true,
+    "allowed_containers": [],
+    "ingredients": [
+      {
+        "inventory_item_name": "Eggs",
+        "amount": 5.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "salt",
+        "amount": 50.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "pepper",
+        "amount": 0.02,
+        "unit": "acre"
+      }
+    ]
+  },
+  {
+    "name": "Copy of lemon",
+    "instructions": "",
+    "label_prefix": "FE",
+    "predicted_yield": 5.0,
+    "predicted_yield_unit": "count",
+    "requires_containers": true,
+    "allowed_containers": [],
+    "ingredients": [
+      {
+        "inventory_item_name": "Eggs",
+        "amount": 5.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "salt",
+        "amount": 50.0,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "pepper",
+        "amount": 0.02,
+        "unit": "acre"
+      },
+      {
+        "inventory_item_name": "lemon",
+        "amount": 50.0,
+        "unit": "acre"
+      }
+    ]
+  },
+  {
+    "name": "Royal Tallow Balm",
+    "instructions": "test",
+    "label_prefix": "RTB",
+    "predicted_yield": 5.51,
+    "predicted_yield_unit": "floz",
+    "requires_containers": true,
+    "allowed_containers": [
+      12
+    ],
+    "ingredients": [
+      {
+        "inventory_item_name": "Grass Fed Tallow",
+        "amount": 0.5,
+        "unit": "cup"
+      },
+      {
+        "inventory_item_name": "Beeswax",
+        "amount": 0.5,
+        "unit": "tbsp"
+      },
+      {
+        "inventory_item_name": "carrot seed oil",
+        "amount": 1.0,
+        "unit": "tsp"
+      },
+      {
+        "inventory_item_name": "Castor Oil",
+        "amount": 2.0,
+        "unit": "tsp"
+      },
+      {
+        "inventory_item_name": "Lavender Essential Oil",
+        "amount": 3.0,
+        "unit": "drop"
+      }
+    ]
+  }
+]
