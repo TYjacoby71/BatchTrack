@@ -53,12 +53,11 @@ def load_legacy_inventory():
                     inventory_item_id=new_item.id,
                     change_type='restock',
                     quantity_change=new_item.quantity,
+                    unit=new_item.unit,
                     remaining_quantity=new_item.quantity,
                     unit_cost=new_item.cost_per_unit,
-                    source='Legacy Import',
                     created_by=1,  # System user
-                    quantity_used=0,
-                    note='Initial import',
+                    note='Legacy Import - Initial import',
                     is_perishable=new_item.is_perishable,
                     expiration_date=new_item.expiration_date,
                     shelf_life_days=None
