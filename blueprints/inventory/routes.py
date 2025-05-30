@@ -208,6 +208,8 @@ def edit_inventory(id):
                                 flash(f'Unit changed and inventory converted: {item.quantity} {new_unit}', 'success')
                             else:
                                 flash(f'Could not convert inventory to new unit: {conversion_result["error"]}. Unit changed but quantity kept as-is.', 'warning')
+                        except Exception as e:
+                            flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
                     else:
                         flash(f'Unit changed to {new_unit}. Inventory quantity unchanged.', 'info')
 
