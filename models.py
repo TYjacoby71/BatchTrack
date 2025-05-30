@@ -157,6 +157,7 @@ class InventoryHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     change_type = db.Column(db.String(32), nullable=False)  # batch, refunded, restock, spoil, trash, recount
     quantity_change = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)  # IMMUTABLE: Unit used at time of transaction
     remaining_quantity = db.Column(db.Float, nullable=True)  # Only for FIFO trackable events
     unit_cost = db.Column(db.Float, nullable=True)  # Cost for restocks/purchases
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('inventory_history.id'), nullable=True)  # References source/target FIFO entry for credit/debit
