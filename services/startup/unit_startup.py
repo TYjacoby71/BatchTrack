@@ -20,7 +20,14 @@ def load_startup_units():
                 print(f"[SKIPPED] Unit '{unit_data['name']}' already exists.")
                 continue
 
-            unit = Unit(**unit_data)
+            # Create unit with only valid fields
+            unit = Unit(
+                name=unit_data['name'],
+                abbreviation=unit_data.get('abbreviation', ''),
+                type=unit_data.get('type', 'weight'),
+                base_unit=unit_data.get('base_unit', ''),
+                multiplier=unit_data.get('multiplier', 1.0)
+            )
             db.session.add(unit)
             print(f"[ADDED] Unit '{unit.name}' ({unit.type})")
 
