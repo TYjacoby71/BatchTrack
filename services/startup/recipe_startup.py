@@ -59,3 +59,64 @@ def load_startup_recipes():
 
 if __name__ == '__main__':
     load_startup_recipes()
+from app import app, db
+from models import Recipe, RecipeIngredient, InventoryItem
+import json
+
+def load_startup_recipes():
+    """Load startup recipes from export file"""
+    with app.app_context():
+        try:
+            with open('recipes_export_20250430_235506 (1).json', 'r') as f:
+                recipes_data = json.load(f)
+        except FileNotFoundError:
+            print("No recipes export file found - skipping recipe startup")
+            return
+
+        print("Loading startup recipes...")
+        
+        for recipe_data in recipes_data:
+            # Check if recipe already exists
+            existing = Recipe.query.filter_by(name=recipe_data['name']).first()
+            if existing:
+                print(f"[SKIPPED] Recipe '{recipe_data['name']}' already exists.")
+                continue
+
+            # Create recipe
+            recipe = Recipe(
+                name=recipe_data.get('name', ''),
+                instructions=recipe_data.get('instructions', ''),
+                label_prefix=recipe_data.get('label_prefix', ''),
+                predicted_yield=float(recipe_data.get('predicted_yield', 0.0)),
+                predicted_yield_unit=recipe_data.get('predicted_yield_unit', 'oz'),
+                requires_containers=bool(recipe_data.get('requires_containers', False))
+            )
+            
+            db.session.add(recipe)
+            db.session.flush()
+
+            # Add recipe ingredients
+            ingredients_added = 0
+            if 'ingredients' in recipe_data:
+                for ing_data in recipe_data['ingredients']:
+                    # Find the inventory item by name
+                    inventory_item = InventoryItem.query.filter_by(name=ing_data['ingredient_name']).first()
+                    if inventory_item:
+                        recipe_ingredient = RecipeIngredient(
+                            recipe_id=recipe.id,
+                            inventory_item_id=inventory_item.id,
+                            amount=float(ing_data.get('amount', 0.0)),
+                            unit=ing_data.get('unit', 'count')
+                        )
+                        db.session.add(recipe_ingredient)
+                        ingredients_added += 1
+                    else:
+                        print(f"  [WARNING] Ingredient '{ing_data['ingredient_name']}' not found in inventory")
+
+            print(f"[ADDED] Recipe '{recipe.name}' with {ingredients_added} ingredients")
+
+        db.session.commit()
+        print("✅ Startup recipes service complete")
+
+if __name__ == '__main__':
+    load_startup_recipes()
