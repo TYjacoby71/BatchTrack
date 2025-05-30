@@ -282,6 +282,7 @@ def quick_add_product():
         } if variant or variant_name else None
     })
 
+@products_bp.route('/<int:product_id>/adjust', methods=['POST'])
 @login_required
 def adjust_inventory(product_id):
     """Manual inventory adjustment for specific batch"""
