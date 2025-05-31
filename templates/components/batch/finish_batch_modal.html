@@ -235,4 +235,47 @@ document.getElementById('finishBatchModal').addEventListener('shown.bs.modal', f
   const batchType = '{{ batch.batch_type }}';
   const productFields = document.getElementById('productFields');
   const intermediateFields = document.getElementById('intermediateFields');
+
+function toggleOutputFields() {
+  const outputType = document.getElementById('output_type').value;
+  const productFields = document.getElementById('productFields');
+
+  if (outputType === 'product') {
+    productFields.style.display = 'block';
+    loadVariants();
+  } else {
+    productFields.style.display = 'none';
+  }
+}
+
+function updateContainerCounts() {
+  const finalQuantity = parseFloat(document.getElementById('final_quantity').value) || 0;
+  {% if container_breakdown %}
+  {% for item in container_breakdown %}
+    const containerSize = {{ item.container.storage_amount }};
+    const estimatedCount = Math.round(finalQuantity / containerSize);
+    document.getElementById('estimated_{{ item.container.id }}').textContent = estimatedCount;
+
+    // Reset adjustment and update final
+    const adjustInput = document.getElementById('adjust_{{ item.container.id }}');
+    const adjustment = parseInt(adjustInput.value) || 0;
+    const finalCount = Math.max(0, estimatedCount + adjustment);
+    document.getElementById('final_{{ item.container.id }}').textContent = finalCount;
+    document.getElementById('hidden_{{ item.container.id }}').value = finalCount;
+  {% endfor %}
+  {% endif %}
+}
+
+function adjustContainer(containerId, change) {
+  const adjustInput = document.getElementById('adjust_' + containerId);
+  const currentAdjust = parseInt(adjustInput.value) || 0;
+  const newAdjust = currentAdjust + change;
+  adjustInput.value = newAdjust;
+
+  // Update final count
+  const estimated = parseInt(document.getElementById('estimated_' + containerId).textContent) || 0;
+  const finalCount = Math.max(0, estimated + newAdjust);
+  document.getElementById('final_' + containerId).textContent = finalCount;
+  document.getElementById('hidden_' + containerId).value = finalCount;
+}
 </script>
