@@ -62,13 +62,23 @@ def complete_batch(batch_id):
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
             batch.variant_label = request.form.get('variant_label')
-            db.session.add(ProductInventory(
+
+            # Get container count overrides from form
+            container_overrides = {}
+            for key, value in request.form.items():
+                if key.startswith('container_final_'):
+                    container_id = int(key.replace('container_final_', ''))
+                    container_overrides[container_id] = int(value)
+
+            # Use ProductInventoryService with container overrides
+            from services.product_inventory_service import ProductInventoryService
+            inventory_entries = ProductInventoryService.add_product_from_batch(
+                batch_id=batch.id,
                 product_id=batch.product_id,
-                variant=batch.variant_id,
-                unit=batch.output_unit,
+                variant_label=batch.variant_label,
                 quantity=batch.final_quantity,
-                batch_id=batch.id
-            ))
+                container_overrides=container_overrides
+            )
 
         elif output_type == 'ingredient':
             total_cost = sum(

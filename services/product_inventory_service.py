@@ -10,7 +10,8 @@ class ProductInventoryService:
     @staticmethod
     def add_product_from_batch(batch_id: int, product_id: int, variant_label: Optional[str] = None, 
                              size_label: Optional[str] = None, quantity: float = None, 
-                             container_id: Optional[int] = None) -> List[ProductInventory]:
+                             container_id: Optional[int] = None, 
+                             container_overrides: Optional[Dict[int, int]] = None) -> List[ProductInventory]:
         """Add product inventory from a finished batch, handling containers as size variants"""
         from models import BatchContainer, InventoryItem
         
@@ -28,6 +29,11 @@ class ProductInventoryService:
                 container = container_usage.container
                 size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
                 
+                # Use override count if provided, otherwise use calculated amount
+                final_count = container_usage.quantity_used
+                if container_overrides and container.id in container_overrides:
+                    final_count = container_overrides[container.id]
+                
                 # Calculate cost per unit for this specific batch
                 batch_cost_per_unit = None
                 if batch.total_cost and batch.final_quantity:
@@ -39,11 +45,11 @@ class ProductInventoryService:
                     variant=variant_label or 'Default',
                     size_label=size_label,
                     unit='count',  # Container units are typically counted
-                    quantity=container_usage.quantity_used,
+                    quantity=final_count,
                     container_id=container.id,
                     batch_cost_per_unit=batch_cost_per_unit,
                     timestamp=datetime.utcnow(),
-                    notes=f"From batch #{batch.id} using {container.name}"
+                    notes=f"From batch #{batch.id} using {container.name} (final count: {final_count})"
                 )
                 
                 db.session.add(inventory)
