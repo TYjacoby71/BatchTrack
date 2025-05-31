@@ -28,7 +28,7 @@
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|groupby('variant')|list|length }}</h5>
+                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='variant')|select('defined')|list|unique|length }}</h5>
                   <small class="text-muted">Variants</small>
                 </div>
               </div>

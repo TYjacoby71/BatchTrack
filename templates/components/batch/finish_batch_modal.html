@@ -69,6 +69,44 @@
             </div>
           </div>
 
+          <!-- Container Breakdown Section -->
+          {% if container_breakdown %}
+          <div class="form-group mb-3">
+            <label>Container Distribution</label>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Container</th>
+                    <th>Estimated</th>
+                    <th>Adjust</th>
+                    <th>Final Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in container_breakdown %}
+                  <tr>
+                    <td>{{ item.size_label }}</td>
+                    <td><span id="estimated_{{ item.container.id }}">{{ item.estimated_count }}</span></td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, -1)">-</button>
+                        <input type="number" id="adjust_{{ item.container.id }}" class="form-control text-center" value="0" style="max-width: 60px;">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, 1)">+</button>
+                      </div>
+                    </td>
+                    <td>
+                      <span id="final_{{ item.container.id }}">{{ item.estimated_count }}</span>
+                      <input type="hidden" name="container_final_{{ item.container.id }}" id="hidden_{{ item.container.id }}" value="{{ item.estimated_count }}">
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-success">Complete Batch</button>
@@ -254,28 +292,51 @@ function updateContainerCounts() {
   {% for item in container_breakdown %}
     const containerSize = {{ item.container.storage_amount }};
     const estimatedCount = Math.round(finalQuantity / containerSize);
-    document.getElementById('estimated_{{ item.container.id }}').textContent = estimatedCount;
+    const estimatedElement = document.getElementById('estimated_{{ item.container.id }}');
+    if (estimatedElement) {
+      estimatedElement.textContent = estimatedCount;
+    }
 
     // Reset adjustment and update final
     const adjustInput = document.getElementById('adjust_{{ item.container.id }}');
-    const adjustment = parseInt(adjustInput.value) || 0;
-    const finalCount = Math.max(0, estimatedCount + adjustment);
-    document.getElementById('final_{{ item.container.id }}').textContent = finalCount;
-    document.getElementById('hidden_{{ item.container.id }}').value = finalCount;
+    if (adjustInput) {
+      const adjustment = parseInt(adjustInput.value) || 0;
+      const finalCount = Math.max(0, estimatedCount + adjustment);
+      const finalElement = document.getElementById('final_{{ item.container.id }}');
+      const hiddenInput = document.getElementById('hidden_{{ item.container.id }}');
+      if (finalElement) finalElement.textContent = finalCount;
+      if (hiddenInput) hiddenInput.value = finalCount;
+    }
   {% endfor %}
   {% endif %}
 }
 
 function adjustContainer(containerId, change) {
   const adjustInput = document.getElementById('adjust_' + containerId);
+  if (!adjustInput) return;
+  
   const currentAdjust = parseInt(adjustInput.value) || 0;
   const newAdjust = currentAdjust + change;
   adjustInput.value = newAdjust;
 
   // Update final count
-  const estimated = parseInt(document.getElementById('estimated_' + containerId).textContent) || 0;
+  const estimatedElement = document.getElementById('estimated_' + containerId);
+  const estimated = estimatedElement ? parseInt(estimatedElement.textContent) || 0 : 0;
   const finalCount = Math.max(0, estimated + newAdjust);
-  document.getElementById('final_' + containerId).textContent = finalCount;
-  document.getElementById('hidden_' + containerId).value = finalCount;
+  
+  const finalElement = document.getElementById('final_' + containerId);
+  const hiddenInput = document.getElementById('hidden_' + containerId);
+  if (finalElement) finalElement.textContent = finalCount;
+  if (hiddenInput) hiddenInput.value = finalCount;
 }
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  const finalQuantityInput = document.getElementById('final_quantity');
+  if (finalQuantityInput) {
+    finalQuantityInput.addEventListener('input', updateContainerCounts);
+  }
+});
+
+}); // Close the modal event listener
 </script>
