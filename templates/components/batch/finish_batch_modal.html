@@ -33,7 +33,6 @@
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
 
-
           <div id="productFields" style="display: none;">
             <div class="mb-3">
               <label for="product_id">Product</label>
@@ -69,6 +68,49 @@
             </div>
           </div>
 
+          <!-- Container Breakdown Section -->
+          {% if container_breakdown %}
+          <div class="form-group mb-3">
+            <label>Container Distribution</label>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Container</th>
+                    <th>Used in Batch</th>
+                    <th>Adjust</th>
+                    <th>Final Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in container_breakdown %}
+                  <tr>
+                    <td>{{ item.size_label }}</td>
+                    <td><span id="used_{{ item.container.id }}">{{ item.original_used }}</span></td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, -1)">-</button>
+                        <input type="number" id="adjust_{{ item.container.id }}" class="form-control text-center" value="0" style="max-width: 60px;">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, 1)">+</button>
+                      </div>
+                    </td>
+                    <td>
+                      <span id="final_{{ item.container.id }}">{{ item.original_used }}</span>
+                      <input type="hidden" name="container_final_{{ item.container.id }}" id="hidden_{{ item.container.id }}" value="{{ item.original_used }}">
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="form-text">
+              <strong>Used in Batch:</strong> Containers already deducted during batch creation<br>
+              <strong>Adjust:</strong> Add (+) or remove (-) containers based on actual usage<br>
+              <strong>Final Count:</strong> Number of product units to create in inventory
+            </div>
+          </div>
+          {% endif %}
+
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-success">Complete Batch</button>
@@ -80,36 +122,60 @@
 </div>
 
 <script>
-// Show/hide fields based on batch type
-document.addEventListener('DOMContentLoaded', function() {
-  const batchType = '{{ batch.batch_type }}';
-  console.log('Batch type:', batchType);
-
+function toggleOutputFields() {
+  const outputType = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
-  const intermediateFields = document.getElementById('intermediateFields');
 
-  if (batchType === 'intermediate') {
-    if (intermediateFields) {
-      intermediateFields.style.display = 'block';
-      console.log('Showing intermediate fields');
-    }
-    if (productFields) {
-      productFields.style.display = 'none';
-      console.log('Hiding product fields');
-    }
+  if (outputType === 'product') {
+    productFields.style.display = 'block';
+    loadVariants();
   } else {
-    if (productFields) {
-      productFields.style.display = 'block';
-      console.log('Showing product fields');
-    }
-    if (intermediateFields) {
-      intermediateFields.style.display = 'none';
-      console.log('Hiding intermediate fields');
-    }
+    productFields.style.display = 'none';
   }
-});
+}
 
-// Load variants for selected product
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable').checked;
+  const shelfLifeField = document.getElementById('shelfLifeField');
+
+  if (isPerishable) {
+    shelfLifeField.style.display = 'block';
+  } else {
+    shelfLifeField.style.display = 'none';
+  }
+}
+
+function updateExpirationDate() {
+  const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
+  if (shelfLifeDays && shelfLifeDays > 0) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + shelfLifeDays);
+
+    const formattedDate = expirationDate.toISOString().split('T')[0];
+    document.getElementById('expiration_date_display').value = formattedDate;
+    document.getElementById('expiration_date').value = formattedDate;
+  }
+}
+
+function adjustContainer(containerId, change) {
+  const adjustInput = document.getElementById('adjust_' + containerId);
+  if (!adjustInput) return;
+
+  const currentAdjust = parseInt(adjustInput.value) || 0;
+  const newAdjust = currentAdjust + change;
+  adjustInput.value = newAdjust;
+
+  // Update final count based on used + adjustment
+  const usedElement = document.getElementById('used_' + containerId);
+  const used = usedElement ? parseInt(usedElement.textContent) || 0 : 0;
+  const finalCount = Math.max(0, used + newAdjust);
+
+  const finalElement = document.getElementById('final_' + containerId);
+  const hiddenInput = document.getElementById('hidden_' + containerId);
+  if (finalElement) finalElement.textContent = finalCount;
+  if (hiddenInput) hiddenInput.value = finalCount;
+}
+
 function loadVariants() {
   const productId = document.getElementById('product_id').value;
   const variantSelect = document.getElementById('variant_label');
@@ -133,149 +199,31 @@ function loadVariants() {
     });
 }
 
-// Quick add product functions
-function showQuickAddProduct() {
-  document.getElementById('quickAddProductForm').style.display = 'block';
-}
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('finishBatchModal');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      const batchType = '{{ batch.batch_type }}';
+      console.log('Batch type:', batchType);
 
-function hideQuickAddProduct() {
-  document.getElementById('quickAddProductForm').style.display = 'none';
-  document.getElementById('quickProductName').value = '';
-}
+      const productFields = document.getElementById('productFields');
 
-function quickAddProduct() {
-  const name = document.getElementById('quickProductName').value;
-  const unit = document.getElementById('quickProductUnit').value;
+      if (batchType === 'product') {
+        if (productFields) {
+          productFields.style.display = 'block';
+          console.log('Showing product fields');
+          loadVariants();
+        }
+      } else {
+        if (productFields) {
+          productFields.style.display = 'none';
+          console.log('Hiding product fields');
+        }
+      }
 
-  if (!name || !unit) {
-    alert('Please enter product name and select unit');
-    return;
+      toggleShelfLife();
+    });
   }
-
-  fetch('/api/products/quick-add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
-    },
-    body: JSON.stringify({
-      product_name: name,
-      default_unit: unit
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      const productSelect = document.getElementById('product_id');
-      productSelect.innerHTML += `<option value="${data.product.id}">${data.product.name}</option>`;
-      productSelect.value = data.product.id;
-      loadVariants();
-      hideQuickAddProduct();
-    } else {
-      alert('Error: ' + data.error);
-    }
-  })
-  .catch(error => {
-    alert('Error adding product: ' + error);
-  });
-}
-
-// Quick add variant functions
-function showQuickAddVariant() {
-  const productId = document.getElementById('product_id').value;
-  if (!productId) {
-    alert('Please select a product first');
-    return;
-  }
-  document.getElementById('quickAddVariantForm').style.display = 'block';
-}
-
-function hideQuickAddVariant() {
-  document.getElementById('quickAddVariantForm').style.display = 'none';
-  document.getElementById('quickVariantName').value = '';
-}
-
-function quickAddVariant() {
-  const productId = document.getElementById('product_id').value;
-  const variantName = document.getElementById('quickVariantName').value;
-
-  if (!productId || !variantName) {
-    alert('Please select product and enter variant name');
-    return;
-  }
-
-  fetch('/api/products/quick-add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
-    },
-    body: JSON.stringify({
-      product_id: productId,
-      variant_name: variantName
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      loadVariants();
-      document.getElementById('variant_label').value = variantName;
-      hideQuickAddVariant();
-    } else {
-      alert('Error: ' + data.error);
-    }
-  })
-  .catch(error => {
-    alert('Error adding variant: ' + error);
-  });
-}
-
-// Also handle when modal is shown (in case DOM wasn't ready)
-document.getElementById('finishBatchModal').addEventListener('shown.bs.modal', function () {
-  const batchType = '{{ batch.batch_type }}';
-  const productFields = document.getElementById('productFields');
-  const intermediateFields = document.getElementById('intermediateFields');
-
-function toggleOutputFields() {
-  const outputType = document.getElementById('output_type').value;
-  const productFields = document.getElementById('productFields');
-
-  if (outputType === 'product') {
-    productFields.style.display = 'block';
-    loadVariants();
-  } else {
-    productFields.style.display = 'none';
-  }
-}
-
-function updateContainerCounts() {
-  const finalQuantity = parseFloat(document.getElementById('final_quantity').value) || 0;
-  {% if container_breakdown %}
-  {% for item in container_breakdown %}
-    const containerSize = {{ item.container.storage_amount }};
-    const estimatedCount = Math.round(finalQuantity / containerSize);
-    document.getElementById('estimated_{{ item.container.id }}').textContent = estimatedCount;
-
-    // Reset adjustment and update final
-    const adjustInput = document.getElementById('adjust_{{ item.container.id }}');
-    const adjustment = parseInt(adjustInput.value) || 0;
-    const finalCount = Math.max(0, estimatedCount + adjustment);
-    document.getElementById('final_{{ item.container.id }}').textContent = finalCount;
-    document.getElementById('hidden_{{ item.container.id }}').value = finalCount;
-  {% endfor %}
-  {% endif %}
-}
-
-function adjustContainer(containerId, change) {
-  const adjustInput = document.getElementById('adjust_' + containerId);
-  const currentAdjust = parseInt(adjustInput.value) || 0;
-  const newAdjust = currentAdjust + change;
-  adjustInput.value = newAdjust;
-
-  // Update final count
-  const estimated = parseInt(document.getElementById('estimated_' + containerId).textContent) || 0;
-  const finalCount = Math.max(0, estimated + newAdjust);
-  document.getElementById('final_' + containerId).textContent = finalCount;
-  document.getElementById('hidden_' + containerId).value = finalCount;
-}
+});
 </script>

@@ -148,26 +148,23 @@ def view_batch_in_progress(batch_identifier):
 
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
-    
+
     # Get products for finish batch modal
     from models import Product
     products = Product.query.filter_by(is_active=True).all()
-    
+
     # Calculate container breakdown for finish modal
     container_breakdown = []
     if batch.containers:
         for container_usage in batch.containers:
             container = container_usage.container
             if container.storage_amount and container.storage_unit:
-                # Calculate how many containers the final yield would fill
-                estimated_containers = batch.projected_yield / container.storage_amount if container.storage_amount > 0 else 0
                 container_breakdown.append({
                     'container': container,
-                    'estimated_count': round(estimated_containers),
                     'size_label': f"{container.storage_amount} {container.storage_unit}",
-                    'original_used': container_usage.quantity_used
+                    'original_used': container_usage.quantity_used or 0
                 })
-    
+
     return render_template('batch_in_progress.html',
                          batch=batch,
                          units=units,

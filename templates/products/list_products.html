@@ -28,12 +28,12 @@
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|groupby('variant')|list|length }}</h5>
+                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='variant')|select('defined')|list|unique|list|length }}</h5>
                   <small class="text-muted">Variants</small>
                 </div>
               </div>
               <div class="col-4">
-                <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|groupby('size_label')|list|length }}</h5>
+                <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'defined')|groupby('size_label')|list|length }}</h5>
                 <small class="text-muted">Sizes</small>
               </div>
             </div>
