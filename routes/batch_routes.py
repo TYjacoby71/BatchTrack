@@ -149,9 +149,8 @@ def view_batch_in_progress(batch_identifier):
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
     
-    # Get product units for finish batch modal
-    from models import ProductUnit, Product
-    product_units = ProductUnit.query.all()
+    # Get products for finish batch modal
+    from models import Product
     products = Product.query.filter_by(is_active=True).all()
     
     return render_template('batch_in_progress.html',
@@ -161,7 +160,6 @@ def view_batch_in_progress(batch_identifier):
                          product_quantity=product_quantity,
                          inventory_items=inventory_items,
                          all_ingredients=all_ingredients,
-                         product_units=product_units,
                          products=products)
 
 
