@@ -121,6 +121,7 @@ class Batch(db.Model):
         return self.status.title()
 
     recipe = db.relationship('Recipe', backref='batches')
+    product = db.relationship('Product', backref='batches')
     ingredients = db.relationship('BatchIngredient', backref='batch', cascade="all, delete-orphan")
     containers = db.relationship('BatchContainer', backref='batch', cascade="all, delete-orphan")
     extra_containers = db.relationship('ExtraBatchContainer', backref='batch', cascade="all, delete-orphan")

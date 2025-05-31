@@ -127,7 +127,7 @@
                 <td>{{ batch.final_quantity if batch.final_quantity else batch.projected_yield|round(2) if batch.projected_yield else '—' }}</td>
                 <td>
                     {% if batch.final_quantity %}
-                        {% if batch.batch_type == 'product' %}
+                        {% if batch.batch_type == 'product' and batch.product %}
                             {% for inv in batch.product.inventory %}
                                 {% if inv.batch_id == batch.id %}
                                     {{ inv.quantity|round(2) if inv.quantity >= 0 else 0 }}
