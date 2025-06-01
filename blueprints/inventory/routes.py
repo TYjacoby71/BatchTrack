@@ -263,6 +263,7 @@ def edit_inventory(id):
             inventory_item_id=item.id,
             change_type='cost_override',
             quantity_change=0,
+            unit=item.unit,  # Add the required unit field
             unit_cost=new_cost,
             note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,

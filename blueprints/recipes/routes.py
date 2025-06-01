@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from utils.unit_utils import get_global_unit_list
@@ -106,9 +106,9 @@ def plan_production(recipe_id):
         }
         for c in InventoryItem.query.filter_by(type='container').all()
     ] if recipe.requires_containers else []
-    
+
     inventory_units = get_global_unit_list()
-    
+
     return render_template('plan_production.html', 
                          recipe=recipe,
                          base_recipe=base_recipe,
@@ -231,7 +231,7 @@ def quick_add_unit():
     type = data.get('type', 'volume')
 
     try:
-        unit = InventoryUnit(name=name, type=type)
+        unit = Unit(name=name, type=type)
         db.session.add(unit)
         db.session.commit()
         return jsonify({
@@ -248,7 +248,7 @@ def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
         ingredients = [(ri.inventory_item_id, ri.amount, ri.unit) for ri in original.recipe_ingredients]
-        
+
         # Create new recipe without ingredients first
         new_recipe = Recipe(
             name=f"Copy of {original.name}",
@@ -259,7 +259,7 @@ def clone_recipe(recipe_id):
             requires_containers=original.requires_containers,
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
-            
+
         return render_template('recipe_form.html',
                             recipe=new_recipe,
                             all_ingredients=InventoryItem.query.all(),
@@ -320,11 +320,11 @@ def edit_recipe(recipe_id):
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
-    
+
     # Check if there are existing batches for this recipe
     from models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
-    
+
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
 
