@@ -77,9 +77,9 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
                 quantity_change=-deduct_amount,
+                unit=item.unit,  # Use the item's unit
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
-                
                 unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
@@ -114,6 +114,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
                     quantity_change=fill_amount,
+                    unit=item.unit,  # Use the item's unit
                     remaining_quantity=0,  # Not a FIFO entry
                     fifo_reference_id=entry.id,
                     note=f"Recount restored to FIFO entry #{entry.id}",
@@ -132,6 +133,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 inventory_item_id=inventory_item_id,
                 change_type='restock',  # Use restock type for new FIFO entries
                 quantity_change=remaining_to_add,
+                unit=item.unit,  # Use the item's unit
                 remaining_quantity=remaining_to_add,
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,

@@ -1,4 +1,4 @@
-2025-06-01 18:31:55,868 ERROR: Exception on /inventory/edit/2 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-01 18:32:00,777 ERROR: Exception on /inventory/edit/2 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -85,5 +85,5 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (2, '2025-06-01 18:31:55.867698', 'recount', 1.0, None, 0.0, None, 49, 0, None, None, None, 'Recount restored to FIFO entry #49', 1, 0, None)]
+[parameters: (2, '2025-06-01 18:32:00.776626', 'recount', 1.0, None, 0.0, None, 49, 0, None, None, None, 'Recount restored to FIFO entry #49', 1, 0, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
