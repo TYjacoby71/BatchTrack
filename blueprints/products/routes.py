@@ -19,11 +19,11 @@ def list_products():
 def new_product():
     if request.method == 'POST':
         name = request.form.get('name')
-        default_unit = request.form.get('default_unit')
+        product_base_unit = request.form.get('product_base_unit')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-        if not name or not default_unit:
-            flash('Name and default unit are required', 'error')
+        if not name or not product_base_unit:
+            flash('Name and product base unit are required', 'error')
             return redirect(url_for('products.new_product'))
 
         # Check if product already exists
@@ -34,7 +34,7 @@ def new_product():
 
         product = Product(
             name=name,
-            default_unit=default_unit,
+            product_base_unit=product_base_unit,
             low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0
         )
 
@@ -235,7 +235,7 @@ def quick_add_product():
 
     product_name = data.get('product_name')
     variant_name = data.get('variant_name')
-    default_unit = data.get('default_unit', 'oz')
+    product_base_unit = data.get('product_base_unit', 'oz')
 
     if not product_name:
         return jsonify({'error': 'Product name is required'}), 400
@@ -247,7 +247,7 @@ def quick_add_product():
         # Create new product
         product = Product(
             name=product_name,
-            default_unit=default_unit
+            product_base_unit=product_base_unit
         )
         db.session.add(product)
         db.session.flush()  # Get the ID
@@ -276,7 +276,7 @@ def quick_add_product():
         'product': {
             'id': product.id,
             'name': product.name,
-            'default_unit': product.default_unit
+            'product_base_unit': product.product_base_unit
         },
         'variant': {
             'id': variant.id if variant else None,
@@ -291,11 +291,11 @@ def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
     
     name = request.form.get('name')
-    default_unit = request.form.get('default_unit')
+    product_base_unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
     
-    if not name or not default_unit:
-        flash('Name and default unit are required', 'error')
+    if not name or not product_base_unit:
+        flash('Name and product base unit are required', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
     
     # Check if another product has this name
@@ -305,7 +305,7 @@ def edit_product(product_id):
         return redirect(url_for('products.view_product', product_id=product_id))
     
     product.name = name
-    product.default_unit = default_unit
+    product.product_base_unit = product_base_unit
     product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
     
     db.session.commit()

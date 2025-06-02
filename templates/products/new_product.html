@@ -8,8 +8,8 @@
     <input type="text" name="name" class="form-control" required>
   </div>
   <div class="mb-3">
-    <label for="default_unit" class="form-label">Default Unit</label>
-    <select name="default_unit" id="default_unit" class="form-select" required>
+    <label for="product_base_unit" class="form-label">Product Base Unit</label>
+    <select name="product_base_unit" id="product_base_unit" class="form-select" required>
       <option value="">Select unit...</option>
       {% for unit in units %}
         <option value="{{ unit.name }}">{{ unit.name }}</option>

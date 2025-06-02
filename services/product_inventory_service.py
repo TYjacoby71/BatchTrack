@@ -67,9 +67,25 @@ class ProductInventoryService:
                     note=event_note
                 ))
         else:
-            # Fallback to batch output unit if no containers
-            unit = product.default_unit
+            # Fallback to product base unit if no containers
+            batch_unit = batch.output_unit or batch.projected_yield_unit or 'oz'
             quantity_used = quantity or batch.final_quantity or batch.projected_yield
+            
+            # Convert to product base unit if different
+            if batch_unit != product.product_base_unit:
+                try:
+                    from services.unit_conversion import convert_unit
+                    converted_quantity = convert_unit(quantity_used, batch_unit, product.product_base_unit)
+                    unit = product.product_base_unit
+                    quantity_used = converted_quantity
+                    conversion_note = f" (converted from {quantity_used} {batch_unit})"
+                except Exception as e:
+                    # If conversion fails, use batch unit as-is
+                    unit = batch_unit
+                    conversion_note = f" (conversion from {batch_unit} to {product.product_base_unit} failed: {str(e)})"
+            else:
+                unit = product.product_base_unit
+                conversion_note = ""
             
             # Calculate cost per unit for this specific batch
             batch_cost_per_unit = None
@@ -85,7 +101,7 @@ class ProductInventoryService:
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
                 timestamp=datetime.utcnow(),
-                notes=f"From batch #{batch.id} (no containers - bulk output)"
+                notes=f"From batch #{batch.id} (no containers - bulk output){conversion_note}"
             )
             
             db.session.add(inventory)
@@ -95,7 +111,7 @@ class ProductInventoryService:
             event_note = f"Added {quantity_used} {unit} bulk"
             if variant_label:
                 event_note += f" ({variant_label})"
-            event_note += f" from batch #{batch.id}"
+            event_note += f" from batch #{batch.id}{conversion_note}"
             
             db.session.add(ProductEvent(
                 product_id=product_id,
