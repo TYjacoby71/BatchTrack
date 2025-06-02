@@ -117,6 +117,12 @@
                                 <td>{{ ing.unit }}</td>
                                 <td>${{ "%.2f"|format(cost) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
+                                <td>
+                                    <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=ing.ingredient.id) }}" 
+                                       class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
+                                        <i class="fas fa-list-alt"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
                         {% endfor %}
@@ -136,6 +142,12 @@
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
+                                <td>
+                                    <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=container.container.id) }}" 
+                                       class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
+                                        <i class="fas fa-list-alt"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% set ns.container_total = ns.container_total + line_cost %}
                         {% endfor %}
@@ -155,6 +167,12 @@
                                 <td>{{ extra.unit }}</td>
                                 <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
+                                <td>
+                                    <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=extra.ingredient.id) }}" 
+                                       class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
+                                        <i class="fas fa-list-alt"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% set ns.extras_total = ns.extras_total + line_cost %}
                         {% endfor %}
@@ -174,6 +192,12 @@
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
+                                <td>
+                                    <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=container.container.id) }}" 
+                                       class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
+                                        <i class="fas fa-list-alt"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
                         {% endfor %}
