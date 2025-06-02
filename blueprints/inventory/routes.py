@@ -55,43 +55,51 @@ def view_inventory(id):
 @login_required
 def add_inventory():
     name = request.form.get('name')
-    quantity = float(request.form.get('quantity', 0))
-    unit = request.form.get('unit')
-    item_type = request.form.get('type', 'ingredient')
-    cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-    is_perishable = request.form.get('is_perishable') == 'on'
-    expiration_date = None
+    
+    # Check for duplicate name first
+    existing_item = InventoryItem.query.filter_by(name=name).first()
+    if existing_item:
+        flash(f'An item with the name "{name}" already exists. Please choose a different name.', 'error')
+        return redirect(url_for('inventory.list_inventory'))
+    
+    try:
+        quantity = float(request.form.get('quantity', 0))
+        unit = request.form.get('unit')
+        item_type = request.form.get('type', 'ingredient')
+        cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+        is_perishable = request.form.get('is_perishable') == 'on'
+        expiration_date = None
 
-    shelf_life_days = None
-    if is_perishable:
-        shelf_life_days = int(request.form.get('shelf_life_days', 0))
-        if shelf_life_days > 0:
-            from datetime import datetime, timedelta
-            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+        shelf_life_days = None
+        if is_perishable:
+            shelf_life_days = int(request.form.get('shelf_life_days', 0))
+            if shelf_life_days > 0:
+                from datetime import datetime, timedelta
+                expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
-    # Handle container-specific fields
-    storage_amount = None
-    storage_unit = None
-    if item_type == 'container':
-        storage_amount = float(request.form.get('storage_amount', 0))
-        storage_unit = request.form.get('storage_unit')
+        # Handle container-specific fields
+        storage_amount = None
+        storage_unit = None
+        if item_type == 'container':
+            storage_amount = float(request.form.get('storage_amount', 0))
+            storage_unit = request.form.get('storage_unit')
 
-    item = InventoryItem(
-        name=name,
-        quantity=0,  # Start at 0, will be updated by history
-        unit=unit,
-        type=item_type,
-        cost_per_unit=cost_per_unit,
-        low_stock_threshold=low_stock_threshold,
-        is_perishable=is_perishable,
-        shelf_life_days=shelf_life_days,
-        expiration_date=expiration_date,
-        storage_amount=storage_amount,
-        storage_unit=storage_unit
-    )
-    db.session.add(item)
-    db.session.flush()  # Get the ID without committing
+        item = InventoryItem(
+            name=name,
+            quantity=0,  # Start at 0, will be updated by history
+            unit=unit,
+            type=item_type,
+            cost_per_unit=cost_per_unit,
+            low_stock_threshold=low_stock_threshold,
+            is_perishable=is_perishable,
+            shelf_life_days=shelf_life_days,
+            expiration_date=expiration_date,
+            storage_amount=storage_amount,
+            storage_unit=storage_unit
+        )
+        db.session.add(item)
+        db.session.flush()  # Get the ID without committing
 
     # Create initial history entry for FIFO tracking
     if quantity > 0:
@@ -112,8 +120,17 @@ def add_inventory():
         item.quantity = quantity  # Update the current quantity
 
     db.session.commit()
-    flash('Inventory item added successfully.')
-    return redirect(url_for('inventory.list_inventory'))
+        flash('Inventory item added successfully.')
+        return redirect(url_for('inventory.list_inventory'))
+        
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'Invalid input values: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding inventory item: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/adjust/<int:id>', methods=['POST'])
 @login_required
