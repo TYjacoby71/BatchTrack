@@ -83,8 +83,8 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="mb-0">Batches In Progress</h3>
             <div>
-                <button class="btn btn-outline-secondary btn-sm" onclick="showInProgressView('cardView')">Card View</button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="showInProgressView('tableView')">Table View</button>
+                <button class="btn btn-secondary btn-sm" id="inProgressCardBtn" onclick="showInProgressView('cardView')">Card View</button>
+                <button class="btn btn-outline-secondary btn-sm" id="inProgressTableBtn" onclick="showInProgressView('tableView')">Table View</button>
             </div>
         </div>
         <div class="card-body">
@@ -170,8 +170,8 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="mb-0">Completed Batches</h3>
             <div>
-                <button class="btn btn-outline-secondary btn-sm" onclick="showCompletedView('tableView')">Table View</button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="showCompletedView('cardView')">Card View</button>
+                <button class="btn btn-secondary btn-sm" id="completedTableBtn" onclick="showCompletedView('tableView')">Table View</button>
+                <button class="btn btn-outline-secondary btn-sm" id="completedCardBtn" onclick="showCompletedView('cardView')">Card View</button>
             </div>
         </div>
         <div class="card-body">
@@ -321,13 +321,39 @@
 
 <script>
 function showInProgressView(viewId) {
+    // Toggle views
     document.getElementById('inProgressTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('inProgressCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
+    
+    // Toggle button styles
+    const cardBtn = document.getElementById('inProgressCardBtn');
+    const tableBtn = document.getElementById('inProgressTableBtn');
+    
+    if (viewId === 'cardView') {
+        cardBtn.className = 'btn btn-secondary btn-sm';
+        tableBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+        tableBtn.className = 'btn btn-secondary btn-sm';
+    }
 }
 
 function showCompletedView(viewId) {
+    // Toggle views
     document.getElementById('completedTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('completedCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
+    
+    // Toggle button styles
+    const tableBtn = document.getElementById('completedTableBtn');
+    const cardBtn = document.getElementById('completedCardBtn');
+    
+    if (viewId === 'tableView') {
+        tableBtn.className = 'btn btn-secondary btn-sm';
+        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        tableBtn.className = 'btn btn-outline-secondary btn-sm';
+        cardBtn.className = 'btn btn-secondary btn-sm';
+    }
 }
 
 function collapseFilters() {
