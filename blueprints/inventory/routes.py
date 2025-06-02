@@ -103,21 +103,21 @@ def add_inventory():
 
         # Create initial history entry for FIFO tracking
         if quantity > 0:
-        history = InventoryHistory(
+            history = InventoryHistory(
             inventory_item_id=item.id,
-            change_type='restock',
-            quantity_change=quantity,
-            remaining_quantity=quantity,  # For FIFO tracking
-            unit_cost=cost_per_unit,
-            note='Initial stock creation',
-            created_by=current_user.id if current_user else None,
-            quantity_used=0,  # Required field for FIFO tracking
-            is_perishable=is_perishable,
-            shelf_life_days=shelf_life_days,
-            expiration_date=expiration_date
-        )
-        db.session.add(history)
-        item.quantity = quantity  # Update the current quantity
+                change_type='restock',
+                quantity_change=quantity,
+                remaining_quantity=quantity,  # For FIFO tracking
+                unit_cost=cost_per_unit,
+                note='Initial stock creation',
+                created_by=current_user.id if current_user else None,
+                quantity_used=0,  # Required field for FIFO tracking
+                is_perishable=is_perishable,
+                shelf_life_days=shelf_life_days,
+                expiration_date=expiration_date
+            )
+            db.session.add(history)
+            item.quantity = quantity  # Update the current quantity
 
         db.session.commit()
         flash('Inventory item added successfully.')
