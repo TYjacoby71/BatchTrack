@@ -78,21 +78,21 @@ def add_inventory():
                 from datetime import datetime, timedelta
                 expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
-        # Handle container-specific fields
+        # Handle container-specific fields and unit assignment
         storage_amount = None
         storage_unit = None
         if item_type == 'container':
             storage_amount = float(request.form.get('storage_amount', 0))
             storage_unit = request.form.get('storage_unit')
-
-        # Handle unit assignment based on item type
-        if item_type == 'container':
-            # Containers don't have a unit on the item itself, but history needs 'count'
-            unit = ''  
-            history_unit = 'count'
+            # For containers, ensure unit is set to empty string and history uses 'count'
+            unit = ''  # Containers don't have a unit on the item itself
+            history_unit = 'count'  # But history entries use 'count'
         else:
             # For ingredients, use the provided unit for both item and history
             history_unit = unit
+
+        # Debug: ensure history_unit is set correctly
+        print(f"DEBUG: item_type={item_type}, unit={unit}, history_unit={history_unit}")
 
         item = InventoryItem(
             name=name,
