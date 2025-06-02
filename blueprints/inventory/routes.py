@@ -85,6 +85,13 @@ def add_inventory():
             storage_amount = float(request.form.get('storage_amount', 0))
             storage_unit = request.form.get('storage_unit')
 
+        # For containers, ensure unit is set to empty string and history uses 'count'
+        if item_type == 'container':
+            unit = ''  # Containers don't have a unit on the item itself
+            history_unit = 'count'  # But history entries use 'count'
+        else:
+            history_unit = unit
+
         item = InventoryItem(
             name=name,
             quantity=0,  # Start at 0, will be updated by history
@@ -104,10 +111,11 @@ def add_inventory():
         # Create initial history entry for FIFO tracking
         if quantity > 0:
             history = InventoryHistory(
-            inventory_item_id=item.id,
+                inventory_item_id=item.id,
                 change_type='restock',
                 quantity_change=quantity,
                 remaining_quantity=quantity,  # For FIFO tracking
+                unit=history_unit,  # Use the correct unit for history
                 unit_cost=cost_per_unit,
                 note='Initial stock creation',
                 created_by=current_user.id if current_user else None,
