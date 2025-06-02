@@ -1,8 +1,7 @@
-2025-06-02 23:10:46,875 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-02 23:11:16,200 ERROR: Exception on /inventory/edit/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-02 23:12:01,282 ERROR: Exception on /inventory/edit/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2115, in _exec_insertmany_context
-    dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
 sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.unit
@@ -61,7 +60,7 @@ Traceback (most recent call last):
     util.preloaded.orm_persistence.save_obj(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
     _emit_insert_statements(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 1143, in _emit_insert_statements
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
     result = connection.execute(
              ^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
@@ -73,18 +72,24 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
     ret = self._execute_context(
           ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1841, in _execute_context
-    return self._exec_insertmany_context(dialect, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2123, in _exec_insertmany_context
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
     self._handle_dbapi_exception(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2115, in _exec_insertmany_context
-    dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
-[SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id]
-[parameters: (20, '2025-06-02 23:11:16.200320', 'recount', -10.0, None, 0.0, None, 90, 0, None, None, None, 'Manual quantity update via inventory edit (From FIFO #90)', 1, 10.0, None)]
+[SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (20, '2025-06-02 23:12:01.281777', 'recount', -10.0, None, 0.0, None, 90, 0, None, None, None, 'Manual quantity update via inventory edit (From FIFO #90)', 1, 10.0, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-06-02 23:13:11,910 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 23:24:36,035 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 23:26:30,882 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 23:30:27,882 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 23:30:27,955 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 23:30:38,716 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
