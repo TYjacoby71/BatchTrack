@@ -146,15 +146,11 @@ def add_inventory():
 @login_required
 def adjust_inventory(id):
     try:
-        # Pre-validation check
-        from services.inventory_adjustment import validate_inventory_fifo_sync
-        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
-        if not is_valid:
-            flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
-
-        # Get the item to check if it's a container
+        # Get the item first
         item = InventoryItem.query.get_or_404(id)
+        
+        # Check if this item has no history - this indicates it needs FIFO initialization
+        history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
         
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
@@ -166,7 +162,7 @@ def adjust_inventory(id):
             
         notes = request.form.get('notes', '')
 
-        # Handle cost input for restocks (weighted average will be calculated in service)
+        # Handle cost input for restocks
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
 
@@ -174,27 +170,70 @@ def adjust_inventory(id):
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
             if cost_entry_type == 'total':
-                # Divide total cost by quantity to get per-unit cost
                 restock_cost = cost_value / input_quantity if input_quantity > 0 else 0
             elif cost_entry_type == 'per_unit':
                 restock_cost = cost_value
 
-        # Use centralized adjustment service
-        from services.inventory_adjustment import process_inventory_adjustment
-        success = process_inventory_adjustment(
-            item_id=id,
-            quantity=input_quantity,
-            change_type=change_type,
-            unit=input_unit,
-            notes=notes,
-            created_by=current_user.id,
-            cost_override=restock_cost  # Only pass cost for restocks, not overrides
-        )
+        # Special case: FIFO initialization for items with no history
+        if history_count == 0 and change_type == 'restock' and input_quantity > 0:
+            # This is essentially the same as initial stock creation
+            # Set the proper unit for history based on item type
+            if item.type == 'container':
+                history_unit = 'count'
+            else:
+                history_unit = item.unit or input_unit
 
-        if success:
-            flash('Inventory adjusted successfully')
+            # Create initial FIFO entry directly (mimics add_inventory route)
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='restock',
+                quantity_change=input_quantity,
+                remaining_quantity=input_quantity,  # For FIFO tracking
+                unit=history_unit,
+                unit_cost=restock_cost or item.cost_per_unit,
+                note=notes or 'Initial stock creation via adjustment modal',
+                created_by=current_user.id,
+                quantity_used=0,  # Required field for FIFO tracking
+                is_perishable=item.is_perishable,
+                shelf_life_days=item.shelf_life_days,
+                expiration_date=item.expiration_date
+            )
+            db.session.add(history)
+            
+            # Update inventory quantity
+            item.quantity = input_quantity
+            
+            # Update cost if provided
+            if restock_cost:
+                item.cost_per_unit = restock_cost
+                
+            db.session.commit()
+            flash('Initial inventory created successfully')
+            
         else:
-            flash('Error adjusting inventory', 'error')
+            # Pre-validation check for existing items
+            from services.inventory_adjustment import validate_inventory_fifo_sync
+            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+            if not is_valid:
+                flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
+                return redirect(url_for('inventory.view_inventory', id=id))
+
+            # Use centralized adjustment service for regular adjustments
+            from services.inventory_adjustment import process_inventory_adjustment
+            success = process_inventory_adjustment(
+                item_id=id,
+                quantity=input_quantity,
+                change_type=change_type,
+                unit=input_unit,
+                notes=notes,
+                created_by=current_user.id,
+                cost_override=restock_cost
+            )
+
+            if success:
+                flash('Inventory adjusted successfully')
+            else:
+                flash('Error adjusting inventory', 'error')
 
     except ValueError as e:
         flash(f'Error: {str(e)}', 'error')
