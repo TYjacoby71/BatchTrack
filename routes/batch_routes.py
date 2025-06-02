@@ -127,7 +127,10 @@ def view_batch(batch_identifier):
         
         return render_template('view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
-        flash('Error viewing batch. Please try again.')
+        flash(f'Error viewing batch: {str(e)}', 'error')
+        print(f"Error in view_batch: {e}")  # For debugging
+        import traceback
+        traceback.print_exc()  # Print full traceback for debugging
         return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])

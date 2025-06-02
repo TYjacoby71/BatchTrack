@@ -16,7 +16,7 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
             {% endif %}
-            
+
             {% if next_batch %}
             <a href="{{ url_for('batches.view_batch', batch_identifier=next_batch.id) }}" class="btn btn-outline-secondary btn-sm" title="Next {{ batch.status }} batch">
                 <i class="fas fa-chevron-right"></i>
@@ -144,10 +144,14 @@
                             <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                             <td>
+                                {% if container.container and container.container.id %}
                                 <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=container.container.id) }}" 
                                    class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
                                     <i class="fas fa-list-alt"></i>
                                 </a>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% set ns.container_total = ns.container_total + line_cost %}
@@ -196,10 +200,14 @@
                             <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                             <td>${{ "%.2f"|format(line_cost) }}</td>
                             <td>
+                                {% if container.container and container.container.id %}
                                 <a href="{{ url_for('fifo.view_batch_ingredient_fifo', batch_id=batch.id, ingredient_id=container.container.id) }}" 
                                    class="btn btn-sm btn-outline-info" title="View FIFO breakdown">
                                     <i class="fas fa-list-alt"></i>
                                 </a>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
