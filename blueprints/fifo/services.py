@@ -73,11 +73,13 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
         # Create separate history entries for each FIFO deduction
         for entry_id, deduct_amount, _ in deductions:
+            # Ensure unit is never None - use 'count' for containers with empty/None units
+            history_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
                 quantity_change=-deduct_amount,
-                unit=item.unit,  # Use the item's unit
+                unit=history_unit,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
                 unit_cost=None,  # Recounts don't track cost
@@ -110,11 +112,13 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
             if fill_amount > 0:
                 # Log the recount but don't create new FIFO entry
+                # Ensure unit is never None - use 'count' for containers with empty/None units
+                history_unit = item.unit if item.unit else 'count'
                 history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
                     quantity_change=fill_amount,
-                    unit=item.unit,  # Use the item's unit
+                    unit=history_unit,
                     remaining_quantity=0,  # Not a FIFO entry
                     fifo_reference_id=entry.id,
                     note=f"Recount restored to FIFO entry #{entry.id}",
@@ -129,11 +133,13 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
         # Only create new FIFO entry if we couldn't fill existing ones
         if remaining_to_add > 0:
+            # Ensure unit is never None - use 'count' for containers with empty/None units
+            history_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='restock',  # Use restock type for new FIFO entries
                 quantity_change=remaining_to_add,
-                unit=item.unit,  # Use the item's unit
+                unit=history_unit,
                 remaining_quantity=remaining_to_add,
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
