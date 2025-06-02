@@ -50,11 +50,13 @@ def start_batch():
             if container_item:
                 # Use the inventory adjustment route
                 try:
+                    # Containers always use 'count' as unit since they don't have a proper unit
+                    container_unit = 'count' if not container_item.unit else container_item.unit
                     result = process_inventory_adjustment(
                         item_id=container_id,
                         quantity=-quantity,  # Negative for deduction
                         change_type='batch',
-                        unit=container_item.unit,
+                        unit=container_unit,
                         notes=f"Used in batch {label_code}",
                         batch_id=new_batch.id,
                         created_by=current_user.id

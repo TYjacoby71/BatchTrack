@@ -1,4 +1,4 @@
-2025-06-01 18:32:00,777 ERROR: Exception on /inventory/edit/2 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-01 18:55:02,179 ERROR: Exception on /inventory/edit/19 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -24,10 +24,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/inventory/routes.py", line 252, in edit_inventory
-    success = recount_fifo(item.id, new_quantity, notes, current_user.id)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/fifo/services.py", line 143, in recount_fifo
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 290, in edit_inventory
     db.session.commit()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
     return self._proxied.commit()
@@ -85,5 +82,12 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (2, '2025-06-01 18:32:00.776626', 'recount', 1.0, None, 0.0, None, 49, 0, None, None, None, 'Recount restored to FIFO entry #49', 1, 0, None)]
+[parameters: (19, '2025-06-01 18:55:02.179215', 'cost_override', 0.0, None, None, 0.8, None, 0, None, None, None, 'Cost manually overridden from 0.0 to 0.8', 1, 0, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-06-01 18:56:39,777 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 17:11:38,631 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 19:05:38,584 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 19:11:46,283 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 19:14:04,294 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 19:38:20,152 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 19:54:12,291 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
