@@ -99,11 +99,13 @@ def process_inventory_adjustment(
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
 
             # Create deduction history for each FIFO entry used
+            # Ensure unit is never None for containers
+            history_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=-deduction_amount,
-                unit=item.unit,  # Record original unit used
+                unit=history_unit,  # Record original unit used, default to 'count' for containers
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
                 unit_cost=cost_per_unit,
@@ -142,11 +144,13 @@ def process_inventory_adjustment(
                     remaining_to_credit -= credit_amount
 
                     # Create credit history entry
+                    # Ensure unit is never None for containers
+                    credit_unit = item.unit if item.unit else 'count'
                     credit_history = InventoryHistory(
                         inventory_item_id=item.id,
                         change_type=change_type,
                         quantity_change=credit_amount,
-                        unit=item.unit,  # Record original unit used
+                        unit=credit_unit,  # Record original unit used, default to 'count' for containers
                         remaining_quantity=0,  # Credits don't create new FIFO entries
                         unit_cost=cost_per_unit,
                         fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
@@ -160,11 +164,13 @@ def process_inventory_adjustment(
             # If there's still quantity to credit (shouldn't happen in normal cases)
             if remaining_to_credit > 0:
                 # Create new FIFO entry for any excess
+                # Ensure unit is never None for containers
+                excess_unit = item.unit if item.unit else 'count'
                 excess_history = InventoryHistory(
                     inventory_item_id=item.id,
                     change_type='restock',  # Treat excess as new stock
                     quantity_change=remaining_to_credit,
-                    unit=item.unit,  # Use current inventory unit for new stock
+                    unit=excess_unit,  # Use current inventory unit for new stock, default to 'count' for containers
                     remaining_quantity=remaining_to_credit,
                     unit_cost=cost_per_unit,
                     note=f"{notes} (Excess credit - no original FIFO found)",
@@ -177,11 +183,13 @@ def process_inventory_adjustment(
         else:
             # Regular additions (restock or recount or adjustment up)
             # Create new stock entry
+            # Ensure unit is never None for containers
+            addition_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
                 quantity_change=qty_change,
-                unit=item.unit,  # Record original unit used
+                unit=addition_unit,  # Record original unit used, default to 'count' for containers
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,
