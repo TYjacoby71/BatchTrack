@@ -16,6 +16,7 @@ def quick_add_container():
         container = InventoryItem(
             name=data['name'],
             type='container',
+            unit='',  # Containers have empty unit field
             storage_amount=float(data['storage_amount']),
             storage_unit=data['storage_unit'],
             quantity=0
