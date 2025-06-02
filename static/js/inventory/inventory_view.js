@@ -1,17 +1,16 @@
-
 document.addEventListener('DOMContentLoaded', function() {
     // Check if initial inventory modal exists and show it
     const initialModal = document.getElementById('initialInventoryModal');
     if (initialModal) {
         const modal = new bootstrap.Modal(initialModal);
         modal.show();
-        
+
         // Prevent closing modal by clicking outside or escape key
         initialModal.addEventListener('hide.bs.modal', function (e) {
             e.preventDefault();
             return false;
         });
-        
+
         // Focus on quantity input when modal is shown
         initialModal.addEventListener('shown.bs.modal', function () {
             document.getElementById('initial_quantity').focus();
@@ -104,4 +103,40 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, 100);
+
+    // Check URL for fifo filter parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('fifo') === 'true') {
+        document.getElementById('fifoFilter').checked = true;
+        toggleFifoFilter();
+    }
 });
+
+function toggleFifoFilter() {
+    const fifoFilter = document.getElementById('fifoFilter');
+    const historyRows = document.querySelectorAll('tbody tr[data-remaining-quantity]');
+
+    historyRows.forEach(row => {
+        const remainingQty = parseFloat(row.dataset.remainingQuantity || '0');
+        if (fifoFilter.checked) {
+            // Show only rows with remaining quantity > 0
+            if (remainingQty > 0) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        } else {
+            // Show all rows
+            row.style.display = '';
+        }
+    });
+
+    // Update URL parameter
+    const url = new URL(window.location);
+    if (fifoFilter.checked) {
+        url.searchParams.set('fifo', 'true');
+    } else {
+        url.searchParams.delete('fifo');
+    }
+    window.history.replaceState({}, '', url);
+}
