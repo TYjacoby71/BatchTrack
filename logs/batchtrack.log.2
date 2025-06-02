@@ -1,4 +1,4 @@
-2025-06-02 23:02:59,997 ERROR: Exception on /start-batch/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-02 23:07:44,641 ERROR: Exception on /start-batch/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -9,9 +9,9 @@ sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.unit
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 53, in start_batch
-    result = process_inventory_adjustment(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 55, in start_batch
+    container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/services/inventory_adjustment.py", line 197, in process_inventory_adjustment
     db.session.commit()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
@@ -70,7 +70,7 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-06-02 23:02:59.996573', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 11, 'Used in batch BTH-2025-004 (From FIFO #90)', 1, 1, None)]
+[parameters: (20, '2025-06-02 23:07:44.640677', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 13, 'Used in batch BTH-2025-006 (From FIFO #90)', 1, 1, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
 
 During handling of the above exception, another exception occurred:
@@ -91,9 +91,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 75, in start_batch
-    container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
-                                                             ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 77, in start_batch
+    except Exception as e:
+                           
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 566, in __get__
     return self.impl.get(state, dict_)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -129,5 +129,5 @@ Traceback (most recent call last):
     raise sa_exc.PendingRollbackError(
 sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-06-02 23:02:59.996573', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 11, 'Used in batch BTH-2025-004 (From FIFO #90)', 1, 1, None)]
+[parameters: (20, '2025-06-02 23:07:44.640677', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 13, 'Used in batch BTH-2025-006 (From FIFO #90)', 1, 1, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
