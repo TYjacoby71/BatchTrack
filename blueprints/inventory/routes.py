@@ -55,65 +55,92 @@ def view_inventory(id):
 @login_required
 def add_inventory():
     name = request.form.get('name')
-    quantity = float(request.form.get('quantity', 0))
-    unit = request.form.get('unit')
-    item_type = request.form.get('type', 'ingredient')
-    cost_per_unit = float(request.form.get('cost_per_unit', 0))
-    low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-    is_perishable = request.form.get('is_perishable') == 'on'
-    expiration_date = None
 
-    shelf_life_days = None
-    if is_perishable:
-        shelf_life_days = int(request.form.get('shelf_life_days', 0))
-        if shelf_life_days > 0:
-            from datetime import datetime, timedelta
-            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+    # Check for duplicate name first
+    existing_item = InventoryItem.query.filter_by(name=name).first()
+    if existing_item:
+        flash(f'An item with the name "{name}" already exists. Please choose a different name.', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
-    # Handle container-specific fields
-    storage_amount = None
-    storage_unit = None
-    if item_type == 'container':
-        storage_amount = float(request.form.get('storage_amount', 0))
-        storage_unit = request.form.get('storage_unit')
+    try:
+        quantity = float(request.form.get('quantity', 0))
+        unit = request.form.get('unit')
+        item_type = request.form.get('type', 'ingredient')
+        cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+        is_perishable = request.form.get('is_perishable') == 'on'
+        expiration_date = None
 
-    item = InventoryItem(
-        name=name,
-        quantity=0,  # Start at 0, will be updated by history
-        unit=unit,
-        type=item_type,
-        cost_per_unit=cost_per_unit,
-        low_stock_threshold=low_stock_threshold,
-        is_perishable=is_perishable,
-        shelf_life_days=shelf_life_days,
-        expiration_date=expiration_date,
-        storage_amount=storage_amount,
-        storage_unit=storage_unit
-    )
-    db.session.add(item)
-    db.session.flush()  # Get the ID without committing
+        shelf_life_days = None
+        if is_perishable:
+            shelf_life_days = int(request.form.get('shelf_life_days', 0))
+            if shelf_life_days > 0:
+                from datetime import datetime, timedelta
+                expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
-    # Create initial history entry for FIFO tracking
-    if quantity > 0:
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type='restock',
-            quantity_change=quantity,
-            remaining_quantity=quantity,  # For FIFO tracking
-            unit_cost=cost_per_unit,
-            note='Initial stock creation',
-            created_by=current_user.id if current_user else None,
-            quantity_used=0,  # Required field for FIFO tracking
+        # Handle container-specific fields and unit assignment
+        storage_amount = None
+        storage_unit = None
+        if item_type == 'container':
+            storage_amount = float(request.form.get('storage_amount', 0))
+            storage_unit = request.form.get('storage_unit')
+            # For containers, ensure unit is set to empty string and history uses 'count'
+            unit = ''  # Containers don't have a unit on the item itself
+            history_unit = 'count'  # But history entries use 'count'
+        else:
+            # For ingredients, use the provided unit for both item and history
+            history_unit = unit
+
+        # Debug: ensure history_unit is set correctly
+        print(f"DEBUG: item_type={item_type}, unit={unit}, history_unit={history_unit}")
+
+        item = InventoryItem(
+            name=name,
+            quantity=0,  # Start at 0, will be updated by history
+            unit=unit,
+            type=item_type,
+            cost_per_unit=cost_per_unit,
+            low_stock_threshold=low_stock_threshold,
             is_perishable=is_perishable,
             shelf_life_days=shelf_life_days,
-            expiration_date=expiration_date
+            expiration_date=expiration_date,
+            storage_amount=storage_amount,
+            storage_unit=storage_unit
         )
-        db.session.add(history)
-        item.quantity = quantity  # Update the current quantity
+        db.session.add(item)
+        db.session.flush()  # Get the ID without committing
 
-    db.session.commit()
-    flash('Inventory item added successfully.')
-    return redirect(url_for('inventory.list_inventory'))
+        # Create initial history entry for FIFO tracking
+        if quantity > 0:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='restock',
+                quantity_change=quantity,
+                remaining_quantity=quantity,  # For FIFO tracking
+                unit=history_unit,  # Use the correct unit for history
+                unit_cost=cost_per_unit,
+                note='Initial stock creation',
+                created_by=current_user.id if current_user else None,
+                quantity_used=0,  # Required field for FIFO tracking
+                is_perishable=is_perishable,
+                shelf_life_days=shelf_life_days,
+                expiration_date=expiration_date
+            )
+            db.session.add(history)
+            item.quantity = quantity  # Update the current quantity
+
+        db.session.commit()
+        flash('Inventory item added successfully.')
+        return redirect(url_for('inventory.list_inventory'))
+
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'Invalid input values: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding inventory item: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/adjust/<int:id>', methods=['POST'])
 @login_required
@@ -125,7 +152,7 @@ def adjust_inventory(id):
         if not is_valid:
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
-        
+
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
@@ -134,7 +161,7 @@ def adjust_inventory(id):
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-        
+
         restock_cost = None
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
@@ -185,7 +212,7 @@ def edit_inventory(id):
                 # Check if user confirmed the unit change
                 confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
                 convert_inventory = request.form.get('convert_inventory') == 'true'
-                
+
                 if not confirm_unit_change:
                     # User hasn't confirmed - show them the options
                     flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
@@ -204,7 +231,7 @@ def edit_inventory(id):
                             from services.unit_conversion import convert_unit
                             converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
                             item.quantity = converted_quantity
-                            
+
                             # Log this conversion
                             history = InventoryHistory(
                                 inventory_item_id=item.id,
@@ -221,7 +248,7 @@ def edit_inventory(id):
                             flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
                     else:
                         flash(f'Unit changed from {item.unit} to {new_unit}. Inventory quantity unchanged.', 'info')
-                    
+
                     # Clear the pending change
                     session.pop('pending_unit_change', None)
 
