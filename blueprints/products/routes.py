@@ -48,7 +48,7 @@ def new_product():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    return render_template('products/new_product.html', product_units=units)
+    return render_template('products/new_product.html', units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
