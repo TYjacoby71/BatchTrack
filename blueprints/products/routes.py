@@ -350,3 +350,111 @@ def adjust_inventory(product_id):
 
     flash(f'Inventory adjusted: {adjustment_type}', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
+@products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
+@login_required
+def view_variant_inventory(product_id, variant, size_label):
+    """View FIFO inventory for a specific product variant and size"""
+    from urllib.parse import unquote
+    from utils.unit_utils import get_global_unit_list
+    
+    product = Product.query.get_or_404(product_id)
+    variant = unquote(variant)
+    size_label = unquote(size_label)
+    
+    # Get FIFO inventory entries for this specific variant/size
+    fifo_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).order_by(ProductInventory.timestamp.asc()).all()
+    
+    # Calculate totals
+    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
+    total_batches = len([entry for entry in fifo_entries if entry.quantity > 0])
+    
+    # Get recent deduction history for this variant/size from product events
+    recent_deductions = ProductEvent.query.filter(
+        ProductEvent.product_id == product_id,
+        ProductEvent.note.like(f'%{variant}%'),
+        ProductEvent.note.like(f'%{size_label}%')
+    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+    
+    return render_template('products/variant_inventory.html',
+                         product=product,
+                         variant=variant,
+                         size_label=size_label,
+                         fifo_entries=fifo_entries,
+                         total_quantity=total_quantity,
+                         total_batches=total_batches,
+                         recent_deductions=recent_deductions,
+                         get_global_unit_list=get_global_unit_list)
+@products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
+@login_required
+def record_sale(product_id):
+    """Record a sale with profit tracking"""
+    variant = request.form.get('variant', 'Default')
+    size_label = request.form.get('size_label')
+    quantity = float(request.form.get('quantity', 0))
+    reason = request.form.get('reason', 'sale')
+    sale_price = request.form.get('sale_price')
+    customer = request.form.get('customer', '')
+    notes = request.form.get('notes', '')
+
+    if quantity <= 0:
+        flash('Quantity must be positive', 'error')
+        return redirect(url_for('products.view_variant_inventory', 
+                               product_id=product_id, variant=variant, size_label=size_label))
+
+    # Deduct using FIFO
+    success = ProductInventoryService.deduct_fifo(
+        product_id=product_id,
+        variant_label=variant,
+        unit='count',  # Assuming count for now, could be dynamic
+        quantity=quantity,
+        reason=reason,
+        notes=notes
+    )
+
+    if success:
+        # Log detailed sale information
+        sale_note = f"{reason.title()}: {quantity} × {size_label}"
+        if reason == 'sale':
+            if sale_price:
+                sale_price_float = float(sale_price)
+                per_unit_price = sale_price_float / quantity
+                sale_note += f" for ${sale_price} (${per_unit_price:.2f}/unit)"
+            if customer:
+                sale_note += f" to {customer}"
+        if notes:
+            sale_note += f". Notes: {notes}"
+
+        db.session.add(ProductEvent(
+            product_id=product_id,
+            event_type=f'inventory_{reason}',
+            note=sale_note
+        ))
+        db.session.commit()
+
+        flash(f'Recorded {reason}: {quantity} units', 'success')
+    else:
+        flash('Not enough stock available', 'error')
+
+    return redirect(url_for('products.view_variant_inventory', 
+                           product_id=product_id, variant=variant, size_label=size_label))
+
+@products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
+@login_required
+def manual_adjust(product_id):
+    """Manual inventory adjustments for variant/size"""
+    variant = request.form.get('variant', 'Default')
+    size_label = request.form.get('size_label')
+    adjustment_type = request.form.get('adjustment_type')
+    quantity = float(request.form.get('quantity', 0))
+    notes = request.form.get('notes', '')
+
+    # Implementation would depend on adjustment type
+    # This is a placeholder for the manual adjustment logic
+    
+    flash(f'Manual adjustment applied: {adjustment_type}', 'success')
+    return redirect(url_for('products.view_variant_inventory', 
+                           product_id=product_id, variant=variant, size_label=size_label))

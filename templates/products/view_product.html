@@ -54,16 +54,25 @@
             <div class="mb-4">
               <h5>{{ group.variant }} ({{ group.unit }})</h5>
               <div class="row mb-2">
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <strong>Avg Cost:</strong> ${{ "%.3f"|format(group.avg_cost) }}
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                  {% if group.batches and group.batches|length > 0 %}
+                  <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=group.variant, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-sm">
+                    View FIFO Details
+                  </a>
+                  {% else %}
+                  <span class="btn btn-info btn-sm disabled">No Batches Available</span>
+                  {% endif %}
+                </div>
+                <div class="col-md-3">
                   <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal" 
                           data-variant="{{ group.variant }}" data-unit="{{ group.unit }}">
-                    Deduct Stock
+                    Quick Deduct
                   </button>
                 </div>
               </div>
