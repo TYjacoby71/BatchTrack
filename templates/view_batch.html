@@ -4,7 +4,30 @@
 {% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-    <h2>Batch Details</h2>
+    <div class="d-flex align-items-center">
+        <h2>Batch Details</h2>
+        <div class="ms-3">
+            {% if prev_batch %}
+            <a href="{{ url_for('batches.view_batch', batch_identifier=prev_batch.id) }}" class="btn btn-outline-secondary btn-sm me-1" title="Previous {{ batch.status }} batch">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm me-1" disabled title="No previous {{ batch.status }} batch">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            {% endif %}
+            
+            {% if next_batch %}
+            <a href="{{ url_for('batches.view_batch', batch_identifier=next_batch.id) }}" class="btn btn-outline-secondary btn-sm" title="Next {{ batch.status }} batch">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" disabled title="No next {{ batch.status }} batch">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
     <button onclick="window.print()" class="btn btn-secondary">
         <i class="fas fa-print"></i> Print Batch Details
     </button>

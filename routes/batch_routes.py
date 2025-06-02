@@ -85,9 +85,20 @@ def view_batch(batch_identifier):
 
         if batch.status == 'in_progress':
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-        return render_template('view_batch.html', batch=batch)
+        
+        # Find previous and next batches of the same status
+        prev_batch = Batch.query.filter(
+            Batch.status == batch.status,
+            Batch.id < batch.id
+        ).order_by(Batch.id.desc()).first()
+        
+        next_batch = Batch.query.filter(
+            Batch.status == batch.status,
+            Batch.id > batch.id
+        ).order_by(Batch.id.asc()).first()
+        
+        return render_template('view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
-        app.logger.error(f'Error viewing batch {batch_identifier}: {str(e)}')
         flash('Error viewing batch. Please try again.')
         return redirect(url_for('batches.list_batches'))
 
@@ -114,9 +125,16 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
 
-    if batch.status != 'in_progress':
-        flash('This batch is already completed.')
-        return redirect(url_for('batches.list_batches'))
+    # Find previous and next in-progress batches
+    prev_batch = Batch.query.filter(
+        Batch.status == 'in_progress',
+        Batch.id < batch.id
+    ).order_by(Batch.id.desc()).first()
+    
+    next_batch = Batch.query.filter(
+        Batch.status == 'in_progress',
+        Batch.id > batch.id
+    ).order_by(Batch.id.asc()).first()
 
     # Get existing batch data
     ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
@@ -173,7 +191,9 @@ def view_batch_in_progress(batch_identifier):
                          inventory_items=inventory_items,
                          all_ingredients=all_ingredients,
                          products=products,
-                         container_breakdown=container_breakdown)
+                         container_breakdown=container_breakdown,
+                         prev_batch=prev_batch,
+                         next_batch=next_batch)
 
 
 
