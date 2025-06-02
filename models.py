@@ -201,7 +201,7 @@ class ExtraBatchIngredient(db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
-    default_unit = db.Column(db.String(32), nullable=False)
+    product_base_unit = db.Column(db.String(32), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     low_stock_threshold = db.Column(db.Float, default=0)
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
