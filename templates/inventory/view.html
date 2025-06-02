@@ -53,6 +53,7 @@
         </div>
         
         <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="change_type" value="restock">
           
           <div class="row">
@@ -68,6 +69,7 @@
                        required>
               </div>
             </div>
+            {% if item.type != 'container' %}
             <div class="col-md-6">
               <div class="form-group mb-3">
                 <label for="initial_unit" class="form-label">Unit</label>
@@ -81,6 +83,9 @@
                 </select>
               </div>
             </div>
+            {% else %}
+            <input type="hidden" name="input_unit" value="count">
+            {% endif %}
           </div>
           
           {% if item.type != 'container' %}
