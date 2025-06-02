@@ -101,8 +101,8 @@ def add_inventory():
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
-    # Create initial history entry for FIFO tracking
-    if quantity > 0:
+        # Create initial history entry for FIFO tracking
+        if quantity > 0:
         history = InventoryHistory(
             inventory_item_id=item.id,
             change_type='restock',
@@ -119,7 +119,7 @@ def add_inventory():
         db.session.add(history)
         item.quantity = quantity  # Update the current quantity
 
-    db.session.commit()
+        db.session.commit()
         flash('Inventory item added successfully.')
         return redirect(url_for('inventory.list_inventory'))
         
