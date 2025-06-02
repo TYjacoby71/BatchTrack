@@ -61,12 +61,12 @@
                   <strong>Avg Cost:</strong> ${{ "%.3f"|format(group.avg_cost) }}
                 </div>
                 <div class="col-md-3">
-                  {% if group.batches and group.batches|length > 0 %}
+                  {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
                   <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=group.variant, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-sm">
                     View FIFO Details
                   </a>
                   {% else %}
-                  <span class="btn btn-info btn-sm disabled">No Batches Available</span>
+                  <span class="btn btn-info btn-sm disabled">No Size Label Available</span>
                   {% endif %}
                 </div>
                 <div class="col-md-3">
