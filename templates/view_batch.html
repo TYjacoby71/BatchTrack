@@ -40,6 +40,13 @@
             <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
             <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
             <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% if batch.completed_at %}
+            <p><strong>Completed:</strong> {{ batch.completed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% elif batch.failed_at %}
+            <p><strong>Failed:</strong> {{ batch.failed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% elif batch.cancelled_at %}
+            <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% endif %}
             <p><strong>Status:</strong> 
                 <span class="badge {% if batch.status == 'completed' %}bg-success
                             {% elif batch.status == 'failed' %}bg-danger
