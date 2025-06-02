@@ -55,13 +55,13 @@ def view_inventory(id):
 @login_required
 def add_inventory():
     name = request.form.get('name')
-    
+
     # Check for duplicate name first
     existing_item = InventoryItem.query.filter_by(name=name).first()
     if existing_item:
         flash(f'An item with the name "{name}" already exists. Please choose a different name.', 'error')
         return redirect(url_for('inventory.list_inventory'))
-    
+
     try:
         quantity = float(request.form.get('quantity', 0))
         unit = request.form.get('unit')
@@ -85,11 +85,13 @@ def add_inventory():
             storage_amount = float(request.form.get('storage_amount', 0))
             storage_unit = request.form.get('storage_unit')
 
-        # For containers, ensure unit is set to empty string and history uses 'count'
+        # Handle unit assignment based on item type
         if item_type == 'container':
-            unit = ''  # Containers don't have a unit on the item itself
-            history_unit = 'count'  # But history entries use 'count'
+            # Containers don't have a unit on the item itself, but history needs 'count'
+            unit = ''  
+            history_unit = 'count'
         else:
+            # For ingredients, use the provided unit for both item and history
             history_unit = unit
 
         item = InventoryItem(
@@ -130,7 +132,7 @@ def add_inventory():
         db.session.commit()
         flash('Inventory item added successfully.')
         return redirect(url_for('inventory.list_inventory'))
-        
+
     except ValueError as e:
         db.session.rollback()
         flash(f'Invalid input values: {str(e)}', 'error')
@@ -150,7 +152,7 @@ def adjust_inventory(id):
         if not is_valid:
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
-        
+
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
@@ -159,7 +161,7 @@ def adjust_inventory(id):
         # Handle cost input for restocks (weighted average will be calculated in service)
         input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-        
+
         restock_cost = None
         if input_cost and change_type == 'restock':
             cost_value = float(input_cost)
@@ -210,7 +212,7 @@ def edit_inventory(id):
                 # Check if user confirmed the unit change
                 confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
                 convert_inventory = request.form.get('convert_inventory') == 'true'
-                
+
                 if not confirm_unit_change:
                     # User hasn't confirmed - show them the options
                     flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
@@ -229,7 +231,7 @@ def edit_inventory(id):
                             from services.unit_conversion import convert_unit
                             converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
                             item.quantity = converted_quantity
-                            
+
                             # Log this conversion
                             history = InventoryHistory(
                                 inventory_item_id=item.id,
@@ -246,7 +248,7 @@ def edit_inventory(id):
                             flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
                     else:
                         flash(f'Unit changed from {item.unit} to {new_unit}. Inventory quantity unchanged.', 'info')
-                    
+
                     # Clear the pending change
                     session.pop('pending_unit_change', None)
 
