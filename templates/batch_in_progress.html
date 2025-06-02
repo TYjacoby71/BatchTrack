@@ -54,7 +54,19 @@
 <form id="batchForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
 
-    <!-- Section 2: Extra Items Management -->
+    <!-- Section 2: Timers -->
+    <div class="mb-4">
+        <h3>Timers</h3>
+        <div class="card">
+            <div class="card-body">
+                {% with timers=timers, now=now %}
+                    {% include 'components/batch/timer_component.html' %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Extra Items Management -->
     <div class="mb-4">
         <h3>Extra Items</h3>
         <div class="card">
@@ -71,18 +83,6 @@
                         <i class="fas fa-save"></i> Save All Extras
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 3: Timers -->
-    <div class="mb-4">
-        <h3>Timers</h3>
-        <div class="card">
-            <div class="card-body">
-                {% with timers=timers, now=now %}
-                    {% include 'components/batch/timer_component.html' %}
-                {% endwith %}
             </div>
         </div>
     </div>
