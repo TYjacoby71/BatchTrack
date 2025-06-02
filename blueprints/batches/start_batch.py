@@ -51,7 +51,8 @@ def start_batch():
                 # Use the inventory adjustment route
                 try:
                     # Containers always use 'count' as unit since they don't have a proper unit
-                    container_unit = 'count' if not container_item.unit else container_item.unit
+                    # Handle both empty string and None cases
+                    container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
                     result = process_inventory_adjustment(
                         item_id=container_id,
                         quantity=-quantity,  # Negative for deduction
