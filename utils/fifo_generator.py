@@ -85,11 +85,3 @@ def validate_fifo_id(fifo_id):
         return True
     except:
         return False
-import base64
-import time
-
-def generate_fifo_code(prefix):
-    """Generates a base-32 encoded FIFO code with a prefix."""
-    timestamp = int(time.time() * 1000)  # Millisecond precision
-    encoded_timestamp = base64.b32encode(str(timestamp).encode()).decode('utf-8').lower()
-    return f"{prefix[:3].upper()}-{encoded_timestamp}"  # Use first 3 chars of prefix

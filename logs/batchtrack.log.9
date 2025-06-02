@@ -1,4 +1,4 @@
-2025-06-02 23:02:59,997 ERROR: Exception on /start-batch/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-02 21:47:22,223 ERROR: Exception on /inventory/edit/20 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -9,10 +9,25 @@ sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.unit
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 53, in start_batch
-    result = process_inventory_adjustment(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/services/inventory_adjustment.py", line 197, in process_inventory_adjustment
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/inventory/routes.py", line 252, in edit_inventory
+    success = recount_fifo(item.id, new_quantity, notes, current_user.id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/fifo/services.py", line 145, in recount_fifo
     db.session.commit()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
     return self._proxied.commit()
@@ -70,64 +85,12 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
 [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-06-02 23:02:59.996573', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 11, 'Used in batch BTH-2025-004 (From FIFO #90)', 1, 1, None)]
+[parameters: (20, '2025-06-02 21:47:22.222132', 'restock', 10.0, None, 10.0, None, None, 0, None, None, None, 'New stock from recount after filling existing FIFO entries', 1, 0, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/batches/start_batch.py", line 75, in start_batch
-    container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
-                                                             ^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 566, in __get__
-    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1086, in get
-    value = self._fire_loader_callables(state, key, passive)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1116, in _fire_loader_callables
-    return state._load_expired(state, passive)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 803, in _load_expired
-    self.manager.expired_attribute_loader(self, toload, passive)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 1670, in load_scalar_attributes
-    result = load_on_ident(
-             ^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 509, in load_on_ident
-    return load_on_pk_identity(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 694, in load_on_pk_identity
-    session.execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
-    return self._execute_internal(
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2241, in _execute_internal
-    conn = self._connection_for_bind(bind)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2110, in _connection_for_bind
-    return trans._connection_for_bind(engine, execution_options)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in _connection_for_bind
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 103, in _go
-    self._raise_for_prerequisite_state(fn.__name__, current_state)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 973, in _raise_for_prerequisite_state
-    raise sa_exc.PendingRollbackError(
-sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.unit
-[SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, is_perishable, expiration_date, shelf_life_days, used_for_batch_id, note, created_by, quantity_used, cost_each) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (20, '2025-06-02 23:02:59.996573', 'batch', -1.0, None, 0.0, 0.0, 90, 0, None, None, 11, 'Used in batch BTH-2025-004 (From FIFO #90)', 1, 1, None)]
-(Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2025-06-02 21:50:29,754 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:00:15,197 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:03:22,914 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:03:28,689 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:09:11,444 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:09:11,844 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-02 22:09:15,606 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
