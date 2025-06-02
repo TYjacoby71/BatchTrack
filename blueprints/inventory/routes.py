@@ -153,9 +153,17 @@ def adjust_inventory(id):
             flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
 
+        # Get the item to check if it's a container
+        item = InventoryItem.query.get_or_404(id)
+        
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
+        
+        # For containers, always use 'count' as the unit
+        if item.type == 'container':
+            input_unit = 'count'
+            
         notes = request.form.get('notes', '')
 
         # Handle cost input for restocks (weighted average will be calculated in service)
