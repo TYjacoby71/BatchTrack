@@ -32,6 +32,17 @@
             <div class="col-md-3">
                 <input type="date" name="end" class="form-control form-control-sm" placeholder="End Date" value="{{ session.get('batch_filter_end', '') }}">
             </div>
+            <div class="col-md-3">
+                <select name="sort_by" class="form-select form-select-sm">
+                    <option value="date_desc" {% if session.get('batch_sort_by') == 'date_desc' or not session.get('batch_sort_by') %}selected{% endif %}>Sort: Newest First</option>
+                    <option value="date_asc" {% if session.get('batch_sort_by') == 'date_asc' %}selected{% endif %}>Sort: Oldest First</option>
+                    <option value="recipe_asc" {% if session.get('batch_sort_by') == 'recipe_asc' %}selected{% endif %}>Sort: Recipe A-Z</option>
+                    <option value="recipe_desc" {% if session.get('batch_sort_by') == 'recipe_desc' %}selected{% endif %}>Sort: Recipe Z-A</option>
+                    <option value="status_asc" {% if session.get('batch_sort_by') == 'status_asc' %}selected{% endif %}>Sort: Status A-Z</option>
+                    <option value="cost_desc" {% if session.get('batch_sort_by') == 'cost_desc' %}selected{% endif %}>Sort: Cost High-Low</option>
+                    <option value="cost_asc" {% if session.get('batch_sort_by') == 'cost_asc' %}selected{% endif %}>Sort: Cost Low-High</option>
+                </select>
+            </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-sm btn-primary" onclick="collapseFilters()">Apply Filters</button>
                 <a href="{{ url_for('batches.list_batches') }}" class="btn btn-sm btn-secondary" onclick="collapseFilters()">Reset</a>
