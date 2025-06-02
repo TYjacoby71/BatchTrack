@@ -145,12 +145,18 @@ function planProduction() {
     },
 
     fetchContainerPlan() {
+      if (!this.recipeNeedsContainers) {
+        this.allowedContainers = [];
+        this.containersSelected = [];
+        return;
+      }
+
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
         .then(data => {
           this.allowedContainers = data.available || [];
 
-          if (this.autoFill) {
+          if (this.autoFill && this.recipeNeedsContainers) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 

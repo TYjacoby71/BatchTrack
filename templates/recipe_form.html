@@ -216,6 +216,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (requiresContainersCheckbox && allowedContainersSection) {
         requiresContainersCheckbox.addEventListener('change', function() {
             allowedContainersSection.style.display = this.checked ? 'block' : 'none';
+
+            // Clear all selected containers when unchecking
+            if (!this.checked) {
+                const containerSelect = document.getElementById('allowed_containers');
+                if (containerSelect) {
+                    // Deselect all options
+                    Array.from(containerSelect.options).forEach(option => {
+                        option.selected = false;
+                    });
+                }
+            }
         });
     }
 
@@ -275,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show warning when yield unit is changed
     const yieldUnitSelect = document.getElementById('predicted_yield_unit');
     const yieldWarning = document.getElementById('yieldUnitWarning');
-    
+
     if (yieldUnitSelect && yieldWarning) {
         yieldUnitSelect.addEventListener('change', function() {
             if (this.value !== originalYieldUnit && this.value !== '') {
