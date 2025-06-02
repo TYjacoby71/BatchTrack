@@ -230,7 +230,7 @@ def adjust_inventory(id):
                 cost_override=restock_cost
             )
 
-        if success:
+            if success:
                 flash('Inventory adjusted successfully')
             else:
                 flash('Error adjusting inventory', 'error')
