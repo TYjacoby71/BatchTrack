@@ -48,18 +48,20 @@ def new_product():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    return render_template('products/new_product.html', product_units=units)
+    return render_template('products/new_product.html', units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
 def view_product(product_id):
     """View product details with FIFO inventory"""
+    from utils.unit_utils import get_global_unit_list
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
 
     return render_template('products/view_product.html', 
                          product=product, 
-                         inventory_groups=inventory_groups)
+                         inventory_groups=inventory_groups,
+                         get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>')
 @login_required
@@ -281,6 +283,34 @@ def quick_add_product():
             'name': variant.name if variant else 'Default'
         } if variant or variant_name else None
     })
+
+@products_bp.route('/<int:product_id>/edit', methods=['POST'])
+@login_required
+def edit_product(product_id):
+    """Edit product details"""
+    product = Product.query.get_or_404(product_id)
+    
+    name = request.form.get('name')
+    default_unit = request.form.get('default_unit')
+    low_stock_threshold = request.form.get('low_stock_threshold', 0)
+    
+    if not name or not default_unit:
+        flash('Name and default unit are required', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+    
+    # Check if another product has this name
+    existing = Product.query.filter(Product.name == name, Product.id != product_id).first()
+    if existing:
+        flash('Another product with this name already exists', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+    
+    product.name = name
+    product.default_unit = default_unit
+    product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+    
+    db.session.commit()
+    flash('Product updated successfully', 'success')
+    return redirect(url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/adjust', methods=['POST'])
 @login_required

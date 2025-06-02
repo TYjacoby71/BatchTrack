@@ -37,7 +37,7 @@ def index():
         'settings/index.html',
         settings=settings_data,
         inventory_units=Unit.query.all(),
-        product_units=ProductUnit.query.all()
+        product_units=[]
     )
 
 @settings_bp.route('/save', methods=['POST'])

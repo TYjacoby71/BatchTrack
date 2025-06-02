@@ -11,7 +11,7 @@
     <label for="default_unit" class="form-label">Default Unit</label>
     <select name="default_unit" id="default_unit" class="form-select" required>
       <option value="">Select unit...</option>
-      {% for unit in product_units %}
+      {% for unit in units %}
         <option value="{{ unit.name }}">{{ unit.name }}</option>
       {% endfor %}
     </select>
