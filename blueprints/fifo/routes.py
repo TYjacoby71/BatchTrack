@@ -1,8 +1,8 @@
-
 from flask import render_template
 from flask_login import login_required
 from . import fifo_bp
 from .services import get_fifo_entries
+from utils.fifo_generator import generate_fifo_code
 
 @fifo_bp.route('/inventory/<int:inventory_item_id>')
 @login_required
