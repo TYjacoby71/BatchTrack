@@ -1,36 +1,253 @@
+
 {% extends 'layout.html' %}
 {% block content %}
-<h2>Batch In Progress</h2>
-
-<div class="batch-details">
-    <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-    <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-    <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
-    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center">
+        <h2>Batch In Progress</h2>
+        <div class="ms-3">
+            {% if prev_batch %}
+            <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=prev_batch.id) }}" class="btn btn-outline-secondary btn-sm me-1" title="Previous in-progress batch">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm me-1" disabled title="No previous in-progress batch">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            {% endif %}
+            
+            {% if next_batch %}
+            <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=next_batch.id) }}" class="btn btn-outline-secondary btn-sm" title="Next in-progress batch">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" disabled title="No next in-progress batch">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
+<!-- Section 1: Basic Batch Info -->
+<div class="batch-header mb-4">
+    <h3>Batch Details</h3>
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+                    <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                    <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-warning">In Progress</span>
+                    </p>
+                    <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <form id="batchForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
-    <!-- Yield info will be handled in modal -->
-    <div class="form-group mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted">Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</span>
+
+    <!-- Section 2: Timers -->
+    <div class="mb-4">
+        <h3>Timers</h3>
+        <div class="card">
+            <div class="card-body">
+                {% with timers=timers, now=now %}
+                    {% include 'components/batch/timer_component.html' %}
+                {% endwith %}
+            </div>
         </div>
     </div>
 
+    <!-- Section 3: Extra Items Management -->
+    <div class="mb-4">
+        <h3>Extra Items</h3>
+        <div class="card">
+            <div class="card-body">
+                <div id="extra-ingredients-container"></div>
+                <div class="d-flex gap-2 mb-3">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('ingredient')">
+                        <i class="fas fa-plus"></i> Add Extra Ingredient
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('container')">
+                        <i class="fas fa-plus"></i> Add Extra Container
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveExtras()">
+                        <i class="fas fa-save"></i> Save All Extras
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- EXTRA INGREDIENTS SECTION -->
-<div class="mt-4">
-    <h4>Extra Ingredients Used</h4>
-    <div id="extra-ingredients-container"></div>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('ingredient')">➕ Add Extra Ingredient</button>
-    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('container')">➕ Add Extra Container</button>
-    <button type="button" class="btn btn-primary" onclick="saveExtras()">💾 Save All Extras</button>
-</div>
+    <!-- Section 4: Batch Cost Summary -->
+    <div class="batch-summary mb-4">
+        <h3>Batch Summary</h3>
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Amount Used</th>
+                            <th>Unit</th>
+                            <th>Cost/Unit</th>
+                            <th>Line Cost</th>
+                        </tr>
+                    </thead>
+                    {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
+                    <tbody>
+                        {% if batch.ingredients %}
+                        <tr><th colspan="5" class="table-secondary">Ingredients</th></tr>
+                        {% for ing in batch.ingredients %}
+                            {% set amount = ing.amount_used|float or 0 %}
+                            {% set cost = ing.cost_per_unit|float or 0 %}
+                            {% set line_cost = amount * cost %}
+                            <tr>
+                                <td>{{ ing.ingredient.name }}</td>
+                                <td>{{ "%.2f"|format(amount) }}</td>
+                                <td>{{ ing.unit }}</td>
+                                <td>${{ "%.2f"|format(cost) }}</td>
+                                <td>${{ "%.2f"|format(line_cost) }}</td>
+                            </tr>
+                            {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
+                        {% endfor %}
+                        <tr>
+                            <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
+                            <td><strong>${{ "%.2f"|format(ns.ingredient_total) }}</strong></td>
+                        </tr>
+                        {% endif %}
 
+                        {% if batch.containers %}
+                        <tr><th colspan="5" class="table-secondary">Containers</th></tr>
+                        {% for container in batch.containers %}
+                            {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
+                            <tr>
+                                <td>{{ container.container.name }}</td>
+                                <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
+                                <td></td>
+                                <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
+                                <td>${{ "%.2f"|format(line_cost) }}</td>
+                            </tr>
+                            {% set ns.container_total = ns.container_total + line_cost %}
+                        {% endfor %}
+                        <tr>
+                            <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
+                            <td><strong>${{ "%.2f"|format(ns.container_total) }}</strong></td>
+                        </tr>
+                        {% endif %}
+
+                        {% if batch.extra_ingredients %}
+                        <tr><th colspan="5" class="table-secondary">Extra Ingredients</th></tr>
+                        {% for extra in batch.extra_ingredients %}
+                            {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
+                            <tr>
+                                <td>{{ extra.ingredient.name }}</td>
+                                <td>{{ "%.3f"|format(extra.quantity|float or 0) }}</td>
+                                <td>{{ extra.unit }}</td>
+                                <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
+                                <td>${{ "%.2f"|format(line_cost) }}</td>
+                            </tr>
+                            {% set ns.extras_total = ns.extras_total + line_cost %}
+                        {% endfor %}
+                        <tr>
+                            <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
+                            <td><strong>${{ "%.2f"|format(ns.extras_total) }}</strong></td>
+                        </tr>
+                        {% endif %}
+
+                        {% if batch.extra_containers %}
+                        <tr><th colspan="5" class="table-secondary">Extra Containers</th></tr>
+                        {% for container in batch.extra_containers %}
+                            {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
+                            <tr>
+                                <td>{{ container.container.name }}</td>
+                                <td>{{ container.quantity_used }}</td>
+                                <td></td>
+                                <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
+                                <td>${{ "%.2f"|format(line_cost) }}</td>
+                            </tr>
+                            {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
+                        {% endfor %}
+                        <tr>
+                            <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
+                            <td><strong>${{ "%.2f"|format(ns.extra_container_total) }}</strong></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+
+                    <tfoot>
+                        {% set total_cost = (ns.ingredient_total if ns.ingredient_total is defined else 0) + 
+                                           (ns.container_total if ns.container_total is defined else 0) + 
+                                           (ns.extras_total if ns.extras_total is defined else 0) + 
+                                           (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
+                        <tr class="table-primary">
+                            <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
+                            <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: Notes and Tags -->
+    <div class="mb-4">
+        <h3>Batch Notes & Tags</h3>
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Batch Notes</label>
+                    <textarea name="notes" rows="4" class="form-control" placeholder="Add any notes about this batch...">{{ batch.notes or '' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="tags" class="form-label">Tags</label>
+                    <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control" placeholder="Enter tags separated by commas">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 6: Action Buttons -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button type="button" onclick="saveBatchNotes().then(() => window.location.href = '/batches/')" class="btn btn-secondary">
+                        <i class="fas fa-save"></i> Save and Exit
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-warning" onclick="cancelBatch()">
+                        <i class="fas fa-ban"></i> Cancel Batch
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="markBatchFailed()">
+                        <i class="fas fa-exclamation-triangle"></i> Mark Failed
+                    </button>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishBatchModal">
+                        <i class="fas fa-check"></i> Complete Batch
+                    </button>
+                    {% if has_active_timers %}
+                        <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-bolt"></i> Force Finish
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Templates for extra ingredients/containers -->
 <template id="extra-ingredient-template">
-    <div class="extra-row row g-2 mb-3 align-items-center" data-type="ingredient">
+    <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="ingredient">
         <div class="col-md-4">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select ingredient</option>
@@ -61,7 +278,7 @@
 </template>
 
 <template id="extra-container-template">
-    <div class="extra-row row g-2 mb-3 align-items-center" data-type="container">
+    <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="container">
         <div class="col-md-5">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select container</option>
@@ -83,151 +300,6 @@
         </div>
     </div>
 </template>
-
-
-    <!-- TIMER SECTION -->
-    <div class="mt-4">
-        <h4>Timers</h4>
-        {% with timers=timers, now=now %}
-            {% include 'components/batch/timer_component.html' %}
-        {% endwith %}
-    </div>
-
-    <!-- Batch Cost Summary -->
-<div class="batch-summary mt-4">
-    <h4>Batch Summary</h4>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Amount Used</th>
-                <th>Unit</th>
-                <th>Cost/Unit</th>
-                <th>Line Cost</th>
-            </tr>
-        </thead>
-        {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
-        <tbody>
-            {% if batch.ingredients %}
-            <tr><th colspan="5">Ingredients</th></tr>
-            {% for ing in batch.ingredients %}
-                {% set amount = ing.amount_used|float or 0 %}
-                {% set cost = ing.cost_per_unit|float or 0 %}
-                {% set line_cost = amount * cost %}
-                <tr>
-                    <td>{{ ing.ingredient.name }}</td>
-                    <td>{{ "%.2f"|format(amount) }}</td>
-                    <td>{{ ing.unit }}</td>
-                    <td>${{ "%.2f"|format(cost) }}</td>
-                    <td>${{ "%.2f"|format(line_cost) }}</td>
-                </tr>
-                {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
-            {% endfor %}
-            <tr>
-                <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
-                <td>${{ "%.2f"|format(ns.ingredient_total) }}</td>
-            </tr>
-            {% endif %}
-
-            {% if batch.containers %}
-            <tr><th colspan="5">Containers</th></tr>
-            {% for container in batch.containers %}
-                {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
-                <tr>
-                    <td>{{ container.container.name }}</td>
-                    <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
-                    <td></td>
-                    <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
-                    <td>${{ "%.2f"|format(line_cost) }}</td>
-                </tr>
-                {% set ns.container_total = ns.container_total + line_cost %}
-            {% endfor %}
-            <tr>
-                <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
-                <td>${{ "%.2f"|format(ns.container_total) }}</td>
-            </tr>
-            {% endif %}
-
-            {% if batch.extra_ingredients %}
-            <tr><th colspan="5">Extra Ingredients</th></tr>
-            {% for extra in batch.extra_ingredients %}
-                {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
-                <tr>
-                    <td>{{ extra.ingredient.name }}</td>
-                    <td>{{ "%.3f"|format(extra.quantity|float or 0) }}</td>
-                    <td>{{ extra.unit }}</td>
-                    <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
-                    <td>${{ "%.2f"|format(line_cost) }}</td>
-                </tr>
-                {% set ns.extras_total = ns.extras_total + line_cost %}
-            {% endfor %}
-            <tr>
-                <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
-                <td>${{ "%.2f"|format(ns.extras_total) }}</td>
-            </tr>
-            {% endif %}
-
-            {% if batch.extra_containers %}
-            <tr><th colspan="5">Extra Containers</th></tr>
-            {% for container in batch.extra_containers %}
-                {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
-                <tr>
-                    <td>{{ container.container.name }}</td>
-                    <td>{{ container.quantity_used }}</td>
-                    <td></td>
-                    <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
-                    <td>${{ "%.2f"|format(line_cost) }}</td>
-                </tr>
-                {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
-            {% endfor %}
-            <tr>
-                <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
-                <td>${{ "%.2f"|format(ns.extra_container_total) }}</td>
-            </tr>
-            {% endif %}
-        </tbody>
-
-        <tfoot>
-            {% set total_cost = (ns.ingredient_total if ns.ingredient_total is defined else 0) + 
-                               (ns.container_total if ns.container_total is defined else 0) + 
-                               (ns.extras_total if ns.extras_total is defined else 0) + 
-                               (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
-            <tr>
-                <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
-                <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
-
-    <!-- Notes Section -->
-    <div class="notes-section mt-4">
-        <h4>Batch Notes</h4>
-        <textarea name="notes" rows="4" class="form-control">{{ batch.notes or '' }}</textarea>
-    </div>
-
-    <!-- Tags Section -->
-    <div class="form-group mt-3">
-        <label for="tags">Tags (comma-separated):</label>
-        <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control">
-    </div>
-
-
-    <!-- Submission Buttons -->
-    <div class="button-group mt-4 d-flex justify-content-between">
-        <div>
-            <button type="button" onclick="saveBatchNotes().then(() => window.location.href = '/batches/')" class="btn btn-secondary">Save and Exit</button>
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-warning" onclick="cancelBatch()">Cancel Batch</button>
-            <button type="button" class="btn btn-danger" onclick="markBatchFailed()">⚠️ Mark Failed</button>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishBatchModal">✓ Complete Batch</button>
-            {% if has_active_timers %}
-                <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">Force Finish</a>
-            {% endif %}
-        </div>
-    </div>
-</form>
 
 {# Finish Batch Modal - include only once #}
 {% include 'components/batch/finish_batch_modal.html' %}

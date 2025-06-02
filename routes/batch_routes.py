@@ -28,7 +28,7 @@ def list_batches():
     page = request.args.get('page', 1, type=int)
     per_page = 10
 
-    query = Batch.query.order_by(Batch.started_at.desc())
+    query = Batch.query
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
@@ -37,12 +37,14 @@ def list_batches():
     recipe_id = request.args.get('recipe_id') or session.get('batch_filter_recipe')
     start = request.args.get('start') or session.get('batch_filter_start')
     end = request.args.get('end') or session.get('batch_filter_end')
+    sort_by = request.args.get('sort_by') or session.get('batch_sort_by', 'date_desc')
 
     # Store current filters in session
     session['batch_filter_status'] = status
     session['batch_filter_recipe'] = recipe_id
     session['batch_filter_start'] = start 
     session['batch_filter_end'] = end
+    session['batch_sort_by'] = sort_by
 
     if status and status != 'all':
         query = query.filter_by(status=status)
@@ -54,6 +56,26 @@ def list_batches():
     if end:
         query = query.filter(Batch.timestamp <= end)
 
+    # Apply sorting
+    if sort_by == 'date_asc':
+        query = query.order_by(Batch.started_at.asc())
+    elif sort_by == 'date_desc':
+        query = query.order_by(Batch.started_at.desc())
+    elif sort_by == 'recipe_asc':
+        query = query.join(Recipe).order_by(Recipe.name.asc())
+    elif sort_by == 'recipe_desc':
+        query = query.join(Recipe).order_by(Recipe.name.desc())
+    elif sort_by == 'status_asc':
+        query = query.order_by(Batch.status.asc())
+    elif sort_by == 'cost_desc':
+        # For cost sorting, we'll sort by a calculated field after pagination
+        query = query.order_by(Batch.started_at.desc())
+    elif sort_by == 'cost_asc':
+        # For cost sorting, we'll sort by a calculated field after pagination
+        query = query.order_by(Batch.started_at.desc())
+    else:
+        query = query.order_by(Batch.started_at.desc())
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     batches = pagination.items
 
@@ -64,6 +86,12 @@ def list_batches():
         extras_total = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
         extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
         batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
+
+    # Apply cost-based sorting after calculating costs
+    if sort_by == 'cost_desc':
+        batches.sort(key=lambda x: x.total_cost or 0, reverse=True)
+    elif sort_by == 'cost_asc':
+        batches.sort(key=lambda x: x.total_cost or 0, reverse=False)
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     from models import InventoryItem
@@ -85,9 +113,20 @@ def view_batch(batch_identifier):
 
         if batch.status == 'in_progress':
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-        return render_template('view_batch.html', batch=batch)
+        
+        # Find previous and next batches of the same status
+        prev_batch = Batch.query.filter(
+            Batch.status == batch.status,
+            Batch.id < batch.id
+        ).order_by(Batch.id.desc()).first()
+        
+        next_batch = Batch.query.filter(
+            Batch.status == batch.status,
+            Batch.id > batch.id
+        ).order_by(Batch.id.asc()).first()
+        
+        return render_template('view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
-        app.logger.error(f'Error viewing batch {batch_identifier}: {str(e)}')
         flash('Error viewing batch. Please try again.')
         return redirect(url_for('batches.list_batches'))
 
@@ -114,9 +153,16 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
 
-    if batch.status != 'in_progress':
-        flash('This batch is already completed.')
-        return redirect(url_for('batches.list_batches'))
+    # Find previous and next in-progress batches
+    prev_batch = Batch.query.filter(
+        Batch.status == 'in_progress',
+        Batch.id < batch.id
+    ).order_by(Batch.id.desc()).first()
+    
+    next_batch = Batch.query.filter(
+        Batch.status == 'in_progress',
+        Batch.id > batch.id
+    ).order_by(Batch.id.asc()).first()
 
     # Get existing batch data
     ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
@@ -173,7 +219,9 @@ def view_batch_in_progress(batch_identifier):
                          inventory_items=inventory_items,
                          all_ingredients=all_ingredients,
                          products=products,
-                         container_breakdown=container_breakdown)
+                         container_breakdown=container_breakdown,
+                         prev_batch=prev_batch,
+                         next_batch=next_batch)
 
 
 
