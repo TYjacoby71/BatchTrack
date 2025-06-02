@@ -1,5 +1,23 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if initial inventory modal exists and show it
+    const initialModal = document.getElementById('initialInventoryModal');
+    if (initialModal) {
+        const modal = new bootstrap.Modal(initialModal);
+        modal.show();
+        
+        // Prevent closing modal by clicking outside or escape key
+        initialModal.addEventListener('hide.bs.modal', function (e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Focus on quantity input when modal is shown
+        initialModal.addEventListener('shown.bs.modal', function () {
+            document.getElementById('initial_quantity').focus();
+        });
+    }
+
     const form = document.querySelector('#editDetailsModal form');
     const quantityInput = form.querySelector('input[name="quantity"]');
     const originalQuantity = parseFloat(quantityInput.value);
