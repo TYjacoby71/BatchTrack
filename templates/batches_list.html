@@ -48,7 +48,11 @@
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
-                    <label class="form-check-label">Timestamp</label>
+                    <label class="form-check-label">Start Date</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="completed_date" {% if 'completed_date' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Completed Date</label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
@@ -125,7 +129,10 @@
                             <th>Label Code</th>
                             <th>Scale</th>
                             {% if 'timestamp' in visible_columns %}
-                            <th>Date</th>
+                            <th>Start Date</th>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <th>Completed Date</th>
                             {% endif %}
                             {% if 'tags' in visible_columns %}
                             <th>Tags</th>
@@ -143,6 +150,9 @@
                             <td>{{ batch.scale }}</td>
                             {% if 'timestamp' in visible_columns %}
                             <td>{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <td>—</td>
                             {% endif %}
                             {% if 'tags' in visible_columns %}
                             <td>{{ batch.tags if batch.tags else '—' }}</td>
@@ -189,7 +199,10 @@
                             <th>Label Code</th>
                             <th>Scale</th>
                             {% if 'timestamp' in visible_columns %}
-                            <th>Date</th>
+                            <th>Start Date</th>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <th>Completed Date</th>
                             {% endif %}
                             <th>Status</th>
                             {% if 'total_cost' in visible_columns %}
@@ -215,6 +228,19 @@
                             <td>{{ batch.scale }}</td>
                             {% if 'timestamp' in visible_columns %}
                             <td>{{ batch.started_at.strftime("%Y-%m-%d") }}</td>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <td>
+                                {% if batch.completed_at %}
+                                    {{ batch.completed_at.strftime("%Y-%m-%d") }}
+                                {% elif batch.failed_at %}
+                                    {{ batch.failed_at.strftime("%Y-%m-%d") }}
+                                {% elif batch.cancelled_at %}
+                                    {{ batch.cancelled_at.strftime("%Y-%m-%d") }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
                             {% endif %}
                             <td>
                                 <span class="badge {% if batch.status == 'completed' %}bg-success
