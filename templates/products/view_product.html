@@ -54,82 +54,56 @@
 
       <!-- Inventory by Variant -->
       <div class="card mb-4">
-        <div class="card-header">
-          <h4>Size Variants</h4>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4>Inventory Groups</h4>
+          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+            <i class="fas fa-plus"></i> Add Manual Stock
+          </button>
         </div>
         <div class="card-body">
           {% if inventory_groups %}
-            {% for group_key, group in inventory_groups.items() %}
-            <div class="mb-4">
-              <h5>{{ group.variant }} ({{ group.unit }})</h5>
-              <div class="row mb-2">
-                <div class="col-md-3">
-                  <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}
-                </div>
-                <div class="col-md-3">
-                  <strong>Avg Cost:</strong> ${{ "%.3f"|format(group.avg_cost) }}
-                </div>
-                <div class="col-md-3">
-                  {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                  <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=group.variant, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-sm">
-                    View FIFO Details
-                  </a>
-                  {% else %}
-                  <span class="btn btn-info btn-sm disabled">No Size Label Available</span>
-                  {% endif %}
-                </div>
-                <div class="col-md-3">
-                  <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal" 
-                          data-variant="{{ group.variant }}" data-unit="{{ group.unit }}">
-                    Quick Deduct
-                  </button>
-                </div>
-              </div>
-
-              <table class="table table-sm table-bordered">
-                <thead>
-                  <tr>
-                    <th>Batch</th>
-                    <th>Date Created</th>
-                    <th>Quantity</th>
-                    <th>Expiration</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for inv in group.batches %}
-                  <tr>
-                    <td>
-                      <a href="{{ url_for('batches.view_batch', batch_identifier=inv.batch_id) }}">
-                        Batch {{ inv.batch_id }}
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>Unit</th>
+                  <th>Total Quantity</th>
+                  <th>Remaining (FIFO)</th>
+                  <th>Avg Cost</th>
+                  <th>Batches</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for group_key, group in inventory_groups.items() %}
+                <tr>
+                  <td>{{ group.variant }}</td>
+                  <td>{{ group.unit }}</td>
+                  <td>{{ group.total_quantity }}</td>
+                  <td>
+                    {% set remaining_total = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
+                    {{ remaining_total }}
+                  </td>
+                  <td>${{ "%.3f"|format(group.avg_cost) }}</td>
+                  <td>{{ group.batches|length }}</td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
+                      <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=group.variant, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-sm">
+                        <i class="fas fa-eye"></i> View
                       </a>
-                    </td>
-                    <td>{{ inv.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ "%.2f"|format(inv.quantity) }} {{ inv.unit }}</td>
-                    <td>
-                      {% if inv.expiration_date %}
-                        {% set today = moment().date() if moment else inv.expiration_date %}
-                        {% set days_until = (inv.expiration_date - today).days if inv.expiration_date else 0 %}
-                        <span class="{% if days_until < 7 %}text-danger{% elif days_until < 30 %}text-warning{% endif %}">
-                          {{ inv.expiration_date.strftime('%Y-%m-%d') }}
-                          {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
-                        </span>
-                      {% else %}
-                        <span class="text-muted">No expiration</span>
                       {% endif %}
-                    </td>
-                    <td>
-                      <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustModal"
-                              data-inventory-id="{{ inv.id }}" data-current-qty="{{ inv.quantity }}" data-unit="{{ inv.unit }}">
-                        Adjust
+                      {% if group.batches and group.batches|length > 0 %}
+                      <button type="button" class="btn btn-warning btn-sm" onclick="openAdjustModal({{ group.batches[0].id }}, '{{ group.variant }}', '{{ group.batches[0].size_label }}')">
+                        <i class="fas fa-edit"></i> Adjust
                       </button>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            {% endfor %}
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           {% else %}
             <div class="alert alert-info">
               No inventory found. Products are added to inventory when batches are completed.
@@ -335,6 +309,59 @@
   </div>
 </div>
 
+<!-- Add Manual Stock Modal -->
+<div class="modal fade" id="addManualStockModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Manual Stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+        {{ csrf_token() }}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Variant</label>
+            <select name="variant" class="form-select" required>
+              {% for variation in product.variations %}
+              <option value="{{ variation.name }}">{{ variation.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Unit</label>
+            <select name="unit" class="form-select" required>
+              {% for unit in get_global_unit_list() %}
+              <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Size Label (e.g., 4oz Jar)</label>
+            <input type="text" name="size_label" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Expiration Date (Optional)</label>
+            <input type="date" name="expiration_date" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 // Handle deduct modal data
 document.getElementById('deductModal').addEventListener('show.bs.modal', function (event) {
@@ -379,6 +406,13 @@ function addVariant() {
   .catch(error => {
     alert('Error adding variant: ' + error);
   });
+}
+
+function openAdjustModal(inventoryId, variant, sizeLabel) {
+  // Populate the adjust modal with relevant data and open it
+  // (This is a placeholder; you'll need to implement the actual logic)
+  alert("Adjusting inventory for batch ID: " + inventoryId + ", Variant: " + variant + ", Size Label: " + sizeLabel);
+  // TODO: Implement modal population and display
 }
 </script>
 {% endblock %}

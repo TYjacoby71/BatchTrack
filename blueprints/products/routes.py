@@ -7,6 +7,16 @@ from services.product_inventory_service import ProductInventoryService
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
+
+
+def get_fifo_summary_helper(inventory_id):
+    """Helper function to get FIFO summary for template"""
+    try:
+        from services.product_adjustment_service import ProductAdjustmentService
+        return ProductAdjustmentService.get_fifo_summary(inventory_id)
+    except:
+        return None
+
 @products_bp.route('/')
 @login_required
 def list_products():
@@ -57,10 +67,17 @@ def view_product(product_id):
     from utils.unit_utils import get_global_unit_list
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
+    
+    # Get available containers for manual stock addition
+    available_containers = InventoryItem.query.filter_by(
+        type='container',
+        is_archived=False
+    ).filter(InventoryItem.quantity > 0).all()
 
     return render_template('products/view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups,
+                         available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>')
@@ -336,43 +353,64 @@ def edit_product(product_id):
     flash('Product updated successfully', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
 
-@products_bp.route('/<int:product_id>/adjust', methods=['POST'])
+@products_bp.route('/<int:product_id>/add-manual-stock', methods=['POST'])
 @login_required
-def adjust_inventory(product_id):
-    """Manual inventory adjustment for specific batch"""
-    inventory_id = request.form.get('inventory_id')
-    adjustment_type = request.form.get('adjustment_type')  # spoil, trash, recount
-    quantity_change = float(request.form.get('quantity_change'))
+def add_manual_stock(product_id):
+    """Add manual stock with container matching"""
+    from services.product_adjustment_service import ProductAdjustmentService
+    
+    variant_name = request.form.get('variant_name')
+    container_id = request.form.get('container_id')
+    quantity = float(request.form.get('quantity', 0))
+    unit_cost = float(request.form.get('unit_cost', 0))
     notes = request.form.get('notes', '')
-
-    inventory_item = ProductInventory.query.get_or_404(inventory_id)
-
-    if inventory_item.product_id != product_id:
-        flash('Invalid inventory item', 'error')
+    
+    if quantity <= 0:
+        flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
+    
+    try:
+        inventory = ProductAdjustmentService.add_manual_stock(
+            product_id=product_id,
+            variant_name=variant_name,
+            container_id=container_id,
+            quantity=quantity,
+            unit_cost=unit_cost,
+            notes=notes
+        )
+        
+        flash(f'Added {quantity} units to product inventory', 'success')
+    except Exception as e:
+        flash(f'Error adding stock: {str(e)}', 'error')
+    
+    return redirect(url_for('products.view_product', product_id=product_id))
 
-    old_quantity = inventory_item.quantity
-
-    if adjustment_type == 'recount':
-        inventory_item.quantity = quantity_change
-    else:
-        inventory_item.quantity += quantity_change
-
-    # Ensure quantity doesn't go negative
-    if inventory_item.quantity < 0:
-        inventory_item.quantity = 0
-
-    db.session.commit()
-
-    # Log the adjustment
-    db.session.add(ProductEvent(
-        product_id=product_id,
-        event_type=f'inventory_{adjustment_type}',
-        note=f'Batch {inventory_item.batch_id}: {old_quantity} → {inventory_item.quantity} {inventory_item.unit}. {notes}'
-    ))
-    db.session.commit()
-
-    flash(f'Inventory adjusted: {adjustment_type}', 'success')
+@products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
+@login_required
+def adjust_inventory(product_id, inventory_id):
+    """Process inventory adjustments with FIFO tracking"""
+    from services.product_adjustment_service import ProductAdjustmentService
+    
+    adjustment_type = request.form.get('adjustment_type')  # sold, spoil, trash, tester, damaged, recount
+    quantity = float(request.form.get('quantity', 0))
+    notes = request.form.get('notes', '')
+    
+    if quantity <= 0:
+        flash('Quantity must be positive', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+    
+    try:
+        ProductAdjustmentService.process_adjustment(
+            inventory_id=inventory_id,
+            adjustment_type=adjustment_type,
+            quantity=quantity,
+            notes=notes
+        )
+        
+        flash(f'Adjustment processed: {adjustment_type}', 'success')
+    except Exception as e:
+        flash(f'Error processing adjustment: {str(e)}', 'error')
+    
     return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
 @login_required
@@ -411,7 +449,8 @@ def view_variant_inventory(product_id, variant, size_label):
                          total_quantity=total_quantity,
                          total_batches=total_batches,
                          recent_deductions=recent_deductions,
-                         get_global_unit_list=get_global_unit_list)
+                         get_global_unit_list=get_global_unit_list,
+                         get_fifo_summary=lambda inv_id: get_fifo_summary_helper(inv_id))
 @products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
 @login_required
 def record_sale(product_id):

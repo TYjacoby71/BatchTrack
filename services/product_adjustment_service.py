@@ -1,0 +1,199 @@
+
+from models import db, ProductInventory, ProductInventoryHistory, Product, ProductEvent
+from datetime import datetime
+from services.inventory_adjustment import generate_fifo_code
+import base64
+
+class ProductAdjustmentService:
+    """Service for handling all product inventory adjustments with FIFO tracking"""
+    
+    @staticmethod
+    def generate_product_fifo_code(product_id):
+        """Generate base32 FIFO code with product prefix"""
+        product = Product.query.get(product_id)
+        prefix = product.name[:3].upper() if product else "PRD"
+        return generate_fifo_code(prefix)
+    
+    @staticmethod
+    def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes=''):
+        """Add manual stock with container matching"""
+        from models import InventoryItem
+        
+        product = Product.query.get_or_404(product_id)
+        container = InventoryItem.query.get_or_404(container_id) if container_id else None
+        
+        # Create size label from container
+        if container:
+            size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
+        else:
+            size_label = "Manual Addition"
+        
+        # Create ProductInventory entry
+        inventory = ProductInventory(
+            product_id=product_id,
+            variant=variant_name or 'Default',
+            size_label=size_label,
+            unit='count',
+            quantity=quantity,
+            container_id=container_id,
+            batch_cost_per_unit=unit_cost,
+            timestamp=datetime.utcnow(),
+            notes=notes
+        )
+        
+        db.session.add(inventory)
+        db.session.flush()  # Get ID
+        
+        # Create FIFO history entry
+        fifo_code = ProductAdjustmentService.generate_product_fifo_code(product_id)
+        history = ProductInventoryHistory(
+            product_inventory_id=inventory.id,
+            change_type='manual_addition',
+            quantity_change=quantity,
+            unit='count',
+            remaining_quantity=quantity,
+            unit_cost=unit_cost,
+            fifo_code=fifo_code,
+            note=notes,
+            created_by=1  # TODO: Get current user
+        )
+        
+        db.session.add(history)
+        
+        # Log product event
+        event_note = f"Manual addition: {quantity} × {size_label}"
+        if variant_name:
+            event_note += f" ({variant_name})"
+        if notes:
+            event_note += f". Notes: {notes}"
+        
+        db.session.add(ProductEvent(
+            product_id=product_id,
+            event_type='inventory_manual_addition',
+            note=event_note
+        ))
+        
+        db.session.commit()
+        return inventory
+    
+    @staticmethod
+    def process_adjustment(inventory_id, adjustment_type, quantity, notes=''):
+        """Process product inventory adjustments with FIFO tracking"""
+        inventory = ProductInventory.query.get_or_404(inventory_id)
+        
+        if adjustment_type == 'recount':
+            # Direct quantity change
+            old_quantity = inventory.quantity
+            quantity_change = quantity - old_quantity
+            inventory.quantity = quantity
+            
+            # Create history entry
+            history = ProductInventoryHistory(
+                product_inventory_id=inventory_id,
+                change_type=adjustment_type,
+                quantity_change=quantity_change,
+                unit=inventory.unit,
+                remaining_quantity=quantity if quantity_change > 0 else None,
+                note=f"Recount: {old_quantity} → {quantity}. {notes}",
+                created_by=1  # TODO: Get current user
+            )
+            
+            db.session.add(history)
+            
+        elif adjustment_type in ['sold', 'spoil', 'trash', 'tester', 'damaged']:
+            # FIFO deduction
+            success = ProductAdjustmentService.deduct_fifo(
+                inventory_id, quantity, adjustment_type, notes
+            )
+            if not success:
+                raise ValueError("Insufficient stock for deduction")
+        
+        # Log product event
+        event_note = f"{adjustment_type.title()}: "
+        if adjustment_type == 'recount':
+            event_note += f"Quantity adjusted to {quantity}"
+        else:
+            event_note += f"{quantity} units"
+        
+        if notes:
+            event_note += f". Notes: {notes}"
+        
+        db.session.add(ProductEvent(
+            product_id=inventory.product_id,
+            event_type=f'inventory_{adjustment_type}',
+            note=event_note
+        ))
+        
+        db.session.commit()
+        return True
+    
+    @staticmethod
+    def deduct_fifo(inventory_id, quantity, reason, notes=''):
+        """Deduct using FIFO from specific inventory item's history"""
+        inventory = ProductInventory.query.get(inventory_id)
+        
+        # Get FIFO entries for this specific inventory item
+        fifo_entries = ProductInventoryHistory.query.filter_by(
+            product_inventory_id=inventory_id
+        ).filter(
+            ProductInventoryHistory.remaining_quantity > 0
+        ).order_by(ProductInventoryHistory.timestamp.asc()).all()
+        
+        # Check available quantity
+        total_available = sum(entry.remaining_quantity for entry in fifo_entries)
+        if total_available < quantity:
+            return False
+        
+        remaining_to_deduct = quantity
+        
+        for entry in fifo_entries:
+            if remaining_to_deduct <= 0:
+                break
+                
+            if entry.remaining_quantity <= remaining_to_deduct:
+                # Use entire entry
+                deduction_amount = entry.remaining_quantity
+                entry.remaining_quantity = 0
+                remaining_to_deduct -= deduction_amount
+            else:
+                # Partial use
+                deduction_amount = remaining_to_deduct
+                entry.remaining_quantity -= remaining_to_deduct
+                remaining_to_deduct = 0
+            
+            # Create deduction history
+            deduction_history = ProductInventoryHistory(
+                product_inventory_id=inventory_id,
+                change_type=reason,
+                quantity_change=-deduction_amount,
+                unit=inventory.unit,
+                remaining_quantity=0,
+                fifo_reference_id=entry.id,
+                note=f"{reason.title()} deduction from FIFO {entry.fifo_code}. {notes}",
+                created_by=1  # TODO: Get current user
+            )
+            
+            db.session.add(deduction_history)
+        
+        # Update inventory quantity
+        inventory.quantity -= quantity
+        
+        return True
+    
+    @staticmethod
+    def get_fifo_summary(inventory_id):
+        """Get FIFO summary for an inventory item"""
+        fifo_entries = ProductInventoryHistory.query.filter_by(
+            product_inventory_id=inventory_id
+        ).filter(
+            ProductInventoryHistory.remaining_quantity > 0
+        ).order_by(ProductInventoryHistory.timestamp.asc()).all()
+        
+        total_remaining = sum(entry.remaining_quantity for entry in fifo_entries)
+        entry_count = len(fifo_entries)
+        
+        return {
+            'total_remaining': total_remaining,
+            'entry_count': entry_count,
+            'entries': fifo_entries
+        }
