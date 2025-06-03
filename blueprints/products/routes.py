@@ -147,6 +147,30 @@ def deduct_product(product_id):
 @products_bp.route('/<int:product_id>/adjust', methods=['POST'])
 
 
+@products_bp.route('/api/<int:product_id>/variants', methods=['GET'])
+@login_required
+def get_product_variants(product_id):
+    """API endpoint to get variants for a specific product"""
+    product = Product.query.get_or_404(product_id)
+    
+    variants = []
+    for variant in product.variations:
+        variants.append({
+            'id': variant.id,
+            'name': variant.name,
+            'sku': variant.sku
+        })
+    
+    # Add default variant if no variants exist
+    if not variants:
+        variants.append({
+            'id': None,
+            'name': 'Default',
+            'sku': None
+        })
+    
+    return jsonify({'variants': variants})
+
 @products_bp.route('/api/search', methods=['GET'])
 @login_required
 def search_products():
