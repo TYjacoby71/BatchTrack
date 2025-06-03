@@ -114,29 +114,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function toggleFifoFilter() {
     const fifoFilter = document.getElementById('fifoFilter');
-    const historyRows = document.querySelectorAll('tbody tr[data-remaining-quantity]');
-
-    historyRows.forEach(row => {
-        const remainingQty = parseFloat(row.dataset.remainingQuantity || '0');
-        if (fifoFilter.checked) {
-            // Show only rows with remaining quantity > 0
-            if (remainingQty > 0) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        } else {
-            // Show all rows
-            row.style.display = '';
-        }
-    });
-
-    // Update URL parameter
+    
+    // Build new URL with filter parameter and reset to page 1
     const url = new URL(window.location);
+    url.searchParams.delete('page'); // Reset to page 1
+    
     if (fifoFilter.checked) {
         url.searchParams.set('fifo', 'true');
     } else {
         url.searchParams.delete('fifo');
     }
-    window.history.replaceState({}, '', url);
+    
+    // Redirect to apply filter at backend level
+    window.location.href = url.toString();
 }

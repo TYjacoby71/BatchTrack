@@ -32,10 +32,19 @@ def set_column_visibility():
 def view_inventory(id):
     page = request.args.get('page', 1, type=int)
     per_page = 5
+    fifo_filter = request.args.get('fifo') == 'true'
+    
     item = InventoryItem.query.get_or_404(id)
-    history_query = InventoryHistory.query.filter_by(inventory_item_id=id).order_by(InventoryHistory.timestamp.desc())
+    history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
+    
+    # Apply FIFO filter at database level if requested
+    if fifo_filter:
+        history_query = history_query.filter(InventoryHistory.remaining_quantity > 0)
+    
+    history_query = history_query.order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    
     from datetime import datetime
     return render_template('inventory/view.html',
                          abs=abs,
@@ -49,7 +58,8 @@ def view_inventory(id):
                          InventoryHistory=InventoryHistory,
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
-                         int_to_base36=int_to_base36)
+                         int_to_base36=int_to_base36,
+                         fifo_filter=fifo_filter)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
