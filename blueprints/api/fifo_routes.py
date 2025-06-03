@@ -51,6 +51,7 @@ def get_fifo_details(inventory_id):
         
         return jsonify({
             'inventory_item': {
+                'id': item.id,
                 'name': item.name,
                 'type': item.type,
                 'quantity': item.quantity,
@@ -126,7 +127,20 @@ def get_batch_fifo_usage(inventory_id, batch_id):
         age_days = None
         life_remaining_percent = None
         
-        if entry.timestamp:
+        # Get the source FIFO entry to calculate age from its creation date
+        source_entry = None
+        if entry.fifo_reference_id:
+            source_entry = InventoryHistory.query.get(entry.fifo_reference_id)
+        
+        if source_entry and source_entry.timestamp:
+            # Calculate age from the source entry's creation date
+            age_days = (datetime.utcnow() - source_entry.timestamp).days
+            
+            if source_entry.is_perishable and source_entry.shelf_life_days:
+                life_remaining_percent = max(0, 100 - ((age_days / source_entry.shelf_life_days) * 100))
+                life_remaining_percent = round(life_remaining_percent, 1)
+        elif entry.timestamp:
+            # Fallback to using the deduction entry's timestamp if no source found
             age_days = (datetime.utcnow() - entry.timestamp).days
             
             if entry.is_perishable and entry.shelf_life_days:
