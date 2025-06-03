@@ -279,3 +279,25 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ProductInventoryHistory(db.Model):
+    """FIFO tracking for product inventory similar to InventoryHistory"""
+    id = db.Column(db.Integer, primary_key=True)
+    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    change_type = db.Column(db.String(32), nullable=False)  # manual_addition, batch_production, sold, spoil, trash, tester, damaged, recount
+    quantity_change = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    remaining_quantity = db.Column(db.Float, nullable=True)  # For FIFO tracking
+    unit_cost = db.Column(db.Float, nullable=True)
+    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_inventory_history.id'), nullable=True)
+    fifo_code = db.Column(db.String(32), nullable=True)  # Base32 encoded unique identifier
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    note = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    product_inventory = db.relationship('ProductInventory', backref='history')
+    batch = db.relationship('Batch')
+    user = db.relationship('User')

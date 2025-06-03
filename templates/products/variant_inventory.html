@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container mt-4">
@@ -204,7 +203,7 @@
               <input type="number" name="sale_price" class="form-control" step="0.01" min="0">
               <small class="form-text text-muted">Total amount collected for this sale</small>
             </div>
-            
+
             <div class="mb-3">
               <label class="form-label">Customer/Platform</label>
               <input type="text" name="customer" class="form-control" placeholder="e.g., Shopify, Etsy, Local Market">
@@ -272,7 +271,7 @@
 function toggleView(viewType) {
   const availableRows = document.querySelectorAll('.available-row');
   const consumedRows = document.querySelectorAll('.consumed-row');
-  
+
   switch(viewType) {
     case 'all':
       availableRows.forEach(row => row.style.display = '');
