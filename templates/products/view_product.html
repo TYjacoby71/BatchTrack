@@ -66,6 +66,7 @@
               <thead>
                 <tr>
                   <th>Variant</th>
+                  <th>Size Label</th>
                   <th>Unit</th>
                   <th>Total Quantity</th>
                   <th>Remaining (FIFO)</th>
@@ -78,14 +79,17 @@
                 {% for group_key, group in inventory_groups.items() %}
                 <tr>
                   <td>{{ group.variant }}</td>
+                  <td>{{ group.batches[0].size_label if group.batches else '-' }}</td>
                   <td>{{ group.unit }}</td>
-                  <td>{{ group.total_quantity }}</td>
+                  <td>{{ "%.2f"|format(group.total_quantity) }}</td>
                   <td>
                     {% set remaining_total = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
-                    {{ remaining_total }}
+                    <span class="{% if remaining_total <= 0 %}text-danger{% elif remaining_total < group.total_quantity * 0.2 %}text-warning{% else %}text-success{% endif %}">
+                      {{ "%.2f"|format(remaining_total) }}
+                    </span>
                   </td>
                   <td>${{ "%.3f"|format(group.avg_cost) }}</td>
-                  <td>{{ group.batches|length }}</td>
+                  <td>{{ group.batches|selectattr('quantity', 'gt', 0)|list|length }} active / {{ group.batches|length }} total</td>
                   <td>
                     <div class="btn-group" role="group">
                       {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
@@ -94,8 +98,8 @@
                       </a>
                       {% endif %}
                       {% if group.batches and group.batches|length > 0 %}
-                      <button type="button" class="btn btn-warning btn-sm" onclick="openAdjustModal({{ group.batches[0].id }}, '{{ group.variant }}', '{{ group.batches[0].size_label }}')">
-                        <i class="fas fa-edit"></i> Adjust
+                      <button type="button" class="btn btn-warning btn-sm" onclick="openAdjustModal({{ group.batches[0].id }}, '{{ group.variant }}', '{{ group.batches[0].size_label or 'Default' }}')">
+                        <i class="fas fa-edit"></i> Edit
                       </button>
                       {% endif %}
                     </div>
@@ -275,7 +279,7 @@
         <h5 class="modal-title">Adjust Batch Inventory</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.adjust_inventory', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('products.adjust_inventory', product_id=product.id, inventory_id=0) }}" id="adjustInventoryForm">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="inventory_id" id="adjustInventoryId">
@@ -283,16 +287,19 @@
           <div class="mb-3">
             <label class="form-label">Adjustment Type</label>
             <select name="adjustment_type" class="form-select" required>
-              <option value="spoil">Mark as Spoiled</option>
-              <option value="trash">Mark as Damaged/Trashed</option>
+              <option value="sold">Sold</option>
+              <option value="trash">Trash/Damaged</option>
+              <option value="spoil">Spoiled</option>
+              <option value="tester">Tester/Sample</option>
+              <option value="damaged">Damaged</option>
               <option value="recount">Recount (Set Exact Quantity)</option>
             </select>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Quantity Change</label>
-            <input type="number" name="quantity_change" class="form-control" step="0.01" required>
-            <small class="form-text text-muted">For recount, enter the exact final quantity. For spoil/trash, enter negative amount.</small>
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" required>
+            <small class="form-text text-muted">For recount, enter the exact final quantity. For spoil/trash, enter amount to deduct.</small>
           </div>
 
           <div class="mb-3">
@@ -322,9 +329,22 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Variant</label>
-            <select name="variant" class="form-select" required>
+            <select name="variant_name" class="form-select" required>
+              <option value="Default">Default</option>
               {% for variation in product.variations %}
               <option value="{{ variation.name }}">{{ variation.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Container Type</label>
+            <select name="container_id" class="form-select" required>
+              <option value="">Select Container...</option>
+              {% for container in available_containers %}
+              <option value="{{ container.id }}">
+                {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+                - Available: {{ container.quantity }}
+              </option>
               {% endfor %}
             </select>
           </div>
@@ -333,20 +353,8 @@
             <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Unit</label>
-            <select name="unit" class="form-select" required>
-              {% for unit in get_global_unit_list() %}
-              <option value="{{ unit.name }}">{{ unit.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Size Label (e.g., 4oz Jar)</label>
-            <input type="text" name="size_label" class="form-control">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Expiration Date (Optional)</label>
-            <input type="date" name="expiration_date" class="form-control">
+            <label class="form-label">Unit Cost per Item</label>
+            <input type="number" name="unit_cost" class="form-control" step="0.001" min="0" value="0">
           </div>
           <div class="mb-3">
             <label class="form-label">Notes</label>
@@ -409,10 +417,16 @@ function addVariant() {
 }
 
 function openAdjustModal(inventoryId, variant, sizeLabel) {
-  // Populate the adjust modal with relevant data and open it
-  // (This is a placeholder; you'll need to implement the actual logic)
-  alert("Adjusting inventory for batch ID: " + inventoryId + ", Variant: " + variant + ", Size Label: " + sizeLabel);
-  // TODO: Implement modal population and display
+  // Set the inventory ID in the form
+  document.getElementById('adjustInventoryId').value = inventoryId;
+  
+  // Update the form action with the correct inventory_id
+  const form = document.getElementById('adjustInventoryForm');
+  form.action = `/products/${{{ product.id }}}/adjust/${inventoryId}`;
+  
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('adjustModal'));
+  modal.show();
 }
 </script>
 {% endblock %}

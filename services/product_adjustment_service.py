@@ -124,7 +124,38 @@ class ProductAdjustmentService:
             note=event_note
         ))
         
+        # Validate FIFO sync after adjustment
+        try:
+            ProductAdjustmentService.validate_product_fifo_sync(inventory.product_id)
+        except Exception as e:
+            db.session.rollback()
+            raise ValueError(f"FIFO sync validation failed: {str(e)}")
+        
         db.session.commit()
+        return True
+    
+    @staticmethod
+    def validate_product_fifo_sync(product_id):
+        """Validate that product FIFO tracking is in sync with actual quantities"""
+        product_inventories = ProductInventory.query.filter_by(product_id=product_id).all()
+        
+        for inventory in product_inventories:
+            # Calculate total remaining from FIFO history
+            fifo_total = ProductInventoryHistory.query.filter_by(
+                product_inventory_id=inventory.id
+            ).filter(
+                ProductInventoryHistory.remaining_quantity > 0
+            ).with_entities(
+                db.func.sum(ProductInventoryHistory.remaining_quantity)
+            ).scalar() or 0
+            
+            # Compare with actual inventory quantity
+            if abs(inventory.quantity - fifo_total) > 0.001:  # Allow for small rounding differences
+                raise ValueError(
+                    f"FIFO desync detected for inventory {inventory.id}: "
+                    f"Actual={inventory.quantity}, FIFO={fifo_total}"
+                )
+        
         return True
     
     @staticmethod
