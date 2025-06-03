@@ -308,6 +308,27 @@
 </style>
 
 <script>
+// Global showView function
+function showView(viewType) {
+    const recipesContainer = document.getElementById('recipesContainer');
+    const recipesTableContainer = document.getElementById('recipesTableContainer');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const tableViewBtn = document.getElementById('tableViewBtn');
+
+    if (viewType === 'cardView') {
+        recipesContainer.style.display = 'flex';
+        recipesTableContainer.style.display = 'none';
+        cardViewBtn.className = 'btn btn-secondary btn-sm';
+        tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        recipesContainer.style.display = 'none';
+        recipesTableContainer.style.display = 'block';
+        cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
+        tableViewBtn.className = 'btn btn-secondary btn-sm';
+    }
+    filterRecipes(); // Re-apply filters for current view
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const recipeFilter = document.getElementById('recipeFilter');
     const sortFilter = document.getElementById('sortFilter');
@@ -315,24 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipesContainer = document.getElementById('recipesContainer');
     const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
-    // View toggle functionality
-    function showView(viewType) {
-        const cardViewBtn = document.getElementById('cardViewBtn');
-        const tableViewBtn = document.getElementById('tableViewBtn');
-
-        if (viewType === 'cardView') {
-            recipesContainer.style.display = 'flex';
-            recipesTableContainer.style.display = 'none';
-            cardViewBtn.className = 'btn btn-secondary btn-sm';
-            tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
-        } else {
-            recipesContainer.style.display = 'none';
-            recipesTableContainer.style.display = 'block';
-            cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
-            tableViewBtn.className = 'btn btn-secondary btn-sm';
-        }
-        filterRecipes(); // Re-apply filters for current view
-    }
 
     // Filter functionality
     function filterRecipes() {
