@@ -104,11 +104,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 100);
 
-    // Check URL for fifo filter parameter
+    // Check URL for fifo filter parameter and set checkbox state
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('fifo') === 'true') {
         document.getElementById('fifoFilter').checked = true;
-        toggleFifoFilter();
+        // Don't call toggleFifoFilter() here as it would cause a reload loop
     }
 });
 
