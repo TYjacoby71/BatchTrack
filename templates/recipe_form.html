@@ -4,25 +4,30 @@
 {% set preselect_ingredient_id = session.pop('preselect_ingredient_id', None) %}
 {% set add_ingredient_line = session.pop('add_ingredient_line', False) %}
 
-<h2>
-    {% if recipe %}
-        {% if recipe.parent_id %}Edit Variation{% else %}Edit Recipe{% endif %}
-    {% else %}
-        {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
-    {% endif %}
-</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if recipe %}
+            {% if recipe.parent_id %}Edit Variation{% else %}Edit Recipe{% endif %}
+        {% else %}
+            {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+        {% endif %}
+    </h2>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Recipes
+    </a>
+</div>
 
 {% if recipe and recipe.parent %}
-<div class="alert alert-info mb-3">
-    <strong>Variation of:</strong> {{ recipe.parent.name }}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle"></i> <strong>Variation of:</strong> {{ recipe.parent.name }}
 </div>
 {% elif is_variation and parent_recipe %}
-<div class="alert alert-info mb-3">
-    <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-plus-circle"></i> <strong>New Variation:</strong> Based on {{ parent_recipe.name }}
 </div>
 {% elif is_clone and recipe %}
-<div class="alert alert-info mb-3">
-    <strong>Creating a copy of:</strong> {{ recipe.name }}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-copy"></i> <strong>Creating a copy of:</strong> {{ recipe.name }}
 </div>
 {% endif %}
 
@@ -30,14 +35,87 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
-    <div class="form-group">
-        <label for="name">{% if recipe and recipe.parent_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}:</label>
-        <input type="text" name="name" value="{{ recipe.name if recipe else '' }}" required>
+    <!-- Basic Information Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-info-circle"></i> Basic Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="name" class="form-label">{% if recipe and recipe.parent_id or is_variation %}Variation Name{% else %}Recipe Name{% endif %}</label>
+                        <input type="text" name="name" class="form-control" value="{{ recipe.name if recipe else '' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="label_prefix" class="form-label">Label Prefix <span class="text-danger">*</span></label>
+                        <div class="d-flex align-items-center">
+                            <input type="text" id="label_prefix" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8" required class="form-control me-2">
+                            <i class="fas fa-info-circle text-muted" 
+                               data-bs-toggle="popover" 
+                               data-bs-placement="right"
+                               data-bs-trigger="click"
+                               data-bs-html="true"
+                               data-bs-content="
+                                 <div>
+                                   <strong>Label Prefix Guidelines:</strong><br>
+                                   • Used for batch labeling<br>
+                                   • Example: <u>SOAP</u>-2024-001<br>
+                                   • Must be unique across all recipes<br>
+                                   • Maximum 8 characters<br>
+                                   • Only letters and numbers recommended
+                                 </div>"
+                               title="Label Prefix Help"
+                               style="cursor: pointer;">
+                            </i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group mb-3">
+                <label for="instructions" class="form-label">Instructions</label>
+                <textarea name="instructions" class="form-control" rows="4" placeholder="Enter detailed instructions for this recipe...">{{ recipe.instructions if recipe else '' }}</textarea>
+            </div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="instructions">Instructions:</label>
-        <textarea name="instructions" rows="4">{{ recipe.instructions if recipe else '' }}</textarea>
+    <!-- Yield Information Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-balance-scale"></i> Expected Yield
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="predicted_yield" class="form-label">Projected Yield Amount</label>
+                        <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="predicted_yield_unit" class="form-label">Projected Yield Unit</label>
+                        <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
+                            <option value="">Select Unit</option>
+                            {% for unit in inventory_units %}
+                            <option value="{{ unit.name }}" {% if recipe and recipe.predicted_yield_unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if edit_mode and existing_batches and existing_batches > 0 %}
+                        <div class="alert alert-warning mt-2" id="yieldUnitWarning" style="display: none;">
+                            <small><strong>⚠️ Warning:</strong> You have already made {{ existing_batches }} batch{{ 'es' if existing_batches > 1 else '' }} using this recipe. If you change the yield unit, future batch outputs will be converted to match the storage unit in the inventory manager when creating intermediate ingredients.</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="form-group">
@@ -84,99 +162,158 @@
         {% endif %}
     </div>
 
-    <hr>
+    <!-- Container Requirements Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-box"></i> Container Requirements
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
+                <label class="form-check-label" for="requiresContainers">
+                    <strong>This recipe requires containers</strong>
+                    <br><small class="text-muted">Check this if the recipe produces items that need to be placed in containers</small>
+                </label>
+            </div>
 
-    <div class="form-group">
-        <label>Does this recipe require containers?</label>
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="requires_containers" id="requiresContainers" {% if recipe and recipe.requires_containers %}checked{% endif %}>
-            <label class="form-check-label" for="requiresContainers">
-              Yes, this recipe needs containers.
-            </label>
+            <div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
+                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
+                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+                    {% for container in all_ingredients if container.type == 'container' %}
+                    <option value="{{ container.id }}" {% if recipe and container.id in recipe.allowed_containers %}selected{% endif %}>
+                        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple containers</small>
+            </div>
         </div>
     </div>
 
-    <div class="form-group" id="allowedContainersSection" style="{% if not (recipe and recipe.requires_containers) %}display:none;{% endif %}">
-        <label for="allowed_containers">Select Allowed Containers:</label>
-        <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-            {% for container in all_ingredients if container.type == 'container' %}
-            <option value="{{ container.id }}" {% if recipe and container.id in recipe.allowed_containers %}selected{% endif %}>
-                {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <hr>
-
-    <div class="form-group">
-        <label>Ingredients:</label>
-        <button type="button" onclick="addIngredient()">Add Ingredient</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">Quick Add Ingredient</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">Quick Add Container</button>
-        <div id="ingredients-container">
+    <!-- Ingredients Card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list"></i> Ingredients
+            </h5>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
+                    <i class="fas fa-plus"></i> Add Ingredient
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">
+                    <i class="fas fa-bolt"></i> Quick Add Ingredient
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">
+                    <i class="fas fa-box-open"></i> Quick Add Container
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="ingredients-container">
             {% if recipe and recipe.recipe_ingredients %}
-                {% for assoc in recipe.recipe_ingredients %}
-                <div class="ingredient-entry">
-                    <select name="ingredient_ids[]" required>
-                        <option value="">Select an ingredient</option>
-                        {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                        <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>{{ available_ing.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" step="0.01" name="amounts[]" value="{{ assoc.amount }}" required>
-                    <select name="units[]" required>
-                        {% for unit in inventory_units %}
-                        <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <td class="conversion-warning text-center align-middle small">
-                        <!-- JS will inject conversion warning here -->
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
-                    </td>
+                    {% for assoc in recipe.recipe_ingredients %}
+                    <div class="ingredient-entry row mb-3 p-3 border rounded">
+                        <div class="col-md-4">
+                            <label class="form-label small">Ingredient</label>
+                            <select name="ingredient_ids[]" class="form-select" required>
+                                <option value="">Select an ingredient</option>
+                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
+                                <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>{{ available_ing.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Amount</label>
+                            <input type="number" step="0.01" name="amounts[]" class="form-control" value="{{ assoc.amount }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Unit</label>
+                            <select name="units[]" class="form-select" required>
+                                {% for unit in inventory_units %}
+                                <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <div class="conversion-warning text-center small text-muted">
+                                <!-- JS will inject conversion warning here -->
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% elif ingredient_prefill %}
+                    {% for ing_id, amount, unit in ingredient_prefill %}
+                    <div class="ingredient-entry row mb-3 p-3 border rounded">
+                        <div class="col-md-4">
+                            <label class="form-label small">Ingredient</label>
+                            <select name="ingredient_ids[]" class="form-select" required>
+                                <option value="">Select an ingredient</option>
+                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
+                                <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Amount</label>
+                            <input type="number" step="0.01" name="amounts[]" class="form-control" value="{{ amount }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Unit</label>
+                            <select name="units[]" class="form-select" required data-preset-unit="{{ unit }}">
+                                {% for unit_choice in inventory_units %}
+                                <option value="{{ unit_choice.name }}" {% if unit_choice.name == unit %}selected{% endif %}>{{ unit_choice.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <div class="conversion-warning text-center small text-muted">
+                                <!-- JS will inject conversion warning here -->
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                    <p>No ingredients added yet. Click "Add Ingredient" to get started.</p>
                 </div>
-                {% endfor %}
-            {% elif ingredient_prefill %}
-                {% for ing_id, amount, unit in ingredient_prefill %}
-                <div class="ingredient-entry">
-                    <select name="ingredient_ids[]" required>
-                        <option value="">Select an ingredient</option>
-                        {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                        <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" step="0.01" name="amounts[]" value="{{ amount }}" required>
-                    <select name="units[]" required data-preset-unit="{{ unit }}">
-                        {% for unit_choice in inventory_units %}
-                        <option value="{{ unit_choice.name }}" {% if unit_choice.name == unit %}selected{% endif %}>{{ unit_choice.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <td class="conversion-warning text-center align-middle small">
-                        <!-- JS will inject conversion warning here -->
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
-                    </td>
-                </div>
-                {% endfor %}
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <hr>
-
-    <div class="form-group mt-3 d-flex justify-content-between">
-        <div>
-            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
-            {% if recipe and not is_clone and not is_variation and not parent_recipe %}
-            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
-                {% if recipe.parent_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
-            </button>
-            {% endif %}
+    <!-- Form Actions -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    {% if recipe and not is_clone and not is_variation and not parent_recipe %}
+                    <button type="button" class="btn btn-outline-danger ms-2" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
+                        <i class="fas fa-trash"></i> 
+                        {% if recipe.parent_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if recipe and recipe.parent_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}
+                </button>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">{% if recipe and recipe.parent_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}</button>
     </div>
 </form>
 
@@ -337,33 +474,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function addIngredient(preselectId = null, presetUnit = null) {
     const container = document.getElementById('ingredients-container');
+    
+    // Remove empty state message if it exists
+    const emptyState = container.querySelector('.text-center.text-muted');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
     const entry = document.createElement('div');
-    entry.classList.add('ingredient-entry');
+    entry.classList.add('ingredient-entry', 'row', 'mb-3', 'p-3', 'border', 'rounded');
     entry.innerHTML = `
-        <select name="ingredient_ids[]" required>
-            <option value="">Select an ingredient</option>
-            {% for ing in all_ingredients if ing.type != 'container' %}
-            <option value="{{ ing.id }}">{{ ing.name }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" step="0.01" name="amounts[]" required>
-        <select name="units[]" required>
-            {% for unit in inventory_units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-        </select>
-        <td class="conversion-warning text-center align-middle small">
-            <!-- JS will inject conversion warning here -->
-        </td>
-        <td>
-            <button type="button" class="btn btn-danger btn-sm remove-ingredient">Remove</button>
-        </td>
+        <div class="col-md-4">
+            <label class="form-label small">Ingredient</label>
+            <select name="ingredient_ids[]" class="form-select" required>
+                <option value="">Select an ingredient</option>
+                {% for ing in all_ingredients if ing.type != 'container' %}
+                <option value="{{ ing.id }}">{{ ing.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Amount</label>
+            <input type="number" step="0.01" name="amounts[]" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Unit</label>
+            <select name="units[]" class="form-select" required>
+                {% for unit in inventory_units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-ingredient w-100">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div class="col-12 mt-2">
+            <div class="conversion-warning text-center small text-muted">
+                <!-- JS will inject conversion warning here -->
+            </div>
+        </div>
     `;
     container.appendChild(entry);
+    
     if (preselectId) {
         const select = entry.querySelector('select[name="ingredient_ids[]"]');
         if (select) select.value = preselectId;
     }
+    
     entry.scrollIntoView({ behavior: 'smooth' });
     return entry;
 }
