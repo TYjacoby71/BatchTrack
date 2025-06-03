@@ -120,6 +120,7 @@ def list_batches():
     
     return render_template('batches_list.html',
         InventoryItem=InventoryItem, 
+        batches=all_batches,
         in_progress_batches=in_progress_batches,
         completed_batches=completed_batches,
         in_progress_pagination=in_progress_pagination,
