@@ -12,14 +12,8 @@
             <i class="fas fa-filter"></i> Filters
         </button>
         <div class="btn-group" role="group">
-            <input type="radio" class="btn-check" name="viewToggle" id="cardView" checked>
-            <label class="btn btn-outline-secondary" for="cardView">
-                <i class="fas fa-th-large"></i> Cards
-            </label>
-            <input type="radio" class="btn-check" name="viewToggle" id="tableView">
-            <label class="btn btn-outline-secondary" for="tableView">
-                <i class="fas fa-table"></i> Table
-            </label>
+            <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
+            <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
         </div>
     </div>
 </div>
@@ -320,17 +314,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipesContainer = document.getElementById('recipesContainer');
     const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
-    const cardView = document.getElementById('cardView');
-    const tableView = document.getElementById('tableView');
-
     // View toggle functionality
-    function toggleView() {
-        if (cardView.checked) {
+    function showView(viewType) {
+        const cardViewBtn = document.getElementById('cardViewBtn');
+        const tableViewBtn = document.getElementById('tableViewBtn');
+
+        if (viewType === 'cardView') {
             recipesContainer.style.display = 'flex';
             recipesTableContainer.style.display = 'none';
+            cardViewBtn.className = 'btn btn-secondary btn-sm';
+            tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
         } else {
             recipesContainer.style.display = 'none';
             recipesTableContainer.style.display = 'block';
+            cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
+            tableViewBtn.className = 'btn btn-secondary btn-sm';
         }
         filterRecipes(); // Re-apply filters for current view
     }
@@ -340,7 +338,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = recipeFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        if (cardView.checked) {
+        const isCardView = recipesContainer.style.display !== 'none';
+        
+        if (isCardView) {
             const cards = recipesContainer.querySelectorAll('.recipe-card');
             cards.forEach(card => {
                 const recipeName = card.dataset.recipeName;
@@ -365,7 +365,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortRecipes() {
         const sortBy = sortFilter.value;
 
-        if (cardView.checked) {
+        const isCardView = recipesContainer.style.display !== 'none';
+        
+        if (isCardView) {
             const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
             cards.sort((a, b) => {
                 switch(sortBy) {
@@ -404,8 +406,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Event listeners
-    cardView.addEventListener('change', toggleView);
-    tableView.addEventListener('change', toggleView);
     recipeFilter.addEventListener('input', filterRecipes);
     sortFilter.addEventListener('change', sortRecipes);
 
