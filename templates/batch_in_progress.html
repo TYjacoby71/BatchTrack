@@ -111,8 +111,8 @@
                             {% set line_cost = amount * cost %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('inventory.view_inventory', id=ing.ingredient.id) }}?fifo=true" 
-                                       class="text-decoration-none" title="View FIFO details for {{ ing.ingredient.name }}">
+                                    <a href="#" onclick="openFifoModal({{ ing.ingredient.id }}, '{{ ing.ingredient.name }}', {{ batch.id }})" 
+                                       class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ ing.ingredient.name }}">
                                         {{ ing.ingredient.name }}
                                     </a>
                                 </td>
@@ -154,8 +154,8 @@
                             {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('inventory.view_inventory', id=extra.ingredient.id) }}?fifo=true" 
-                                       class="text-decoration-none" title="View FIFO details for {{ extra.ingredient.name }}">
+                                    <a href="#" onclick="openFifoModal({{ extra.ingredient.id }}, '{{ extra.ingredient.name }}', {{ batch.id }})" 
+                                       class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ extra.ingredient.name }}">
                                         {{ extra.ingredient.name }}
                                     </a>
                                 </td>
@@ -313,6 +313,16 @@
 {# Finish Batch Modal - include only once #}
 {% include 'components/batch/finish_batch_modal.html' %}
 
+{# FIFO Insight Modal #}
+{% include 'components/batch/fifo_insight_modal.html' %}
+
+<!-- Inventory Summary Button -->
+<div class="mb-3">
+    <button type="button" class="btn btn-info" onclick="openBatchInventorySummary({{ batch.id }})">
+        <i class="fas fa-list-alt"></i> View Complete Inventory Summary
+    </button>
+</div>
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -320,5 +330,6 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 
 {% endblock %}
