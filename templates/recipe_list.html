@@ -11,6 +11,16 @@
         <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
             <i class="fas fa-filter"></i> Filters
         </button>
+        <div class="btn-group" role="group">
+            <input type="radio" class="btn-check" name="viewToggle" id="cardView" checked>
+            <label class="btn btn-outline-secondary" for="cardView">
+                <i class="fas fa-th-large"></i> Cards
+            </label>
+            <input type="radio" class="btn-check" name="viewToggle" id="tableView">
+            <label class="btn btn-outline-secondary" for="tableView">
+                <i class="fas fa-table"></i> Table
+            </label>
+        </div>
     </div>
 </div>
 
@@ -40,10 +50,10 @@
     </div>
 </div>
 
-<!-- Recipes Grid -->
+<!-- Recipes Card View -->
 <div class="row" id="recipesContainer">
     {% for recipe in recipes if not recipe.parent_id %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}">
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ recipe.name }}</h5>
@@ -142,6 +152,115 @@
     {% endfor %}
 </div>
 
+<!-- Recipes Table View -->
+<div class="card" id="recipesTableContainer" style="display: none;">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Recipe Name</th>
+                        <th>Label Prefix</th>
+                        <th>Ingredients</th>
+                        <th>Predicted Yield</th>
+                        <th>Batches</th>
+                        <th>Variations</th>
+                        <th>Containers</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recipe in recipes if not recipe.parent_id %}
+                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
+                        <td>
+                            <strong>{{ recipe.name }}</strong>
+                            {% if recipe.instructions %}
+                            <br><small class="text-muted">{{ recipe.instructions[:50] }}{% if recipe.instructions|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-primary">{{ recipe.label_prefix or 'BTH' }}</span></td>
+                        <td>{{ recipe.recipe_ingredients|length }}</td>
+                        <td>
+                            {% if recipe.predicted_yield %}
+                                {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ recipe.batches|length }}</td>
+                        <td>
+                            {{ recipe.variations|length }}
+                            {% if recipe.variations %}
+                            <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ recipe.id }}">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if recipe.requires_containers %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-copy"></i> Clone
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-code-branch"></i> Create Variation
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% if recipe.variations %}
+                    <tr class="collapse" id="table-variations-{{ recipe.id }}">
+                        <td colspan="8">
+                            <div class="ps-4">
+                                <strong>Variations:</strong>
+                                <div class="mt-2">
+                                    {% for variation in recipe.variations %}
+                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                        <div>
+                                            <span class="fw-bold">{{ variation.name }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ variation.label_prefix or 'BTH' }}</span>
+                                        </div>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                            <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                            <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- No Results Message -->
 <div id="noResults" class="text-center py-5" style="display: none;">
     <div class="card">
@@ -199,49 +318,94 @@ document.addEventListener('DOMContentLoaded', function() {
     const sortFilter = document.getElementById('sortFilter');
     const showVariations = document.getElementById('showVariations');
     const recipesContainer = document.getElementById('recipesContainer');
+    const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
+    const cardView = document.getElementById('cardView');
+    const tableView = document.getElementById('tableView');
+
+    // View toggle functionality
+    function toggleView() {
+        if (cardView.checked) {
+            recipesContainer.style.display = 'flex';
+            recipesTableContainer.style.display = 'none';
+        } else {
+            recipesContainer.style.display = 'none';
+            recipesTableContainer.style.display = 'block';
+        }
+        filterRecipes(); // Re-apply filters for current view
+    }
 
     // Filter functionality
     function filterRecipes() {
         const searchTerm = recipeFilter.value.toLowerCase();
-        const cards = recipesContainer.querySelectorAll('.recipe-card');
         let visibleCount = 0;
 
-        cards.forEach(card => {
-            const recipeName = card.dataset.recipeName;
-            const isVisible = recipeName.includes(searchTerm);
-            card.style.display = isVisible ? 'block' : 'none';
-            if (isVisible) visibleCount++;
-        });
+        if (cardView.checked) {
+            const cards = recipesContainer.querySelectorAll('.recipe-card');
+            cards.forEach(card => {
+                const recipeName = card.dataset.recipeName;
+                const isVisible = recipeName.includes(searchTerm);
+                card.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) visibleCount++;
+            });
+        } else {
+            const rows = recipesTableContainer.querySelectorAll('.recipe-row');
+            rows.forEach(row => {
+                const recipeName = row.dataset.recipeName;
+                const isVisible = recipeName.includes(searchTerm);
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+        }
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
     }
 
     // Sort functionality
     function sortRecipes() {
-        const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
         const sortBy = sortFilter.value;
 
-        cards.sort((a, b) => {
-            switch(sortBy) {
-                case 'name':
-                    return a.dataset.recipeName.localeCompare(b.dataset.recipeName);
-                case 'created':
-                    // Assuming we have a data attribute for created date
-                    return new Date(b.dataset.created || 0) - new Date(a.dataset.created || 0);
-                case 'batches':
-                    const batchesA = parseInt(a.querySelector('.stat-box strong').textContent) || 0;
-                    const batchesB = parseInt(b.querySelector('.stat-box strong').textContent) || 0;
-                    return batchesB - batchesA;
-                default:
-                    return 0;
-            }
-        });
-
-        cards.forEach(card => recipesContainer.appendChild(card));
+        if (cardView.checked) {
+            const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
+            cards.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.dataset.recipeName.localeCompare(b.dataset.recipeName);
+                    case 'created':
+                        return new Date(b.dataset.created || 0) - new Date(a.dataset.created || 0);
+                    case 'batches':
+                        const batchesA = parseInt(a.dataset.batches) || 0;
+                        const batchesB = parseInt(b.dataset.batches) || 0;
+                        return batchesB - batchesA;
+                    default:
+                        return 0;
+                }
+            });
+            cards.forEach(card => recipesContainer.appendChild(card));
+        } else {
+            const tbody = recipesTableContainer.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('.recipe-row'));
+            rows.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.dataset.recipeName.localeCompare(b.dataset.recipeName);
+                    case 'created':
+                        return new Date(b.dataset.created || 0) - new Date(a.dataset.created || 0);
+                    case 'batches':
+                        const batchesA = parseInt(a.dataset.batches) || 0;
+                        const batchesB = parseInt(b.dataset.batches) || 0;
+                        return batchesB - batchesA;
+                    default:
+                        return 0;
+                }
+            });
+            rows.forEach(row => tbody.appendChild(row));
+        }
     }
 
     // Event listeners
+    cardView.addEventListener('change', toggleView);
+    tableView.addEventListener('change', toggleView);
     recipeFilter.addEventListener('input', filterRecipes);
     sortFilter.addEventListener('change', sortRecipes);
 
