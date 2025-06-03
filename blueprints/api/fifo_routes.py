@@ -115,10 +115,10 @@ def get_batch_fifo_usage(inventory_id, batch_id):
     """Get FIFO usage data for a specific ingredient in a specific batch"""
     # Get deduction history entries for this batch
     deduction_entries = InventoryHistory.query.filter_by(
-        inventory_item_id=inventory_id
+        inventory_item_id=inventory_id,
+        used_for_batch_id=batch_id
     ).filter(
-        InventoryHistory.batch_id == batch_id,
-        InventoryHistory.change_type.in_(['use', 'batch_use'])
+        InventoryHistory.quantity_change < 0  # Only deductions
     ).all()
     
     usage_data = []
