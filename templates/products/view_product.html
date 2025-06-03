@@ -337,9 +337,9 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Container Type</label>
-            <select name="container_id" class="form-select" required>
-              <option value="">Select Container...</option>
+            <label class="form-label">Container Type (Optional)</label>
+            <select name="container_id" class="form-select">
+              <option value="">No Container (Standalone Product)</option>
               {% for container in available_containers %}
               <option value="{{ container.id }}">
                 {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
@@ -347,6 +347,9 @@
               </option>
               {% endfor %}
             </select>
+            <small class="form-text text-muted">
+              Select "No Container" for standalone products like bread loaves, whole items, etc.
+            </small>
           </div>
           <div class="mb-3">
             <label class="form-label">Quantity</label>
