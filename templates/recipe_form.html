@@ -335,6 +335,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Handle ingredient removal using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-ingredient')) {
+            e.preventDefault();
+            const ingredientEntry = e.target.closest('.ingredient-entry');
+            if (ingredientEntry) {
+                ingredientEntry.remove();
+                
+                // Check if we need to show empty state
+                const container = document.getElementById('ingredients-container');
+                const remainingEntries = container.querySelectorAll('.ingredient-entry');
+                
+                if (remainingEntries.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                            <p>No ingredients added yet. Click "Add Ingredient" to get started.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+    });
+
     if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
         addIngredient(PRESELECT_INGREDIENT_ID);
     }
