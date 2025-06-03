@@ -1,0 +1,62 @@
+Absolutely — here's a cleaned-up and fully structured prompt that builds from what you were trying to write. This captures the purpose (better FIFO visibility), user interaction design (modal instead of redirect), and practical use cases (perishable tracking, data transparency).
+
+✅ Final Prompt: FIFO Insight Modal in Batch In Progress
+I like the existing filter, but I think the user would be better served if the Batch In Progress (BIP) page displayed more derivative data from FIFO inventory events.
+
+Instead of a redirect to the inventory page, let’s populate a modal that gives inventory context in-place when an ingredient is clicked during a batch.
+
+🔍 Key Interaction
+When the user clicks on an ingredient name in the batch ingredient list, open a modal (not a new page).
+
+This modal shows FIFO-derived data for the inventory deductions used for that ingredient in this batch.
+
+📊 Modal Data Requirements
+Inventory Item Age
+
+For each FIFO entry used, calculate the age (now - restock date)
+
+Display in days (e.g., “24 days old”)
+
+Life Remaining % (If Perishable)
+
+If the item has a shelf_life in days:
+
+Calculate remaining %:
+
+python
+Copy
+Edit
+remaining = max(0, 100 - ((age_in_days / shelf_life) * 100))
+Display as progress bar or badge (e.g., “72% life remaining”)
+
+Quantity Pulled
+
+Show exactly how much was pulled from each FIFO entry
+
+Example:
+
+csharp
+Copy
+Edit
+Pulled 5g from Restock #201 (27 days old, 60% life remaining)
+Pulled 10g from Restock #198 (40 days old, expired)
+Cost Breakdown (Optional)
+
+Show cost per unit from each FIFO line (if cost tracking is active)
+
+Summarize total cost for that ingredient within this batch
+
+🧠 Advanced Option: Summary View
+Add an “Inventory Summary” button at the bottom of the ingredient table in BIP.
+
+Opens a modal that shows the aggregate FIFO source info for all ingredients used in that batch.
+
+Acts like a transparent ingredient traceability report.
+
+🛠 Technical Implementation Suggestions
+Modal should use Bootstrap or your current modal framework.
+
+Use AJAX or Alpine.js to fetch FIFO summary for the ingredient when clicked — avoid reloading the page.
+
+Store FIFO deduction records during deduct_fifo() and map them to batch ingredient entries.
+
