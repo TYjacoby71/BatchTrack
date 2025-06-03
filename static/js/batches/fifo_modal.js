@@ -82,27 +82,26 @@ async function fetchBatchInventorySummary(batchId) {
 }
 
 function renderFifoDetails(data) {
-    const { inventory_item, fifo_entries, batch_usage } = data;
+    const { inventory_item, batch_usage } = data;
     
     let html = `
         <div class="mb-3">
-            <h6>Item: ${inventory_item.name}</h6>
-            <p class="text-muted">${inventory_item.type} • Current Stock: ${inventory_item.quantity} ${inventory_item.unit}</p>
+            <h6>${inventory_item.name}</h6>
+            <p class="text-muted">Current Stock: ${inventory_item.quantity} ${inventory_item.unit}</p>
         </div>
     `;
     
     if (batch_usage && batch_usage.length > 0) {
         html += `
-            <div class="mb-4">
-                <h6>Usage in This Batch</h6>
-                <table class="table table-sm">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
                     <thead>
                         <tr>
-                            <th>FIFO Entry</th>
+                            <th>FIFO Source</th>
                             <th>Amount Used</th>
                             <th>Age</th>
-                            <th>Life Remaining</th>
-                            <th>Cost/Unit</th>
+                            <th>Freshness</th>
+                            <th>Line Cost</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,58 +109,24 @@ function renderFifoDetails(data) {
         
         batch_usage.forEach(usage => {
             const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
-            const lifeRemaining = usage.life_remaining_percent !== null 
+            const freshnessDisplay = usage.life_remaining_percent !== null 
                 ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                 : '<span class="text-muted">Non-perishable</span>';
             
-            html += `
-                <tr>
-                    <td><small class="text-muted">#${usage.fifo_id}</small></td>
-                    <td><strong>${usage.quantity_used} ${usage.unit}</strong></td>
-                    <td>${ageText}</td>
-                    <td>${lifeRemaining}</td>
-                    <td>$${(usage.unit_cost || 0).toFixed(2)}</td>
-                </tr>
-            `;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-    
-    if (fifo_entries && fifo_entries.length > 0) {
-        html += `
-            <div class="mb-3">
-                <h6>Current FIFO Entries (Available Stock)</h6>
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>FIFO ID</th>
-                            <th>Available</th>
-                            <th>Age</th>
-                            <th>Life Remaining</th>
-                            <th>Date Added</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        fifo_entries.forEach(entry => {
-            const ageText = entry.age_days ? `${entry.age_days} days` : 'N/A';
-            const lifeRemaining = entry.life_remaining_percent !== null 
-                ? `<span class="badge ${getLifeBadgeClass(entry.life_remaining_percent)}">${entry.life_remaining_percent}%</span>`
-                : '<span class="text-muted">Non-perishable</span>';
+            const lineCost = (usage.quantity_used * (usage.unit_cost || 0)).toFixed(2);
             
             html += `
                 <tr>
-                    <td><small class="text-muted">#${entry.fifo_id}</small></td>
-                    <td><strong>${entry.remaining_quantity} ${entry.unit}</strong></td>
+                    <td>
+                        <a href="/inventory/view/${inventory_item.id}?fifo=true#entry-${usage.fifo_id}" 
+                           target="_blank" class="fifo-ingredient-link">
+                            #${usage.fifo_id}
+                        </a>
+                    </td>
+                    <td><strong>${usage.quantity_used} ${usage.unit}</strong></td>
                     <td>${ageText}</td>
-                    <td>${lifeRemaining}</td>
-                    <td>${new Date(entry.timestamp).toLocaleDateString()}</td>
+                    <td>${freshnessDisplay}</td>
+                    <td>$${lineCost}</td>
                 </tr>
             `;
         });
@@ -172,7 +137,7 @@ function renderFifoDetails(data) {
             </div>
         `;
     } else {
-        html += '<div class="alert alert-info">No FIFO entries available for this item.</div>';
+        html += '<div class="alert alert-info">No usage data available for this ingredient in this batch.</div>';
     }
     
     document.getElementById('fifoModalContent').innerHTML = html;
