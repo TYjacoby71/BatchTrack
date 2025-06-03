@@ -26,14 +26,18 @@ def set_column_visibility():
 @login_required
 def list_batches():
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    in_progress_page = request.args.get('in_progress_page', 1, type=int)
+    completed_page = request.args.get('completed_page', 1, type=int)
+    
+    # Set different pagination limits for tables vs cards
+    table_per_page = 10
+    card_per_page = 8  # 2 rows x 4 columns
 
-    query = Batch.query
     # Default columns to show if user has not set preference
     visible_columns = session.get('visible_columns', ['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
     # Get filters from request args or session
-    status = request.args.get('status') or session.get('batch_filter_status')
+    status = request.args.get('status') or session.get('batch_filter_status', 'all')
     recipe_id = request.args.get('recipe_id') or session.get('batch_filter_recipe')
     start = request.args.get('start') or session.get('batch_filter_start')
     end = request.args.get('end') or session.get('batch_filter_end')
@@ -46,41 +50,57 @@ def list_batches():
     session['batch_filter_end'] = end
     session['batch_sort_by'] = sort_by
 
+    # Build base query with filters
+    base_query = Batch.query
+
     if status and status != 'all':
-        query = query.filter_by(status=status)
+        base_query = base_query.filter_by(status=status)
 
     if recipe_id:
-        query = query.filter_by(recipe_id=recipe_id)
+        base_query = base_query.filter_by(recipe_id=recipe_id)
     if start:
-        query = query.filter(Batch.timestamp >= start)
+        base_query = base_query.filter(Batch.started_at >= start)
     if end:
-        query = query.filter(Batch.timestamp <= end)
+        base_query = base_query.filter(Batch.started_at <= end)
 
-    # Apply sorting
-    if sort_by == 'date_asc':
-        query = query.order_by(Batch.started_at.asc())
-    elif sort_by == 'date_desc':
-        query = query.order_by(Batch.started_at.desc())
-    elif sort_by == 'recipe_asc':
-        query = query.join(Recipe).order_by(Recipe.name.asc())
-    elif sort_by == 'recipe_desc':
-        query = query.join(Recipe).order_by(Recipe.name.desc())
-    elif sort_by == 'status_asc':
-        query = query.order_by(Batch.status.asc())
-    elif sort_by == 'cost_desc':
-        # For cost sorting, we'll sort by a calculated field after pagination
-        query = query.order_by(Batch.started_at.desc())
-    elif sort_by == 'cost_asc':
-        # For cost sorting, we'll sort by a calculated field after pagination
-        query = query.order_by(Batch.started_at.desc())
-    else:
-        query = query.order_by(Batch.started_at.desc())
+    # Apply sorting to base query
+    def apply_sorting(query, sort_order):
+        if sort_order == 'date_asc':
+            return query.order_by(Batch.started_at.asc())
+        elif sort_order == 'date_desc':
+            return query.order_by(Batch.started_at.desc())
+        elif sort_order == 'recipe_asc':
+            return query.join(Recipe).order_by(Recipe.name.asc())
+        elif sort_order == 'recipe_desc':
+            return query.join(Recipe).order_by(Recipe.name.desc())
+        elif sort_order == 'status_asc':
+            return query.order_by(Batch.status.asc())
+        else:
+            return query.order_by(Batch.started_at.desc())
 
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    batches = pagination.items
+    # Separate queries for in-progress and completed batches
+    in_progress_query = apply_sorting(base_query.filter_by(status='in_progress'), sort_by)
+    completed_query = apply_sorting(base_query.filter(Batch.status != 'in_progress'), sort_by)
 
-    # Calculate total cost for each batch including ingredients, containers and extras
-    for batch in batches:
+    # Paginate in-progress batches (use card pagination for card view)
+    in_progress_pagination = in_progress_query.paginate(
+        page=in_progress_page, 
+        per_page=card_per_page, 
+        error_out=False
+    )
+    in_progress_batches = in_progress_pagination.items
+
+    # Paginate completed batches (use table pagination for table view)
+    completed_pagination = completed_query.paginate(
+        page=completed_page, 
+        per_page=table_per_page, 
+        error_out=False
+    )
+    completed_batches = completed_pagination.items
+
+    # Calculate total cost for each batch
+    all_batches = in_progress_batches + completed_batches
+    for batch in all_batches:
         ingredient_total = sum((ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
         container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
         extras_total = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
@@ -89,18 +109,23 @@ def list_batches():
 
     # Apply cost-based sorting after calculating costs
     if sort_by == 'cost_desc':
-        batches.sort(key=lambda x: x.total_cost or 0, reverse=True)
+        in_progress_batches.sort(key=lambda x: x.total_cost or 0, reverse=True)
+        completed_batches.sort(key=lambda x: x.total_cost or 0, reverse=True)
     elif sort_by == 'cost_asc':
-        batches.sort(key=lambda x: x.total_cost or 0, reverse=False)
+        in_progress_batches.sort(key=lambda x: x.total_cost or 0, reverse=False)
+        completed_batches.sort(key=lambda x: x.total_cost or 0, reverse=False)
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     from models import InventoryItem
+    
     return render_template('batches_list.html',
         InventoryItem=InventoryItem, 
-                         batches=batches, 
-                         pagination=pagination,
-                         all_recipes=all_recipes, 
-                         visible_columns=visible_columns)
+        in_progress_batches=in_progress_batches,
+        completed_batches=completed_batches,
+        in_progress_pagination=in_progress_pagination,
+        completed_pagination=completed_pagination,
+        all_recipes=all_recipes, 
+        visible_columns=visible_columns)
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
