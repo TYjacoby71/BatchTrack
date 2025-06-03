@@ -337,8 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
 
-    // Filter functionality
-    function filterRecipes() {
+    // Make filterRecipes globally accessible
+    window.filterRecipes = function() {
         const searchTerm = recipeFilter.value.toLowerCase();
         let visibleCount = 0;
 
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-    }
+    };
 
     // Sort functionality
     function sortRecipes() {
