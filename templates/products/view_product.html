@@ -280,7 +280,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('products.adjust_inventory', product_id=product.id, inventory_id=0) }}" id="adjustInventoryForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="hidden-token">
+        {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="inventory_id" id="adjustInventoryId">
 
