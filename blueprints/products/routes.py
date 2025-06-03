@@ -482,3 +482,89 @@ def manual_adjust(product_id):
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
     return redirect(url_for('products.view_variant_inventory', 
                            product_id=product_id, variant=variant, size_label=size_label))
+
+@products_bp.route('/<int:product_id>/variation/<int:variation_id>')
+@login_required
+def view_variation(product_id, variation_id):
+    """View individual product variation details"""
+    from utils.unit_utils import get_global_unit_list
+    
+    product = Product.query.get_or_404(product_id)
+    variation = ProductVariation.query.get_or_404(variation_id)
+    
+    # Ensure variation belongs to this product
+    if variation.product_id != product_id:
+        flash('Variation not found for this product', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+    
+    # Get inventory for this specific variation
+    inventory_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variation.name
+    ).order_by(ProductInventory.timestamp.asc()).all()
+    
+    # Group by size_label and unit
+    size_groups = {}
+    for entry in inventory_entries:
+        if entry.quantity > 0:  # Only show active inventory
+            key = f"{entry.size_label}_{entry.unit}"
+            if key not in size_groups:
+                size_groups[key] = {
+                    'size_label': entry.size_label,
+                    'unit': entry.unit,
+                    'total_quantity': 0,
+                    'batches': []
+                }
+            size_groups[key]['total_quantity'] += entry.quantity
+            size_groups[key]['batches'].append(entry)
+    
+    # Get recent activity for this variation
+    recent_events = ProductEvent.query.filter(
+        ProductEvent.product_id == product_id,
+        ProductEvent.note.like(f'%{variation.name}%')
+    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+    
+    return render_template('products/view_variation.html',
+                         product=product,
+                         variation=variation,
+                         size_groups=size_groups,
+                         recent_events=recent_events,
+                         get_global_unit_list=get_global_unit_list)
+
+@products_bp.route('/<int:product_id>/variation/<int:variation_id>/edit', methods=['POST'])
+@login_required
+def edit_variation(product_id, variation_id):
+    """Edit product variation details"""
+    product = Product.query.get_or_404(product_id)
+    variation = ProductVariation.query.get_or_404(variation_id)
+    
+    # Ensure variation belongs to this product
+    if variation.product_id != product_id:
+        flash('Variation not found for this product', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+    
+    name = request.form.get('name')
+    sku = request.form.get('sku')
+    description = request.form.get('description')
+    
+    if not name:
+        flash('Variation name is required', 'error')
+        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+    
+    # Check if another variation has this name for the same product
+    existing = ProductVariation.query.filter(
+        ProductVariation.name == name,
+        ProductVariation.product_id == product_id,
+        ProductVariation.id != variation_id
+    ).first()
+    if existing:
+        flash('Another variation with this name already exists for this product', 'error')
+        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+    
+    variation.name = name
+    variation.sku = sku if sku else None
+    variation.description = description if description else None
+    
+    db.session.commit()
+    flash('Variation updated successfully', 'success')
+    return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))

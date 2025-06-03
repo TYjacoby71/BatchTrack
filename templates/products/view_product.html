@@ -33,6 +33,15 @@
             </div>
             <div class="col-md-3">
               <strong>Variants:</strong> {{ product.variations|length }}
+              {% if product.variations %}
+                <div class="mt-1">
+                  {% for variation in product.variations %}
+                    <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-info btn-xs me-1">
+                      {{ variation.name }}
+                    </a>
+                  {% endfor %}
+                </div>
+              {% endif %}
             </div>
             <div class="col-md-3">
               <strong>Total Inventory:</strong> 
