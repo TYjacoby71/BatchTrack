@@ -199,20 +199,21 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-edit"></i>
-                                </a>
                                 <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-play"></i>
+                                    <i class="fas fa-play"></i> Plan
                                 </a>
                                 <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-eye"></i> View
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-copy"></i> Clone
                                         </a></li>
