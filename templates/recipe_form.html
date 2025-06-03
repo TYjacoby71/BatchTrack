@@ -41,15 +41,27 @@
     </div>
 
     <div class="form-group">
-        <label for="label_prefix">
-            Label Prefix: <span style="color: red;">*</span>
-            <i class="fas fa-info-circle" style="color: #6c757d; cursor: help;" 
-               data-bs-toggle="tooltip" 
-               data-bs-placement="top" 
-               title="Used for batch labeling (e.g., SOAP-2024-001). Must be unique across all recipes."></i>
-        </label>
-        <input type="text" id="label_prefix" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8" required>
-        <small>Example: <u>SOAP</u>-2024-001</small>
+        <label for="label_prefix">Label Prefix: <span style="color: red;">*</span></label>
+        <div class="d-flex align-items-center">
+            <input type="text" id="label_prefix" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8" required class="form-control me-2">
+            <i class="fas fa-info-circle text-muted" 
+               data-bs-toggle="popover" 
+               data-bs-placement="right"
+               data-bs-trigger="click"
+               data-bs-html="true"
+               data-bs-content="
+                 <div>
+                   <strong>Label Prefix Guidelines:</strong><br>
+                   • Used for batch labeling<br>
+                   • Example: <u>SOAP</u>-2024-001<br>
+                   • Must be unique across all recipes<br>
+                   • Maximum 8 characters<br>
+                   • Only letters and numbers recommended
+                 </div>"
+               title="Label Prefix Help"
+               style="cursor: pointer;">
+            </i>
+        </div>
     </div>
 
     <div class="form-group">
@@ -213,10 +225,21 @@ let originalYieldUnit = '{{ recipe.predicted_yield_unit if recipe else '' }}';
 {% endif %}
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    // Initialize Bootstrap popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl, {
+            container: 'body'
+        });
+    });
+
+    // Close popover when clicking elsewhere
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-bs-toggle="popover"]')) {
+            popoverList.forEach(function(popover) {
+                popover.hide();
+            });
+        }
     });
 
     if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
