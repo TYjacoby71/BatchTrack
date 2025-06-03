@@ -1,0 +1,272 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
+          <li class="breadcrumb-item active">{{ variation.name }}</li>
+        </ol>
+      </nav>
+
+      <!-- Variation Summary Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3>{{ product.name }} - {{ variation.name }}</h3>
+          <div>
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+              Edit Variation
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <strong>SKU:</strong> {{ variation.sku or 'Not set' }}
+            </div>
+            <div class="col-md-3">
+              <strong>Product Base Unit:</strong> {{ product.product_base_unit }}
+            </div>
+            <div class="col-md-3">
+              <strong>Size Variants:</strong> {{ size_groups|length }}
+            </div>
+            <div class="col-md-3">
+              <strong>Created:</strong> {{ variation.created_at.strftime('%Y-%m-%d') }}
+            </div>
+          </div>
+          {% if variation.description %}
+          <div class="row mt-2">
+            <div class="col-12">
+              <strong>Description:</strong> {{ variation.description }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Size Variants Inventory -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h4>Size Variants & Inventory</h4>
+        </div>
+        <div class="card-body">
+          {% if size_groups %}
+            {% for group_key, group in size_groups.items() %}
+            <div class="mb-4">
+              <h5>{{ group.size_label }} ({{ group.unit }})</h5>
+              <div class="row mb-2">
+                <div class="col-md-3">
+                  <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}
+                </div>
+                <div class="col-md-3">
+                  {% set avg_cost = (group.batches|sum(attribute='batch_cost_per_unit')|default(0) / group.batches|length) if group.batches|length > 0 else 0 %}
+                  <strong>Avg Cost:</strong> ${{ "%.3f"|format(avg_cost) }}
+                </div>
+                <div class="col-md-3">
+                  <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variation.name, size_label=group.size_label) }}" class="btn btn-info btn-sm">
+                    View FIFO Details
+                  </a>
+                </div>
+                <div class="col-md-3">
+                  <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal" 
+                          data-variant="{{ variation.name }}" data-size="{{ group.size_label }}" data-unit="{{ group.unit }}">
+                    Quick Deduct
+                  </button>
+                </div>
+              </div>
+
+              <table class="table table-sm table-bordered">
+                <thead>
+                  <tr>
+                    <th>Batch</th>
+                    <th>Date Created</th>
+                    <th>Quantity</th>
+                    <th>Container</th>
+                    <th>Expiration</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for inv in group.batches %}
+                  <tr>
+                    <td>
+                      <a href="{{ url_for('batches.view_batch', batch_identifier=inv.batch_id) }}">
+                        Batch {{ inv.batch_id }}
+                      </a>
+                    </td>
+                    <td>{{ inv.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ "%.2f"|format(inv.quantity) }} {{ inv.unit }}</td>
+                    <td>
+                      {% if inv.container %}
+                        {{ inv.container.name }}
+                      {% else %}
+                        <span class="text-muted">Not specified</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if inv.expiration_date %}
+                        {% set today = moment().date() if moment else inv.expiration_date %}
+                        {% set days_until = (inv.expiration_date - today).days if inv.expiration_date else 0 %}
+                        <span class="{% if days_until < 7 %}text-danger{% elif days_until < 30 %}text-warning{% endif %}">
+                          {{ inv.expiration_date.strftime('%Y-%m-%d') }}
+                          {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
+                        </span>
+                      {% else %}
+                        <span class="text-muted">No expiration</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if inv.quantity <= 0 %}
+                        <span class="badge bg-secondary">Consumed</span>
+                      {% elif inv.expiration_date and inv.expiration_date < moment().date() %}
+                        <span class="badge bg-danger">Expired</span>
+                      {% elif inv.expiration_date and (inv.expiration_date - moment().date()).days < 7 %}
+                        <span class="badge bg-warning">Expiring Soon</span>
+                      {% else %}
+                        <span class="badge bg-success">Available</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="alert alert-info">
+              No inventory found for this variation. Inventory is added when batches are completed.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Activity Log -->
+      <div class="card">
+        <div class="card-header">
+          <h4>Activity Log</h4>
+        </div>
+        <div class="card-body">
+          {% if recent_events %}
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Event</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for event in recent_events %}
+                <tr>
+                  <td>{{ event.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>
+                    <span class="badge bg-{% if 'sale' in event.event_type %}success{% elif 'spoil' in event.event_type %}danger{% else %}warning{% endif %}">
+                      {{ event.event_type.replace('_', ' ').title() }}
+                    </span>
+                  </td>
+                  <td>{{ event.note }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="alert alert-info">No activity recorded for this variation yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Variation Modal -->
+<div class="modal fade" id="editVariationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Variation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.edit_variation', product_id=product.id, variation_id=variation.id) }}">
+        {{ csrf_token() }}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Variation Name</label>
+            <input type="text" name="name" class="form-control" value="{{ variation.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">SKU</label>
+            <input type="text" name="sku" class="form-control" value="{{ variation.sku or '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3">{{ variation.description or '' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Deduct Stock Modal -->
+<div class="modal fade" id="deductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Deduct Stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
+        {{ csrf_token() }}
+        <div class="modal-body">
+          <input type="hidden" name="variant" id="deductVariant">
+          <input type="hidden" name="size_label" id="deductSize">
+
+          <div class="mb-3">
+            <label class="form-label">Quantity to Deduct</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <select name="reason" class="form-select" required>
+              <option value="sale">Sale</option>
+              <option value="spoiled">Spoiled</option>
+              <option value="damaged">Damaged</option>
+              <option value="sample">Sample</option>
+              <option value="manual_deduction">Manual Deduction</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Notes (Optional)</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Deduct Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Handle deduct modal data
+document.getElementById('deductModal').addEventListener('show.bs.modal', function (event) {
+  var button = event.relatedTarget;
+  var variant = button.getAttribute('data-variant');
+  var size = button.getAttribute('data-size');
+
+  document.getElementById('deductVariant').value = variant;
+  document.getElementById('deductSize').value = size;
+});
+</script>
+{% endblock %}

@@ -1,68 +1,443 @@
 
-{% extends "layout.html" %}
+{% extends 'layout.html' %}
 {% block content %}
-<div class="container">
-    <h2>Recipes</h2>
-    <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary mb-3">+ New Recipe</a>
 
-    {% for recipe in recipes %}
-        {% if not recipe.parent_id %}
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    {% if recipe.variations %}
-                    <button class="btn btn-link p-0 me-2" onclick="toggleVariations('variations-{{recipe.id}}')" aria-expanded="false">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                    {% endif %}
-                    <h5 class="mb-0">{{ recipe.name }}</h5>
-                </div>
-                <div>
-                    {% if recipe.is_locked %}
-                    <i class="fas fa-lock me-2"></i>
-                    {% endif %}
-                    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
-                    <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" 
-                       class="btn btn-outline-secondary btn-sm"
-                       {% if recipe.is_locked %}
-                       onclick="event.preventDefault(); alert('This recipe is locked and cannot be edited.');"
-                       {% endif %}>Edit</a>
-                    <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">Plan</a>
-                    <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">Duplicate</a>
-                    <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-success btn-sm">+ Variation</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Recipes</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Recipe
+        </a>
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+            <i class="fas fa-filter"></i> Filters
+        </button>
+        <div class="btn-group" role="group">
+            <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
+            <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="collapse mb-4" id="filterSection">
+    <div class="card card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="recipeFilter" class="form-control" placeholder="Search recipes...">
+            </div>
+            <div class="col-md-4">
+                <select id="sortFilter" class="form-select">
+                    <option value="name">Sort by Name</option>
+                    <option value="created">Sort by Created Date</option>
+                    <option value="batches">Sort by Batch Count</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="showVariations">
+                    <label class="form-check-label" for="showVariations">
+                        Show Variations
+                    </label>
                 </div>
             </div>
-            {% if recipe.variations %}
-            <ul id="variations-{{recipe.id}}" class="list-group list-group-flush" style="display: none;">
-                {% for variation in recipe.variations %}
-                <li class="list-group-item d-flex justify-content-between align-items-center ps-4">
-                    <span>{{ variation.name }}</span>
-                    <div>
-                        <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">View</a>
-                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
-                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=variation.id) }}" class="btn btn-info btn-sm">Make New Parent</a>
-                        <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-sm">Plan</a>
+        </div>
+    </div>
+</div>
+
+<!-- Recipes Card View -->
+<div class="row" id="recipesContainer">
+    {% for recipe in recipes if not recipe.parent_id %}
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{{ recipe.name }}</h5>
+                <span class="badge bg-primary">{{ recipe.label_prefix or 'BTH' }}</span>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <div class="recipe-details mb-3">
+                    <p class="card-text text-muted mb-2">
+                        <small>
+                            <i class="fas fa-flask"></i> {{ recipe.recipe_ingredients|length }} ingredients
+                            {% if recipe.predicted_yield %}
+                                | <i class="fas fa-balance-scale"></i> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
+                            {% endif %}
+                        </small>
+                    </p>
+                    {% if recipe.instructions %}
+                    <p class="card-text">{{ recipe.instructions[:100] }}{% if recipe.instructions|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Recipe Stats -->
+                <div class="recipe-stats mb-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-box">
+                                <strong>{{ recipe.batches|length }}</strong>
+                                <br><small class="text-muted">Batches</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-box">
+                                <strong>{{ recipe.variations|length }}</strong>
+                                <br><small class="text-muted">Variations</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-box">
+                                <strong>{% if recipe.requires_containers %}Yes{% else %}No{% endif %}</strong>
+                                <br><small class="text-muted">Containers</small>
+                            </div>
+                        </div>
                     </div>
-                </li>
-                {% endfor %}
-            </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-auto">
+                    <div class="btn-group w-100 mb-2" role="group">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-play"></i> Plan
+                        </a>
+                    </div>
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-copy"></i> Clone
+                        </a>
+                        <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-code-branch"></i> Variation
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Variations Section -->
+            {% if recipe.variations %}
+            <div class="card-footer">
+                <button class="btn btn-link btn-sm p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#variations-{{ recipe.id }}">
+                    <i class="fas fa-chevron-right"></i> {{ recipe.variations|length }} Variation{{ 's' if recipe.variations|length != 1 else '' }}
+                </button>
+                <div class="collapse variations-list" id="variations-{{ recipe.id }}">
+                    <div class="mt-2">
+                        {% for variation in recipe.variations %}
+                        <div class="variation-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <strong>{{ variation.name }}</strong>
+                                <br><small class="text-muted">{{ variation.label_prefix or 'BTH' }}</small>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
             {% endif %}
         </div>
-        {% endif %}
+    </div>
     {% endfor %}
 </div>
 
-<script>
-function toggleVariations(id) {
-    const el = document.getElementById(id);
-    const btn = el.previousElementSibling.querySelector('button i');
-    if (el.style.display === 'none') {
-        el.style.display = 'block';
-        btn.classList.replace('fa-chevron-right', 'fa-chevron-down');
-    } else {
-        el.style.display = 'none';
-        btn.classList.replace('fa-chevron-down', 'fa-chevron-right');
+<!-- Recipes Table View -->
+<div class="card" id="recipesTableContainer" style="display: none;">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Recipe Name</th>
+                        <th>Label Prefix</th>
+                        <th>Ingredients</th>
+                        <th>Predicted Yield</th>
+                        <th>Batches</th>
+                        <th>Variations</th>
+                        <th>Containers</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recipe in recipes if not recipe.parent_id %}
+                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
+                        <td>
+                            <strong>{{ recipe.name }}</strong>
+                            {% if recipe.instructions %}
+                            <br><small class="text-muted">{{ recipe.instructions[:50] }}{% if recipe.instructions|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-primary">{{ recipe.label_prefix or 'BTH' }}</span></td>
+                        <td>{{ recipe.recipe_ingredients|length }}</td>
+                        <td>
+                            {% if recipe.predicted_yield %}
+                                {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ recipe.batches|length }}</td>
+                        <td>
+                            {{ recipe.variations|length }}
+                            {% if recipe.variations %}
+                            <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ recipe.id }}">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if recipe.requires_containers %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> Plan
+                                </a>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-eye"></i> View
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-copy"></i> Clone
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
+                                            <i class="fas fa-code-branch"></i> Create Variation
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% if recipe.variations %}
+                    <tr class="collapse" id="table-variations-{{ recipe.id }}">
+                        <td colspan="8">
+                            <div class="ps-4">
+                                <strong>Variations:</strong>
+                                <div class="mt-2">
+                                    {% for variation in recipe.variations %}
+                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                        <div>
+                                            <span class="fw-bold">{{ variation.name }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ variation.label_prefix or 'BTH' }}</span>
+                                        </div>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                            <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                            <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- No Results Message -->
+<div id="noResults" class="text-center py-5" style="display: none;">
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h5>No recipes found</h5>
+            <p class="text-muted">Try adjusting your search criteria</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.recipe-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.recipe-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-box {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+}
+
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.variation-item:last-child {
+    border-bottom: none !important;
+}
+
+.variations-list .collapse.show {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
+</style>
+
+<script>
+// Global showView function
+function showView(viewType) {
+    const recipesContainer = document.getElementById('recipesContainer');
+    const recipesTableContainer = document.getElementById('recipesTableContainer');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const tableViewBtn = document.getElementById('tableViewBtn');
+
+    if (viewType === 'cardView') {
+        recipesContainer.style.display = 'flex';
+        recipesTableContainer.style.display = 'none';
+        cardViewBtn.className = 'btn btn-secondary btn-sm';
+        tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        recipesContainer.style.display = 'none';
+        recipesTableContainer.style.display = 'block';
+        cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
+        tableViewBtn.className = 'btn btn-secondary btn-sm';
+    }
+    filterRecipes(); // Re-apply filters for current view
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const recipeFilter = document.getElementById('recipeFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const showVariations = document.getElementById('showVariations');
+    const recipesContainer = document.getElementById('recipesContainer');
+    const recipesTableContainer = document.getElementById('recipesTableContainer');
+    const noResults = document.getElementById('noResults');
+
+    // Make filterRecipes globally accessible
+    window.filterRecipes = function() {
+        const searchTerm = recipeFilter.value.toLowerCase();
+        let visibleCount = 0;
+
+        const isCardView = recipesContainer.style.display !== 'none';
+        
+        if (isCardView) {
+            const cards = recipesContainer.querySelectorAll('.recipe-card');
+            cards.forEach(card => {
+                const recipeName = card.dataset.recipeName;
+                const isVisible = recipeName.includes(searchTerm);
+                card.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) visibleCount++;
+            });
+        } else {
+            const rows = recipesTableContainer.querySelectorAll('.recipe-row');
+            rows.forEach(row => {
+                const recipeName = row.dataset.recipeName;
+                const isVisible = recipeName.includes(searchTerm);
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+        }
+
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    };
+
+    // Sort functionality
+    function sortRecipes() {
+        const sortBy = sortFilter.value;
+
+        const isCardView = recipesContainer.style.display !== 'none';
+        
+        if (isCardView) {
+            const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
+            cards.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.dataset.recipeName.localeCompare(b.dataset.recipeName);
+                    case 'created':
+                        return new Date(b.dataset.created || 0) - new Date(a.dataset.created || 0);
+                    case 'batches':
+                        const batchesA = parseInt(a.dataset.batches) || 0;
+                        const batchesB = parseInt(b.dataset.batches) || 0;
+                        return batchesB - batchesA;
+                    default:
+                        return 0;
+                }
+            });
+            cards.forEach(card => recipesContainer.appendChild(card));
+        } else {
+            const tbody = recipesTableContainer.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('.recipe-row'));
+            rows.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.dataset.recipeName.localeCompare(b.dataset.recipeName);
+                    case 'created':
+                        return new Date(b.dataset.created || 0) - new Date(a.dataset.created || 0);
+                    case 'batches':
+                        const batchesA = parseInt(a.dataset.batches) || 0;
+                        const batchesB = parseInt(b.dataset.batches) || 0;
+                        return batchesB - batchesA;
+                    default:
+                        return 0;
+                }
+            });
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    }
+
+    // Event listeners
+    recipeFilter.addEventListener('input', filterRecipes);
+    sortFilter.addEventListener('change', sortRecipes);
+
+    // Variation toggle functionality
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            setTimeout(() => {
+                const target = document.querySelector(this.dataset.bsTarget);
+                if (target.classList.contains('show')) {
+                    icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+                } else {
+                    icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+                }
+            }, 100);
+        });
+    });
+
+    // Collapse filter section when clicking outside
+    document.addEventListener('click', function(e) {
+        const filterSection = document.getElementById('filterSection');
+        const filterToggle = document.querySelector('[data-bs-target="#filterSection"]');
+        
+        if (!filterSection.contains(e.target) && !filterToggle.contains(e.target)) {
+            const bsCollapse = new bootstrap.Collapse(filterSection, { toggle: false });
+            bsCollapse.hide();
+        }
+    });
+});
 </script>
 {% endblock %}

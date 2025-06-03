@@ -94,42 +94,14 @@
                     <i class="fas fa-filter"></i> Filters
                 </button>
                 <div class="btn-group" role="group">
-                    <button class="btn btn-secondary btn-sm" id="inProgressCardBtn" onclick="showInProgressView('cardView')">Card View</button>
-                    <button class="btn btn-outline-secondary btn-sm" id="inProgressTableBtn" onclick="showInProgressView('tableView')">Table View</button>
+                    <button class="btn btn-secondary btn-sm" id="inProgressTableBtn" onclick="showInProgressView('tableView')">Table View</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="inProgressCardBtn" onclick="showInProgressView('cardView')">Card View</button>
                 </div>
             </div>
         </div>
         <div class="card-body">
-            <!-- In Progress Card View -->
-            <div id="inProgressCardView">
-                <div class="row">
-                    {% for batch in in_progress_batches %}
-                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">{{ batch.recipe.name }}</h5>
-                                <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
-                                <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
-                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</p>
-                                <p class="card-text">
-                                    <strong>Status:</strong> 
-                                    <span class="badge bg-warning">In Progress</span>
-                                </p>
-                                {% if batch.tags %}
-                                <p class="card-text"><small class="text-muted">{{ batch.tags }}</small></p>
-                                {% endif %}
-                                <div class="mt-auto">
-                                    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-warning w-100">Continue</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
             <!-- In Progress Table View -->
-            <div id="inProgressTableView" style="display: none;">
+            <div id="inProgressTableView">
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -174,6 +146,34 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- In Progress Card View -->
+            <div id="inProgressCardView" style="display: none;">
+                <div class="row">
+                    {% for batch in in_progress_batches %}
+                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ batch.recipe.name }}</h5>
+                                <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
+                                <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
+                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                                <p class="card-text">
+                                    <strong>Status:</strong> 
+                                    <span class="badge bg-warning">In Progress</span>
+                                </p>
+                                {% if batch.tags %}
+                                <p class="card-text"><small class="text-muted">{{ batch.tags }}</small></p>
+                                {% endif %}
+                                <div class="mt-auto">
+                                    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-warning w-100">Continue</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -356,30 +356,28 @@
 </div>
 {% endif %}
 
-<!-- Pagination Controls -->
+<!-- In Progress Pagination -->
+{% if in_progress_batches and in_progress_pagination.pages > 1 %}
 <div class="d-flex justify-content-center mt-3">
-    <nav aria-label="Batch navigation">
-        <ul class="pagination">
-            {% if pagination.has_prev %}
+    <nav aria-label="In Progress batch navigation">
+        <ul class="pagination pagination-sm">
+            {% if in_progress_pagination.has_prev %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('batches.list_batches', page=pagination.prev_num) }}">Previous</a>
+                <a class="page-link" href="{{ url_for('batches.list_batches', in_progress_page=in_progress_pagination.prev_num, completed_page=request.args.get('completed_page', 1)) }}">Previous</a>
             </li>
             {% endif %}
-
             <li class="page-item">
-                <span class="page-link">
-                    Page {{ pagination.page }} of {{ pagination.pages }}
-                </span>
+                <span class="page-link">In Progress: Page {{ in_progress_pagination.page }} of {{ in_progress_pagination.pages }}</span>
             </li>
-
-            {% if pagination.has_next %}
+            {% if in_progress_pagination.has_next %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('batches.list_batches', page=pagination.next_num) }}">Next</a>
+                <a class="page-link" href="{{ url_for('batches.list_batches', in_progress_page=in_progress_pagination.next_num, completed_page=request.args.get('completed_page', 1)) }}">Next</a>
             </li>
             {% endif %}
         </ul>
     </nav>
 </div>
+{% endif %}
 
 <script>
 function showInProgressView(viewId) {
@@ -388,15 +386,15 @@ function showInProgressView(viewId) {
     document.getElementById('inProgressCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
 
     // Toggle button styles
-    const cardBtn = document.getElementById('inProgressCardBtn');
     const tableBtn = document.getElementById('inProgressTableBtn');
+    const cardBtn = document.getElementById('inProgressCardBtn');
 
-    if (viewId === 'cardView') {
-        cardBtn.className = 'btn btn-secondary btn-sm';
-        tableBtn.className = 'btn btn-outline-secondary btn-sm';
-    } else {
-        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+    if (viewId === 'tableView') {
         tableBtn.className = 'btn btn-secondary btn-sm';
+        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        tableBtn.className = 'btn btn-outline-secondary btn-sm';
+        cardBtn.className = 'btn btn-secondary btn-sm';
     }
 }
 
