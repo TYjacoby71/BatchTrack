@@ -174,10 +174,6 @@ class InventoryHistory(db.Model):
     batch = db.relationship('Batch')
     user = db.relationship('User')
 
-    quantity_used = db.Column(db.Integer, nullable=False)
-    cost_each = db.Column(db.Float)
-    container = db.relationship('InventoryItem', backref=db.backref('history_containers'), overlaps="history,inventory_item")
-
 class BatchTimer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)

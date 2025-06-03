@@ -161,7 +161,7 @@ def deduct_product(product_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 
-@products_bp.route('/<int:product_id>/adjust', methods=['POST'])
+@products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
 
 
 @products_bp.route('/api/<int:product_id>/variants', methods=['GET'])
