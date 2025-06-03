@@ -1,17 +1,16 @@
-
 document.addEventListener('DOMContentLoaded', function() {
     // Check if initial inventory modal exists and show it
     const initialModal = document.getElementById('initialInventoryModal');
     if (initialModal) {
         const modal = new bootstrap.Modal(initialModal);
         modal.show();
-        
+
         // Prevent closing modal by clicking outside or escape key
         initialModal.addEventListener('hide.bs.modal', function (e) {
             e.preventDefault();
             return false;
         });
-        
+
         // Focus on quantity input when modal is shown
         initialModal.addEventListener('shown.bs.modal', function () {
             document.getElementById('initial_quantity').focus();
@@ -104,4 +103,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, 100);
+
+    // Check URL for fifo filter parameter and set checkbox state
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('fifo') === 'true') {
+        document.getElementById('fifoFilter').checked = true;
+        // Don't call toggleFifoFilter() here as it would cause a reload loop
+    }
 });
+
+function toggleFifoFilter() {
+    const fifoFilter = document.getElementById('fifoFilter');
+    
+    // Build new URL with filter parameter and reset to page 1
+    const url = new URL(window.location);
+    url.searchParams.delete('page'); // Reset to page 1
+    
+    if (fifoFilter.checked) {
+        url.searchParams.set('fifo', 'true');
+    } else {
+        url.searchParams.delete('fifo');
+    }
+    
+    // Redirect to apply filter at backend level
+    window.location.href = url.toString();
+}

@@ -50,7 +50,7 @@
       </thead>
       <tbody>
         {% for entry in history %}
-        <tr id="entry-{{ entry.id }}">
+        <tr>
           <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>{{ entry.change_type|title }}</td>
           <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
