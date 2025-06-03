@@ -20,6 +20,20 @@
     font-weight: 600;
     font-size: 0.875rem;
     border-top: none;
+    color: #495057;
+}
+
+#fifoInsightModal .table td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+    color: #212529;
+    font-weight: 400;
+}
+
+#fifoInsightModal .table td strong {
+    font-weight: 600;
+    color: #212529;
 }
 
 #fifoInsightModal .table-hover tbody tr:hover {
@@ -28,16 +42,14 @@
 
 #fifoInsightModal .badge {
     font-size: 0.75rem;
-}
-
-#fifoInsightModal .table td {
-    vertical-align: middle;
-    padding: 0.75rem 0.5rem;
+    font-weight: 500;
 }
 
 #fifoInsightModal h6 {
     margin-bottom: 0.5rem;
     color: #495057;
+    font-weight: 600;
+    font-size: 1rem;
 }
 
 /* Responsive handling for batch modals */
