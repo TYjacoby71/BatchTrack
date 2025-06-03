@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -292,6 +291,29 @@
                         {% endfor %}
                     </tbody>
                 </table>
+
+                <!-- Completed Table Pagination -->
+                {% if completed_pagination.pages > 1 %}
+                <div class="d-flex justify-content-center mt-3">
+                    <nav aria-label="Completed batch navigation">
+                        <ul class="pagination pagination-sm">
+                            {% if completed_pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('batches.list_batches', completed_page=completed_pagination.prev_num, in_progress_page=request.args.get('in_progress_page', 1)) }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            <li class="page-item">
+                                <span class="page-link">Page {{ completed_pagination.page }} of {{ completed_pagination.pages }}</span>
+                            </li>
+                            {% if completed_pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('batches.list_batches', completed_page=completed_pagination.next_num, in_progress_page=request.args.get('in_progress_page', 1)) }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Completed Card View -->
@@ -364,11 +386,11 @@ function showInProgressView(viewId) {
     // Toggle views
     document.getElementById('inProgressTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('inProgressCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
-    
+
     // Toggle button styles
     const cardBtn = document.getElementById('inProgressCardBtn');
     const tableBtn = document.getElementById('inProgressTableBtn');
-    
+
     if (viewId === 'cardView') {
         cardBtn.className = 'btn btn-secondary btn-sm';
         tableBtn.className = 'btn btn-outline-secondary btn-sm';
@@ -382,11 +404,11 @@ function showCompletedView(viewId) {
     // Toggle views
     document.getElementById('completedTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
     document.getElementById('completedCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
-    
+
     // Toggle button styles
     const tableBtn = document.getElementById('completedTableBtn');
     const cardBtn = document.getElementById('completedCardBtn');
-    
+
     if (viewId === 'tableView') {
         tableBtn.className = 'btn btn-secondary btn-sm';
         cardBtn.className = 'btn btn-outline-secondary btn-sm';

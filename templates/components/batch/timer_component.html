@@ -1,7 +1,7 @@
 
 <div x-data="{ 
   showTimerForm: false,
-  showTimerList: false,
+  showTimerList: true,
   name: '',
   hours: '',
   minutes: '',
@@ -54,11 +54,8 @@
 }">
   <div x-show="showStatus" x-transition.duration.500ms class="alert" :class="statusType === 'success' ? 'alert-success' : 'alert-danger'" x-text="statusMessage"></div>
 <div class="d-flex align-items-center gap-2">
-    <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary">
-      + Add Timer
-    </button>
-    <button type="button" @click="showTimerList = !showTimerList" class="btn btn-outline-secondary btn-sm" title="Show/Hide Timer List">
-      <span x-text="showTimerList ? '▼' : '▶'" style="font-size: 10px;"></span>
+    <button type="button" @click="showTimerForm = !showTimerForm" class="btn btn-outline-primary btn-sm">
+      <i class="fas fa-plus"></i> Add Timer
     </button>
   </div>
 

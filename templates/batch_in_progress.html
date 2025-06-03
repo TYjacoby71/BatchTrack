@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/batches.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="d-flex align-items-center">
@@ -53,22 +58,49 @@
 <form id="batchForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
 
-    <!-- Section 2: Timers -->
-    <div class="mb-4">
-        <h3>Timers</h3>
-        <div class="card">
+    <!-- Section 2: Batch Tools -->
+    <div class="mb-4" x-data="{ 
+        showTimers: false, 
+        showExtraItems: false,
+        hasActiveTimers: {{ 'true' if timers and timers|selectattr('status', 'equalto', 'active')|list else 'false' }},
+        hasExtraItems: false
+    }">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Batch Tools</h3>
+            <div class="d-flex gap-2">
+                <button type="button" @click="showTimers = !showTimers" 
+                        class="btn btn-outline-primary btn-sm" 
+                        :class="{ 'btn-primary text-white': showTimers }">
+                    <i class="fas fa-clock"></i> Timers
+                    <span x-show="hasActiveTimers && !showTimers" class="badge bg-warning text-dark ms-1">
+                        {{ timers|selectattr('status', 'equalto', 'active')|list|length if timers else 0 }}
+                    </span>
+                </button>
+                <button type="button" @click="showExtraItems = !showExtraItems" 
+                        class="btn btn-outline-secondary btn-sm"
+                        :class="{ 'btn-secondary text-white': showExtraItems }">
+                    <i class="fas fa-plus-circle"></i> Extra Items
+                </button>
+            </div>
+        </div>
+
+        <!-- Timers Section -->
+        <div x-show="showTimers" x-transition.duration.300ms class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Batch Timers</h5>
+            </div>
             <div class="card-body">
                 {% with timers=timers, now=now %}
                     {% include 'components/batch/timer_component.html' %}
                 {% endwith %}
             </div>
         </div>
-    </div>
 
-    <!-- Section 3: Extra Items Management -->
-    <div class="mb-4">
-        <h3>Extra Items</h3>
-        <div class="card">
+        <!-- Extra Items Section -->
+        <div x-show="showExtraItems" x-transition.duration.300ms class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Extra Items Management</h5>
+            </div>
             <div class="card-body">
                 <div id="extra-ingredients-container"></div>
                 <div class="d-flex gap-2 mb-3">
@@ -111,8 +143,8 @@
                             {% set line_cost = amount * cost %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('inventory.view_inventory', id=ing.ingredient.id) }}?fifo=true" 
-                                       class="text-decoration-none" title="View FIFO details for {{ ing.ingredient.name }}">
+                                    <a href="#" onclick="openFifoModal({{ ing.ingredient.id }}, '{{ ing.ingredient.name }}', {{ batch.id }})" 
+                                       class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ ing.ingredient.name }}">
                                         {{ ing.ingredient.name }}
                                     </a>
                                 </td>
@@ -154,8 +186,8 @@
                             {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('inventory.view_inventory', id=extra.ingredient.id) }}?fifo=true" 
-                                       class="text-decoration-none" title="View FIFO details for {{ extra.ingredient.name }}">
+                                    <a href="#" onclick="openFifoModal({{ extra.ingredient.id }}, '{{ extra.ingredient.name }}', {{ batch.id }})" 
+                                       class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ extra.ingredient.name }}">
                                         {{ extra.ingredient.name }}
                                     </a>
                                 </td>
@@ -313,6 +345,16 @@
 {# Finish Batch Modal - include only once #}
 {% include 'components/batch/finish_batch_modal.html' %}
 
+{# FIFO Insight Modal #}
+{% include 'components/batch/fifo_insight_modal.html' %}
+
+<!-- Inventory Summary Button -->
+<div class="mb-3">
+    <button type="button" class="btn btn-info" onclick="openBatchInventorySummary({{ batch.id }})">
+        <i class="fas fa-list-alt"></i> View Complete Inventory Summary
+    </button>
+</div>
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -320,5 +362,6 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 
 {% endblock %}
