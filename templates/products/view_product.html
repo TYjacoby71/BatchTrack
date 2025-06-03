@@ -422,7 +422,7 @@ function openAdjustModal(inventoryId, variant, sizeLabel) {
 
   // Update the form action with the correct inventory_id
   const form = document.getElementById('adjustInventoryForm');
-  form.action = `/products/${{{ product.id }}}/adjust/${inventoryId}`;
+  form.action = `/products/{{ product.id }}/adjust/${inventoryId}`;
 
   // Show the modal
   const modal = new bootstrap.Modal(document.getElementById('adjustModal'));
