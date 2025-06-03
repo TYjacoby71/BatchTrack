@@ -255,17 +255,17 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> Cancel
+                    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
                     </a>
                     {% if recipe and not is_clone and not is_variation and not parent_recipe %}
-                    <button type="button" class="btn btn-outline-danger ms-2" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
+                    <button type="button" class="btn btn-danger ms-2" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_id else 'false' }}, {{ recipe.variations|length }})">
                         <i class="fas fa-trash"></i> 
                         {% if recipe.parent_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
                     </button>
                     {% endif %}
                 </div>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-success">
                     <i class="fas fa-save"></i> {% if recipe and recipe.parent_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}
                 </button>
             </div>
