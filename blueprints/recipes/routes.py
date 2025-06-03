@@ -12,11 +12,29 @@ recipes_bp = Blueprint('recipes', __name__)
 def new_recipe():
     if request.method == 'POST':
         try:
+            # Validate required fields
+            label_prefix = request.form.get('label_prefix', '').strip()
+            if not label_prefix:
+                flash('Label prefix is required and cannot be empty.', 'error')
+                return render_template('recipe_form.html', 
+                                     recipe=None, 
+                                     all_ingredients=InventoryItem.query.all(), 
+                                     inventory_units=get_global_unit_list())
+            
+            # Check for duplicate label prefixes
+            existing_recipe = Recipe.query.filter_by(label_prefix=label_prefix).first()
+            if existing_recipe:
+                flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                return render_template('recipe_form.html', 
+                                     recipe=None, 
+                                     all_ingredients=InventoryItem.query.all(), 
+                                     inventory_units=get_global_unit_list())
+
             # Create recipe first
             recipe = Recipe(
                 name=request.form.get('name'),
                 instructions=request.form.get('instructions'),
-                label_prefix=request.form.get('label_prefix'),
+                label_prefix=label_prefix,
                 predicted_yield=float(request.form.get('predicted_yield') or 0.0),
                 predicted_yield_unit=request.form.get('predicted_yield_unit') or "",
                 requires_containers=True if request.form.get('requires_containers') else False,
@@ -142,9 +160,34 @@ def create_variation(recipe_id):
             db.session.add(new_ingredient)
 
         if request.method == 'POST':
+            # Validate label prefix for variation
+            label_prefix = request.form.get('label_prefix', '').strip()
+            if not label_prefix:
+                flash('Label prefix is required and cannot be empty.', 'error')
+                return render_template('recipe_form.html',
+                                     recipe=new_variation,
+                                     all_ingredients=all_ingredients,
+                                     inventory_units=inventory_units,
+                                     is_variation=True,
+                                     parent_recipe=parent)
+            
+            # Check for duplicate label prefixes (excluding current variation)
+            existing_recipe = Recipe.query.filter(
+                Recipe.label_prefix == label_prefix,
+                Recipe.id != new_variation.id
+            ).first()
+            if existing_recipe:
+                flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                return render_template('recipe_form.html',
+                                     recipe=new_variation,
+                                     all_ingredients=all_ingredients,
+                                     inventory_units=inventory_units,
+                                     is_variation=True,
+                                     parent_recipe=parent)
+
             new_variation.name = request.form['name']
             new_variation.instructions = request.form.get('instructions', '')
-            new_variation.label_prefix = request.form.get('label_prefix', '')
+            new_variation.label_prefix = label_prefix
 
             # Clear existing ingredient links (important for updates)
             RecipeIngredient.query.filter_by(recipe_id=new_variation.id).delete()
@@ -330,9 +373,34 @@ def edit_recipe(recipe_id):
 
     if request.method == 'POST':
         try:
+            # Validate label prefix
+            label_prefix = request.form.get('label_prefix', '').strip()
+            if not label_prefix:
+                flash('Label prefix is required and cannot be empty.', 'error')
+                return render_template('recipe_form.html', 
+                                     recipe=recipe,
+                                     all_ingredients=all_ingredients,
+                                     inventory_units=inventory_units, 
+                                     edit_mode=True,
+                                     existing_batches=existing_batches)
+            
+            # Check for duplicate label prefixes (excluding current recipe)
+            existing_recipe = Recipe.query.filter(
+                Recipe.label_prefix == label_prefix,
+                Recipe.id != recipe.id
+            ).first()
+            if existing_recipe:
+                flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                return render_template('recipe_form.html', 
+                                     recipe=recipe,
+                                     all_ingredients=all_ingredients,
+                                     inventory_units=inventory_units, 
+                                     edit_mode=True,
+                                     existing_batches=existing_batches)
+
             recipe.name = request.form['name']
             recipe.instructions = request.form.get('instructions', '')
-            recipe.label_prefix = request.form.get('label_prefix', '')
+            recipe.label_prefix = label_prefix
             recipe.predicted_yield = float(request.form.get('predicted_yield') or 0.0)
             recipe.predicted_yield_unit = request.form.get('predicted_yield_unit') or ""
             recipe.requires_containers = True if request.form.get('requires_containers') else False
