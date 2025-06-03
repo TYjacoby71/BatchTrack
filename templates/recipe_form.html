@@ -118,50 +118,6 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label for="label_prefix">Label Prefix: <span style="color: red;">*</span></label>
-        <div class="d-flex align-items-center">
-            <input type="text" id="label_prefix" name="label_prefix" value="{{ recipe.label_prefix if recipe else '' }}" maxlength="8" required class="form-control me-2">
-            <i class="fas fa-info-circle text-muted" 
-               data-bs-toggle="popover" 
-               data-bs-placement="right"
-               data-bs-trigger="click"
-               data-bs-html="true"
-               data-bs-content="
-                 <div>
-                   <strong>Label Prefix Guidelines:</strong><br>
-                   • Used for batch labeling<br>
-                   • Example: <u>SOAP</u>-2024-001<br>
-                   • Must be unique across all recipes<br>
-                   • Maximum 8 characters<br>
-                   • Only letters and numbers recommended
-                 </div>"
-               title="Label Prefix Help"
-               style="cursor: pointer;">
-            </i>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label for="predicted_yield">Projected Yield Amount:</label>
-        <input type="number" class="form-control" id="predicted_yield" name="predicted_yield" value="{{ recipe.predicted_yield if recipe else '' }}" step="0.01" min="0">
-    </div>
-
-    <div class="form-group">
-        <label for="predicted_yield_unit">Projected Yield Unit:</label>
-        <select class="form-select" id="predicted_yield_unit" name="predicted_yield_unit">
-            <option value="">Select Unit</option>
-            {% for unit in inventory_units %}
-            <option value="{{ unit.name }}" {% if recipe and recipe.predicted_yield_unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
-            {% endfor %}
-        </select>
-        {% if edit_mode and existing_batches and existing_batches > 0 %}
-        <div class="alert alert-warning mt-2" id="yieldUnitWarning" style="display: none;">
-            <small><strong>⚠️ Warning:</strong> You have already made {{ existing_batches }} batch{{ 'es' if existing_batches > 1 else '' }} using this recipe. If you change the yield unit, future batch outputs will be converted to match the storage unit in the inventory manager when creating intermediate ingredients.</small>
-        </div>
-        {% endif %}
-    </div>
-
     <!-- Container Requirements Card -->
     <div class="card mb-4">
         <div class="card-header">
