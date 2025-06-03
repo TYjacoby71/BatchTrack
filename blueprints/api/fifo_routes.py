@@ -133,15 +133,21 @@ def get_batch_fifo_usage(inventory_id, batch_id):
             source_entry = InventoryHistory.query.get(entry.fifo_reference_id)
         
         if source_entry and source_entry.timestamp:
-            # Calculate age from the source entry's creation date
-            age_days = (datetime.utcnow() - source_entry.timestamp).days
+            # Get the batch to use its start timestamp for age calculation
+            batch = Batch.query.get(batch_id)
+            batch_start = batch.started_at if batch else datetime.utcnow()
+            
+            # Calculate age from the source entry's creation date to when batch started
+            age_days = (batch_start - source_entry.timestamp).days
             
             if source_entry.is_perishable and source_entry.shelf_life_days:
                 life_remaining_percent = max(0, 100 - ((age_days / source_entry.shelf_life_days) * 100))
                 life_remaining_percent = round(life_remaining_percent, 1)
         elif entry.timestamp:
             # Fallback to using the deduction entry's timestamp if no source found
-            age_days = (datetime.utcnow() - entry.timestamp).days
+            batch = Batch.query.get(batch_id)
+            batch_start = batch.started_at if batch else datetime.utcnow()
+            age_days = (batch_start - entry.timestamp).days
             
             if entry.is_perishable and entry.shelf_life_days:
                 life_remaining_percent = max(0, 100 - ((age_days / entry.shelf_life_days) * 100))
