@@ -19,19 +19,23 @@ def upgrade():
     # First, update any NULL label_prefix values to avoid constraint violation
     op.execute("UPDATE recipe SET label_prefix = 'BTH' WHERE label_prefix IS NULL OR label_prefix = ''")
     
-    # Make label_prefix NOT NULL
-    op.alter_column('recipe', 'label_prefix',
-               existing_type=sa.VARCHAR(length=8),
-               nullable=False)
-    
-    # Add unique constraint
-    op.create_unique_constraint('uq_recipe_label_prefix', 'recipe', ['label_prefix'])
+    # Use batch operations for SQLite compatibility
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        # Make label_prefix NOT NULL
+        batch_op.alter_column('label_prefix',
+                   existing_type=sa.VARCHAR(length=8),
+                   nullable=False)
+        
+        # Add unique constraint
+        batch_op.create_unique_constraint('uq_recipe_label_prefix', ['label_prefix'])
 
 def downgrade():
-    # Remove unique constraint
-    op.drop_constraint('uq_recipe_label_prefix', 'recipe', type_='unique')
-    
-    # Make label_prefix nullable again
-    op.alter_column('recipe', 'label_prefix',
-               existing_type=sa.VARCHAR(length=8),
-               nullable=True)
+    # Use batch operations for SQLite compatibility
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        # Remove unique constraint
+        batch_op.drop_constraint('uq_recipe_label_prefix', type_='unique')
+        
+        # Make label_prefix nullable again
+        batch_op.alter_column('label_prefix',
+                   existing_type=sa.VARCHAR(length=8),
+                   nullable=True)
