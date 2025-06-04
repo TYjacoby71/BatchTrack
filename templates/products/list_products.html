@@ -22,7 +22,8 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <h6 class="mb-0 me-2">{{ product.name }}</h6>
-              {% if product.variations %}
+              {% set base_inventory = product.inventory|selectattr('variant', 'equalto', 'Base')|list %}
+              {% if product.variations or base_inventory|length > 0 %}
               <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ product.id }}">
                 <i class="fas fa-chevron-down"></i>
               </button>
@@ -52,10 +53,24 @@
               </div>
             </div>
             
-            {% if product.variations %}
+            {% set base_inventory = product.inventory|selectattr('variant', 'equalto', 'Base')|list %}
+            {% if product.variations or base_inventory|length > 0 %}
             <div class="collapse mt-3" id="card-variations-{{ product.id }}">
               <div class="border-top pt-2">
                 <strong class="small">Variations:</strong>
+                
+                <!-- Base Variant -->
+                {% if base_inventory|length > 0 %}
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <div>
+                    <span class="fw-bold small">Base</span>
+                    <span class="badge bg-light text-dark ms-1 small">Default</span>
+                  </div>
+                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                </div>
+                {% endif %}
+                
+                <!-- Regular Variations -->
                 {% for variation in product.variations %}
                 <div class="d-flex justify-content-between align-items-center py-1">
                   <div>
