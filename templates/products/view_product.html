@@ -75,18 +75,20 @@
 
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
-        <!-- Get all unique variants -->
-        {% set all_variants = [] %}
+        <!-- Get all unique variants from ProductVariation table and inventory -->
+        {% set all_variants = ['Base'] %}
+        {% for variation in product.variations %}
+          {% if variation.name not in all_variants %}
+            {% set _ = all_variants.append(variation.name) %}
+          {% endif %}
+        {% endfor %}
+        
+        <!-- Add any additional variants from inventory that might not be in variations table -->
         {% for group_key, group in inventory_groups.items() %}
           {% if group.variant not in all_variants %}
             {% set _ = all_variants.append(group.variant) %}
           {% endif %}
         {% endfor %}
-        
-        <!-- Add Base variant if not already in list -->
-        {% if 'Base' not in all_variants %}
-          {% set _ = all_variants.append('Base') %}
-        {% endif %}
 
         <!-- Create card for each unique variant -->
         {% for variant_name in all_variants %}
