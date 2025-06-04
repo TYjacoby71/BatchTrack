@@ -28,13 +28,13 @@
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ product.variations|length }}</h5>
-                  <small class="text-muted">Variants</small>
+                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</h5>
+                  <small class="text-muted">Sizes</small>
                 </div>
               </div>
               <div class="col-4">
-                <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</h5>
-                <small class="text-muted">Sizes</small>
+                <h5 class="mb-0">{{ product.variations|length }}</h5>
+                <small class="text-muted">Variants</small>
               </div>
             </div>
             
