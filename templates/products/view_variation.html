@@ -77,7 +77,8 @@
                   <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}
                 </div>
                 <div class="col-md-3">
-                  {% set avg_cost = (group.batches|sum(attribute='batch_cost_per_unit')|default(0) / group.batches|length) if group.batches|length > 0 else 0 %}
+                  {% set costs = group.batches|map(attribute='batch_cost_per_unit')|select('number')|list %}
+                  {% set avg_cost = (costs|sum / costs|length) if costs|length > 0 else 0 %}
                   <strong>Avg Cost:</strong> ${{ "%.3f"|format(avg_cost) }}
                 </div>
                 <div class="col-md-3">
