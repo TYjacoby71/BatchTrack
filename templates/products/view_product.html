@@ -75,14 +75,22 @@
 
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
-        <!-- All Variants (including Base) -->
-        {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
-        {% if variant_name in inventory_groups %}
-          {% set var_inventory = [inventory_groups[variant_name]] %}
-        {% else %}
-          {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
+        <!-- Get all unique variants -->
+        {% set all_variants = [] %}
+        {% for group_key, group in inventory_groups.items() %}
+          {% if group.variant not in all_variants %}
+            {% set _ = all_variants.append(group.variant) %}
+          {% endif %}
+        {% endfor %}
+        
+        <!-- Add Base variant if not already in list -->
+        {% if 'Base' not in all_variants %}
+          {% set _ = all_variants.append('Base') %}
         {% endif %}
 
+        <!-- Create card for each unique variant -->
+        {% for variant_name in all_variants %}
+        {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
         {% set var_size_count = var_inventory|length %}
         {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
@@ -212,12 +220,8 @@
               </thead>
               <tbody>
                 <!-- All Variants (including Base) -->
-                {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
-                {% if variant_name in inventory_groups %}
-                  {% set var_inventory = [inventory_groups[variant_name]] %}
-                {% else %}
-                  {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
-                {% endif %}
+                {% for variant_name in all_variants %}
+                {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
                 {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
                 {% set var_size_count = var_inventory|length %}
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
