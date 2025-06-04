@@ -19,8 +19,15 @@
       {% for product in products %}
       <div class="col-md-6 col-lg-4 mb-4">
         <div class="card h-100">
-          <div class="card-header d-flex justify-content-between">
-            <h6 class="mb-0">{{ product.name }}</h6>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <h6 class="mb-0 me-2">{{ product.name }}</h6>
+              {% if product.variations %}
+              <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ product.id }}">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              {% endif %}
+            </div>
             {% if product.total_inventory < product.low_stock_threshold %}
               <span class="badge bg-warning">Low Stock</span>
             {% endif %}
@@ -40,15 +47,34 @@
                 </div>
               </div>
               <div class="col-4">
-                <h5 class="mb-0">{{ product.variations|length }}</h5>
-                <small class="text-muted">Variants</small>
+                <h5 class="mb-0">{{ product.created_at.strftime('%m/%d') }}</h5>
+                <small class="text-muted">Created</small>
               </div>
             </div>
             
+            {% if product.variations %}
+            <div class="collapse mt-3" id="card-variations-{{ product.id }}">
+              <div class="border-top pt-2">
+                <strong class="small">Variations:</strong>
+                {% for variation in product.variations %}
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <div>
+                    <span class="fw-bold small">{{ variation.name }}</span>
+                    {% if variation.sku %}
+                    <span class="badge bg-secondary ms-1 small">{{ variation.sku }}</span>
+                    {% endif %}
+                  </div>
+                  <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            
             <div class="mt-3">
               <small class="text-muted">
-                Default Unit: {{ product.default_unit }}<br>
-                Created: {{ product.created_at.strftime('%Y-%m-%d') }}
+                Default Unit: {{ product.product_base_unit }}<br>
+                {% if not product.variations %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
               </small>
             </div>
           </div>
@@ -84,9 +110,11 @@
               {% for product in products %}
               <tr class="product-row">
                 <td>
-                  <strong>{{ product.name }}</strong>
+                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
+                    <strong>{{ product.name }}</strong>
+                  </a>
                 </td>
-                <td>{{ product.default_unit }}</td>
+                <td>{{ product.product_base_unit }}</td>
                 <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
                 <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
                 <td>
@@ -107,22 +135,17 @@
                 <td>{{ product.created_at.strftime('%Y-%m-%d') }}</td>
                 <td>
                   <div class="btn-group" role="group">
-                    <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-sm">
-                      <i class="fas fa-eye"></i> View
-                    </a>
-                    <div class="btn-group" role="group">
-                      <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-ellipsis-h"></i>
-                      </button>
-                      <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
-                          <i class="fas fa-eye"></i> View Details
-                        </a></li>
-                        <li><a class="dropdown-item" href="#">
-                          <i class="fas fa-edit"></i> Edit Product
-                        </a></li>
-                      </ul>
-                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                        <i class="fas fa-eye"></i> View Details
+                      </a></li>
+                      <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
+                        <i class="fas fa-edit"></i> Edit Product
+                      </a></li>
+                    </ul>
                   </div>
                 </td>
               </tr>
@@ -131,21 +154,56 @@
                 <td colspan="8">
                   <div class="ps-4">
                     <strong>Variations:</strong>
-                    <div class="mt-2">
-                      {% for variation in product.variations %}
-                      <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                        <div>
-                          <span class="fw-bold">{{ variation.name }}</span>
-                          {% if variation.sku %}
-                          <span class="badge bg-secondary ms-2">{{ variation.sku }}</span>
-                          {% endif %}
-                        </div>
-                        <div class="btn-group" role="group">
-                          <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                          <a href="#" class="btn btn-outline-secondary btn-xs">Edit</a>
-                        </div>
-                      </div>
-                      {% endfor %}
+                    <div class="table-responsive mt-2">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Variation</th>
+                            <th>SKU</th>
+                            <th>Total Units</th>
+                            <th>Sizes</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for variation in product.variations %}
+                          {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
+                          <tr>
+                            <td>
+                              <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
+                                <strong>{{ variation.name }}</strong>
+                              </a>
+                            </td>
+                            <td>
+                              {% if variation.sku %}
+                              <span class="badge bg-secondary">{{ variation.sku }}</span>
+                              {% else %}
+                              <span class="text-muted">-</span>
+                              {% endif %}
+                            </td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                            <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                              <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">
+                                  Actions
+                                </button>
+                                <ul class="dropdown-menu">
+                                  <li><a class="dropdown-item" href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}">
+                                    <i class="fas fa-eye"></i> View Details
+                                  </a></li>
+                                  <li><a class="dropdown-item" href="#" onclick="editVariation({{ product.id }}, {{ variation.id }})">
+                                    <i class="fas fa-edit"></i> Edit Variation
+                                  </a></li>
+                                </ul>
+                              </div>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </td>
@@ -234,5 +292,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+// Edit product function
+function editProduct(productId) {
+  // Navigate to edit product page or open modal
+  window.location.href = `/products/${productId}#edit`;
+}
+
+// Edit variation function
+function editVariation(productId, variationId) {
+  // Navigate to edit variation page or open modal
+  window.location.href = `/products/${productId}/variation/${variationId}#edit`;
+}
 </script>
 {% endblock %}
