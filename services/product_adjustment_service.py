@@ -32,7 +32,7 @@ class ProductAdjustmentService:
         # Create ProductInventory entry
         inventory = ProductInventory(
             product_id=product_id,
-            variant=variant_name or 'Default',
+            variant=variant_name or 'Base',
             size_label=size_label,
             unit='count',
             quantity=quantity,
