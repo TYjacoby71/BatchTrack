@@ -67,7 +67,7 @@ def view_product(product_id):
     from utils.unit_utils import get_global_unit_list
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
-    
+
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
         type='container',
@@ -135,7 +135,7 @@ def add_variant(product_id):
 @login_required
 def deduct_product(product_id):
     """Deduct product inventory using FIFO"""
-    variant = request.form.get('variant', 'Default')
+    variant = request.form.get('variant', 'Base')
     unit = request.form.get('unit')
     quantity = float(request.form.get('quantity', 0))
     reason = request.form.get('reason', 'manual_deduction')
@@ -169,7 +169,7 @@ def deduct_product(product_id):
 def get_product_variants(product_id):
     """API endpoint to get variants for a specific product"""
     product = Product.query.get_or_404(product_id)
-    
+
     variants = []
     for variant in product.variations:
         variants.append({
@@ -177,7 +177,7 @@ def get_product_variants(product_id):
             'name': variant.name,
             'sku': variant.sku
         })
-    
+
     # Add default variant if no variants exist
     if not variants:
         variants.append({
@@ -185,7 +185,7 @@ def get_product_variants(product_id):
             'name': 'Default',
             'sku': None
         })
-    
+
     return jsonify({'variants': variants})
 
 @products_bp.route('/api/search', methods=['GET'])
@@ -225,8 +225,9 @@ def search_products():
             product_data['variants'].append({
                 'id': None,
                 'name': 'Default',
-                'sku': None
-            })
+```
+            'sku': None
+        })
 
         result.append(product_data)
 
@@ -330,25 +331,25 @@ def quick_add_product():
 def edit_product(product_id):
     """Edit product details"""
     product = Product.query.get_or_404(product_id)
-    
+
     name = request.form.get('name')
     product_base_unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
-    
+
     if not name or not product_base_unit:
         flash('Name and product base unit are required', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Check if another product has this name
     existing = Product.query.filter(Product.name == name, Product.id != product_id).first()
     if existing:
         flash('Another product with this name already exists', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     product.name = name
     product.product_base_unit = product_base_unit
     product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
-    
+
     db.session.commit()
     flash('Product updated successfully', 'success')
     return redirect(url_for('products.view_product', product_id=product_id))
@@ -358,17 +359,17 @@ def edit_product(product_id):
 def add_manual_stock(product_id):
     """Add manual stock with container matching"""
     from services.product_adjustment_service import ProductAdjustmentService
-    
+
     variant_name = request.form.get('variant_name')
     container_id = request.form.get('container_id')
     quantity = float(request.form.get('quantity', 0))
     unit_cost = float(request.form.get('unit_cost', 0))
     notes = request.form.get('notes', '')
-    
+
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     try:
         inventory = ProductAdjustmentService.add_manual_stock(
             product_id=product_id,
@@ -378,11 +379,11 @@ def add_manual_stock(product_id):
             unit_cost=unit_cost,
             notes=notes
         )
-        
+
         flash(f'Added {quantity} units to product inventory', 'success')
     except Exception as e:
         flash(f'Error adding stock: {str(e)}', 'error')
-    
+
     return redirect(url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
@@ -390,15 +391,15 @@ def add_manual_stock(product_id):
 def adjust_inventory(product_id, inventory_id):
     """Process inventory adjustments with FIFO tracking"""
     from services.product_adjustment_service import ProductAdjustmentService
-    
+
     adjustment_type = request.form.get('adjustment_type')  # sold, spoil, trash, tester, damaged, recount
     quantity = float(request.form.get('quantity', 0))
     notes = request.form.get('notes', '')
-    
+
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     try:
         ProductAdjustmentService.process_adjustment(
             inventory_id=inventory_id,
@@ -406,11 +407,11 @@ def adjust_inventory(product_id, inventory_id):
             quantity=quantity,
             notes=notes
         )
-        
+
         flash(f'Adjustment processed: {adjustment_type}', 'success')
     except Exception as e:
         flash(f'Error processing adjustment: {str(e)}', 'error')
-    
+
     return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
 @login_required
@@ -418,29 +419,29 @@ def view_variant_inventory(product_id, variant, size_label):
     """View FIFO inventory for a specific product variant and size"""
     from urllib.parse import unquote
     from utils.unit_utils import get_global_unit_list
-    
+
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
     size_label = unquote(size_label)
-    
+
     # Get FIFO inventory entries for this specific variant/size
     fifo_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
     ).order_by(ProductInventory.timestamp.asc()).all()
-    
+
     # Calculate totals
     total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
     total_batches = len([entry for entry in fifo_entries if entry.quantity > 0])
-    
+
     # Get recent deduction history for this variant/size from product events
     recent_deductions = ProductEvent.query.filter(
         ProductEvent.product_id == product_id,
         ProductEvent.note.like(f'%{variant}%'),
         ProductEvent.note.like(f'%{size_label}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
-    
+
     return render_template('products/variant_inventory.html',
                          product=product,
                          variant=variant,
@@ -455,7 +456,7 @@ def view_variant_inventory(product_id, variant, size_label):
 @login_required
 def record_sale(product_id):
     """Record a sale with profit tracking"""
-    variant = request.form.get('variant', 'Default')
+    variant = request.form.get('variant', 'Base')
     size_label = request.form.get('size_label')
     quantity = float(request.form.get('quantity', 0))
     reason = request.form.get('reason', 'sale')
@@ -509,7 +510,7 @@ def record_sale(product_id):
 @login_required
 def manual_adjust(product_id):
     """Manual inventory adjustments for variant/size"""
-    variant = request.form.get('variant', 'Default')
+    variant = request.form.get('variant', 'Base')
     size_label = request.form.get('size_label')
     adjustment_type = request.form.get('adjustment_type')
     quantity = float(request.form.get('quantity', 0))
@@ -517,7 +518,7 @@ def manual_adjust(product_id):
 
     # Implementation would depend on adjustment type
     # This is a placeholder for the manual adjustment logic
-    
+
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
     return redirect(url_for('products.view_variant_inventory', 
                            product_id=product_id, variant=variant, size_label=size_label))
@@ -527,21 +528,21 @@ def manual_adjust(product_id):
 def view_variation(product_id, variation_id):
     """View individual product variation details"""
     from utils.unit_utils import get_global_unit_list
-    
+
     product = Product.query.get_or_404(product_id)
     variation = ProductVariation.query.get_or_404(variation_id)
-    
+
     # Ensure variation belongs to this product
     if variation.product_id != product_id:
         flash('Variation not found for this product', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Get inventory for this specific variation
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variation.name
     ).order_by(ProductInventory.timestamp.asc()).all()
-    
+
     # Group by size_label and unit
     size_groups = {}
     for entry in inventory_entries:
@@ -556,19 +557,19 @@ def view_variation(product_id, variation_id):
                 }
             size_groups[key]['total_quantity'] += entry.quantity
             size_groups[key]['batches'].append(entry)
-    
+
     # Get recent activity for this variation
     recent_events = ProductEvent.query.filter(
         ProductEvent.product_id == product_id,
         ProductEvent.note.like(f'%{variation.name}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
-    
+
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
         type='container',
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
-    
+
     return render_template('products/view_variation.html',
                          product=product,
                          variation=variation,
@@ -583,20 +584,20 @@ def edit_variation(product_id, variation_id):
     """Edit product variation details"""
     product = Product.query.get_or_404(product_id)
     variation = ProductVariation.query.get_or_404(variation_id)
-    
+
     # Ensure variation belongs to this product
     if variation.product_id != product_id:
         flash('Variation not found for this product', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     name = request.form.get('name')
     sku = request.form.get('sku')
     description = request.form.get('description')
-    
+
     if not name:
         flash('Variation name is required', 'error')
         return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
-    
+
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
         ProductVariation.name == name,
@@ -606,11 +607,11 @@ def edit_variation(product_id, variation_id):
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
         return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
-    
+
     variation.name = name
     variation.sku = sku if sku else None
     variation.description = description if description else None
-    
+
     db.session.commit()
     flash('Variation updated successfully', 'success')
     return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))

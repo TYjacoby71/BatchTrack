@@ -348,7 +348,7 @@
           <div class="mb-3">
             <label class="form-label">Variant</label>
             <select name="variant_name" class="form-select" required>
-              <option value="Default">Default</option>
+              <option value="Base">Base</option>
               {% for variation in product.variations %}
               <option value="{{ variation.name }}">{{ variation.name }}</option>
               {% endfor %}
