@@ -246,9 +246,8 @@ class ProductInventoryService:
     def get_product_summary():
         """Get summary of all products with inventory totals"""
         products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-
-        for product in products:
-            product.total_inventory = sum(inv.quantity for inv in product.inventory if inv.quantity > 0)
-            product.variant_count = len(product.variations) if hasattr(product, 'variations') else 0
-
+        
+        # The total_inventory and variant_count are already calculated as properties in the Product model
+        # No need to assign them here since they're computed dynamically
+        
         return products
