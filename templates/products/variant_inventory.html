@@ -36,7 +36,8 @@
               <strong>Product Base Unit:</strong> {{ product.product_base_unit }}
             </div>
             <div class="col-md-3">
-              {% set avg_cost = (fifo_entries|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit')|default(0) / total_batches) if total_batches > 0 else 0 %}
+              {% set valid_costs = fifo_entries|selectattr('quantity', 'gt', 0)|selectattr('batch_cost_per_unit', 'ne', none)|map(attribute='batch_cost_per_unit')|list %}
+              {% set avg_cost = (valid_costs|sum / valid_costs|length) if valid_costs|length > 0 else 0 %}
               <strong>Avg Cost:</strong> ${{ "%.3f"|format(avg_cost) }}
             </div>
           </div>

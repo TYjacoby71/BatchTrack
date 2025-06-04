@@ -22,11 +22,12 @@ class ProductAdjustmentService:
         product = Product.query.get_or_404(product_id)
         container = InventoryItem.query.get_or_404(container_id) if container_id else None
         
-        # Create size label from container
+        # Create size label from container or use product-based labeling
         if container:
             size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
-            size_label = "Manual Addition"
+            # For standalone products without containers (bread loaves, whole items, etc.)
+            size_label = f"Whole {product.name}" if product.product_base_unit in ['each', 'count', 'loaf', 'item'] else f"Bulk {product.name}"
         
         # Create ProductInventory entry
         inventory = ProductInventory(
@@ -61,7 +62,11 @@ class ProductAdjustmentService:
         db.session.add(history)
         
         # Log product event
-        event_note = f"Manual addition: {quantity} × {size_label}"
+        if container:
+            event_note = f"Manual addition: {quantity} × {size_label}"
+        else:
+            event_note = f"Manual addition: {quantity} {product.product_base_unit} of {size_label}"
+        
         if variant_name:
             event_note += f" ({variant_name})"
         if notes:

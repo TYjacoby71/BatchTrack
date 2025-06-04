@@ -563,11 +563,18 @@ def view_variation(product_id, variation_id):
         ProductEvent.note.like(f'%{variation.name}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
     
+    # Get available containers for manual stock addition
+    available_containers = InventoryItem.query.filter_by(
+        type='container',
+        is_archived=False
+    ).filter(InventoryItem.quantity > 0).all()
+    
     return render_template('products/view_variation.html',
                          product=product,
                          variation=variation,
                          size_groups=size_groups,
                          recent_events=recent_events,
+                         available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<int:product_id>/variation/<int:variation_id>/edit', methods=['POST'])

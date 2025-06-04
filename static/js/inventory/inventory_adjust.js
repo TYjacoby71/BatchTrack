@@ -1,11 +1,14 @@
-
 // Inventory adjustment functionality
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inventory adjustment JS loaded');
-    
+    // Prevent multiple script loading
+    if (window.inventoryAdjustmentLoaded) {
+        return;
+    }
+    window.inventoryAdjustmentLoaded = true;
+
     // Initialize any inventory adjustment specific functionality here
     const adjustmentForms = document.querySelectorAll('.adjustment-form');
-    
+
     adjustmentForms.forEach(form => {
         form.addEventListener('submit', function(e) {
             // Add any form validation or processing here
