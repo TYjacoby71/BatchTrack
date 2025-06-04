@@ -76,7 +76,7 @@
 
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
-        <!-- Base Variant Card -->
+        <!-- Base Variant Card (treated like any other variant) -->
         {% set base_inventory = inventory_groups.values()|selectattr('variant', 'equalto', 'Base')|list %}
         {% set base_total_qty = base_inventory|sum(attribute='total_quantity')|default(0) %}
         {% set base_size_count = base_inventory|length %}
@@ -85,7 +85,7 @@
         <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="base" data-quantity="{{ base_total_qty }}" data-sizes="{{ base_size_count }}">
           <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">Base Variant</h5>
+              <h5 class="card-title mb-0">Base</h5>
               <span class="badge {% if base_total_qty <= 0 %}bg-danger{% elif base_total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
                 {% if base_total_qty <= 0 %}Out of Stock{% elif base_total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
               </span>
@@ -98,7 +98,7 @@
                     | <i class="fas fa-balance-scale"></i> {{ "%.2f"|format(base_total_qty) }} total
                   </small>
                 </p>
-                <p class="card-text">Default product variant</p>
+                <p class="card-text">Base product variant</p>
               </div>
               
               <!-- Variant Stats -->
@@ -128,8 +128,11 @@
               <!-- Action Buttons -->
               <div class="mt-auto">
                 <div class="btn-group w-100 mb-2" role="group">
-                  <button class="btn btn-outline-primary btn-sm" onclick="setVariant('Base')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                  <button class="btn btn-primary btn-sm" onclick="openAddStockModal('Base')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
                     <i class="fas fa-plus"></i> Add Stock
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" onclick="setEditVariation(null, 'Base', '', 'Base product variant')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                    <i class="fas fa-edit"></i> Edit
                   </button>
                   {% if base_inventory %}
                   <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#base-sizes">
@@ -173,7 +176,7 @@
           </div>
         </div>
 
-        <!-- Other Variant Cards -->
+        <!-- All Other Variant Cards -->
         {% for variation in product.variations %}
         {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variation.name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
@@ -235,8 +238,8 @@
                   <button class="btn btn-outline-secondary btn-sm" onclick="setEditVariation({{ variation.id }}, '{{ variation.name }}', '{{ variation.sku or '' }}', '{{ variation.description or '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                     <i class="fas fa-edit"></i> Edit
                   </button>
-                  <button class="btn btn-primary btn-sm" onclick="setVariant('{{ variation.name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                    <i class="fas fa-plus"></i> Stock
+                  <button class="btn btn-primary btn-sm" onclick="openAddStockModal('{{ variation.name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                    <i class="fas fa-plus"></i> Add Stock
                   </button>
                 </div>
                 {% if var_inventory %}
@@ -304,8 +307,8 @@
                 <!-- Base Variant Row -->
                 <tr class="variant-row" data-variant-name="base" data-quantity="{{ base_total_qty }}" data-sizes="{{ base_size_count }}">
                   <td>
-                    <strong>Base Variant</strong>
-                    <br><small class="text-muted">Default product variant</small>
+                    <strong>Base</strong>
+                    <br><small class="text-muted">Base product variant</small>
                   </td>
                   <td><span class="text-muted">-</span></td>
                   <td>{{ "%.2f"|format(base_total_qty) }}</td>
@@ -325,9 +328,19 @@
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      <button class="btn btn-primary btn-sm" onclick="setVariant('Base')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                        <i class="fas fa-plus"></i> Stock
+                      <button class="btn btn-primary btn-sm" onclick="openAddStockModal('Base')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                        <i class="fas fa-plus"></i> Add Stock
                       </button>
+                      <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                          <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" href="#" onclick="setEditVariation(null, 'Base', '', 'Base product variant')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                            <i class="fas fa-edit"></i> Edit
+                          </a></li>
+                        </ul>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -400,6 +413,9 @@
                       <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-eye"></i> View
                       </a>
+                      <button class="btn btn-primary btn-sm" onclick="openAddStockModal('{{ variation.name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                        <i class="fas fa-plus"></i> Add Stock
+                      </button>
                       <div class="btn-group" role="group">
                         <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-h"></i>
@@ -407,9 +423,6 @@
                         <ul class="dropdown-menu">
                           <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id }}, '{{ variation.name }}', '{{ variation.sku or '' }}', '{{ variation.description or '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                             <i class="fas fa-edit"></i> Edit
-                          </a></li>
-                          <li><a class="dropdown-item" href="#" onclick="setVariant('{{ variation.name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                            <i class="fas fa-plus"></i> Add Stock
                           </a></li>
                         </ul>
                       </div>
@@ -621,14 +634,12 @@
       <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="modal-body">
+          <input type="hidden" name="variant_name" id="manualStockVariant" value="">
           <div class="mb-3">
-            <label class="form-label">Variant</label>
-            <select name="variant_name" id="manualStockVariant" class="form-select" required>
-              <option value="Base">Base</option>
-              {% for variation in product.variations %}
-              <option value="{{ variation.name }}">{{ variation.name }}</option>
-              {% endfor %}
-            </select>
+            <label class="form-label">Adding Stock to Variant:</label>
+            <div class="alert alert-info">
+              <strong id="selectedVariantDisplay">-</strong>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Container Type (Optional)</label>
@@ -861,9 +872,10 @@ function addVariant() {
   });
 }
 
-// Set variant for manual stock modal
-function setVariant(variantName) {
+// Open Add Stock modal for specific variant
+function openAddStockModal(variantName) {
   document.getElementById('manualStockVariant').value = variantName;
+  document.getElementById('selectedVariantDisplay').textContent = variantName;
 }
 
 // Set edit variation modal data
