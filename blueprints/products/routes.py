@@ -208,7 +208,7 @@ def search_products():
         product_data = {
             'id': product.id,
             'name': product.name,
-            'default_unit': product.default_unit,
+            'default_unit': product.product_base_unit,
             'variants': []
         }
 
@@ -220,14 +220,13 @@ def search_products():
                 'sku': variant.sku
             })
 
-        # Add default variant if no variants exist
+        # Add Base variant if no variants exist
         if not product.variations:
             product_data['variants'].append({
                 'id': None,
-                'name': 'Default',
-```
-            'sku': None
-        })
+                'name': 'Base',
+                'sku': None
+            })
 
         result.append(product_data)
 
