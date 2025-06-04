@@ -4,11 +4,18 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Products</h2>
-    <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">+ New Product</a>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">+ New Product</a>
+      <div class="btn-group" role="group">
+        <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
+        <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
+      </div>
+    </div>
   </div>
 
   {% if products %}
-    <div class="row">
+    <!-- Products Card View -->
+    <div class="row" id="productsContainer">
       {% for product in products %}
       <div class="col-md-6 col-lg-4 mb-4">
         <div class="card h-100">
@@ -55,6 +62,101 @@
       </div>
       {% endfor %}
     </div>
+
+    <!-- Products Table View -->
+    <div class="card" id="productsTableContainer" style="display: none;">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Default Unit</th>
+                <th>Total Units</th>
+                <th>Sizes</th>
+                <th>Variants</th>
+                <th>Stock Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr class="product-row">
+                <td>
+                  <strong>{{ product.name }}</strong>
+                </td>
+                <td>{{ product.default_unit }}</td>
+                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                <td>
+                  {{ product.variations|length }}
+                  {% if product.variations %}
+                  <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ product.id }}">
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if product.total_inventory < product.low_stock_threshold %}
+                    <span class="badge bg-warning">Low Stock</span>
+                  {% else %}
+                    <span class="badge bg-success">In Stock</span>
+                  {% endif %}
+                </td>
+                <td>{{ product.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-sm">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                    <div class="btn-group" role="group">
+                      <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-h"></i>
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                          <i class="fas fa-eye"></i> View Details
+                        </a></li>
+                        <li><a class="dropdown-item" href="#">
+                          <i class="fas fa-edit"></i> Edit Product
+                        </a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% if product.variations %}
+              <tr class="collapse" id="table-variations-{{ product.id }}">
+                <td colspan="8">
+                  <div class="ps-4">
+                    <strong>Variations:</strong>
+                    <div class="mt-2">
+                      {% for variation in product.variations %}
+                      <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                        <div>
+                          <span class="fw-bold">{{ variation.name }}</span>
+                          {% if variation.sku %}
+                          <span class="badge bg-secondary ms-2">{{ variation.sku }}</span>
+                          {% endif %}
+                        </div>
+                        <div class="btn-group" role="group">
+                          <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                          <a href="#" class="btn btn-outline-secondary btn-xs">Edit</a>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   {% else %}
     <div class="alert alert-info text-center">
       <h4>No Products Found</h4>
@@ -63,4 +165,54 @@
     </div>
   {% endif %}
 </div>
+
+<style>
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.product-row:hover {
+  background-color: #f8f9fa;
+}
+</style>
+
+<script>
+// Global showView function
+function showView(viewType) {
+  const productsContainer = document.getElementById('productsContainer');
+  const productsTableContainer = document.getElementById('productsTableContainer');
+  const cardViewBtn = document.getElementById('cardViewBtn');
+  const tableViewBtn = document.getElementById('tableViewBtn');
+
+  if (viewType === 'cardView') {
+    productsContainer.style.display = 'flex';
+    productsTableContainer.style.display = 'none';
+    cardViewBtn.className = 'btn btn-secondary btn-sm';
+    tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
+  } else {
+    productsContainer.style.display = 'none';
+    productsTableContainer.style.display = 'block';
+    cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
+    tableViewBtn.className = 'btn btn-secondary btn-sm';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Variation toggle functionality
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      setTimeout(() => {
+        const target = document.querySelector(this.dataset.bsTarget);
+        if (target.classList.contains('show')) {
+          icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+          icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+      }, 100);
+    });
+  });
+});
+</script>
 {% endblock %}
