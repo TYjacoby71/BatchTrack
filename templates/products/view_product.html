@@ -76,7 +76,7 @@
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
         <!-- All Variants (including Base) -->
-        {% for variant_name in inventory_groups.keys()|list + ['Base']|unique %}
+        {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
         {% if variant_name in inventory_groups %}
           {% set var_inventory = [inventory_groups[variant_name]] %}
         {% else %}
@@ -212,7 +212,7 @@
               </thead>
               <tbody>
                 <!-- All Variants (including Base) -->
-                {% for variant_name in inventory_groups.keys()|list + ['Base']|unique %}
+                {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
                 {% if variant_name in inventory_groups %}
                   {% set var_inventory = [inventory_groups[variant_name]] %}
                 {% else %}
