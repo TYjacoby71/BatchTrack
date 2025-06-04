@@ -71,7 +71,7 @@
           {% if size_groups %}
             {% for group_key, group in size_groups.items() %}
             <div class="mb-4">
-              <h5>{{ group.size_label }} ({{ group.unit }})</h5>
+              <h5>{{ group.size_label if group.size_label else 'bulk' }} ({{ group.unit }})</h5>
               <div class="row mb-2">
                 <div class="col-md-3">
                   <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}

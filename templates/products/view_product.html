@@ -181,7 +181,7 @@
                     {% if group.variant == variant_name %}
                     <div class="size-item d-flex justify-content-between align-items-center py-2 border-bottom">
                       <div>
-                        <strong>{{ group.batches[0].size_label if group.batches else '-' }}</strong>
+                        <strong>{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'bulk' }}</strong>
                         <br><small class="text-muted">{{ group.unit }} | {{ group.batches|selectattr('quantity', 'gt', 0)|list|length }} batches</small>
                       </div>
                       <div class="d-flex align-items-center gap-2">
@@ -302,7 +302,7 @@
                           {% if group.variant == variant_name %}
                           <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                             <div>
-                              <span class="fw-bold">{{ group.batches[0].size_label if group.batches else '-' }}</span>
+                              <span class="fw-bold">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'bulk' }}</span>
                               <span class="text-muted ms-2">{{ group.unit }}</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
