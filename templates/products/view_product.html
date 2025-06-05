@@ -75,18 +75,28 @@
 
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
-        <!-- All Variants (including Base) -->
-        {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
-        {% if variant_name in inventory_groups %}
-          {% set var_inventory = [inventory_groups[variant_name]] %}
-        {% else %}
-          {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
-        {% endif %}
+        <!-- Get all unique variants from ProductVariation table and inventory -->
+        {% set all_variants = ['Base'] %}
+        {% for variation in product.variations %}
+          {% if variation.name not in all_variants %}
+            {% set _ = all_variants.append(variation.name) %}
+          {% endif %}
+        {% endfor %}
 
+        <!-- Add any additional variants from inventory that might not be in variations table -->
+        {% for group_key, group in inventory_groups.items() %}
+          {% if group.variant not in all_variants %}
+            {% set _ = all_variants.append(group.variant) %}
+          {% endif %}
+        {% endfor %}
+
+        <!-- Create card for each unique variant -->
+        {% for variant_name in all_variants %}
+        {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
         {% set var_size_count = var_inventory|length %}
         {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
-        {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first if variant_name != 'Base' else none %}
+        {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
         <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
           <div class="card h-100 shadow-sm">
@@ -171,7 +181,7 @@
                     {% if group.variant == variant_name %}
                     <div class="size-item d-flex justify-content-between align-items-center py-2 border-bottom">
                       <div>
-                        <strong>{{ group.batches[0].size_label if group.batches else '-' }}</strong>
+                        <strong>{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'bulk' }}</strong>
                         <br><small class="text-muted">{{ group.unit }} | {{ group.batches|selectattr('quantity', 'gt', 0)|list|length }} batches</small>
                       </div>
                       <div class="d-flex align-items-center gap-2">
@@ -212,16 +222,12 @@
               </thead>
               <tbody>
                 <!-- All Variants (including Base) -->
-                {% for variant_name in (inventory_groups.keys()|list + ['Base'])|unique|list %}
-                {% if variant_name in inventory_groups %}
-                  {% set var_inventory = [inventory_groups[variant_name]] %}
-                {% else %}
-                  {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
-                {% endif %}
+                {% for variant_name in all_variants %}
+                {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
                 {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
                 {% set var_size_count = var_inventory|length %}
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
-                {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first if variant_name != 'Base' else none %}
+                {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
@@ -296,7 +302,7 @@
                           {% if group.variant == variant_name %}
                           <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                             <div>
-                              <span class="fw-bold">{{ group.batches[0].size_label if group.batches else '-' }}</span>
+                              <span class="fw-bold">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'bulk' }}</span>
                               <span class="text-muted ms-2">{{ group.unit }}</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">

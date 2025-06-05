@@ -204,6 +204,21 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
     inventory = db.relationship('ProductInventory', backref='product', lazy=True)
+    
+    @property
+    def total_inventory(self):
+        """Total inventory across all variants"""
+        return sum(inv.quantity for inv in self.inventory if inv.quantity > 0)
+    
+    @property
+    def base_variant(self):
+        """Get the Base ProductVariation for this product"""
+        return next((v for v in self.variations if v.name == 'Base'), None)
+    
+    @property
+    def variant_count(self):
+        """Total number of variants including Base"""
+        return len(self.variations)
 
 class ProductInventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)

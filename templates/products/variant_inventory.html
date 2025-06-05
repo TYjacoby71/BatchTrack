@@ -7,14 +7,14 @@
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
           <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
-          <li class="breadcrumb-item active">{{ variant }} - {{ size_label }}</li>
+          <li class="breadcrumb-item active">{{ variant }} - {{ size_label if size_label else 'bulk' }}</li>
         </ol>
       </nav>
 
       <!-- Variant Summary Card -->
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h3>{{ product.name }} - {{ variant }} ({{ size_label }})</h3>
+          <h3>{{ product.name }} - {{ variant }} ({{ size_label if size_label else 'bulk' }})</h3>
           <div>
             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal">
               Record Sale/Deduction
