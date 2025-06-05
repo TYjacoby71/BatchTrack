@@ -427,7 +427,7 @@ def adjust_inventory(product_id, inventory_id):
     return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
 @login_required
-def view_variant_inventory(product_id, variant, size_label):
+def sku_inventory(product_id, variant, size_label):
     """View FIFO inventory for a specific product variant and size"""
     from urllib.parse import unquote
     from utils.unit_utils import get_global_unit_list
