@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 
-marketplace = Blueprint('marketplace', __name__)
+marketplace_bp = Blueprint('marketplace', __name__, url_prefix='/marketplace')
 
-@marketplace.route('/', endpoint='index')
+@marketplace_bp.route('/', endpoint='index')
 @login_required
 def index():
     return render_template('marketplace/index.html')

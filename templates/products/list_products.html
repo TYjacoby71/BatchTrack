@@ -135,6 +135,7 @@
                 <th>Variants</th>
                 <th>Total Cost</th>
                 <th>Total Value</th>
+                <th>Marketplace</th>
                 <th>Stock Status</th>
                 <th>Created</th>
                 <th>Actions</th>
@@ -180,6 +181,22 @@
                   {% endif %}
                 </td>
                 <td>
+                  {% set variants_with_sku = product.variations|selectattr('sku')|list|length %}
+                  {% set variants_with_pricing = product.variations|selectattr('retail_price')|selectattr('retail_price', 'gt', 0)|list|length %}
+                  {% set total_variants = product.variations|length %}
+                  
+                  {% if variants_with_sku > 0 %}
+                    <div class="small">
+                      <span class="badge bg-info">{{ variants_with_sku }}/{{ total_variants }} SKUs</span>
+                      {% if variants_with_pricing > 0 %}
+                        <br><span class="badge bg-success">{{ variants_with_pricing }} Priced</span>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <span class="text-muted small">No SKUs</span>
+                  {% endif %}
+                </td>
+                <td>
                   {% if product.total_inventory < product.low_stock_threshold %}
                     <span class="badge bg-warning">Low Stock</span>
                   {% else %}
@@ -198,6 +215,9 @@
                       </a></li>
                       <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
                         <i class="fas fa-edit"></i> Edit Product
+                      </a></li>
+                      <li><a class="dropdown-item" href="#" onclick="openMarketplaceModal({{ product.id }})">
+                        <i class="fas fa-shopping-cart"></i> Marketplace Sync
                       </a></li>
                     </ul>
                   </div>
@@ -218,7 +238,9 @@
                             <th>Packaged Qty</th>
                             <th>Total Cost</th>
                             <th>Retail Price</th>
+                            <th>Wholesale Price</th>
                             <th>Total Value</th>
+                            <th>Marketplace Status</th>
                             <th>Sizes</th>
                             <th>Actions</th>
                           </tr>
@@ -267,10 +289,26 @@
                               {% endif %}
                             </td>
                             <td>
-                              {% if variation.retail_price %}
+                              {% if variation.wholesale_price %}
+                                ${{ "%.2f"|format(variation.wholesale_price) }}
+                              {% else %}
+                                <em class="text-muted">Not set</em>
+                              {% endif %}
+                            </td>
+                            <td>
+                              {% if variation.retail_price and variation.retail_price > 0 %}
                                 ${{ "%.2f"|format((bulk_qty + packaged_qty) * variation.retail_price) }}
                               {% else %}
                                 $0.00
+                              {% endif %}
+                            </td>
+                            <td>
+                              {% if variation.sku and variation.retail_price and variation.retail_price > 0 and variation.is_active %}
+                                <span class="badge bg-success">Ready</span>
+                              {% elif variation.sku %}
+                                <span class="badge bg-warning">Needs Pricing</span>
+                              {% else %}
+                                <span class="badge bg-secondary">No SKU</span>
                               {% endif %}
                             </td>
                             <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
@@ -285,6 +323,9 @@
                                   </a></li>
                                   <li><a class="dropdown-item" href="#" onclick="editVariation({{ product.id }}, {{ variation.id }})">
                                     <i class="fas fa-edit"></i> Edit Variation
+                                  </a></li>
+                                  <li><a class="dropdown-item" href="#" onclick="editVariationPricing({{ variation.id }}, '{{ variation.name }}', '{{ variation.sku or '' }}', {{ variation.retail_price or 0 }}, {{ variation.wholesale_price or 0 }}, '{{ variation.marketplace_id or '' }}', {{ variation.is_active|lower }})">
+                                    <i class="fas fa-dollar-sign"></i> Marketplace Pricing
                                   </a></li>
                                 </ul>
                               </div>
@@ -433,5 +474,107 @@ function editVariation(productId, variationId) {
   // Navigate to edit variation page or open modal
   window.location.href = `/products/${productId}/variation/${variationId}#edit`;
 }
+
+// Open marketplace modal for product
+function openMarketplaceModal(productId) {
+  // Could show marketplace sync status, quick SKU assignment, etc.
+  alert('Marketplace sync modal - to be implemented');
+}
+
+// Edit variation pricing for marketplace
+function editVariationPricing(id, name, sku, retailPrice, wholesalePrice, marketplaceId, isActive) {
+  document.getElementById('pricingVariantId').value = id;
+  document.getElementById('pricingVariantName').value = name;
+  document.getElementById('pricingVariantSku').value = sku;
+  document.getElementById('pricingRetailPrice').value = retailPrice;
+  document.getElementById('pricingWholesalePrice').value = wholesalePrice;
+  document.getElementById('pricingMarketplaceId').value = marketplaceId;
+  document.getElementById('pricingIsActive').checked = isActive;
+  
+  new bootstrap.Modal(document.getElementById('pricingModal')).show();
+}
+
+// Save pricing changes
+async function savePricing() {
+  const variantId = document.getElementById('pricingVariantId').value;
+  const data = {
+    retail_price: parseFloat(document.getElementById('pricingRetailPrice').value) || 0,
+    wholesale_price: parseFloat(document.getElementById('pricingWholesalePrice').value) || 0,
+    marketplace_id: document.getElementById('pricingMarketplaceId').value,
+    is_active: document.getElementById('pricingIsActive').checked
+  };
+  
+  try {
+    const response = await fetch(`/api/marketplace/variants/${variantId}/pricing`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      bootstrap.Modal.getInstance(document.getElementById('pricingModal')).hide();
+      location.reload(); // Refresh to show updated data
+    } else {
+      alert('Error updating pricing');
+    }
+  } catch (error) {
+    console.error('Error saving pricing:', error);
+    alert('Error updating pricing');
+  }
+}
 </script>
+
+<!-- Pricing Modal -->
+<div class="modal fade" id="pricingModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Update Marketplace Pricing</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="pricingForm">
+          <input type="hidden" id="pricingVariantId">
+          <div class="mb-3">
+            <label class="form-label">Variant Name:</label>
+            <input type="text" class="form-control" id="pricingVariantName" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">SKU:</label>
+            <input type="text" class="form-control" id="pricingVariantSku" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Retail Price ($):</label>
+            <input type="number" class="form-control" id="pricingRetailPrice" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Wholesale Price ($):</label>
+            <input type="number" class="form-control" id="pricingWholesalePrice" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Marketplace ID:</label>
+            <input type="text" class="form-control" id="pricingMarketplaceId" placeholder="External marketplace product ID">
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="pricingIsActive">
+              <label class="form-check-label" for="pricingIsActive">
+                Active for marketplace sync
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="savePricing()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

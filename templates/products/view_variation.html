@@ -17,18 +17,18 @@
           <h3>{{ product.name }} - {{ variation.name }}</h3>
           <div>
             <div class="btn-group" role="group">
-              <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+              <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 Actions
               </button>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#sizes">
-                  <i class="fas fa-eye"></i> View Sizes
-                </a></li>
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                   <i class="fas fa-edit"></i> Edit Variation
                 </a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#marketplacePricingModal">
+                  <i class="fas fa-dollar-sign"></i> Marketplace Pricing
+                </a></li>
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                  <i class="fas fa-plus"></i> Add Stock
+                  <i class="fas fa-plus"></i> Add Manual Stock
                 </a></li>
               </ul>
             </div>
@@ -56,6 +56,66 @@
             </div>
           </div>
           {% endif %}
+        </div>
+      </div>
+
+      <!-- Marketplace Info -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="fas fa-shopping-cart"></i> Marketplace Info</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-sm-6">
+                  <strong>SKU:</strong> 
+                  {% if variation.sku %}
+                    <code>{{ variation.sku }}</code>
+                  {% else %}
+                    <em class="text-muted">Not set</em>
+                  {% endif %}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Status:</strong>
+                  <span class="badge {% if variation.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ 'Active' if variation.is_active else 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+              <div class="row mt-2">
+                <div class="col-sm-6">
+                  <strong>Retail Price:</strong> 
+                  {% if variation.retail_price %}
+                    ${{ "%.2f"|format(variation.retail_price) }}
+                  {% else %}
+                    <em class="text-muted">Not set</em>
+                  {% endif %}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Wholesale Price:</strong>
+                  {% if variation.wholesale_price %}
+                    ${{ "%.2f"|format(variation.wholesale_price) }}
+                  {% else %}
+                    <em class="text-muted">Not set</em>
+                  {% endif %}
+                </div>
+              </div>
+              {% if variation.marketplace_id %}
+              <div class="mt-2">
+                <strong>Marketplace ID:</strong> <code>{{ variation.marketplace_id }}</code>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="fas fa-boxes"></i> Inventory Summary</h5>
+            </div>
+        
+          </div>
         </div>
       </div>
 
@@ -219,6 +279,51 @@
           <div class="mb-3">
             <label class="form-label">Description</label>
             <textarea name="description" class="form-control" rows="3">{{ variation.description or '' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Marketplace Pricing Modal -->
+<div class="modal fade" id="marketplacePricingModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Marketplace Pricing</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.update_marketplace_pricing', product_id=product.id, variation_id=variation.id) }}">
+        {{ csrf_token() }}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Retail Price</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="retail_price" class="form-control" step="0.01" value="{{ variation.retail_price or '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Wholesale Price</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="wholesale_price" class="form-control" step="0.01" value="{{ variation.wholesale_price or '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Marketplace ID</label>
+            <input type="text" name="marketplace_id" class="form-control" value="{{ variation.marketplace_id or '' }}">
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input type="checkbox" name="is_active" class="form-check-input" {% if variation.is_active %}checked{% endif %}>
+              <label class="form-check-label">Active on Marketplace</label>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
