@@ -182,7 +182,7 @@
                 </td>
                 <td>
                   {% set variants_with_sku = product.variations|selectattr('sku')|list|length %}
-                  {% set variants_with_pricing = product.variations|selectattr('retail_price', 'gt', 0)|list|length %}
+                  {% set variants_with_pricing = product.variations|selectattr('retail_price')|selectattr('retail_price', 'gt', 0)|list|length %}
                   {% set total_variants = product.variations|length %}
                   
                   {% if variants_with_sku > 0 %}
@@ -296,14 +296,14 @@
                               {% endif %}
                             </td>
                             <td>
-                              {% if variation.retail_price %}
+                              {% if variation.retail_price and variation.retail_price > 0 %}
                                 ${{ "%.2f"|format((bulk_qty + packaged_qty) * variation.retail_price) }}
                               {% else %}
                                 $0.00
                               {% endif %}
                             </td>
                             <td>
-                              {% if variation.sku and variation.retail_price and variation.is_active %}
+                              {% if variation.sku and variation.retail_price and variation.retail_price > 0 and variation.is_active %}
                                 <span class="badge bg-success">Ready</span>
                               {% elif variation.sku %}
                                 <span class="badge bg-warning">Needs Pricing</span>
