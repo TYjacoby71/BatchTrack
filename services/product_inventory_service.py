@@ -251,3 +251,50 @@ class ProductInventoryService:
         # No need to assign them here since they're computed dynamically
         
         return products
+
+    @staticmethod
+    def get_product_sales_volume():
+        """Get sales volume for all products from ProductEvent table"""
+        from sqlalchemy import func, and_
+        
+        # Query ProductEvent table for sale events and extract quantity from notes
+        sales_events = db.session.query(
+            ProductEvent.product_id,
+            ProductEvent.note
+        ).filter(
+            and_(
+                ProductEvent.event_type == 'inventory_deduction',
+                ProductEvent.note.like('%sale%')
+            )
+        ).all()
+        
+        # Parse sales quantities from notes and aggregate by product
+        sales_by_product = {}
+        for event in sales_events:
+            product_id = event.product_id
+            note = event.note or ''
+            
+            # Extract quantity from notes like "FIFO deduction: 2.0 count of Base. Items used: 1. Reason: sale"
+            # or "Sale: 1 × 4 oz Jar for $15.00 ($15.00/unit) to Customer Name"
+            try:
+                if 'FIFO deduction:' in note and 'Reason: sale' in note:
+                    # Extract quantity from FIFO deduction notes
+                    parts = note.split('FIFO deduction:')[1].split(' ')
+                    quantity = float(parts[1])
+                elif 'Sale:' in note and ' × ' in note:
+                    # Extract quantity from sale record notes
+                    parts = note.split('Sale:')[1].split(' × ')[0].strip()
+                    quantity = float(parts)
+                else:
+                    continue
+                    
+                if product_id not in sales_by_product:
+                    sales_by_product[product_id] = 0
+                sales_by_product[product_id] += quantity
+                
+            except (ValueError, IndexError):
+                # Skip events where we can't parse the quantity
+                continue
+        
+        # Convert to list format
+        return [{'product_id': pid, 'total_sales': vol} for pid, vol in sales_by_product.items()]
