@@ -1,21 +1,372 @@
+
 {% extends 'layout.html' %}
-
 {% block content %}
-  <h1>Product Details</h1>
-  <p>Product Name: {{ product.name }}</p>
-  <p>Product ID: {{ product.id }}</p>
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item active">{{ product.name }}</li>
+        </ol>
+      </nav>
 
-  <div>
-    <a href="{{ url_for('products.product_log', product_id=product.id) }}" class="btn btn-info btn-sm">
-      <i class="fas fa-history"></i> Event Log
-    </a>
-    <a href="{{ url_for('products.view_batches_by_variant', product_id=product.id, variant='some_variant', size='some_size', unit='some_unit') }}"
-       class="btn btn-outline-info btn-sm">
-      <i class="fas fa-list"></i> View Batches
-    </a>
+      <!-- Product Header Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3>{{ product.name }}</h3>
+          <div>
+            <a href="{{ url_for('products.product_log', product_id=product.id) }}" class="btn btn-info btn-sm">
+              <i class="fas fa-history"></i> Event Log
+            </a>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editProductModal">
+              <i class="fas fa-edit"></i> Edit Product
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Product ID:</strong> {{ product.id }}</p>
+              <p><strong>Base Unit:</strong> {{ product.product_base_unit }}</p>
+              <p><strong>Low Stock Threshold:</strong> {{ product.low_stock_threshold or 'Not set' }}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Active:</strong> {{ 'Yes' if product.is_active else 'No' }}</p>
+              <p><strong>Created:</strong> {{ product.created_at.strftime('%Y-%m-%d') if product.created_at else 'Unknown' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <form method="POST" action="{{ url_for('products.deduct_product', product_id=product.id) }}" class="d-inline">
-      <button type="submit" class="btn btn-danger btn-sm">Deduct Product</button>
-    </form>
+      <!-- Inventory Summary Cards -->
+      {% if inventory_groups %}
+      <div class="row mb-4">
+        {% for group in inventory_groups %}
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">{{ group.variant }}</h6>
+              <span class="badge bg-secondary">{{ group.batches|length }} batches</span>
+            </div>
+            <div class="card-body">
+              <div class="mb-2">
+                <strong>Size: {{ group.size_label }}</strong>
+              </div>
+              <div class="mb-2">
+                <strong>Total: {{ "%.2f"|format(group.total_quantity) }} {{ group.unit }}</strong>
+              </div>
+              
+              <!-- FIFO Batch List -->
+              <div class="mb-3">
+                <small class="text-muted">FIFO Order:</small>
+                {% for batch in group.batches[:3] %}
+                <div class="d-flex justify-content-between small">
+                  <span>Batch #{{ batch.batch_id or 'Manual' }}</span>
+                  <span>{{ "%.1f"|format(batch.quantity) }} {{ batch.unit }}</span>
+                </div>
+                {% endfor %}
+                {% if group.batches|length > 3 %}
+                <small class="text-muted">... and {{ group.batches|length - 3 }} more</small>
+                {% endif %}
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="btn-group w-100" role="group">
+                <a href="{{ url_for('products.sku_inventory', product_id=product.id, variant=group.variant, size_label=group.size_label) }}" 
+                   class="btn btn-outline-primary btn-sm">
+                  <i class="fas fa-boxes"></i> View SKU
+                </a>
+                <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" 
+                        data-bs-target="#deductModal"
+                        data-variant="{{ group.variant }}"
+                        data-size="{{ group.size_label }}"
+                        data-unit="{{ group.unit }}">
+                  <i class="fas fa-minus"></i> Deduct
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Quick Add Stock Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5>Add Manual Stock</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Variant Name</label>
+                <input type="text" name="variant_name" class="form-control" value="Base" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Container</label>
+                <select name="container_id" class="form-select">
+                  <option value="">No container</option>
+                  {% for container in available_containers %}
+                  <option value="{{ container.id }}">{{ container.name }} ({{ container.quantity }} {{ container.unit }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Quantity</label>
+                <input type="number" name="quantity" class="form-control" step="0.01" required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Unit Cost</label>
+                <input type="number" name="unit_cost" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-success w-100">Add Stock</button>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-12">
+                <label class="form-label">Notes</label>
+                <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Detailed Inventory Table -->
+      {% if inventory_groups %}
+      <div class="card">
+        <div class="card-header">
+          <h5>Detailed Inventory (FIFO Order)</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>Size</th>
+                  <th>Batch ID</th>
+                  <th>Quantity</th>
+                  <th>Unit</th>
+                  <th>Added</th>
+                  <th>Container</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for group in inventory_groups %}
+                  {% for batch in group.batches %}
+                  <tr>
+                    <td>{{ batch.variant }}</td>
+                    <td>{{ batch.size_label }}</td>
+                    <td>
+                      {% if batch.batch_id %}
+                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.batch_id) }}" class="text-decoration-none">
+                          #{{ batch.batch_id }}
+                        </a>
+                      {% else %}
+                        <span class="text-muted">Manual</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ "%.2f"|format(batch.quantity) }}</td>
+                    <td>{{ batch.unit }}</td>
+                    <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                      {% if batch.container_id %}
+                        <span class="badge bg-info">Container #{{ batch.container_id }}</span>
+                      {% else %}
+                        <span class="text-muted">None</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" 
+                              data-bs-target="#adjustModal"
+                              data-inventory-id="{{ batch.id }}"
+                              data-variant="{{ batch.variant }}"
+                              data-quantity="{{ batch.quantity }}"
+                              data-unit="{{ batch.unit }}">
+                        <i class="fas fa-edit"></i> Adjust
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-info">
+        <h5>No Inventory Found</h5>
+        <p>This product doesn't have any inventory yet. Add some stock using the form above or finish a batch that produces this product.</p>
+      </div>
+      {% endif %}
+
+    </div>
   </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.edit_product', product_id=product.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Product Name</label>
+            <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Base Unit</label>
+            <select name="product_base_unit" class="form-select" required>
+              {% for unit in get_global_unit_list() %}
+              <option value="{{ unit }}" {% if unit == product.product_base_unit %}selected{% endif %}>{{ unit }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Low Stock Threshold</label>
+            <input type="number" name="low_stock_threshold" class="form-control" 
+                   value="{{ product.low_stock_threshold or '' }}" step="0.01">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Deduct Product Modal -->
+<div class="modal fade" id="deductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Deduct Product Inventory</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.deduct_product', product_id=product.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Variant</label>
+            <input type="text" name="variant" class="form-control" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Unit</label>
+            <input type="text" name="unit" class="form-control" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quantity to Deduct</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <select name="reason" class="form-select">
+              <option value="sale">Sale</option>
+              <option value="spoilage">Spoilage</option>
+              <option value="damage">Damage</option>
+              <option value="sample">Sample</option>
+              <option value="manual_deduction">Manual Deduction</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Deduct Inventory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Adjust Inventory Modal -->
+<div class="modal fade" id="adjustModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Adjust Inventory Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Adjustment Type</label>
+            <select name="adjustment_type" class="form-select" required>
+              <option value="sold">Sold</option>
+              <option value="spoil">Spoiled</option>
+              <option value="trash">Trash</option>
+              <option value="tester">Tester</option>
+              <option value="damaged">Damaged</option>
+              <option value="recount">Recount</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Process Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle deduct modal data population
+  const deductModal = document.getElementById('deductModal');
+  if (deductModal) {
+    deductModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const variant = button.getAttribute('data-variant');
+      const unit = button.getAttribute('data-unit');
+      
+      const modal = this;
+      modal.querySelector('input[name="variant"]').value = variant;
+      modal.querySelector('input[name="unit"]').value = unit;
+    });
+  }
+
+  // Handle adjust modal data population
+  const adjustModal = document.getElementById('adjustModal');
+  if (adjustModal) {
+    adjustModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const inventoryId = button.getAttribute('data-inventory-id');
+      const variant = button.getAttribute('data-variant');
+      const quantity = button.getAttribute('data-quantity');
+      const unit = button.getAttribute('data-unit');
+      
+      const modal = this;
+      const form = modal.querySelector('form');
+      form.action = `{{ url_for('products.adjust_inventory', product_id=product.id, inventory_id=0) }}`.replace('0', inventoryId);
+      modal.querySelector('input[name="quantity"]').max = quantity;
+      modal.querySelector('input[name="quantity"]').placeholder = `Max: ${quantity} ${unit}`;
+    });
+  }
+});
+</script>
 {% endblock %}
