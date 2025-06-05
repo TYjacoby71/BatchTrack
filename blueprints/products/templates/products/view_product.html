@@ -143,78 +143,7 @@
         </div>
       </div>
 
-      <!-- Detailed Inventory Table -->
-      {% if inventory_groups %}
-      <div class="card">
-        <div class="card-header">
-          <h5>Detailed Inventory (FIFO Order)</h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Variant</th>
-                  <th>Size</th>
-                  <th>Batch ID</th>
-                  <th>Quantity</th>
-                  <th>Unit</th>
-                  <th>Added</th>
-                  <th>Container</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for group in inventory_groups %}
-                  {% if group.batches %}
-                    {% for batch in group.batches %}
-                    <tr>
-                      <td>{{ batch.variant or 'Base' }}</td>
-                      <td>{{ batch.size_label or 'bulk' }}</td>
-                      <td>
-                        {% if batch.batch_id %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.batch_id) }}" class="text-decoration-none">
-                            #{{ batch.batch_id }}
-                          </a>
-                        {% else %}
-                          <span class="text-muted">Manual</span>
-                        {% endif %}
-                      </td>
-                      <td>{{ "%.2f"|format(batch.quantity) }}</td>
-                      <td>{{ batch.unit }}</td>
-                      <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') if batch.timestamp else 'Unknown' }}</td>
-                      <td>
-                        {% if batch.container_id %}
-                          <span class="badge bg-info">Container #{{ batch.container_id }}</span>
-                        {% else %}
-                          <span class="text-muted">None</span>
-                        {% endif %}
-                      </td>
-                      <td>
-                        <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" 
-                                data-bs-target="#adjustModal"
-                                data-inventory-id="{{ batch.id }}"
-                                data-variant="{{ batch.variant or 'Base' }}"
-                                data-quantity="{{ batch.quantity }}"
-                                data-unit="{{ batch.unit }}">
-                          <i class="fas fa-edit"></i> Adjust
-                        </button>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  {% endif %}
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      {% else %}
-      <div class="alert alert-info">
-        <h5>No Inventory Found</h5>
-        <p>This product doesn't have any inventory yet. Add some stock using the form above or finish a batch that produces this product.</p>
-      </div>
-      {% endif %}
+      
 
     </div>
   </div>
