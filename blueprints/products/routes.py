@@ -454,7 +454,7 @@ def view_variant_inventory(product_id, variant, size_label):
         ProductEvent.note.like(f'%{size_label}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
-    return render_template('products/variant_inventory.html',
+    return render_template('products/sku_inventory.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
