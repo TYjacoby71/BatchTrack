@@ -178,7 +178,7 @@
                         <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
                         {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
                         <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">
-                          FIFO
+                          View
                         </a>
                         {% endif %}
                       </div>
@@ -298,7 +298,7 @@
                             <div class="d-flex align-items-center gap-2">
                               <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
                               {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                              <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">FIFO</a>
+                              <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">View</a>
                               {% endif %}
                             </div>
                           </div>

@@ -117,7 +117,6 @@ def add_variant(product_id):
         data = request.get_json()
         product_id = data.get('product_id')
         variant_name = data.get('name')
-        sku = data.get('sku')
         description = data.get('description')
 
         product = Product.query.get_or_404(product_id)
@@ -129,7 +128,6 @@ def add_variant(product_id):
         variant = ProductVariation(
             product_id=product_id,
             name=variant_name,
-            sku=sku,
             description=description
         )
         db.session.add(variant)
@@ -605,7 +603,6 @@ def edit_variation(product_id, variation_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     name = request.form.get('name')
-    sku = request.form.get('sku')
     description = request.form.get('description')
 
     if not name:
@@ -623,7 +620,6 @@ def edit_variation(product_id, variation_id):
         return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
-    variation.sku = sku if sku else None
     variation.description = description if description else None
 
     db.session.commit()
