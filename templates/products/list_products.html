@@ -5,15 +5,33 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Products</h2>
     <div class="d-flex gap-2 align-items-center">
-      <div class="btn-group" role="group">
-        <button class="btn {% if current_sort == 'popular' %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="sortProducts('popular')">Most Popular</button>
-        <button class="btn {% if current_sort == 'name' or not current_sort %}btn-secondary{% else %}btn-outline-secondary{% endif %} btn-sm" onclick="sortProducts('name')">A-Z</button>
-        <button class="btn {% if current_sort == 'stock' %}btn-warning{% else %}btn-outline-warning{% endif %} btn-sm" onclick="sortProducts('stock')">Low Stock</button>
-      </div>
       <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">+ New Product</a>
+      <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+        <i class="fas fa-filter"></i> Filters
+      </button>
       <div class="btn-group" role="group">
         <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
         <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="collapse mb-4" id="filterSection">
+    <div class="card card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Sort By:</label>
+          <div class="btn-group w-100" role="group">
+            <button class="btn {% if current_sort == 'popular' %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="sortProducts('popular')">Most Popular</button>
+            <button class="btn {% if current_sort == 'name' or not current_sort %}btn-secondary{% else %}btn-outline-secondary{% endif %} btn-sm" onclick="sortProducts('name')">A-Z</button>
+            <button class="btn {% if current_sort == 'stock' %}btn-warning{% else %}btn-outline-warning{% endif %} btn-sm" onclick="sortProducts('stock')">Low Stock</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Search Products:</label>
+          <input type="text" id="productFilter" class="form-control" placeholder="Search products...">
+        </div>
       </div>
     </div>
   </div>
@@ -326,6 +344,29 @@ function sortProducts(sortType) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Product search functionality
+  const productFilter = document.getElementById('productFilter');
+  if (productFilter) {
+    productFilter.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const isCardView = document.getElementById('productsContainer').style.display !== 'none';
+      
+      if (isCardView) {
+        const cards = document.querySelectorAll('#productsContainer .col-md-6');
+        cards.forEach(card => {
+          const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
+          card.style.display = productName.includes(searchTerm) ? 'block' : 'none';
+        });
+      } else {
+        const rows = document.querySelectorAll('#productsTableContainer tbody .product-row');
+        rows.forEach(row => {
+          const productName = row.querySelector('td a strong').textContent.toLowerCase();
+          row.style.display = productName.includes(searchTerm) ? '' : 'none';
+        });
+      }
+    });
+  }
+
   // Variation toggle functionality
   document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
     button.addEventListener('click', function() {
