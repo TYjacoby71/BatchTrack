@@ -5,7 +5,9 @@ from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
 from services.product_inventory_service import ProductInventoryService
 
-products_bp = Blueprint('products', __name__, url_prefix='/products')
+products_bp = Blueprint('products', __name__, 
+                          url_prefix='/products',
+                          template_folder='templates')
 
 
 

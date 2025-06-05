@@ -1,25 +1,24 @@
 // Global utility functions
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+    alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
 
     const container = document.querySelector('.container') || document.body;
     container.insertBefore(alertDiv, container.firstChild);
 
     // Auto dismiss after 5 seconds
-    setTimeout(() => {
+    setTimeout(function() {
         alertDiv.remove();
     }, 5000);
 }
 
 // CSRF token handling
 function getCSRFToken() {
-    return document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || 
-           document.querySelector('input[name=csrf_token]')?.value;
+    var metaToken = document.querySelector('meta[name=csrf-token]');
+    var inputToken = document.querySelector('input[name=csrf_token]');
+    return (metaToken && metaToken.getAttribute('content')) || 
+           (inputToken && inputToken.value) || '';
 }
 
 // Format numbers consistently
@@ -30,9 +29,9 @@ function formatNumber(num, decimals = 2) {
 // Initialize tooltips if Bootstrap is available
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof bootstrap !== 'undefined') {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
         });
     }
 });
