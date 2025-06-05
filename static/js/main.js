@@ -1,40 +1,8 @@
-// Global utility functions
-function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
-    alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
 
-    const container = document.querySelector('.container') || document.body;
-    container.insertBefore(alertDiv, container.firstChild);
-
-    // Auto dismiss after 5 seconds
-    setTimeout(function() {
-        alertDiv.remove();
-    }, 5000);
-}
-
-// CSRF token handling
+// Get CSRF token from meta tag
 function getCSRFToken() {
-    var metaToken = document.querySelector('meta[name=csrf-token]');
-    var inputToken = document.querySelector('input[name=csrf_token]');
-    return (metaToken && metaToken.getAttribute('content')) || 
-           (inputToken && inputToken.value) || '';
+  return document.querySelector('meta[name="csrf-token"]')?.content;
 }
-
-// Format numbers consistently
-function formatNumber(num, decimals = 2) {
-    return parseFloat(num).toFixed(decimals);
-}
-
-// Initialize tooltips if Bootstrap is available
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof bootstrap !== 'undefined') {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-            new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
-});
 
 function handleModalTransition(fromModalId, toModalId, focusElementId) {
   const fromModal = document.getElementById(fromModalId);
@@ -57,7 +25,7 @@ function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
   updateForm.style.display = 'none';
-
+  
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
@@ -70,7 +38,7 @@ function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
   addForm.style.display = 'none';
-
+  
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
