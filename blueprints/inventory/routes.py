@@ -33,18 +33,18 @@ def view_inventory(id):
     page = request.args.get('page', 1, type=int)
     per_page = 5
     fifo_filter = request.args.get('fifo') == 'true'
-    
+
     item = InventoryItem.query.get_or_404(id)
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
-    
+
     # Apply FIFO filter at database level if requested
     if fifo_filter:
         history_query = history_query.filter(InventoryHistory.remaining_quantity > 0)
-    
+
     history_query = history_query.order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    
+
     from datetime import datetime
     return render_template('inventory/view.html',
                          abs=abs,
@@ -131,7 +131,7 @@ def add_inventory():
                 unit_cost=cost_per_unit,
                 note='Initial stock creation',
                 created_by=current_user.id if current_user else None,
-                quantity_used=0,  # Required field for FIFO tracking
+                quantity_used=None,  # Restocks don't consume inventory - always null
                 is_perishable=is_perishable,
                 shelf_life_days=shelf_life_days,
                 expiration_date=expiration_date
@@ -158,18 +158,18 @@ def adjust_inventory(id):
     try:
         # Get the item first
         item = InventoryItem.query.get_or_404(id)
-        
+
         # Check if this item has no history - this indicates it needs FIFO initialization
         history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
-        
+
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
-        
+
         # For containers, always use 'count' as the unit
         if item.type == 'container':
             input_unit = 'count'
-            
+
         notes = request.form.get('notes', '')
 
         # Handle cost input for restocks
@@ -203,23 +203,23 @@ def adjust_inventory(id):
                 unit_cost=restock_cost or item.cost_per_unit,
                 note=notes or 'Initial stock creation via adjustment modal',
                 created_by=current_user.id,
-                quantity_used=0,  # Required field for FIFO tracking
+                quantity_used=None,  # Restocks don't consume inventory - always null
                 is_perishable=item.is_perishable,
                 shelf_life_days=item.shelf_life_days,
                 expiration_date=item.expiration_date
             )
             db.session.add(history)
-            
+
             # Update inventory quantity
             item.quantity = input_quantity
-            
+
             # Update cost if provided
             if restock_cost:
                 item.cost_per_unit = restock_cost
-                
+
             db.session.commit()
             flash('Initial inventory created successfully')
-            
+
         else:
             # Pre-validation check for existing items
             from services.inventory_adjustment import validate_inventory_fifo_sync
@@ -297,7 +297,7 @@ def edit_inventory(id):
                                 unit=new_unit,  # Record in the new unit
                                 note=f'Unit converted from {item.unit} to {new_unit}. Quantity adjusted from {request.form.get("original_quantity", item.quantity)} {item.unit} to {converted_quantity} {new_unit}',
                                 created_by=current_user.id,
-                                quantity_used=0
+                                quantity_used=None  # Unit conversions don't consume inventory - always null
                             )
                             db.session.add(history)
                             flash(f'Unit changed and inventory converted: {item.quantity} {item.unit} → {converted_quantity} {new_unit}', 'success')
@@ -351,7 +351,7 @@ def edit_inventory(id):
             unit_cost=new_cost,
             note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,
-            quantity_used=0
+            quantity_used=None  # Cost overrides don't consume inventory - always null
         )
         db.session.add(history)
         item.cost_per_unit = new_cost
