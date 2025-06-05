@@ -35,13 +35,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateExpirationDate() {
-  const shelfLife = document.getElementById('shelf_life_days').value;
+  const shelfLifeElement = document.getElementById('shelf_life_days');
+  if (!shelfLifeElement) return;
+  
+  const shelfLife = shelfLifeElement.value;
   if (shelfLife && parseInt(shelfLife) > 0) {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
     const dateString = expirationDate.toISOString().split('T')[0];
-    document.getElementById('expiration_date').value = dateString;
-    document.getElementById('expiration_date_display').value = dateString;
+    
+    const expDateElement = document.getElementById('expiration_date');
+    const expDateDisplayElement = document.getElementById('expiration_date_display');
+    
+    if (expDateElement) expDateElement.value = dateString;
+    if (expDateDisplayElement) expDateDisplayElement.value = dateString;
   }
 }
 

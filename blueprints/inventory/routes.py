@@ -33,18 +33,18 @@ def view_inventory(id):
     page = request.args.get('page', 1, type=int)
     per_page = 5
     fifo_filter = request.args.get('fifo') == 'true'
-    
+
     item = InventoryItem.query.get_or_404(id)
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
-    
+
     # Apply FIFO filter at database level if requested
     if fifo_filter:
         history_query = history_query.filter(InventoryHistory.remaining_quantity > 0)
-    
+
     history_query = history_query.order_by(InventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    
+
     from datetime import datetime
     return render_template('inventory/view.html',
                          abs=abs,
@@ -158,18 +158,18 @@ def adjust_inventory(id):
     try:
         # Get the item first
         item = InventoryItem.query.get_or_404(id)
-        
+
         # Check if this item has no history - this indicates it needs FIFO initialization
         history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
-        
+
         change_type = request.form.get('change_type')
         input_quantity = float(request.form.get('quantity', 0))
         input_unit = request.form.get('input_unit')
-        
+
         # For containers, always use 'count' as the unit
         if item.type == 'container':
             input_unit = 'count'
-            
+
         notes = request.form.get('notes', '')
 
         # Handle cost input for restocks
@@ -209,17 +209,17 @@ def adjust_inventory(id):
                 expiration_date=item.expiration_date
             )
             db.session.add(history)
-            
+
             # Update inventory quantity
             item.quantity = input_quantity
-            
+
             # Update cost if provided
             if restock_cost:
                 item.cost_per_unit = restock_cost
-                
+
             db.session.commit()
             flash('Initial inventory created successfully')
-            
+
         else:
             # Pre-validation check for existing items
             from services.inventory_adjustment import validate_inventory_fifo_sync
