@@ -1,0 +1,84 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ product.name }} - Event Log</h2>
+    <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Product
+    </a>
+  </div>
+
+  <!-- Add Event Form -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5>Log New Event</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row">
+          <div class="col-md-4">
+            <label for="event_type" class="form-label">Event Type</label>
+            <select name="event_type" id="event_type" class="form-select" required>
+              <option value="">Select event type...</option>
+              <option value="inventory_addition">Inventory Addition</option>
+              <option value="inventory_deduction">Inventory Deduction</option>
+              <option value="inventory_adjustment">Inventory Adjustment</option>
+              <option value="quality_check">Quality Check</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="note" class="form-label">Note</label>
+            <input type="text" name="note" id="note" class="form-control" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary d-block">Add Event</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Events List -->
+  <div class="card">
+    <div class="card-header">
+      <h5>Event History</h5>
+    </div>
+    <div class="card-body">
+      {% if events %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Event Type</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in events %}
+              <tr>
+                <td>{{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S') if event.timestamp else 'N/A' }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ event.event_type }}</span>
+                </td>
+                <td>{{ event.note or 'No note' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info text-center">
+          <h6>No events recorded</h6>
+          <p>Use the form above to log the first event for this product.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
