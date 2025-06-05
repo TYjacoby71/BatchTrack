@@ -22,9 +22,9 @@ def get_fifo_summary_helper(inventory_id):
 def list_products():
     """List all products with inventory summary and sorting"""
     sort_type = request.args.get('sort', 'name')
-    
+
     products = ProductInventoryService.get_product_summary()
-    
+
     # Sort products based on the requested sort type
     if sort_type == 'popular':
         # Sort by sales volume (most sales first)
@@ -36,7 +36,7 @@ def list_products():
         products.sort(key=lambda p: p.total_inventory / max(p.low_stock_threshold, 1))
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
-    
+
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
@@ -660,3 +660,20 @@ def update_marketplace_pricing(product_id, variation_id):
     db.session.commit()
     flash('Marketplace pricing updated successfully', 'success')
     return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+
+@products_bp.route('/<int:product_id>/log', methods=['GET', 'POST'])
+@login_required
+def product_log(product_id):
+    """Product event log from the old product_log_routes.py"""
+    product = Product.query.get_or_404(product_id)
+    events = ProductEvent.query.filter_by(product_id=product_id).order_by(ProductEvent.timestamp.desc()).all()
+
+    if request.method == 'POST':
+        event_type = request.form.get('event_type')
+        note = request.form.get('note')
+        db.session.add(ProductEvent(product_id=product.id, event_type=event_type, note=note))
+        db.session.commit()
+        flash(f"Logged event: {event_type}")
+        return redirect(url_for('products.product_log', product_id=product.id))
+
+    return render_template('products/product_detail.html', product=product, events=events)
