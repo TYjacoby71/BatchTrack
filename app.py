@@ -65,6 +65,17 @@ from blueprints.api import init_api
 from blueprints.timers import timers_bp
 from blueprints.marketplace import marketplace_bp
 
+# Import API blueprints
+from blueprints.api.routes import api_bp
+from blueprints.api.fifo_routes import fifo_api_bp
+from blueprints.api.ingredient_routes import ingredient_api_bp
+from blueprints.api.stock_routes import stock_api_bp
+from blueprints.api.container_routes import container_api_bp
+from blueprints.api.marketplace_routes import marketplace_api_bp
+
+# Import marketplace blueprint
+from blueprints.marketplace.routes import marketplace_bp
+
 # Register blueprints
 app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
@@ -92,6 +103,10 @@ app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 # Initialize API routes
 init_api(app)
 
+# Register API blueprints
+init_api(app)
+api = Api(app)
+api.add_resource(IngredientAPI, '/api/ingredients', '/api/ingredients/<int:ingredient_id>')
 
 @app.context_processor
 def inject_units():
