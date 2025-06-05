@@ -7,7 +7,7 @@ from services.product_inventory_service import ProductInventoryService
 
 products_bp = Blueprint('products', __name__, 
                           url_prefix='/products',
-                          template_folder='templates')
+                          template_folder='templates/products')
 
 
 
