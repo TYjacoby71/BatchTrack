@@ -47,42 +47,48 @@
         <div class="col-md-6 col-lg-4 mb-3">
           <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">{{ group.variant }}</h6>
-              <span class="badge bg-secondary">{{ group.batches|length }} batches</span>
+              <h6 class="mb-0">{{ group.variant if group.variant else 'Base' }}</h6>
+              <span class="badge bg-secondary">{{ group.batches|length if group.batches else 0 }} batches</span>
             </div>
             <div class="card-body">
               <div class="mb-2">
-                <strong>Size: {{ group.size_label }}</strong>
+                <strong>Size: {{ group.size_label if group.size_label else 'Bulk' }}</strong>
               </div>
               <div class="mb-2">
-                <strong>Total: {{ "%.2f"|format(group.total_quantity) }} {{ group.unit }}</strong>
+                {% set total_qty = group.batches|sum(attribute='quantity') if group.batches else 0 %}
+                {% set first_unit = group.batches[0].unit if group.batches else product.product_base_unit %}
+                <strong>Total: {{ "%.2f"|format(total_qty) }} {{ first_unit }}</strong>
               </div>
               
               <!-- FIFO Batch List -->
               <div class="mb-3">
                 <small class="text-muted">FIFO Order:</small>
-                {% for batch in group.batches[:3] %}
-                <div class="d-flex justify-content-between small">
-                  <span>Batch #{{ batch.batch_id or 'Manual' }}</span>
-                  <span>{{ "%.1f"|format(batch.quantity) }} {{ batch.unit }}</span>
-                </div>
-                {% endfor %}
-                {% if group.batches|length > 3 %}
-                <small class="text-muted">... and {{ group.batches|length - 3 }} more</small>
+                {% if group.batches %}
+                  {% for batch in group.batches[:3] %}
+                  <div class="d-flex justify-content-between small">
+                    <span>Batch #{{ batch.batch_id or 'Manual' }}</span>
+                    <span>{{ "%.1f"|format(batch.quantity) }} {{ batch.unit }}</span>
+                  </div>
+                  {% endfor %}
+                  {% if group.batches|length > 3 %}
+                  <small class="text-muted">... and {{ group.batches|length - 3 }} more</small>
+                  {% endif %}
+                {% else %}
+                  <small class="text-muted">No active batches</small>
                 {% endif %}
               </div>
 
               <!-- Quick Actions -->
               <div class="btn-group w-100" role="group">
-                <a href="{{ url_for('products.sku_inventory', product_id=product.id, variant=group.variant, size_label=group.size_label) }}" 
+                <a href="{{ url_for('products.sku_inventory', product_id=product.id, variant=group.variant or 'Base', size_label=group.size_label or 'bulk') }}" 
                    class="btn btn-outline-primary btn-sm">
                   <i class="fas fa-boxes"></i> View SKU
                 </a>
                 <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" 
                         data-bs-target="#deductModal"
-                        data-variant="{{ group.variant }}"
-                        data-size="{{ group.size_label }}"
-                        data-unit="{{ group.unit }}">
+                        data-variant="{{ group.variant or 'Base' }}"
+                        data-size="{{ group.size_label or 'bulk' }}"
+                        data-unit="{{ first_unit }}">
                   <i class="fas fa-minus"></i> Deduct
                 </button>
               </div>
@@ -137,76 +143,7 @@
         </div>
       </div>
 
-      <!-- Detailed Inventory Table -->
-      {% if inventory_groups %}
-      <div class="card">
-        <div class="card-header">
-          <h5>Detailed Inventory (FIFO Order)</h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Variant</th>
-                  <th>Size</th>
-                  <th>Batch ID</th>
-                  <th>Quantity</th>
-                  <th>Unit</th>
-                  <th>Added</th>
-                  <th>Container</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for group in inventory_groups %}
-                  {% for batch in group.batches %}
-                  <tr>
-                    <td>{{ batch.variant }}</td>
-                    <td>{{ batch.size_label }}</td>
-                    <td>
-                      {% if batch.batch_id %}
-                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.batch_id) }}" class="text-decoration-none">
-                          #{{ batch.batch_id }}
-                        </a>
-                      {% else %}
-                        <span class="text-muted">Manual</span>
-                      {% endif %}
-                    </td>
-                    <td>{{ "%.2f"|format(batch.quantity) }}</td>
-                    <td>{{ batch.unit }}</td>
-                    <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                      {% if batch.container_id %}
-                        <span class="badge bg-info">Container #{{ batch.container_id }}</span>
-                      {% else %}
-                        <span class="text-muted">None</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" 
-                              data-bs-target="#adjustModal"
-                              data-inventory-id="{{ batch.id }}"
-                              data-variant="{{ batch.variant }}"
-                              data-quantity="{{ batch.quantity }}"
-                              data-unit="{{ batch.unit }}">
-                        <i class="fas fa-edit"></i> Adjust
-                      </button>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      {% else %}
-      <div class="alert alert-info">
-        <h5>No Inventory Found</h5>
-        <p>This product doesn't have any inventory yet. Add some stock using the form above or finish a batch that produces this product.</p>
-      </div>
-      {% endif %}
+      
 
     </div>
   </div>
