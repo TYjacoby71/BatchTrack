@@ -133,6 +133,8 @@
                 <th>Bulk Inventory</th>
                 <th>Packaged Items</th>
                 <th>Variants</th>
+                <th>Total Cost</th>
+                <th>Total Value</th>
                 <th>Stock Status</th>
                 <th>Created</th>
                 <th>Actions</th>
@@ -161,6 +163,20 @@
                   <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ product.id }}">
                     <i class="fas fa-chevron-down"></i>
                   </button>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if hasattr(product, 'total_cost') %}
+                    ${{ "%.2f"|format(product.total_cost) }}
+                  {% else %}
+                    $0.00
+                  {% endif %}
+                </td>
+                <td>
+                  {% if hasattr(product, 'total_value') %}
+                    ${{ "%.2f"|format(product.total_value) }}
+                  {% else %}
+                    $0.00
                   {% endif %}
                 </td>
                 <td>
@@ -198,9 +214,12 @@
                           <tr>
                             <th>Variation</th>
                             <th>SKU</th>
-                            <th>Total Units</th>
+                            <th>Bulk Qty</th>
+                            <th>Packaged Qty</th>
+                            <th>Total Cost</th>
+                            <th>Retail Price</th>
+                            <th>Total Value</th>
                             <th>Sizes</th>
-                            <th>Created</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -208,6 +227,11 @@
                           <!-- All Variations (including Base) -->
                           {% for variation in product.variations %}
                           {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
+                          {% set bulk_qty = variation_inventory|selectattr('size_label', 'equalto', 'Bulk')|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) %}
+                          {% set packaged_qty = variation_inventory|selectattr('size_label', 'ne', 'Bulk')|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(0)|int %}
+                          {% set variant_cost = variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='batch_cost_per_unit')|select('number')|list %}
+                          {% set total_variant_cost = (variation_inventory|selectattr('quantity', 'gt', 0)|map('product', 'quantity', 'batch_cost_per_unit')|select('number')|sum) if variant_cost else 0 %}
+                          {% set total_variant_value = (bulk_qty + packaged_qty) * (variation.retail_price or 0) %}
                           <tr>
                             <td>
                               {% if variation.name == 'Base' %}
@@ -226,9 +250,32 @@
                               <span class="text-muted">-</span>
                               {% endif %}
                             </td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                            <td>{{ bulk_qty }}</td>
+                            <td>{{ packaged_qty }}</td>
+                            <td>
+                              {% set cost_sum = 0 %}
+                              {% for inv in variation_inventory %}
+                                {% if inv.quantity > 0 and inv.batch_cost_per_unit %}
+                                  {% set cost_sum = cost_sum + (inv.quantity * inv.batch_cost_per_unit) %}
+                                {% endif %}
+                              {% endfor %}
+                              ${{ "%.2f"|format(cost_sum) }}
+                            </td>
+                            <td>
+                              {% if variation.retail_price %}
+                                ${{ "%.2f"|format(variation.retail_price) }}
+                              {% else %}
+                                <em class="text-muted">Not set</em>
+                              {% endif %}
+                            </td>
+                            <td>
+                              {% if variation.retail_price %}
+                                ${{ "%.2f"|format((bulk_qty + packaged_qty) * variation.retail_price) }}
+                              {% else %}
+                                $0.00
+                              {% endif %}
+                            </td>
                             <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
-                            <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                               <div class="btn-group" role="group">
                                 <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">
