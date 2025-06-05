@@ -101,6 +101,10 @@ def process_inventory_adjustment(
             # Create deduction history for each FIFO entry used
             # Ensure unit is never None for containers
             history_unit = item.unit if item.unit else 'count'
+            
+            # Only set quantity_used for actual consumption (spoil, trash, batch usage)
+            quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else None
+            
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
@@ -111,7 +115,7 @@ def process_inventory_adjustment(
                 unit_cost=cost_per_unit,
                 note=f"{used_for_note} (From FIFO #{entry_id})",
                 created_by=created_by,
-                quantity_used=deduction_amount,  # Track amount consumed for deductions
+                quantity_used=quantity_used_value,  # Only set for actual consumption
                 used_for_batch_id=batch_id
             )
             db.session.add(history)
@@ -193,7 +197,7 @@ def process_inventory_adjustment(
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,
-                quantity_used=None,  # Additions don't consume inventory
+                quantity_used=None,  # Additions don't consume inventory - always null
                 created_by=created_by,
                 expiration_date=expiration_date,
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
