@@ -85,7 +85,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
-                quantity_used=deduct_amount
+                quantity_used=deduct_amount  # Track amount consumed for recount deductions
             )
             db.session.add(history)
 

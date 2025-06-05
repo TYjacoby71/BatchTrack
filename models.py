@@ -168,6 +168,7 @@ class InventoryHistory(db.Model):
     used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    quantity_used = db.Column(db.Float, nullable=True)  # Only for deductions - tracks amount consumed
     
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')

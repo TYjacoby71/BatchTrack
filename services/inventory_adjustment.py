@@ -111,7 +111,7 @@ def process_inventory_adjustment(
                 unit_cost=cost_per_unit,
                 note=f"{used_for_note} (From FIFO #{entry_id})",
                 created_by=created_by,
-                quantity_used=deduction_amount,
+                quantity_used=deduction_amount,  # Track amount consumed for deductions
                 used_for_batch_id=batch_id
             )
             db.session.add(history)
@@ -156,7 +156,7 @@ def process_inventory_adjustment(
                         fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
                         note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         created_by=created_by,
-                        quantity_used=0,
+                        quantity_used=None,  # Credits don't consume inventory
                         used_for_batch_id=batch_id
                     )
                     db.session.add(credit_history)
@@ -175,7 +175,7 @@ def process_inventory_adjustment(
                     unit_cost=cost_per_unit,
                     note=f"{notes} (Excess credit - no original FIFO found)",
                     created_by=created_by,
-                    quantity_used=0,
+                    quantity_used=None,  # Restocks don't consume inventory
                     expiration_date=expiration_date,
                     used_for_batch_id=batch_id
                 )
@@ -193,7 +193,7 @@ def process_inventory_adjustment(
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,
-                quantity_used=0,
+                quantity_used=None,  # Additions don't consume inventory
                 created_by=created_by,
                 expiration_date=expiration_date,
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
