@@ -82,7 +82,7 @@
                   <strong>Avg Cost:</strong> ${{ "%.3f"|format(avg_cost) }}
                 </div>
                 <div class="col-md-3">
-                  <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variation.name, size_label=group.size_label) }}" class="btn btn-info btn-sm">
+                  <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variation.name, size_label=group.size_label or 'bulk') }}" class="btn btn-info btn-sm">
                     View FIFO Details
                   </a>
                 </div>
