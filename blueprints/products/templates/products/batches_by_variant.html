@@ -1,0 +1,96 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
+          <li class="breadcrumb-item active">{{ variant }} - {{ size }} ({{ unit }})</li>
+        </ol>
+      </nav>
+
+      <!-- Header -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>FIFO Batches: {{ variant }} - {{ size }} ({{ unit }})</h3>
+        </div>
+        <div class="card-body">
+          <p><strong>Product:</strong> {{ product.name }}</p>
+          <p><strong>Variant:</strong> {{ variant }}</p>
+          <p><strong>Size:</strong> {{ size }}</p>
+          <p><strong>Unit:</strong> {{ unit }}</p>
+          <p><strong>Total Batches:</strong> {{ batches|length }}</p>
+        </div>
+      </div>
+
+      <!-- Batches Table -->
+      {% if batches %}
+      <div class="card">
+        <div class="card-header">
+          <h5>FIFO Order (Oldest First)</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>FIFO Order</th>
+                  <th>Batch ID</th>
+                  <th>Quantity</th>
+                  <th>Unit</th>
+                  <th>Added</th>
+                  <th>Container</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for batch in batches %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td>
+                    {% if batch.batch_id %}
+                      <a href="{{ url_for('batches.view_batch', batch_identifier=batch.batch_id) }}" class="text-decoration-none">
+                        #{{ batch.batch_id }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted">Manual</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ "%.2f"|format(batch.quantity) }}</td>
+                  <td>{{ batch.unit }}</td>
+                  <td>{{ batch.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>
+                    {% if batch.container_id %}
+                      <span class="badge bg-info">Container #{{ batch.container_id }}</span>
+                    {% else %}
+                      <span class="text-muted">None</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{{ url_for('products.sku_inventory', product_id=product.id, variant=variant, size_label=size) }}" 
+                       class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-eye"></i> View SKU
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-info">
+        <h5>No Batches Found</h5>
+        <p>No inventory batches found for this variant and size combination.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
