@@ -36,21 +36,29 @@
             <div class="row text-center">
               <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</h5>
-                  <small class="text-muted">Total Units</small>
+                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                  {% if bulk_inventory %}
+                  <h5 class="mb-0">{{ bulk_inventory|sum(attribute='quantity')|round(1) }}</h5>
+                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  {% else %}
+                  <h5 class="mb-0">0</h5>
+                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  {% endif %}
                 </div>
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  <h5 class="mb-0">{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</h5>
-                  <small class="text-muted">Sizes</small>
+                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                  <h5 class="mb-0">{{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}</h5>
+                  <small class="text-muted">Packaged</small>
                 </div>
               </div>
               <div class="col-4">
-                <h5 class="mb-0">{{ product.created_at.strftime('%m/%d') }}</h5>
-                <small class="text-muted">Created</small>
+                {% set container_types = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|map(attribute='size_label')|select('defined')|list|unique|list|length %}
+                <h5 class="mb-0">{{ container_types }}</h5>
+                <small class="text-muted">Container Types</small>
               </div>
-            </div>
+            </div></div>
             
             {% if product.variations|length > 0 %}
             <div class="collapse mt-3" id="card-variations-{{ product.id }}">
@@ -100,8 +108,8 @@
               <tr>
                 <th>Product Name</th>
                 <th>Default Unit</th>
-                <th>Total Units</th>
-                <th>Sizes</th>
+                <th>Bulk Stock</th>
+                <th>Packaged</th>
                 <th>Variants</th>
                 <th>Stock Status</th>
                 <th>Created</th>
@@ -117,8 +125,14 @@
                   </a>
                 </td>
                 <td>{{ product.product_base_unit }}</td>
-                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
-                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                <td>
+                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }} {{ product.product_base_unit }}
+                </td>
+                <td>
+                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }} items
+                </td>
                 <td>
                   {{ product.variant_count }}
                   {% if product.variations|length > 0 %}
@@ -162,8 +176,8 @@
                           <tr>
                             <th>Variation</th>
                             <th>SKU</th>
-                            <th>Total Units</th>
-                            <th>Sizes</th>
+                            <th>Bulk Stock</th>
+                            <th>Packaged</th>
                             <th>Created</th>
                             <th>Actions</th>
                           </tr>
@@ -190,8 +204,14 @@
                               <span class="text-muted">-</span>
                               {% endif %}
                             </td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                            <td>
+                              {% set bulk_inv = variation_inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                              {{ bulk_inv|sum(attribute='quantity')|round(1) if bulk_inv else 0 }} {{ product.product_base_unit }}
+                            </td>
+                            <td>
+                              {% set packaged_inv = variation_inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                              {{ packaged_inv|sum(attribute='quantity')|round(0)|int }} items
+                            </td>
                             <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                               <div class="btn-group" role="group">
