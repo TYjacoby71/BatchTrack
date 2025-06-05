@@ -629,3 +629,38 @@ def edit_variation(product_id, variation_id):
     db.session.commit()
     flash('Variation updated successfully', 'success')
     return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+
+@products_bp.route('/<int:product_id>/variation/<int:variation_id>/marketplace-pricing', methods=['POST'])
+@login_required
+def update_marketplace_pricing(product_id, variation_id):
+    """Update marketplace pricing for a product variation"""
+    product = Product.query.get_or_404(product_id)
+    variation = ProductVariation.query.get_or_404(variation_id)
+
+    # Ensure variation belongs to this product
+    if variation.product_id != product_id:
+        flash('Variation not found for this product', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+
+    retail_price = request.form.get('retail_price')
+    wholesale_price = request.form.get('wholesale_price')
+    marketplace_id = request.form.get('marketplace_id')
+    is_active = request.form.get('is_active') == 'on'
+
+    # Update pricing fields
+    if retail_price:
+        variation.retail_price = float(retail_price)
+    else:
+        variation.retail_price = None
+
+    if wholesale_price:
+        variation.wholesale_price = float(wholesale_price)
+    else:
+        variation.wholesale_price = None
+
+    variation.marketplace_id = marketplace_id if marketplace_id else None
+    variation.is_active = is_active
+
+    db.session.commit()
+    flash('Marketplace pricing updated successfully', 'success')
+    return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
