@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container mt-4">
@@ -16,7 +17,7 @@
     <!-- Products Card View -->
     <div class="row" id="productsContainer">
       {% for product in products %}
-      <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+      <div class="col-md-6 col-lg-4 mb-4">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -49,13 +50,13 @@
                 <h5 class="mb-0">{{ product.created_at.strftime('%m/%d') }}</h5>
                 <small class="text-muted">Created</small>
               </div>
-            </div></div>
-
+            </div>
+            
             {% if product.variations|length > 0 %}
             <div class="collapse mt-3" id="card-variations-{{ product.id }}">
               <div class="border-top pt-2">
                 <strong class="small">Variations:</strong>
-
+                
                 <!-- All Variations (including Base) -->
                 {% for variation in product.variations %}
                 <div class="d-flex justify-content-between align-items-center py-1">
@@ -71,7 +72,7 @@
               </div>
             </div>
             {% endif %}
-
+            
             <div class="mt-3">
               <small class="text-muted">
                 Default Unit: {{ product.product_base_unit }}<br>
@@ -99,8 +100,8 @@
               <tr>
                 <th>Product Name</th>
                 <th>Default Unit</th>
-                <th>Bulk Stock</th>
-                <th>Packaged</th>
+                <th>Total Units</th>
+                <th>Sizes</th>
                 <th>Variants</th>
                 <th>Stock Status</th>
                 <th>Created</th>
@@ -116,14 +117,8 @@
                   </a>
                 </td>
                 <td>{{ product.product_base_unit }}</td>
-                <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }} {{ product.product_base_unit }}
-                </td>
-                <td>
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }} items
-                </td>
+                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                <td>{{ product.inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
                 <td>
                   {{ product.variant_count }}
                   {% if product.variations|length > 0 %}
@@ -167,8 +162,8 @@
                           <tr>
                             <th>Variation</th>
                             <th>SKU</th>
-                            <th>Bulk Stock</th>
-                            <th>Packaged</th>
+                            <th>Total Units</th>
+                            <th>Sizes</th>
                             <th>Created</th>
                             <th>Actions</th>
                           </tr>
@@ -195,14 +190,8 @@
                               <span class="text-muted">-</span>
                               {% endif %}
                             </td>
-                            <td>
-                              {% set bulk_inv = variation_inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                              {{ bulk_inv|sum(attribute='quantity')|round(1) if bulk_inv else 0 }} {{ product.product_base_unit }}
-                            </td>
-                            <td>
-                              {% set packaged_inv = variation_inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                              {{ packaged_inv|sum(attribute='quantity')|round(0)|int }} items
-                            </td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
                             <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                               <div class="btn-group" role="group">
@@ -331,7 +320,3 @@ function editVariation(productId, variationId) {
 }
 </script>
 {% endblock %}
-```
-
-```
-</replit_final_file>
