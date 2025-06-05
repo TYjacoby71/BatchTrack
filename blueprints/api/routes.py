@@ -7,9 +7,11 @@ from .stock_routes import stock_api_bp
 from .ingredient_routes import ingredient_api_bp
 from .container_routes import container_api_bp
 from .fifo_routes import fifo_api_bp
+from .marketplace_routes import marketplace_api_bp
 
 def register_api_routes(app):
     app.register_blueprint(stock_api_bp)
     app.register_blueprint(ingredient_api_bp)
     app.register_blueprint(container_api_bp)
     app.register_blueprint(fifo_api_bp)
+    app.register_blueprint(marketplace_api_bp)

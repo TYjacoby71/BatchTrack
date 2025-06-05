@@ -20,9 +20,24 @@ def get_fifo_summary_helper(inventory_id):
 @products_bp.route('/')
 @login_required
 def list_products():
-    """List all products with inventory summary"""
+    """List all products with inventory summary and sorting"""
+    sort_type = request.args.get('sort', 'name')
+    
     products = ProductInventoryService.get_product_summary()
-    return render_template('products/list_products.html', products=products)
+    
+    # Sort products based on the requested sort type
+    if sort_type == 'popular':
+        # Sort by sales volume (most sales first)
+        sales_data = ProductInventoryService.get_product_sales_volume()
+        sales_dict = {item['product_id']: item['total_sales'] for item in sales_data}
+        products.sort(key=lambda p: sales_dict.get(p.id, 0), reverse=True)
+    elif sort_type == 'stock':
+        # Sort by stock level (low stock first)
+        products.sort(key=lambda p: p.total_inventory / max(p.low_stock_threshold, 1))
+    else:  # default to name
+        products.sort(key=lambda p: p.name.lower())
+    
+    return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
