@@ -63,6 +63,7 @@ from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
+from blueprints.marketplace import marketplace_bp
 
 # Register blueprints
 app.register_blueprint(fifo_bp)
@@ -83,6 +84,7 @@ app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')
+app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
 app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
 app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
