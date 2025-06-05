@@ -51,10 +51,10 @@ def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch
 def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     """
     Handles recounts with proper FIFO integrity and expiration tracking
+    Aligned with inventory_adjustment service standards
     """
     from models import InventoryItem
     from datetime import datetime, timedelta
-    from utils.fifo_generator import generate_fifo_id
 
     item = InventoryItem.query.get(inventory_item_id)
     current_entries = get_fifo_entries(inventory_item_id)
@@ -65,6 +65,12 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     if difference == 0:
         return True
 
+    # Use same unit logic as inventory_adjustment service
+    if item.type == 'container':
+        history_unit = 'count'  # Containers always use 'count' in history
+    else:
+        history_unit = item.unit  # Ingredients use their assigned unit
+
     # Handle reduction in quantity
     if difference < 0:
         success, deductions = deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
@@ -73,8 +79,6 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
         # Create separate history entries for each FIFO deduction
         for entry_id, deduct_amount, _ in deductions:
-            # Ensure unit is never None - use 'count' for containers with empty/None units
-            history_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='recount',
@@ -112,8 +116,6 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
             if fill_amount > 0:
                 # Log the recount but don't create new FIFO entry
-                # Ensure unit is never None - use 'count' for containers with empty/None units
-                history_unit = item.unit if item.unit else 'count'
                 history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
@@ -123,7 +125,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     fifo_reference_id=entry.id,
                     note=f"Recount restored to FIFO entry #{entry.id}",
                     created_by=user_id,
-                    quantity_used=0
+                    quantity_used=None  # Additions don't consume inventory - always null
                 )
                 db.session.add(history)
 
@@ -133,8 +135,6 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
         # Only create new FIFO entry if we couldn't fill existing ones
         if remaining_to_add > 0:
-            # Ensure unit is never None - use 'count' for containers with empty/None units
-            history_unit = item.unit if item.unit else 'count'
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type='restock',  # Use restock type for new FIFO entries
@@ -143,7 +143,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 remaining_quantity=remaining_to_add,
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
-                quantity_used=0,
+                quantity_used=None,  # Restocks don't consume inventory - always null
                 timestamp=datetime.utcnow()
             )
             db.session.add(history)
@@ -155,6 +155,8 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""
     from datetime import datetime, timedelta
+    from models import InventoryItem
+    
     entries = InventoryHistory.query.filter(
         and_(
             InventoryHistory.inventory_item_id == inventory_item_id,
@@ -162,8 +164,12 @@ def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
         )
     ).all()
 
-    expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
+    # Calculate expiration from each entry's timestamp + shelf life
     for entry in entries:
         entry.is_perishable = True
         entry.shelf_life_days = shelf_life_days
-        entry.expiration_date = expiration_date
+        # Set expiration based on entry creation date + shelf life
+        if entry.timestamp:
+            entry.expiration_date = entry.timestamp + timedelta(days=shelf_life_days)
+        else:
+            entry.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
