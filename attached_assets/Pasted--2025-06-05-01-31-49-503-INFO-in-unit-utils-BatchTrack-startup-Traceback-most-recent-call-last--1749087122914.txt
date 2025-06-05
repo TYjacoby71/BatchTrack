@@ -1,0 +1,34 @@
+[2025-06-05 01:31:49,503] INFO in unit_utils: BatchTrack startup
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1691, in invoke
+    cmd_name, cmd, args = self.resolve_command(ctx, args)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1738, in resolve_command
+    cmd = self.get_command(ctx, cmd_name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 631, in get_command
+    app = info.load_app()
+          ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 353, in load_app
+    app = locate_app(import_name, None, raise_if_not_found=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 245, in locate_app
+    __import__(module_name)
+  File "/home/runner/workspace/app.py", line 87, in <module>
+    app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/sansio/app.py", line 595, in register_blueprint
+    blueprint.register(self, options)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 310, in register
+    raise ValueError(
+ValueError: The name 'marketplace' is already registered for this blueprint. Use 'name=' to provide a unique name.
