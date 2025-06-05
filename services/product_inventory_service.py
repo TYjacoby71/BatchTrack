@@ -247,35 +247,8 @@ class ProductInventoryService:
         """Get summary of all products with inventory totals"""
         products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
         
-        # Enhance each product with detailed inventory calculations
-        for product in products:
-            # Calculate bulk vs packaged inventory
-            bulk_inventory = 0
-            packaged_inventory = 0
-            total_cost = 0
-            total_value = 0
-            
-            for inv in product.inventory:
-                if inv.quantity > 0:
-                    if inv.size_label == 'Bulk':
-                        bulk_inventory += inv.quantity
-                    else:
-                        packaged_inventory += inv.quantity
-                    
-                    # Calculate cost from batch
-                    if inv.batch_cost_per_unit:
-                        total_cost += inv.quantity * inv.batch_cost_per_unit
-                    
-                    # Calculate retail value
-                    variant = next((v for v in product.variations if v.name == inv.variant), None)
-                    if variant and variant.retail_price:
-                        total_value += inv.quantity * variant.retail_price
-            
-            # Set calculated values as dynamic attributes
-            product.bulk_inventory = bulk_inventory
-            product.packaged_inventory = packaged_inventory
-            product.total_cost = total_cost
-            product.total_value = total_value
+        # The total_inventory and variant_count are already calculated as properties in the Product model
+        # No need to assign them here since they're computed dynamically
         
         return products
 

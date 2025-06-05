@@ -242,10 +242,6 @@ class ProductVariation(db.Model):
     name = db.Column(db.String(128), nullable=False)
     sku = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
-    retail_price = db.Column(db.Float, default=0.0)  # SKU-level pricing
-    wholesale_price = db.Column(db.Float, default=0.0)  # For bulk sales
-    is_active = db.Column(db.Boolean, default=True)  # For marketplace sync
-    marketplace_id = db.Column(db.String(128))  # External marketplace reference
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ProductEvent(db.Model):

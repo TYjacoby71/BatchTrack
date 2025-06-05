@@ -5,9 +5,7 @@ from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
 from services.product_inventory_service import ProductInventoryService
 
-products_bp = Blueprint('products', __name__, 
-                          url_prefix='/products',
-                          template_folder='templates/products')
+products_bp = Blueprint('products', __name__, url_prefix='/products')
 
 
 
@@ -39,7 +37,7 @@ def list_products():
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
-    return render_template('list_products.html', products=products, current_sort=sort_type)
+    return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -75,7 +73,7 @@ def new_product():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    return render_template('new_product.html', units=units)
+    return render_template('products/new_product.html', units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -91,25 +89,13 @@ def view_product(product_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    return render_template('view_product.html', 
+    return render_template('products/view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>')
-@login_required
-def view_batches_by_variant(product_id, variant, size, unit):
-    """View FIFO-ordered batches for a specific product variant"""
-    product = Product.query.get_or_404(product_id)
-    batches = ProductInventoryService.get_variant_batches(product_id, variant, unit)
 
-    return render_template('batches_by_variant.html',
-                         product=product,
-                         batches=batches,
-                         variant=variant,
-                         size=size,
-                         unit=unit)
 
 @products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
@@ -119,6 +105,7 @@ def add_variant(product_id):
         data = request.get_json()
         product_id = data.get('product_id')
         variant_name = data.get('name')
+        sku = data.get('sku')
         description = data.get('description')
 
         product = Product.query.get_or_404(product_id)
@@ -130,6 +117,7 @@ def add_variant(product_id):
         variant = ProductVariation(
             product_id=product_id,
             name=variant_name,
+            sku=sku,
             description=description
         )
         db.session.add(variant)
@@ -429,7 +417,7 @@ def adjust_inventory(product_id, inventory_id):
     return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
 @login_required
-def sku_inventory(product_id, variant, size_label):
+def view_variant_inventory(product_id, variant, size_label):
     """View FIFO inventory for a specific product variant and size"""
     from urllib.parse import unquote
     from utils.unit_utils import get_global_unit_list
@@ -456,7 +444,7 @@ def sku_inventory(product_id, variant, size_label):
         ProductEvent.note.like(f'%{size_label}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
-    return render_template('sku_inventory.html',
+    return render_template('products/variant_inventory.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
@@ -480,8 +468,8 @@ def record_sale(product_id):
 
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.sku_inventory', 
-                               product_id=product_id, variant=variant, size_label=size_label))
+        return redirect(url_for('products.view_sku', 
+                           product_id=product_id, variant=variant, size_label=size_label))
 
     # Deduct using FIFO
     success = ProductInventoryService.deduct_fifo(
@@ -517,7 +505,7 @@ def record_sale(product_id):
     else:
         flash('Not enough stock available', 'error')
 
-    return redirect(url_for('products.sku_inventory', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
@@ -534,7 +522,7 @@ def manual_adjust(product_id):
     # This is a placeholder for the manual adjustment logic
 
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
-    return redirect(url_for('products.sku_inventory', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/variation/<int:variation_id>')
@@ -584,7 +572,7 @@ def view_variation(product_id, variation_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    return render_template('view_variation.html',
+    return render_template('products/view_variation.html',
                          product=product,
                          variation=variation,
                          size_groups=size_groups,
@@ -605,11 +593,12 @@ def edit_variation(product_id, variation_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     name = request.form.get('name')
+    sku = request.form.get('sku')
     description = request.form.get('description')
 
     if not name:
         flash('Variation name is required', 'error')
-        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
@@ -619,63 +608,12 @@ def edit_variation(product_id, variation_id):
     ).first()
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
+    variation.sku = sku if sku else None
     variation.description = description if description else None
 
     db.session.commit()
     flash('Variation updated successfully', 'success')
-    return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
-
-@products_bp.route('/<int:product_id>/variation/<int:variation_id>/marketplace-pricing', methods=['POST'])
-@login_required
-def update_marketplace_pricing(product_id, variation_id):
-    """Update marketplace pricing for a product variation"""
-    product = Product.query.get_or_404(product_id)
-    variation = ProductVariation.query.get_or_404(variation_id)
-
-    # Ensure variation belongs to this product
-    if variation.product_id != product_id:
-        flash('Variation not found for this product', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
-
-    retail_price = request.form.get('retail_price')
-    wholesale_price = request.form.get('wholesale_price')
-    marketplace_id = request.form.get('marketplace_id')
-    is_active = request.form.get('is_active') == 'on'
-
-    # Update pricing fields
-    if retail_price:
-        variation.retail_price = float(retail_price)
-    else:
-        variation.retail_price = None
-
-    if wholesale_price:
-        variation.wholesale_price = float(wholesale_price)
-    else:
-        variation.wholesale_price = None
-
-    variation.marketplace_id = marketplace_id if marketplace_id else None
-    variation.is_active = is_active
-
-    db.session.commit()
-    flash('Marketplace pricing updated successfully', 'success')
-    return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
-
-@products_bp.route('/<int:product_id>/log', methods=['GET', 'POST'])
-@login_required
-def product_log(product_id):
-    """Product event log from the old product_log_routes.py"""
-    product = Product.query.get_or_404(product_id)
-    events = ProductEvent.query.filter_by(product_id=product_id).order_by(ProductEvent.timestamp.desc()).all()
-
-    if request.method == 'POST':
-        event_type = request.form.get('event_type')
-        note = request.form.get('note')
-        db.session.add(ProductEvent(product_id=product.id, event_type=event_type, note=note))
-        db.session.commit()
-        flash(f"Logged event: {event_type}")
-        return redirect(url_for('products.product_log', product_id=product.id))
-
-    return render_template('product_detail.html', product=product, events=events)
+    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
