@@ -22,9 +22,9 @@ def get_fifo_summary_helper(inventory_id):
 def list_products():
     """List all products with inventory summary and sorting"""
     sort_type = request.args.get('sort', 'name')
-    
+
     products = ProductInventoryService.get_product_summary()
-    
+
     # Sort products based on the requested sort type
     if sort_type == 'popular':
         # Sort by sales volume (most sales first)
@@ -36,7 +36,7 @@ def list_products():
         products.sort(key=lambda p: p.total_inventory / max(p.low_stock_threshold, 1))
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
-    
+
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
@@ -480,8 +480,8 @@ def record_sale(product_id):
 
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.view_variant_inventory', 
-                               product_id=product_id, variant=variant, size_label=size_label))
+        return redirect(url_for('products.view_sku', 
+                           product_id=product_id, variant=variant, size_label=size_label))
 
     # Deduct using FIFO
     success = ProductInventoryService.deduct_fifo(
@@ -517,7 +517,7 @@ def record_sale(product_id):
     else:
         flash('Not enough stock available', 'error')
 
-    return redirect(url_for('products.view_variant_inventory', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
@@ -534,7 +534,7 @@ def manual_adjust(product_id):
     # This is a placeholder for the manual adjustment logic
 
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
-    return redirect(url_for('products.view_variant_inventory', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/variation/<int:variation_id>')
@@ -610,7 +610,7 @@ def edit_variation(product_id, variation_id):
 
     if not name:
         flash('Variation name is required', 'error')
-        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
@@ -620,7 +620,7 @@ def edit_variation(product_id, variation_id):
     ).first()
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
     variation.sku = sku if sku else None
@@ -628,4 +628,4 @@ def edit_variation(product_id, variation_id):
 
     db.session.commit()
     flash('Variation updated successfully', 'success')
-    return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
+    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))

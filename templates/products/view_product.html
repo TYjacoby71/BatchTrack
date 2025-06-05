@@ -5,7 +5,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
           <li class="breadcrumb-item active">{{ product.name }}</li>
         </ol>
       </nav>
@@ -142,7 +142,7 @@
               <div class="mt-auto">
                 <div class="btn-group w-100 mb-2" role="group">
                   {% if variation %}
-                  <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-sm">
+                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-eye"></i> View
                   </a>
                   {% endif %}
@@ -177,7 +177,7 @@
                       <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
                         {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                        <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">
+                        <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">
                           FIFO
                         </a>
                         {% endif %}
@@ -270,7 +270,7 @@
                           <i class="fas fa-minus"></i> Deduct Stock
                         </button></li>
                         {% if variation and variation.id %}
-                        <li><a class="dropdown-item" href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}">
+                        <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
                           <i class="fas fa-eye"></i> View Details
                         </a></li>
                         {% endif %}
@@ -298,7 +298,7 @@
                             <div class="d-flex align-items-center gap-2">
                               <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
                               {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                              <a href="{{ url_for('products.view_variant_inventory', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">FIFO</a>
+                              <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">FIFO</a>
                               {% endif %}
                             </div>
                           </div>
