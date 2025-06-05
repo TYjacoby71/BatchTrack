@@ -39,7 +39,7 @@ def list_products():
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
-    return render_template('products/list_products.html', products=products, current_sort=sort_type)
+    return render_template('list_products.html', products=products, current_sort=sort_type)
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -75,7 +75,7 @@ def new_product():
     from utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    return render_template('products/new_product.html', units=units)
+    return render_template('new_product.html', units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -91,7 +91,7 @@ def view_product(product_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    return render_template('products/view_product.html', 
+    return render_template('view_product.html', 
                          product=product, 
                          inventory_groups=inventory_groups,
                          available_containers=available_containers,
@@ -104,7 +104,7 @@ def view_batches_by_variant(product_id, variant, size, unit):
     product = Product.query.get_or_404(product_id)
     batches = ProductInventoryService.get_variant_batches(product_id, variant, unit)
 
-    return render_template('products/batches_by_variant.html',
+    return render_template('batches_by_variant.html',
                          product=product,
                          batches=batches,
                          variant=variant,
@@ -456,7 +456,7 @@ def sku_inventory(product_id, variant, size_label):
         ProductEvent.note.like(f'%{size_label}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
-    return render_template('products/sku_inventory.html',
+    return render_template('sku_inventory.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
@@ -584,7 +584,7 @@ def view_variation(product_id, variation_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    return render_template('products/view_variation.html',
+    return render_template('view_variation.html',
                          product=product,
                          variation=variation,
                          size_groups=size_groups,
@@ -678,4 +678,4 @@ def product_log(product_id):
         flash(f"Logged event: {event_type}")
         return redirect(url_for('products.product_log', product_id=product.id))
 
-    return render_template('products/product_detail.html', product=product, events=events)
+    return render_template('product_detail.html', product=product, events=events)
