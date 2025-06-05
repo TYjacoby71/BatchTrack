@@ -166,14 +166,14 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if hasattr(product, 'total_cost') %}
+                  {% if product.total_cost %}
                     ${{ "%.2f"|format(product.total_cost) }}
                   {% else %}
                     $0.00
                   {% endif %}
                 </td>
                 <td>
-                  {% if hasattr(product, 'total_value') %}
+                  {% if product.total_value %}
                     ${{ "%.2f"|format(product.total_value) }}
                   {% else %}
                     $0.00
