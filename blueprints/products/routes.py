@@ -662,20 +662,3 @@ def update_marketplace_pricing(product_id, variation_id):
     db.session.commit()
     flash('Marketplace pricing updated successfully', 'success')
     return redirect(url_for('products.view_variation', product_id=product_id, variation_id=variation_id))
-
-@products_bp.route('/<int:product_id>/log', methods=['GET', 'POST'])
-@login_required
-def product_log(product_id):
-    """Product event log from the old product_log_routes.py"""
-    product = Product.query.get_or_404(product_id)
-    events = ProductEvent.query.filter_by(product_id=product_id).order_by(ProductEvent.timestamp.desc()).all()
-
-    if request.method == 'POST':
-        event_type = request.form.get('event_type')
-        note = request.form.get('note')
-        db.session.add(ProductEvent(product_id=product.id, event_type=event_type, note=note))
-        db.session.commit()
-        flash(f"Logged event: {event_type}")
-        return redirect(url_for('products.product_log', product_id=product.id))
-
-    return render_template('product_detail.html', product=product, events=events)
