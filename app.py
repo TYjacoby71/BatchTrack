@@ -71,6 +71,8 @@ app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(products_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
+from blueprints.marketplace import marketplace_bp
+app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
 app.register_blueprint(admin_bp, url_prefix='/admin')
