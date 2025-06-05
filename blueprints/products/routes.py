@@ -95,19 +95,7 @@ def view_product(product_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/variant/<variant>/size/<size>/unit/<unit>')
-@login_required
-def view_batches_by_variant(product_id, variant, size, unit):
-    """View FIFO-ordered batches for a specific product variant"""
-    product = Product.query.get_or_404(product_id)
-    batches = ProductInventoryService.get_variant_batches(product_id, variant, unit)
 
-    return render_template('products/batches_by_variant.html',
-                         product=product,
-                         batches=batches,
-                         variant=variant,
-                         size=size,
-                         unit=unit)
 
 @products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
