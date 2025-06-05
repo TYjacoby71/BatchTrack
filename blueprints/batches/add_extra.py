@@ -57,22 +57,12 @@ def add_extra_to_batch(batch_id):
             continue
 
         try:
-            # Handle ingredient conversion
-            conversion = ConversionEngine.convert_units(
-                item["quantity"],
-                item["unit"],
-                inventory_item.unit,
-                ingredient_id=inventory_item.id,
-                density=inventory_item.density or (inventory_item.category.default_density if inventory_item.category else None)
-            )
-            needed_amount = conversion['converted_value']
-
-            # Use centralized inventory adjustment
+            # Use centralized inventory adjustment (handles conversion internally)
             result = process_inventory_adjustment(
                 item_id=inventory_item.id,
-                quantity=-needed_amount,  # Negative for deduction
+                quantity=item["quantity"],  # Service handles conversion and negation
                 change_type='batch',
-                unit=inventory_item.unit,
+                unit=item["unit"],  # Use input unit, service converts to inventory unit
                 notes=f"Extra ingredient for batch {batch.label_code}",
                 batch_id=batch.id,
                 created_by=current_user.id

@@ -88,14 +88,18 @@ def start_batch():
         required_amount = assoc.amount * scale
 
         try:
-            conversion_result = ConversionEngine.convert_units(
-                required_amount,
-                assoc.unit,
-                ingredient.unit,
-                ingredient_id=ingredient.id,
-                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
+            # Use centralized inventory adjustment service
+            from services.inventory_adjustment import process_inventory_adjustment
+            
+            success = process_inventory_adjustment(
+                item_id=ingredient.id,
+                quantity=required_amount,  # Service will handle conversion
+                change_type='batch',
+                unit=assoc.unit,  # Use recipe unit, service converts to inventory unit
+                notes=f"Used in batch {new_batch.label_code}",
+                batch_id=new_batch.id,
+                created_by=current_user.id if current_user.is_authenticated else 1
             )
-            required_converted = conversion_result['converted_value']
 
             # Use centralized inventory adjustment 
             result = process_inventory_adjustment(

@@ -183,55 +183,25 @@ class ProductInventoryService:
     @staticmethod
     def deduct_fifo(product_id: int, variant_label: str, unit: str, quantity: float, 
                    reason: str = 'manual_deduction', notes: str = '') -> bool:
-        """Deduct product inventory using FIFO method"""
-
-        # Get FIFO-ordered inventory for this variant
-        inventory_items = ProductInventory.query.filter_by(
-            product_id=product_id,
-            variant=variant_label,
-            unit=unit
-        ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
-
-        # Check if enough stock is available
-        total_available = sum(item.quantity for item in inventory_items)
-        if total_available < quantity:
+        """Deduct product inventory using FIFO method - delegates to centralized service"""
+        try:
+            # Find the first matching inventory item for this variant/unit combination
+            inventory_item = ProductInventory.query.filter_by(
+                product_id=product_id,
+                variant=variant_label,
+                unit=unit
+            ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).first()
+            
+            if not inventory_item:
+                return False
+            
+            # Use product adjustment service for the deduction
+            from services.product_adjustment_service import ProductAdjustmentService
+            return ProductAdjustmentService.process_adjustment(
+                inventory_item.id, reason, quantity, notes
+            )
+        except Exception:
             return False
-
-        remaining_to_deduct = quantity
-        deducted_items = []
-
-        for item in inventory_items:
-            if remaining_to_deduct <= 0:
-                break
-
-            if item.quantity <= remaining_to_deduct:
-                # Use entire item
-                deducted_items.append((item, item.quantity))
-                remaining_to_deduct -= item.quantity
-                item.quantity = 0
-            else:
-                # Partial use
-                deducted_items.append((item, remaining_to_deduct))
-                item.quantity -= remaining_to_deduct
-                remaining_to_deduct = 0
-
-        # Commit the deductions
-        db.session.commit()
-
-        # Log the event
-        event_note = f"FIFO deduction: {quantity} {unit} of {variant_label or 'Default'}. "
-        event_note += f"Items used: {len(deducted_items)}. Reason: {reason}"
-        if notes:
-            event_note += f". Notes: {notes}"
-
-        db.session.add(ProductEvent(
-            product_id=product_id,
-            event_type='inventory_deduction',
-            note=event_note
-        ))
-        db.session.commit()
-
-        return True
 
     @staticmethod
     def get_variant_batches(product_id: int, variant_label: str, unit: str) -> List[ProductInventory]:

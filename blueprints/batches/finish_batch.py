@@ -124,7 +124,7 @@ def complete_batch(batch_id):
                     item_id=ingredient.id,
                     quantity=converted_quantity,
                     change_type='finished_batch',
-                    unit=ingredient.unit,
+                    unit=output_unit,  # Use batch output unit, service converts if needed
                     notes=f"Batch {batch.label_code} completed",
                     batch_id=batch.id,
                     created_by=current_user.id,
