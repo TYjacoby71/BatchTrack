@@ -478,7 +478,7 @@ def record_sale(product_id):
 
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.view_variant_inventory', 
+        return redirect(url_for('products.sku_inventory', 
                                product_id=product_id, variant=variant, size_label=size_label))
 
     # Deduct using FIFO
@@ -515,7 +515,7 @@ def record_sale(product_id):
     else:
         flash('Not enough stock available', 'error')
 
-    return redirect(url_for('products.view_variant_inventory', 
+    return redirect(url_for('products.sku_inventory', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
@@ -532,7 +532,7 @@ def manual_adjust(product_id):
     # This is a placeholder for the manual adjustment logic
 
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
-    return redirect(url_for('products.view_variant_inventory', 
+    return redirect(url_for('products.sku_inventory', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
 @products_bp.route('/<int:product_id>/variation/<int:variation_id>')

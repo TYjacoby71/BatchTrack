@@ -87,6 +87,10 @@ app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
 app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 
+# Products blueprint
+from blueprints.products.routes import products_bp
+app.register_blueprint(products_bp)
+
 # Initialize API routes
 init_api(app)
 
