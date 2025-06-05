@@ -1,10 +1,21 @@
-<a href="{{ url_for('products.product_log', product_id=product.id) }}" class="btn btn-info btn-sm">
-                      <i class="fas fa-history"></i> Event Log
-                    </a>
-```
+{% extends 'layout.html' %}
 
-```replit_final_file>
-<a href="{{ url_for('products.product_log', product_id=product.id) }}" class="btn btn-info btn-sm">
-                      <i class="fas fa-history"></i> Event Log
-                    </a>
-</replit_final_file>
+{% block content %}
+  <h1>Product Details</h1>
+  <p>Product Name: {{ product.name }}</p>
+  <p>Product ID: {{ product.id }}</p>
+
+  <div>
+    <a href="{{ url_for('products.product_log', product_id=product.id) }}" class="btn btn-info btn-sm">
+      <i class="fas fa-history"></i> Event Log
+    </a>
+    <a href="{{ url_for('products.view_batches_by_variant', product_id=product.id, variant='some_variant', size='some_size', unit='some_unit') }}"
+       class="btn btn-outline-info btn-sm">
+      <i class="fas fa-list"></i> View Batches
+    </a>
+
+    <form method="POST" action="{{ url_for('products.deduct_product', product_id=product.id) }}" class="d-inline">
+      <button type="submit" class="btn btn-danger btn-sm">Deduct Product</button>
+    </form>
+  </div>
+{% endblock %}
