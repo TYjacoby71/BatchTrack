@@ -69,7 +69,7 @@ app.register_blueprint(fifo_bp)
 app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(products_bp)
+app.register_blueprint(products_bp, url_prefix='/products')
 app.register_blueprint(settings_bp, url_prefix='/settings')
 
 app.register_blueprint(app_routes_bp)
