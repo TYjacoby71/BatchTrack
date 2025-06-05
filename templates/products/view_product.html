@@ -160,11 +160,7 @@
                   </button>
                 </div>
                 {% if var_inventory %}
-                <div class="btn-group w-100" role="group">
-                  <button class="btn btn-outline-info btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#var-{{ variant_name|lower|replace(' ', '_') }}-sizes">
-                    <i class="fas fa-boxes"></i> View {{ var_size_count }} Size{{ 's' if var_size_count != 1 else '' }}
-                  </button>
-                </div>
+                
                 {% endif %}
               </div>
             </div>
