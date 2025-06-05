@@ -63,17 +63,6 @@ from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
-from blueprints.marketplace import marketplace_bp
-
-# Import API blueprints
-from blueprints.api.routes import api_bp
-from blueprints.api.fifo_routes import fifo_api_bp
-from blueprints.api.ingredient_routes import ingredient_api_bp
-from blueprints.api.stock_routes import stock_api_bp
-from blueprints.api.container_routes import container_api_bp
-from blueprints.api.marketplace_routes import marketplace_api_bp
-
-# Import marketplace blueprint
 from blueprints.marketplace.routes import marketplace_bp
 
 # Register blueprints
@@ -83,7 +72,6 @@ app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(products_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
-from blueprints.marketplace import marketplace_bp
 app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -102,11 +90,6 @@ app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 
 # Initialize API routes
 init_api(app)
-
-# Register API blueprints
-init_api(app)
-api = Api(app)
-api.add_resource(IngredientAPI, '/api/ingredients', '/api/ingredients/<int:ingredient_id>')
 
 @app.context_processor
 def inject_units():
