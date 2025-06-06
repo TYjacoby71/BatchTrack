@@ -19,7 +19,7 @@ def get_fifo_summary_helper(inventory_id):
 
 @products_bp.route('/')
 @login_required
-def list_products():
+def product_list():
     """List all products with inventory summary and sorting"""
     sort_type = request.args.get('sort', 'name')
 
@@ -415,9 +415,9 @@ def adjust_inventory(product_id, inventory_id):
         flash(f'Error processing adjustment: {str(e)}', 'error')
 
     return redirect(url_for('products.view_product', product_id=product_id))
-@products_bp.route('/<int:product_id>/variant/<variant>/size/<size_label>')
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
 @login_required
-def view_variant_inventory(product_id, variant, size_label):
+def view_sku(product_id, variant, size_label):
     """View FIFO inventory for a specific product variant and size"""
     from urllib.parse import unquote
     from utils.unit_utils import get_global_unit_list
@@ -525,9 +525,9 @@ def manual_adjust(product_id):
     return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
-@products_bp.route('/<int:product_id>/variation/<int:variation_id>')
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
-def view_variation(product_id, variation_id):
+def view_variant(product_id, variation_id):
     """View individual product variation details"""
     from utils.unit_utils import get_global_unit_list
 
@@ -580,9 +580,9 @@ def view_variation(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/variation/<int:variation_id>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
 @login_required
-def edit_variation(product_id, variation_id):
+def edit_variant(product_id, variation_id):
     """Edit product variation details"""
     product = Product.query.get_or_404(product_id)
     variation = ProductVariation.query.get_or_404(variation_id)
