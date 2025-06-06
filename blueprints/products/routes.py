@@ -580,6 +580,60 @@ def view_variant(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])
+@login_required
+def edit_sku(product_id, variant, size_label):
+    """Edit SKU for a specific product variant and size"""
+    from urllib.parse import unquote
+
+    product = Product.query.get_or_404(product_id)
+    variant = unquote(variant)
+    size_label = unquote(size_label)
+    
+    sku = request.form.get('sku', '').strip()
+    
+    # Update all ProductInventory entries for this variant/size combination
+    inventory_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).all()
+    
+    if not inventory_entries:
+        flash('No inventory entries found for this variant/size combination', 'error')
+        return redirect(url_for('products.view_sku', 
+                               product_id=product_id, variant=variant, size_label=size_label))
+    
+    # Check if SKU already exists for another product/variant/size combination
+    if sku:
+        existing_sku = ProductInventory.query.filter(
+            ProductInventory.sku == sku,
+            db.or_(
+                ProductInventory.product_id != product_id,
+                ProductInventory.variant != variant,
+                ProductInventory.size_label != size_label
+            )
+        ).first()
+        
+        if existing_sku:
+            flash(f'SKU "{sku}" is already in use for another product/variant/size', 'error')
+            return redirect(url_for('products.view_sku', 
+                                   product_id=product_id, variant=variant, size_label=size_label))
+    
+    # Update all entries
+    for entry in inventory_entries:
+        entry.sku = sku if sku else None
+    
+    db.session.commit()
+    
+    if sku:
+        flash(f'SKU updated to "{sku}" for {variant} - {size_label}', 'success')
+    else:
+        flash(f'SKU removed for {variant} - {size_label}', 'success')
+    
+    return redirect(url_for('products.view_sku', 
+                           product_id=product_id, variant=variant, size_label=size_label))
+
 @products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
 @login_required
 def edit_variant(product_id, variation_id):
@@ -593,7 +647,6 @@ def edit_variant(product_id, variation_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     name = request.form.get('name')
-    sku = request.form.get('sku')
     description = request.form.get('description')
 
     if not name:
@@ -611,7 +664,6 @@ def edit_variant(product_id, variation_id):
         return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
-    variation.sku = sku if sku else None
     variation.description = description if description else None
 
     db.session.commit()

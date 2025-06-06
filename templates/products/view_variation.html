@@ -39,19 +39,16 @@
         </div>
         <div class="card-body">
           <div class="row">
-            <div class="col-md-3">
-              <strong>SKU:</strong> {{ variation.sku or 'Not set' }}
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <strong>Product Base Unit:</strong> {{ product.product_base_unit }}
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <strong>Created:</strong> {{ variation.created_at.strftime('%Y-%m-%d') }}
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <strong>Size Variants:</strong> {{ size_groups|length }}
             </div>
-          </div>
+          </div></div>
           {% if variation.description %}
           <div class="row mt-2">
             <div class="col-12">
@@ -181,10 +178,6 @@
           <div class="mb-3">
             <label class="form-label">Variation Name</label>
             <input type="text" name="name" class="form-control" value="{{ variation.name }}" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">SKU</label>
-            <input type="text" name="sku" class="form-control" value="{{ variation.sku or '' }}">
           </div>
           <div class="mb-3">
             <label class="form-label">Description</label>

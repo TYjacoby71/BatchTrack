@@ -226,6 +226,7 @@ class ProductInventory(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
     variant = db.Column(db.String(100))
     size_label = db.Column(db.String(100))  # Container size (e.g., "4 oz Jar")
+    sku = db.Column(db.String(100), nullable=True)  # SKU at the size level
     unit = db.Column(db.String(50))
     quantity = db.Column(db.Float)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
