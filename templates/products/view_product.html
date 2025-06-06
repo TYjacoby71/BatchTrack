@@ -39,7 +39,7 @@
               <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editProductModal">
                 <i class="fas fa-edit"></i> Edit Product
               </a></li>
-              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addManualStockModal" onclick="clearVariantSelection()">
                 <i class="fas fa-plus"></i> Add Manual Stock
               </a></li>
               <li><hr class="dropdown-divider"></li>
@@ -489,12 +489,14 @@
       <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="modal-body">
-          <input type="hidden" name="variant_name" id="manualStockVariant" value="">
           <div class="mb-3">
-            <label class="form-label">Adding Stock to Variant:</label>
-            <div class="alert alert-info">
-              <strong id="selectedVariantDisplay">-</strong>
-            </div>
+            <label class="form-label">Select Variant</label>
+            <select name="variant_name" id="manualStockVariant" class="form-select" required>
+              <option value="">Choose a variant...</option>
+              {% for variant_name in all_variants %}
+              <option value="{{ variant_name }}">{{ variant_name }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Container Type (Optional)</label>
@@ -730,7 +732,11 @@ function addVariant(){
 // Open Add Stock modal for specific variant
 function openAddStockModal(variantName) {
   document.getElementById('manualStockVariant').value = variantName;
-  document.getElementById('selectedVariantDisplay').textContent = variantName;
+}
+
+// Clear variant selection when opening modal from actions menu
+function clearVariantSelection() {
+  document.getElementById('manualStockVariant').value = '';
 }
 
 // Set edit variation modal data
