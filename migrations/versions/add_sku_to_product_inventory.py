@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_sku_to_product_inventory'
-down_revision = '8dfa489d825b'
+down_revision = '068534518f6c'
 branch_labels = None
 depends_on = None
 
