@@ -227,7 +227,7 @@
                     {% set _ = all_batches.extend(group.batches) %}
                   {% endif %}
                 {% endfor %}
-                {% set total_cost = all_batches|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
+                {% set total_cost = all_batches|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|list|sum %}
                 
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
