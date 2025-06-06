@@ -163,31 +163,7 @@
               </div>
             </div>
 
-            <!-- Size Details Section -->
-            {% if var_inventory %}
-            <div class="card-footer">
-              <button class="btn btn-link btn-sm p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#var-{{ variant_name|lower|replace(' ', '_') }}-sizes">
-                <i class="fas fa-chevron-right"></i> {{ var_size_count }} Size{{ 's' if var_size_count != 1 else '' }}
-              </button>
-              <div class="collapse sizes-list" id="var-{{ variant_name|lower|replace(' ', '_') }}-sizes">
-                <div class="mt-2">
-                  {% for group_key, group in inventory_groups.items() %}
-                    {% if group.variant == variant_name %}
-                    <div class="size-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                      <div>
-                        <strong>{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' }}</strong>
-                        <br><small class="text-muted">{{ group.unit }} | {{ group.batches|selectattr('quantity', 'gt', 0)|list|length }} batches</small>
-                      </div>
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
-                      </div>
-                    </div>
-                    {% endif %}
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-            {% endif %}
+            
           </div>
         </div>
         {% endfor %}
