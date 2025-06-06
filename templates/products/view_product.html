@@ -319,7 +319,7 @@
         </div>
       </div>
 
-      
+
     </div>
   </div>
 </div>
@@ -397,7 +397,7 @@
   </div>
 </div>
 
-<!-- Edit Variant Modal -->
+<!-- Edit Variation Modal -->
 <div class="modal fade" id="editVariationModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -405,25 +405,80 @@
         <h5 class="modal-title">Edit Variant</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="" id="editVariationForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <form id="editVariationForm" method="POST">
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Variant Name</label>
-            <input type="text" name="name" id="editVariantName" class="form-control" required>
+            <input type="text" class="form-control" id="editVariantName" name="name" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">SKU (Optional)</label>
-            <input type="text" name="sku" id="editVariantSku" class="form-control">
+            <label class="form-label">SKU</label>
+            <input type="text" class="form-control" id="editVariantSku" name="sku">
           </div>
           <div class="mb-3">
             <label class="form-label">Description</label>
-            <textarea name="description" id="editVariantDescription" class="form-control" rows="3"></textarea>
+            <textarea class="form-control" id="editVariantDescription" name="description" rows="3"></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Size Variant Modal -->
+<div class="modal fade" id="addSizeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Size Variant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+        <div class="modal-body">
+          <input type="hidden" id="sizeVariantName" name="variant_name">
+
+          <div class="mb-3">
+            <label class="form-label">Size Type</label>
+            <select class="form-control" name="size_type" id="sizeType" onchange="toggleSizeFields()">
+              <option value="bulk">Bulk</option>
+              <option value="packaged">Packaged</option>
+            </select>
+          </div>
+
+          <div id="packagedFields" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Container</label>
+              <select class="form-control" name="container_id" id="sizeContainer">
+                <option value="">Select Container</option>
+                {% for container in available_containers %}
+                <option value="{{ container.id }}">{{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" class="form-control" name="quantity" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Unit Cost (per unit)</label>
+            <input type="number" step="0.001" class="form-control" name="unit_cost">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Size Variant</button>
         </div>
       </form>
     </div>
@@ -653,6 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add variant via AJAX
+```javascript
 function addVariant(){
   const form = document.getElementById('addVariantForm');
   const formData = new FormData(form);
@@ -691,6 +747,21 @@ function setEditVariation(variationId, name, sku, description) {
   document.getElementById('editVariantSku').value = sku;
   document.getElementById('editVariantDescription').value = description;
   document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variation/${variationId}/edit`;
+}
+
+function setSizeVariant(variantName) {
+    document.getElementById('sizeVariantName').value = variantName;
+}
+
+function toggleSizeFields() {
+    var sizeType = document.getElementById('sizeType').value;
+    var packagedFields = document.getElementById('packagedFields');
+
+    if (sizeType === 'packaged') {
+        packagedFields.style.display = 'block';
+    } else {
+        packagedFields.style.display = 'none';
+    }
 }
 </script>
 {% endblock %}
