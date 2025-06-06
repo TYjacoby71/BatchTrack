@@ -303,7 +303,11 @@
                           <div class="border rounded p-2 mb-2">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                               <div>
-                                <span class="fw-bold fs-6">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' }}</span>
+                                {% set display_label = group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' %}
+                                {% if display_label == 'Bulk' or 'Bulk' in display_label %}
+                                  {% set display_label = 'Bulk' %}
+                                {% endif %}
+                                <span class="fw-bold fs-6">{{ display_label }}</span>
                                 <span class="text-muted ms-2">{{ group.unit }}</span>
                               </div>
                               <div class="d-flex gap-3 text-sm">
@@ -326,7 +330,11 @@
                                   </div>
                                   <div class="d-flex gap-3">
                                     <span><strong>Qty:</strong> {{ "%.1f"|format(batch.quantity) }}</span>
-                                    <span><strong>Size:</strong> {{ batch.size_label if batch.size_label else 'Bulk' }}</span>
+                                    {% set batch_display_label = batch.size_label if batch.size_label else 'Bulk' %}
+                                    {% if batch_display_label == 'Bulk' or 'Bulk' in batch_display_label %}
+                                      {% set batch_display_label = 'Bulk' %}
+                                    {% endif %}
+                                    <span><strong>Size:</strong> {{ batch_display_label }}</span>
                                     <span><strong>Total Cost:</strong> ${{ "%.2f"|format((batch.batch_cost_per_unit or 0) * batch.quantity) }}</span>
                                   </div>
                                 </div>
