@@ -251,7 +251,7 @@
                   <td>
                     <div class="btn-group" role="group">
                       {% if variation %}
-                      <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
+                      <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-eye"></i> View
                       </a>
                       {% endif %}
