@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.pwntools
+    pkgs.sqlite-interactive
     pkgs.graalvmCEPackages.graaljs
     pkgs.zlib
     pkgs.tk
