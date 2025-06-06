@@ -27,6 +27,9 @@
           <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
             <i class="fas fa-filter"></i> Filters
           </button>
+          <button class="btn btn-danger" onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name }}')">
+            <i class="fas fa-trash"></i> Delete Product
+          </button>
           <div class="btn-group" role="group">
             <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
             <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
@@ -738,6 +741,29 @@ function setEditVariation(variationId, name, sku, description) {
   document.getElementById('editVariantSku').value = sku || '';
   document.getElementById('editVariantDescription').value = description || '';
   document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variant/${variationId}/edit`;
+}
+
+// Confirm product deletion
+function confirmDeleteProduct(productId, productName) {
+  if (confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone and will delete all associated data.`)) {
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/products/${productId}/delete`;
+    
+    // Add CSRF token if available
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (csrfToken) {
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = csrfToken.getAttribute('content');
+      form.appendChild(csrfInput);
+    }
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
 }
 
 function setSizeVariant(variantName) {
