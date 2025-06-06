@@ -109,9 +109,13 @@
                   {% for inv in group.batches %}
                   <tr>
                     <td>
-                      <a href="{{ url_for('batches.view_batch', batch_identifier=inv.batch_id) }}">
-                        Batch {{ inv.batch_id }}
-                      </a>
+                      {% if inv.batch_id %}
+                        <a href="{{ url_for('batches.view_batch', batch_identifier=inv.batch_id) }}">
+                          Batch {{ inv.batch_id }}
+                        </a>
+                      {% else %}
+                        <span class="text-muted">Manual Entry</span>
+                      {% endif %}
                     </td>
                     <td>{{ inv.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>{{ "%.2f"|format(inv.quantity) }} {{ inv.unit }}</td>
