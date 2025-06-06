@@ -495,12 +495,10 @@ def view_sku(product_id, variant, size_label):
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
     # Get the variation object if it exists
-    variation = None
-    if variant != 'Base':
-        variation = ProductVariation.query.filter_by(
-            product_id=product_id,
-            name=variant
-        ).first()
+    variation = ProductVariation.query.filter_by(
+        product_id=product_id,
+        name=variant
+    ).first()
 
     return render_template('products/view_sku.html',
                          product=product,
