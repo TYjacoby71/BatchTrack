@@ -13,7 +13,7 @@ class ProductInventoryService:
             product_id=product_id,
             name='Base'
         ).first()
-        
+
         if not base_variant:
             product = Product.query.get_or_404(product_id)
             base_variant = ProductVariation(
@@ -34,7 +34,7 @@ class ProductInventoryService:
 
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
-        
+
         # Ensure Base variant exists for this product
         ProductInventoryService._ensure_base_variant(product_id)
 
@@ -116,7 +116,7 @@ class ProductInventoryService:
                 product_id=product_id,
                 batch_id=batch_id,
                 variant=variant_label or 'Base',
-                size_label='Bulk',
+                size_label= f"Whole {product.name}" if product.product_base_unit in ['each', 'count', 'loaf', 'item'] else f"Bulk {product.name}",
                 unit=unit,
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
@@ -246,17 +246,17 @@ class ProductInventoryService:
     def get_product_summary():
         """Get summary of all products with inventory totals"""
         products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
-        
+
         # The total_inventory and variant_count are already calculated as properties in the Product model
         # No need to assign them here since they're computed dynamically
-        
+
         return products
 
     @staticmethod
     def get_product_sales_volume():
         """Get sales volume for all products from ProductEvent table"""
         from sqlalchemy import func, and_
-        
+
         # Query ProductEvent table for sale events and extract quantity from notes
         sales_events = db.session.query(
             ProductEvent.product_id,
@@ -267,13 +267,13 @@ class ProductInventoryService:
                 ProductEvent.note.like('%sale%')
             )
         ).all()
-        
+
         # Parse sales quantities from notes and aggregate by product
         sales_by_product = {}
         for event in sales_events:
             product_id = event.product_id
             note = event.note or ''
-            
+
             # Extract quantity from notes like "FIFO deduction: 2.0 count of Base. Items used: 1. Reason: sale"
             # or "Sale: 1 × 4 oz Jar for $15.00 ($15.00/unit) to Customer Name"
             try:
@@ -287,14 +287,14 @@ class ProductInventoryService:
                     quantity = float(parts)
                 else:
                     continue
-                    
+
                 if product_id not in sales_by_product:
                     sales_by_product[product_id] = 0
                 sales_by_product[product_id] += quantity
-                
+
             except (ValueError, IndexError):
                 # Skip events where we can't parse the quantity
                 continue
-        
+
         # Convert to list format
         return [{'product_id': pid, 'total_sales': vol} for pid, vol in sales_by_product.items()]
