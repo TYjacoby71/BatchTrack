@@ -92,22 +92,20 @@ init_api(app)
 
 # Add custom Jinja2 filter for cost calculations
 @app.template_filter('attr_multiply')
-def attr_multiply_filter(items, *attrs):
-    """Multiply attributes of each item in a list"""
-    result = []
-    # Handle case where items might not be iterable
-    if not hasattr(items, '__iter__'):
-        return []
-
-    for item in items:
-        product = 1
-        for attr in attrs:
-            value = getattr(item, attr, 0)
-            if value is None:
-                value = 0
-            product *= float(value)
-        result.append(product)
-    return result
+def attr_multiply_filter(item, attr1, attr2):
+    """Multiply two attributes of a single item"""
+    if item is None:
+        return 0
+    
+    val1 = getattr(item, attr1, 0)
+    val2 = getattr(item, attr2, 0)
+    
+    if val1 is None:
+        val1 = 0
+    if val2 is None:
+        val2 = 0
+        
+    return float(val1) * float(val2)
 
 @app.context_processor
 def inject_units():
