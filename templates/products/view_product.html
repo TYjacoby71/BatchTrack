@@ -735,9 +735,9 @@ function openAddStockModal(variantName) {
 // Set edit variation modal data
 function setEditVariation(variationId, name, sku, description) {
   document.getElementById('editVariantName').value = name;
-  document.getElementById('editVariantSku').value = sku;
-  document.getElementById('editVariantDescription').value = description;
-  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variation/${variationId}/edit`;
+  document.getElementById('editVariantSku').value = sku || '';
+  document.getElementById('editVariantDescription').value = description || '';
+  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variant/${variationId}/edit`;
 }
 
 function setSizeVariant(variantName) {

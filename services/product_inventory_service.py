@@ -6,23 +6,7 @@ from typing import Optional, Dict, List, Tuple
 class ProductInventoryService:
     """Service for handling product inventory operations and batch-to-product transitions"""
 
-    @staticmethod
-    def _ensure_base_variant(product_id: int) -> None:
-        """Ensure the product has a Base ProductVariation record"""
-        base_variant = ProductVariation.query.filter_by(
-            product_id=product_id,
-            name='Base'
-        ).first()
-
-        if not base_variant:
-            product = Product.query.get_or_404(product_id)
-            base_variant = ProductVariation(
-                product_id=product_id,
-                name='Base',
-                description='Default base variant'
-            )
-            db.session.add(base_variant)
-            db.session.commit()
+    
 
     @staticmethod
     def add_product_from_batch(batch_id: int, product_id: int, variant_label: Optional[str] = None, 
@@ -34,9 +18,6 @@ class ProductInventoryService:
 
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
-
-        # Ensure Base variant exists for this product
-        ProductInventoryService._ensure_base_variant(product_id)
 
         inventory_entries = []
 

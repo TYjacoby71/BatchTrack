@@ -64,6 +64,15 @@ def new_product():
         )
 
         db.session.add(product)
+        db.session.flush()  # Get the product ID
+
+        # Create the Base variant automatically
+        base_variant = ProductVariation(
+            product_id=product.id,
+            name='Base',
+            description='Default base variant'
+        )
+        db.session.add(base_variant)
         db.session.commit()
 
         flash('Product created successfully', 'success')
