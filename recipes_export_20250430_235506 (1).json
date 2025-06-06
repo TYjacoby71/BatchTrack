@@ -32,7 +32,7 @@
   {
     "name": "lemon",
     "instructions": "",
-    "label_prefix": "FE",
+    "label_prefix": "lm",
     "predicted_yield": 5.0,
     "predicted_yield_unit": "count",
     "requires_containers": true,
@@ -63,7 +63,7 @@
   {
     "name": "Copy of Fried Eggs",
     "instructions": "",
-    "label_prefix": "FE",
+    "label_prefix": "cfe",
     "predicted_yield": 5.0,
     "predicted_yield_unit": "count",
     "requires_containers": true,
