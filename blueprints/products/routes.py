@@ -64,6 +64,15 @@ def new_product():
         )
 
         db.session.add(product)
+        db.session.flush()  # Get the product ID
+
+        # Create the Base variant automatically
+        base_variant = ProductVariation(
+            product_id=product.id,
+            name='Base',
+            description='Default base variant'
+        )
+        db.session.add(base_variant)
         db.session.commit()
 
         flash('Product created successfully', 'success')
@@ -669,3 +678,45 @@ def edit_variant(product_id, variation_id):
     db.session.commit()
     flash('Variation updated successfully', 'success')
     return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
+
+@products_bp.route('/<int:product_id>/delete', methods=['POST'])
+@login_required
+def delete_product(product_id):
+    """Delete a product and all its related data"""
+    product = Product.query.get_or_404(product_id)
+    
+    try:
+        # Check if product has any batches
+        if product.batches:
+            flash('Cannot delete product with associated batches', 'error')
+            return redirect(url_for('products.view_product', product_id=product_id))
+        
+        # Delete related records in order
+        # Delete product inventory history
+        from models import ProductInventoryHistory
+        ProductInventoryHistory.query.filter(
+            ProductInventoryHistory.product_inventory_id.in_(
+                db.session.query(ProductInventory.id).filter_by(product_id=product_id)
+            )
+        ).delete(synchronize_session=False)
+        
+        # Delete product inventory
+        ProductInventory.query.filter_by(product_id=product_id).delete()
+        
+        # Delete product events
+        ProductEvent.query.filter_by(product_id=product_id).delete()
+        
+        # Delete product variations
+        ProductVariation.query.filter_by(product_id=product_id).delete()
+        
+        # Delete the product itself
+        db.session.delete(product)
+        db.session.commit()
+        
+        flash(f'Product "{product.name}" deleted successfully', 'success')
+        return redirect(url_for('products.product_list'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting product: {str(e)}', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))

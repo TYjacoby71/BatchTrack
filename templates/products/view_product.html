@@ -27,6 +27,9 @@
           <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
             <i class="fas fa-filter"></i> Filters
           </button>
+          <button class="btn btn-danger" onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name }}')">
+            <i class="fas fa-trash"></i> Delete Product
+          </button>
           <div class="btn-group" role="group">
             <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
             <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
@@ -146,7 +149,7 @@
                     <i class="fas fa-eye"></i> View
                   </a>
                   {% endif %}
-                  <button class="btn btn-outline-secondary btn-sm" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.sku if variation and variation.sku else '' }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                  <button class="btn btn-outline-secondary btn-sm" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                     <i class="fas fa-edit"></i> Edit
                   </button>
                   <button class="btn btn-primary btn-sm" onclick="openAddStockModal('{{ variant_name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
@@ -259,7 +262,7 @@
                           <i class="fas fa-minus"></i> Deduct Stock
                         </button></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.sku if variation and variation.sku else '' }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                        <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                           <i class="fas fa-edit"></i> Edit Variant
                         </a></li>
                       </ul>
@@ -398,14 +401,11 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="editVariationForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Variant Name</label>
             <input type="text" class="form-control" id="editVariantName" name="name" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">SKU</label>
-            <input type="text" class="form-control" id="editVariantSku" name="sku">
           </div>
           <div class="mb-3">
             <label class="form-label">Description</label>
@@ -700,13 +700,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add variant via AJAX
-```javascript
 function addVariant(){
   const form = document.getElementById('addVariantForm');
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
 
-  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {method: 'POST',
+  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
@@ -715,7 +715,7 @@ function addVariant(){
   })
   .then(response => response.json())
   .then(data => {
-if (data.success) {
+    if (data.success) {
       location.reload();
     } else {
       alert('Error: ' + data.error);
@@ -733,11 +733,39 @@ function openAddStockModal(variantName) {
 }
 
 // Set edit variation modal data
-function setEditVariation(variationId, name, sku, description) {
+function setEditVariation(variationId, name, description) {
   document.getElementById('editVariantName').value = name;
-  document.getElementById('editVariantSku').value = sku;
-  document.getElementById('editVariantDescription').value = description;
-  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variation/${variationId}/edit`;
+  document.getElementById('editVariantDescription').value = description || '';
+  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variant/${variationId}/edit`;
+}
+
+// Open Add Stock modal for specific variant
+function openAddStockModal(variantName) {
+  document.getElementById('manualStockVariant').value = variantName;
+  document.getElementById('selectedVariantDisplay').textContent = variantName;
+}
+
+// Confirm product deletion
+function confirmDeleteProduct(productId, productName) {
+  if (confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone and will delete all associated data.`)) {
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/products/${productId}/delete`;
+    
+    // Add CSRF token if available
+    const csrfToken = document.querySelector('input[name="csrf_token"]');
+    if (csrfToken) {
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = csrfToken.value;
+      form.appendChild(csrfInput);
+    }
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
 }
 
 function setSizeVariant(variantName) {
