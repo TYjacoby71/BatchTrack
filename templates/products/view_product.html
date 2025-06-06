@@ -250,35 +250,27 @@
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      {% if variation %}
-                      <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye"></i> View
-                      </a>
-                      {% endif %}
-                      <button class="btn btn-primary btn-sm" onclick="openAddStockModal('{{ variant_name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                        <i class="fas fa-plus"></i> Add Stock
+                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="dropdown" style="border: none; background: transparent;">
+                        <i class="fas fa-ellipsis-v"></i>
                       </button>
-                      <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                          <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                          <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addManualStockModal" onclick="openAddStockModal('{{ variant_name }}')">
+                      <ul class="dropdown-menu">
+                        {% if variation and variation.id %}
+                        <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
+                          <i class="fas fa-eye"></i> View Details
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addManualStockModal" onclick="openAddStockModal('{{ variant_name }}')">
                           <i class="fas fa-plus"></i> Add Stock
                         </button></li>
                         <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#deductModal" onclick="setVariantForDeduct('{{ variant_name }}')">
                           <i class="fas fa-minus"></i> Deduct Stock
                         </button></li>
-                        {% else %}
-                          <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
-                            <i class="fas fa-eye"></i> View Details
-                          </a></li>
-                          {% endif %}
-                          <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.sku if variation and variation.sku else '' }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
-                            <i class="fas fa-edit"></i> Edit
-                          </a></li>
-                        </ul>
-                      </div>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.sku if variation and variation.sku else '' }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                          <i class="fas fa-edit"></i> Edit Variant
+                        </a></li>
+                      </ul>
                     </div>
                   </td>
                 </tr>
@@ -327,45 +319,7 @@
         </div>
       </div>
 
-      <!-- Activity Log -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h4>Recent Activity</h4>
-        </div>
-        <div class="card-body">
-          {% if product.events %}
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Event</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for event in product.events[:10] %}
-                  <tr>
-                    <td>{{ event.timestamp.strftime('%m/%d %H:%M') }}</td>
-                    <td>
-                      <span class="badge bg-{% if 'deduction' in event.event_type %}warning{% elif 'spoil' in event.event_type %}danger{% else %}info{% endif %}">
-                        {{ event.event_type.replace('_', ' ').title() }}
-                      </span>
-                    </td>
-                    <td>{{ event.note[:80] }}{% if event.note|length > 80 %}...{% endif %}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            {% if product.events|length > 10 %}
-            <small class="text-muted">Showing last 10 events</small>
-            {% endif %}
-          {% else %}
-            <div class="alert alert-info">No activity recorded yet.</div>
-          {% endif %}
-        </div>
-      </div>
+      
     </div>
   </div>
 </div>
