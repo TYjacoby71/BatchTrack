@@ -92,7 +92,20 @@
         {% for variant_name in all_variants %}
         {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-        {% set var_size_count = var_inventory|length %}
+        {% set unique_size_labels = [] %}
+        {% for group in var_inventory %}
+          {% if group.batches %}
+            {% for batch in group.batches %}
+              {% if batch.quantity > 0 %}
+                {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
+                {% if size_label not in unique_size_labels %}
+                  {% set _ = unique_size_labels.append(size_label) %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% set var_size_count = unique_size_labels|length %}
         {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
@@ -189,7 +202,20 @@
                 {% for variant_name in all_variants %}
                 {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
                 {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-                {% set var_size_count = var_inventory|length %}
+                {% set unique_size_labels = [] %}
+                {% for group in var_inventory %}
+                  {% if group.batches %}
+                    {% for batch in group.batches %}
+                      {% if batch.quantity > 0 %}
+                        {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
+                        {% if size_label not in unique_size_labels %}
+                          {% set _ = unique_size_labels.append(size_label) %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {% set var_size_count = unique_size_labels|length %}
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
                 {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
@@ -199,7 +225,7 @@
                     {% set _ = all_batches.extend(group.batches) %}
                   {% endif %}
                 {% endfor %}
-                
+
                 {% set packaged_items = [] %}
                 {% set bulk_items = [] %}
                 {% for batch in all_batches %}
