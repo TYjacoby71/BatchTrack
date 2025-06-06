@@ -269,11 +269,11 @@
                         <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#deductModal" onclick="setVariantForDeduct('{{ variant_name }}')">
                           <i class="fas fa-minus"></i> Deduct Stock
                         </button></li>
-                        {% else %}
+                        {% if variation and variation.id %}
                           <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
                             <i class="fas fa-eye"></i> View Details
                           </a></li>
-                          {% endif %}
+                        {% endif %}
                           <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.sku if variation and variation.sku else '' }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                             <i class="fas fa-edit"></i> Edit
                           </a></li>
