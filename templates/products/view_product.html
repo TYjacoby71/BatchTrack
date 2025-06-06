@@ -327,45 +327,7 @@
         </div>
       </div>
 
-      <!-- Activity Log -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h4>Recent Activity</h4>
-        </div>
-        <div class="card-body">
-          {% if product.events %}
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Event</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for event in product.events[:10] %}
-                  <tr>
-                    <td>{{ event.timestamp.strftime('%m/%d %H:%M') }}</td>
-                    <td>
-                      <span class="badge bg-{% if 'deduction' in event.event_type %}warning{% elif 'spoil' in event.event_type %}danger{% else %}info{% endif %}">
-                        {{ event.event_type.replace('_', ' ').title() }}
-                      </span>
-                    </td>
-                    <td>{{ event.note[:80] }}{% if event.note|length > 80 %}...{% endif %}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            {% if product.events|length > 10 %}
-            <small class="text-muted">Showing last 10 events</small>
-            {% endif %}
-          {% else %}
-            <div class="alert alert-info">No activity recorded yet.</div>
-          {% endif %}
-        </div>
-      </div>
+      
     </div>
   </div>
 </div>
