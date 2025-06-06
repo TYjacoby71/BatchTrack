@@ -180,11 +180,6 @@
                       </div>
                       <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
-                        {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                        <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">
-                          FIFO
-                        </a>
-                        {% endif %}
                       </div>
                     </div>
                     {% endif %}
@@ -206,9 +201,9 @@
               <thead>
                 <tr>
                   <th>Variant Name</th>
-                  <th>Total Quantity</th>
+                  <th>Quantities</th>
                   <th>Size Count</th>
-                  <th>Avg Cost</th>
+                  <th>Financial Summary</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -222,6 +217,12 @@
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
                 {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
+                {% set packaged_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'ne', none)|selectattr('quantity', 'gt', 0)|list %}
+                {% set bulk_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'equalto', none)|selectattr('quantity', 'gt', 0)|list %}
+                {% set total_packaged_qty = packaged_items|sum(attribute='quantity') %}
+                {% set total_bulk_qty = bulk_items|sum(attribute='quantity') %}
+                {% set total_cost = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
+                
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
                     <strong>{{ variant_name }}</strong>
@@ -229,7 +230,12 @@
                     <br><small class="text-muted">{{ variation.description[:50] }}{% if variation.description|length > 50 %}...{% endif %}</small>
                     {% endif %}
                   </td>
-                  <td>{{ "%.2f"|format(var_total_qty) }}</td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span><strong>Packaged:</strong> {{ "%.1f"|format(total_packaged_qty) }} items</span>
+                      <span><strong>Bulk:</strong> {{ "%.1f"|format(total_bulk_qty) }} {{ product.product_base_unit }}</span>
+                    </div>
+                  </td>
                   <td>
                     {{ var_size_count }}
                     {% if var_inventory %}
@@ -238,7 +244,12 @@
                     </button>
                     {% endif %}
                   </td>
-                  <td>${{ "%.3f"|format(var_avg_cost) }}</td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span><strong>Total Cost:</strong> ${{ "%.2f"|format(total_cost) }}</span>
+                      <span class="text-muted"><strong>Retail Value:</strong> Not Set</span>
+                    </div>
+                  </td>
                   <td>
                     <span class="badge {% if var_total_qty <= 0 %}bg-danger{% elif var_total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
                       {% if var_total_qty <= 0 %}Out of Stock{% elif var_total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
@@ -278,16 +289,42 @@
                       <div class="mt-2">
                         {% for group_key, group in inventory_groups.items() %}
                           {% if group.variant == variant_name %}
-                          <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                            <div>
-                              <span class="fw-bold">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' }}</span>
-                              <span class="text-muted ms-2">{{ group.unit }}</span>
+                          {% set size_total_qty = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
+                          {% set size_avg_cost = (group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit') / group.batches|selectattr('quantity', 'gt', 0)|list|length) if group.batches|selectattr('quantity', 'gt', 0)|list|length > 0 else 0 %}
+                          
+                          <!-- Size Summary Row -->
+                          <div class="border rounded p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                              <div>
+                                <span class="fw-bold fs-6">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' }}</span>
+                                <span class="text-muted ms-2">{{ group.unit }}</span>
+                              </div>
+                              <div class="d-flex gap-3 text-sm">
+                                <span><strong>Qty:</strong> {{ "%.1f"|format(size_total_qty) }}</span>
+                                <span><strong>Unit:</strong> {{ group.unit }}</span>
+                                <span><strong>Avg Cost:</strong> ${{ "%.3f"|format(size_avg_cost) }}</span>
+                              </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                              <span class="badge bg-secondary">{{ "%.1f"|format(group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')) }}</span>
-                              {% if group.batches and group.batches|length > 0 and group.batches[0].size_label %}
-                              <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variant_name, size_label=group.batches[0].size_label) }}" class="btn btn-info btn-xs">FIFO</a>
-                              {% endif %}
+                            
+                            <!-- Individual Batch Items -->
+                            <div class="ps-3">
+                              {% for batch in group.batches %}
+                                {% if batch.quantity > 0 %}
+                                <div class="d-flex justify-content-between align-items-center py-1 text-sm">
+                                  <div>
+                                    <span class="text-muted">Batch {{ batch.batch_id if batch.batch_id else 'Manual' }}</span>
+                                    {% if batch.expiration_date %}
+                                    <span class="badge bg-warning ms-1">Exp: {{ batch.expiration_date.strftime('%m/%d/%y') }}</span>
+                                    {% endif %}
+                                  </div>
+                                  <div class="d-flex gap-3">
+                                    <span><strong>Qty:</strong> {{ "%.1f"|format(batch.quantity) }}</span>
+                                    <span><strong>Size:</strong> {{ batch.size_label if batch.size_label else 'Bulk' }}</span>
+                                    <span><strong>Total Cost:</strong> ${{ "%.2f"|format((batch.batch_cost_per_unit or 0) * batch.quantity) }}</span>
+                                  </div>
+                                </div>
+                                {% endif %}
+                              {% endfor %}
                             </div>
                           </div>
                           {% endif %}
@@ -374,10 +411,6 @@
           <div class="mb-3">
             <label class="form-label">Variant Name</label>
             <input type="text" name="name" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">SKU (Optional)</label>
-            <input type="text" name="sku" class="form-control">
           </div>
           <div class="mb-3">
             <label class="form-label">Description</label>
@@ -749,7 +782,6 @@ function setEditVariation(variationId, name, description) {
 // Open Add Stock modal for specific variant
 function openAddStockModal(variantName) {
   document.getElementById('manualStockVariant').value = variantName;
-  document.getElementById('selectedVariantDisplay').textContent = variantName;
 }
 
 // Confirm product deletion

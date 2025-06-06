@@ -90,6 +90,25 @@ app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 init_api(app)
 
 
+# Add custom Jinja2 filter for cost calculations
+@app.template_filter('attr_multiply')
+def attr_multiply_filter(items, *attrs):
+    """Multiply attributes of each item in a list"""
+    result = []
+    # Handle case where items might not be iterable
+    if not hasattr(items, '__iter__'):
+        return []
+
+    for item in items:
+        product = 1
+        for attr in attrs:
+            value = getattr(item, attr, 0)
+            if value is None:
+                value = 0
+            product *= float(value)
+        result.append(product)
+    return result
+
 @app.context_processor
 def inject_units():
     units = Unit.query.order_by(Unit.type, Unit.name).all()
