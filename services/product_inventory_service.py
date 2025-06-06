@@ -93,8 +93,8 @@ class ProductInventoryService:
             if batch.total_cost and batch.final_quantity:
                 batch_cost_per_unit = batch.total_cost / batch.final_quantity
 
-            # Always use "Bulk" prefix for non-containerized inventory
-            size_label = f"Bulk {product.name}"
+            # Use simple "Bulk" label for non-containerized inventory
+            size_label = "Bulk"
 
             inventory = ProductInventory(
                 product_id=product_id,
