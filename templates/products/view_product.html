@@ -707,8 +707,7 @@ function addVariant(){
 
   fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+    headers: {      'Content-Type': 'application/json',
       'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
     },
     body: JSON.stringify(data)
@@ -722,65 +721,29 @@ function addVariant(){
     }
   })
   .catch(error => {
-    alert('Error adding variant: ' + error);
+    console.error('Error:', error);
+    alert('Error adding variant');
   });
 }
 
-// Open Add Stock modal for specific variant
-function openAddStockModal(variantName) {
-  document.getElementById('manualStockVariant').value = variantName;
-  document.getElementById('selectedVariantDisplay').textContent = variantName;
-}
-
-// Set edit variation modal data
-function setEditVariation(variationId, name, description) {
+// Add missing function definitions
+function setEditVariation(variationId, name, sku, description) {
+  document.getElementById('editVariantId').value = variationId;
   document.getElementById('editVariantName').value = name;
+  document.getElementById('editVariantSku').value = sku || '';
   document.getElementById('editVariantDescription').value = description || '';
-  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variant/${variationId}/edit`;
 }
 
-// Open Add Stock modal for specific variant
-function openAddStockModal(variantName) {
-  document.getElementById('manualStockVariant').value = variantName;
-  document.getElementById('selectedVariantDisplay').textContent = variantName;
-}
-
-// Confirm product deletion
-function confirmDeleteProduct(productId, productName) {
-  if (confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone and will delete all associated data.`)) {
-    // Create a form and submit it
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/products/${productId}/delete`;
-    
-    // Add CSRF token if available
-    const csrfToken = document.querySelector('input[name="csrf_token"]');
-    if (csrfToken) {
-      const csrfInput = document.createElement('input');
-      csrfInput.type = 'hidden';
-      csrfInput.name = 'csrf_token';
-      csrfInput.value = csrfToken.value;
-      form.appendChild(csrfInput);
-    }
-    
-    document.body.appendChild(form);
-    form.submit();
+function openAddStockModal(variant, size, unit) {
+  // Set the variant in the modal if needed
+  const modal = document.getElementById('addManualStockModal');
+  if (modal) {
+    // You can add logic here to pre-populate modal fields
   }
 }
 
-function setSizeVariant(variantName) {
-    document.getElementById('sizeVariantName').value = variantName;
-}
-
-function toggleSizeFields() {
-    var sizeType = document.getElementById('sizeType').value;
-    var packagedFields = document.getElementById('packagedFields');
-
-    if (sizeType === 'packaged') {
-        packagedFields.style.display = 'block';
-    } else {
-        packagedFields.style.display = 'none';
-    }
+function confirmDeleteProduct() {
+  return confirm('Are you sure you want to delete this product? This action cannot be undone.');
 }
 </script>
 {% endblock %}
