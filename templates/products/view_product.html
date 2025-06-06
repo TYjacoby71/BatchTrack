@@ -202,7 +202,6 @@
               <thead>
                 <tr>
                   <th>Variant Name</th>
-                  <th>SKU</th>
                   <th>Total Quantity</th>
                   <th>Size Count</th>
                   <th>Avg Cost</th>
@@ -224,13 +223,6 @@
                     <strong>{{ variant_name }}</strong>
                     {% if variation and variation.description %}
                     <br><small class="text-muted">{{ variation.description[:50] }}{% if variation.description|length > 50 %}...{% endif %}</small>
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if variation and variation.sku %}
-                    <span class="badge bg-secondary">{{ variation.sku }}</span>
-                    {% else %}
-                    <span class="text-muted">-</span>
                     {% endif %}
                   </td>
                   <td>{{ "%.2f"|format(var_total_qty) }}</td>
@@ -714,8 +706,7 @@ function addVariant(){
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
 
-  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
-    method: 'POST',
+  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
