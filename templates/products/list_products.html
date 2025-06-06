@@ -213,7 +213,7 @@
                                 <strong>{{ variation.name }}</strong>
                                 <br><small class="text-muted">Default variant</small>
                               {% else %}
-                                <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
+                                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
                                   <strong>{{ variation.name }}</strong>
                                 </a>
                               {% endif %}
