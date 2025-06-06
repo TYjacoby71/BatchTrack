@@ -221,7 +221,13 @@
                 {% set bulk_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'equalto', none)|selectattr('quantity', 'gt', 0)|list %}
                 {% set total_packaged_qty = packaged_items|sum(attribute='quantity') %}
                 {% set total_bulk_qty = bulk_items|sum(attribute='quantity') %}
-                {% set total_cost = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
+                {% set all_batches = [] %}
+                {% for group in var_inventory %}
+                  {% if group.batches %}
+                    {% set _ = all_batches.extend(group.batches) %}
+                  {% endif %}
+                {% endfor %}
+                {% set total_cost = all_batches|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
                 
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
