@@ -163,7 +163,7 @@
               </div>
             </div>
 
-            
+
           </div>
         </div>
         {% endfor %}
@@ -211,7 +211,7 @@
                   {% endif %}
                 {% endfor %}
                 {% set total_cost = cost_values|sum %}
-                
+
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
                     <strong>{{ variant_name }}</strong>
@@ -280,7 +280,7 @@
                           {% if group.variant == variant_name %}
                           {% set size_total_qty = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
                           {% set size_avg_cost = (group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit') / group.batches|selectattr('quantity', 'gt', 0)|list|length) if group.batches|selectattr('quantity', 'gt', 0)|list|length > 0 else 0 %}
-                          
+
                           <!-- Size Summary Row -->
                           <div class="border rounded p-2 mb-2">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
@@ -294,7 +294,7 @@
                                 <span><strong>Avg Cost:</strong> ${{ "%.3f"|format(size_avg_cost) }}</span>
                               </div>
                             </div>
-                            
+
                             <!-- Individual Batch Items -->
                             <div class="ps-3">
                               {% for batch in group.batches %}
@@ -378,8 +378,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
         </div>
       </form>
     </div>
@@ -408,8 +408,8 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="addVariant()">Add Variant</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addVariant()">Add Variant</button>
       </div>
     </div>
   </div>
@@ -436,8 +436,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
         </div>
       </form>
     </div>
@@ -492,8 +492,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Size Variant</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add Size Variant</button>
         </div>
       </form>
     </div>
@@ -546,8 +546,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Stock</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add Stock</button>
         </div>
       </form>
     </div>
@@ -695,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'status':
                         const qtyA2 = parseFloat(a.dataset.quantity) || 0;
                         const qtyB2 = parseFloat(b.dataset.quantity) || 0;
-                        return (qtyA2 > 0 ? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
+                        return (qtyA2 > 0? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
                     default:
                         return 0;
                 }
@@ -780,7 +780,7 @@ function confirmDeleteProduct(productId, productName) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/products/${productId}/delete`;
-    
+
     // Add CSRF token if available
     const csrfToken = document.querySelector('input[name="csrf_token"]');
     if (csrfToken) {
@@ -790,7 +790,7 @@ function confirmDeleteProduct(productId, productName) {
       csrfInput.value = csrfToken.value;
       form.appendChild(csrfInput);
     }
-    
+
     document.body.appendChild(form);
     form.submit();
   }
