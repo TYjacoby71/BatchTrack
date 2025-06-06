@@ -193,8 +193,26 @@
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
                 {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
-                {% set packaged_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'ne', none)|selectattr('quantity', 'gt', 0)|list %}
-                {% set bulk_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'equalto', none)|selectattr('quantity', 'gt', 0)|list %}
+                {% set all_batches = [] %}
+                {% for group in var_inventory %}
+                  {% if group.batches %}
+                    {% set _ = all_batches.extend(group.batches) %}
+                  {% endif %}
+                {% endfor %}
+                
+                {% set packaged_items = [] %}
+                {% set bulk_items = [] %}
+                {% for batch in all_batches %}
+                  {% if batch.quantity > 0 %}
+                    {% if batch.size_label and ('Bulk' in batch.size_label or 'bulk' in batch.size_label) %}
+                      {% set _ = bulk_items.append(batch) %}
+                    {% elif batch.size_label and batch.size_label != none %}
+                      {% set _ = packaged_items.append(batch) %}
+                    {% else %}
+                      {% set _ = bulk_items.append(batch) %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
                 {% set total_packaged_qty = packaged_items|sum(attribute='quantity') %}
                 {% set total_bulk_qty = bulk_items|sum(attribute='quantity') %}
                 {% set all_batches = [] %}
