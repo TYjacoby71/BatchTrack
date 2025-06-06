@@ -5,7 +5,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
           <li class="breadcrumb-item active">{{ product.name }}</li>
         </ol>
       </nav>
@@ -142,7 +142,7 @@
               <div class="mt-auto">
                 <div class="btn-group w-100 mb-2" role="group">
                   {% if variation %}
-                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-sm">
+                  <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-eye"></i> View
                   </a>
                   {% endif %}
@@ -251,7 +251,7 @@
                   <td>
                     <div class="btn-group" role="group">
                       {% if variation %}
-                      <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
+                      <a href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-eye"></i> View
                       </a>
                       {% endif %}
@@ -270,7 +270,7 @@
                           <i class="fas fa-minus"></i> Deduct Stock
                         </button></li>
                         {% if variation and variation.id %}
-                        <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
+                        <li><a class="dropdown-item" href="{{ url_for('products.view_variation', product_id=product.id, variation_id=variation.id) }}">
                           <i class="fas fa-eye"></i> View Details
                         </a></li>
                         {% endif %}
@@ -714,7 +714,7 @@ function addVariant(){
   })
   .then(response => response.json())
   .then(data => {
-    if (data.success) {
+if (data.success) {
       location.reload();
     } else {
       alert('Error: ' + data.error);
