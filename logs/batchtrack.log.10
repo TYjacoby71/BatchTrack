@@ -1,7 +1,81 @@
-2025-06-03 19:51:44,696 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-03 19:52:51,088 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-03 19:53:15,528 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-03 19:53:25,896 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-03 20:02:37,652 ERROR: Exception on /products/1/variant/Default/size/0.5 floz Tin  [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/products/routes.py", line 444, in view_variant_inventory
+    return render_template('products/variant_inventory.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/products/variant_inventory.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 104, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/products/variant_inventory.html", line 39, in block 'content'
+    {% set avg_cost = (fifo_entries|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit')|default(0) / total_batches) if total_batches > 0 else 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/async_utils.py", line 48, in wrapper
+    return normal_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1336, in sync_do_sum
+    return sum(iterable, start)  # type: ignore[no-any-return, call-overload]
+           ^^^^^^^^^^^^^^^^^^^^
+TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
+2025-06-03 20:03:56,773 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:08:50,264 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:13:08,887 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:13:34,022 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:14:18,855 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:17:05,404 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-03 20:17:31,042 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 15:47:02,422 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 15:51:25,984 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 15:51:43,979 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 15:54:45,696 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 15:58:55,794 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:05:18,086 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:25:57,355 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:41:31,141 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:43:07,496 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:45:58,373 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:52:44,420 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:55:15,727 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:55:32,988 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:58:20,027 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 16:58:57,006 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:04:10,610 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:07:57,251 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:13:52,958 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:14:04,085 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:27:58,550 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:35:43,791 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:38:16,094 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:43:34,856 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:53:33,879 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:54:20,434 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -37,65 +111,15 @@ Traceback (most recent call last):
   File "/home/runner/workspace/templates/layout.html", line 104, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/products/view_product.html", line 278, in block 'content'
-    <form method="POST" action="{{ url_for('products.adjust_inventory', product_id=product.id) }}">
+  File "/home/runner/workspace/templates/products/view_product.html", line 79, in block 'content'
+    {% for variant_name in inventory_groups.keys()|list + ['Base']|unique %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.adjust_inventory' with values ['product_id']. Did you forget to specify values ['inventory_id']?
-2025-06-03 19:54:06,490 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-03 19:54:16,291 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-03 19:54:22,881 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/blueprints/products/routes.py", line 77, in view_product
-    return render_template('products/view_product.html',
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/products/view_product.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 104, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/products/view_product.html", line 278, in block 'content'
-    <form method="POST" action="{{ url_for('products.adjust_inventory', product_id=product.id) }}">
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.adjust_inventory' with values ['product_id']. Did you forget to specify values ['inventory_id']?
+TypeError: can only concatenate list (not "generator") to list
+2025-06-04 17:55:41,844 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:55:42,691 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 17:55:53,860 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 18:10:02,921 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 18:12:22,668 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 18:12:24,585 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 18:13:01,254 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-04 18:13:03,491 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
