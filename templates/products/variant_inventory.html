@@ -74,9 +74,12 @@
                 <tr class="{% if entry.quantity <= 0 %}table-secondary consumed-row{% else %}available-row{% endif %}">
                   <td>{{ loop.index }}</td>
                   <td>
-                    <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch_id) }}">
-                      Batch {{ entry.batch_id }}
+                    Batch #{{ entry.batch_id or 'Manual' }}
+                    {% if entry.batch_id %}
                     </a>
+                    {% else %}
+                    </span>
+                    {% endif %}
                   </td>
                   <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                   <td>
