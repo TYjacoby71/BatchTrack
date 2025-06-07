@@ -188,7 +188,7 @@
                 <tr>
                   <th>Variant Name</th>
                   <th>Quantities</th>
-                  <th>Size Count</th>
+                  <th>Sizes</th>
                   <th>Financial Summary</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -267,12 +267,9 @@
                     </div>
                   </td>
                   <td>
-                    {{ var_size_count }}
-                    {% if var_inventory %}
-                    <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-var-{{ variant_name|lower|replace(' ', '_') }}-sizes">
-                      <i class="fas fa-chevron-down"></i>
-                    </button>
-                    {% endif %}
+                    {% for group_key, group in var_inventory.items() %}
+                      <span class="badge bg-light text-dark me-1 mb-1">{{ group.size_label or 'Bulk' }}</span>
+                    {% endfor %}
                   </td>
                   <td>
                     <div class="d-flex flex-column">
@@ -311,76 +308,7 @@
                     </div>
                   </td>
                 </tr>
-                {% if var_inventory %}
-                <tr class="collapse" id="table-var-{{ variant_name|lower|replace(' ', '_') }}-sizes">
-                  <td colspan="7">
-                    <div class="ps-4">
-                      <strong>Sizes:</strong>
-                      <div class="mt-2">
-                        {% for group_key, group in inventory_groups.items() %}
-                          {% if group.variant == variant_name %}
-                          {% set size_total_qty = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
-                          {% set size_avg_cost = (group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit') / group.batches|selectattr('quantity', 'gt', 0)|list|length) if group.batches|selectattr('quantity', 'gt', 0)|list|length > 0 else 0 %}
-
-                          <!-- Size Summary Row -->
-                          <div class="border rounded p-2 mb-2">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                              <div>
-                                {% set display_label = group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' %}
-                                {% if display_label == 'Bulk' or 'Bulk' in display_label %}
-                                  {% set display_label = 'Bulk' %}
-                                {% endif %}
-                                <span class="fw-bold fs-6">{{ display_label }}</span>
-                                <span class="text-muted ms-2">{{ group.unit }}</span>
-                              </div>
-                              <div class="d-flex gap-3 text-sm">
-                                <span><strong>Qty:</strong> {{ "%.1f"|format(size_total_qty) }}</span>
-                                <span><strong>Unit:</strong> {{ group.unit }}</span>
-                                <span><strong>Avg Cost:</strong> ${{ "%.3f"|format(size_avg_cost) }}</span>
-                              </div>
-                            </div>
-
-                            <!-- Size Summary Table -->
-                            <div class="ps-3">
-                              <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                  <tr>
-                                    <th>Size</th>
-                                    <th>Quantity Remaining</th>
-                                    <th>Total Cost</th>
-                                    <th>Total Value</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <!-- Single row per size showing aggregated data -->
-                                  {% set size_display_label = group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' %}
-                                  {% if size_display_label == 'Bulk' or 'Bulk' in size_display_label %}
-                                    {% set size_display_label = 'Bulk' %}
-                                  {% endif %}
-
-                                  {% set remaining_qty = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
-                                  {% set total_cost = group.batches|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
-
-                                  <tr>
-                                    <td>{{ size_display_label }}</td>
-                                    <td>{{ "%.1f"|format(remaining_qty) }} {{ group.unit }}</td>
-                                    <td>${{ "%.2f"|format(total_cost) }}</td>
-                                    <td>
-                                      <span class="text-muted">Not Set</span>
-                                      <small class="d-block text-muted">Retail price needed</small>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                          {% endif %}
-                        {% endfor %}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                {% endif %}
+                
                 {% endfor %}
               </tbody>
             </table>
