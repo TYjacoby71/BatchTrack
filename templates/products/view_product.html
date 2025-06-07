@@ -709,7 +709,6 @@ document.addEventListener('DOMContentLoaded', function() {
             rows.forEach(row => {
                 const variantName = row.dataset.variantName;
                 const isVisible = variantName.includes(searchTerm);
-```text
                 row.style.display = isVisible ? '' : 'none';
                 if (isVisible) visibleCount++;
             });
