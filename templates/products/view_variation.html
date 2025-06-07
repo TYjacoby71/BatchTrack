@@ -39,41 +39,41 @@
         </div>
         <div class="card-body">
           <div class="row">
-          <div class="col-md-2">
-            {% set total_bulk = 0 %}
-            {% set total_packaged = 0 %}
-            {% for group_key, group in size_groups.items() %}
-              {% if group.size_label and group.size_label != 'Bulk' %}
-                {% set total_packaged = total_packaged + group.total_quantity %}
-              {% else %}
-                {% set total_bulk = total_bulk + group.total_quantity %}
-              {% endif %}
-            {% endfor %}
-            <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.product_base_unit }}
-          </div>
-          <div class="col-md-2">
-            <strong>Total Packaged:</strong> {{ total_packaged|int }} items
-          </div>
-          <div class="col-md-2">
-            <strong>Size Count:</strong> {{ size_groups|length }}
-          </div>
-          <div class="col-md-3">
-            {% set variant_total_cost = 0 %}
-            {% for group_key, group in size_groups.items() %}
-              {% for batch in group.batches %}
-                {% if batch.quantity > 0 %}
-                  {% set variant_total_cost = variant_total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
+            <div class="col-md-2">
+              {% set total_bulk = 0 %}
+              {% set total_packaged = 0 %}
+              {% for group_key, group in size_groups.items() %}
+                {% if group.size_label and group.size_label != 'Bulk' %}
+                  {% set total_packaged = total_packaged + group.total_quantity %}
+                {% else %}
+                  {% set total_bulk = total_bulk + group.total_quantity %}
                 {% endif %}
               {% endfor %}
-            {% endfor %}
-            <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
+              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.product_base_unit }}
+            </div>
+            <div class="col-md-2">
+              <strong>Total Packaged:</strong> {{ total_packaged|int }} items
+            </div>
+            <div class="col-md-2">
+              <strong>Size Count:</strong> {{ size_groups|length }}
+            </div>
+            <div class="col-md-3">
+              {% set variant_total_cost = 0 %}
+              {% for group_key, group in size_groups.items() %}
+                {% for batch in group.batches %}
+                  {% if batch.quantity > 0 %}
+                    {% set variant_total_cost = variant_total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+              <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
+            </div>
+            <div class="col-md-3">
+              {% set variant_total_value = 0 %}
+              {# TODO: Calculate total value when retail prices are added #}
+              <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
+            </div>
           </div>
-          <div class="col-md-3">
-            {% set variant_total_value = 0 %}
-            {# TODO: Calculate total value when retail prices are added #}
-            <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
-          </div>
-          </div></div>
           {% if variation.description %}
           <div class="row mt-2">
             <div class="col-12">
@@ -87,11 +87,11 @@
       <!-- Sizes & Inventory -->
       <div class="card mb-4" id="sizes">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4>Sizes & Inventory</h4>
+          <h3>Sizes & Inventory</h3>
           <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
             <i class="fas fa-plus"></i> Add Manual Stock
           </button>
-        </div>
+        </div></div>
         <div class="card-body">
           {% if size_groups %}
             <div class="table-responsive">
