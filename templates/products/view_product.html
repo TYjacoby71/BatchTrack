@@ -92,7 +92,20 @@
         {% for variant_name in all_variants %}
         {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-        {% set var_size_count = var_inventory|length %}
+        {% set unique_size_labels = [] %}
+        {% for group in var_inventory %}
+          {% if group.batches %}
+            {% for batch in group.batches %}
+              {% if batch.quantity > 0 %}
+                {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
+                {% if size_label not in unique_size_labels %}
+                  {% set _ = unique_size_labels.append(size_label) %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% set var_size_count = unique_size_labels|length %}
         {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
@@ -146,14 +159,14 @@
               <div class="mt-auto">
                 <div class="btn-group w-100 mb-2" role="group">
                   {% if variation %}
-                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-sm">
+                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">
                     <i class="fas fa-eye"></i> View
                   </a>
                   {% endif %}
-                  <button class="btn btn-outline-secondary btn-sm" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                  <button class="btn btn-outline-secondary btn-xs" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
                     <i class="fas fa-edit"></i> Edit
                   </button>
-                  <button class="btn btn-primary btn-sm" onclick="openAddStockModal('{{ variant_name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                  <button class="btn btn-primary btn-xs" onclick="openAddStockModal('{{ variant_name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
                     <i class="fas fa-plus"></i> Add Stock
                   </button>
                 </div>
@@ -189,12 +202,43 @@
                 {% for variant_name in all_variants %}
                 {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
                 {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-                {% set var_size_count = var_inventory|length %}
+                {% set unique_size_labels = [] %}
+                {% for group in var_inventory %}
+                  {% if group.batches %}
+                    {% for batch in group.batches %}
+                      {% if batch.quantity > 0 %}
+                        {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
+                        {% if size_label not in unique_size_labels %}
+                          {% set _ = unique_size_labels.append(size_label) %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {% set var_size_count = unique_size_labels|length %}
                 {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
                 {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
-                {% set packaged_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'ne', none)|selectattr('quantity', 'gt', 0)|list %}
-                {% set bulk_items = var_inventory|selectattr('batches')|map(attribute='batches')|sum(start=[])|selectattr('size_label', 'equalto', none)|selectattr('quantity', 'gt', 0)|list %}
+                {% set all_batches = [] %}
+                {% for group in var_inventory %}
+                  {% if group.batches %}
+                    {% set _ = all_batches.extend(group.batches) %}
+                  {% endif %}
+                {% endfor %}
+
+                {% set packaged_items = [] %}
+                {% set bulk_items = [] %}
+                {% for batch in all_batches %}
+                  {% if batch.quantity > 0 %}
+                    {% if batch.size_label and ('Bulk' in batch.size_label or 'bulk' in batch.size_label) %}
+                      {% set _ = bulk_items.append(batch) %}
+                    {% elif batch.size_label and batch.size_label != none %}
+                      {% set _ = packaged_items.append(batch) %}
+                    {% else %}
+                      {% set _ = bulk_items.append(batch) %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
                 {% set total_packaged_qty = packaged_items|sum(attribute='quantity') %}
                 {% set total_bulk_qty = bulk_items|sum(attribute='quantity') %}
                 {% set all_batches = [] %}
@@ -285,7 +329,11 @@
                           <div class="border rounded p-2 mb-2">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                               <div>
-                                <span class="fw-bold fs-6">{{ group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' }}</span>
+                                {% set display_label = group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' %}
+                                {% if display_label == 'Bulk' or 'Bulk' in display_label %}
+                                  {% set display_label = 'Bulk' %}
+                                {% endif %}
+                                <span class="fw-bold fs-6">{{ display_label }}</span>
                                 <span class="text-muted ms-2">{{ group.unit }}</span>
                               </div>
                               <div class="d-flex gap-3 text-sm">
@@ -295,25 +343,38 @@
                               </div>
                             </div>
 
-                            <!-- Individual Batch Items -->
+                            <!-- Size Summary Table -->
                             <div class="ps-3">
-                              {% for batch in group.batches %}
-                                {% if batch.quantity > 0 %}
-                                <div class="d-flex justify-content-between align-items-center py-1 text-sm">
-                                  <div>
-                                    <span class="text-muted">Batch {{ batch.batch_id if batch.batch_id else 'Manual' }}</span>
-                                    {% if batch.expiration_date %}
-                                    <span class="badge bg-warning ms-1">Exp: {{ batch.expiration_date.strftime('%m/%d/%y') }}</span>
-                                    {% endif %}
-                                  </div>
-                                  <div class="d-flex gap-3">
-                                    <span><strong>Qty:</strong> {{ "%.1f"|format(batch.quantity) }}</span>
-                                    <span><strong>Size:</strong> {{ batch.size_label if batch.size_label else 'Bulk' }}</span>
-                                    <span><strong>Total Cost:</strong> ${{ "%.2f"|format((batch.batch_cost_per_unit or 0) * batch.quantity) }}</span>
-                                  </div>
-                                </div>
-                                {% endif %}
-                              {% endfor %}
+                              <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                  <tr>
+                                    <th>Size</th>
+                                    <th>Quantity Remaining</th>
+                                    <th>Total Cost</th>
+                                    <th>Total Value</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <!-- Single row per size showing aggregated data -->
+                                  {% set size_display_label = group.batches[0].size_label if group.batches and group.batches[0].size_label else 'Bulk' %}
+                                  {% if size_display_label == 'Bulk' or 'Bulk' in size_display_label %}
+                                    {% set size_display_label = 'Bulk' %}
+                                  {% endif %}
+
+                                  {% set remaining_qty = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
+                                  {% set total_cost = group.batches|selectattr('quantity', 'gt', 0)|map('attr_multiply', 'quantity', 'batch_cost_per_unit')|sum %}
+
+                                  <tr>
+                                    <td>{{ size_display_label }}</td>
+                                    <td>{{ "%.1f"|format(remaining_qty) }} {{ group.unit }}</td>
+                                    <td>${{ "%.2f"|format(total_cost) }}</td>
+                                    <td>
+                                      <span class="text-muted">Not Set</span>
+                                      <small class="d-block text-muted">Retail price needed</small>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
                             </div>
                           </div>
                           {% endif %}
@@ -696,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const qtyA2 = parseFloat(a.dataset.quantity) || 0;
                         const qtyB2 = parseFloat(b.dataset.quantity) || 0;
                         return (qtyA2 > 0? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
-                    default:
+default:
                         return 0;
                 }
             });

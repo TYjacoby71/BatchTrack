@@ -425,44 +425,94 @@ def adjust_inventory(product_id, inventory_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
-@login_required
+@login_required  
 def view_sku(product_id, variant, size_label):
-    """View FIFO inventory for a specific product variant and size"""
-    from urllib.parse import unquote
-    from utils.unit_utils import get_global_unit_list
+    """View detailed SKU-level inventory with FIFO tracking"""
+    from models import ProductInventory, ProductInventoryHistory
+    from utils.fifo_generator import get_change_type_prefix, int_to_base36
+    from datetime import datetime
 
     product = Product.query.get_or_404(product_id)
-    variant = unquote(variant)
-    size_label = unquote(size_label)
 
-    # Get FIFO inventory entries for this specific variant/size
+    # Get filter parameters
+    change_type = request.args.get('change_type')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    sort_by = request.args.get('sort_by', 'timestamp_desc')
+    active_only = request.args.get('active_only') == 'on'
+
+    # Get all inventory entries for this SKU combination
     fifo_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
-    ).order_by(ProductInventory.timestamp.asc()).all()
+    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+
+    # Get transaction history for this SKU
+    history_query = ProductInventoryHistory.query.join(
+        ProductInventory, ProductInventoryHistory.product_inventory_id == ProductInventory.id
+    ).filter(
+        ProductInventory.product_id == product_id,
+        ProductInventory.variant == variant,
+        ProductInventory.size_label == size_label
+    )
+
+    # Apply filters
+    if change_type:
+        history_query = history_query.filter(ProductInventoryHistory.change_type == change_type)
+
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, '%Y-%m-%d')
+            history_query = history_query.filter(ProductInventoryHistory.timestamp >= from_date)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, '%Y-%m-%d')
+            history_query = history_query.filter(ProductInventoryHistory.timestamp <= to_date)
+        except ValueError:
+            pass
+
+    if active_only:
+        history_query = history_query.filter(ProductInventoryHistory.remaining_quantity > 0)
+
+    # Apply sorting
+    if sort_by == 'timestamp_asc':
+        history_query = history_query.order_by(ProductInventoryHistory.timestamp.asc())
+    elif sort_by == 'quantity_desc':
+        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.desc())
+    elif sort_by == 'quantity_asc':
+        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.asc())
+    else:  # timestamp_desc (default)
+        history_query = history_query.order_by(ProductInventoryHistory.timestamp.desc())
+
+    history = history_query.all()
 
     # Calculate totals
-    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
-    total_batches = len([entry for entry in fifo_entries if entry.quantity > 0])
+    total_quantity = sum(entry.quantity for entry in fifo_entries)
+    total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    # Get recent deduction history for this variant/size from product events
-    recent_deductions = ProductEvent.query.filter(
-        ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variant}%'),
-        ProductEvent.note.like(f'%{size_label}%')
-    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+    # Get the variation object if it exists
+    variation = ProductVariation.query.filter_by(
+        product_id=product_id,
+        name=variant
+    ).first()
 
-    return render_template('products/variant_inventory.html',
+    return render_template('products/view_sku.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
+                         variation=variation,
                          fifo_entries=fifo_entries,
+                         history=history,
                          total_quantity=total_quantity,
                          total_batches=total_batches,
-                         recent_deductions=recent_deductions,
-                         get_global_unit_list=get_global_unit_list,
-                         get_fifo_summary=lambda inv_id: get_fifo_summary_helper(inv_id))
+                         moment=datetime,
+                         now=datetime.utcnow(),
+                         get_change_type_prefix=get_change_type_prefix,
+                         int_to_base36=int_to_base36)
 @products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
@@ -598,21 +648,21 @@ def edit_sku(product_id, variant, size_label):
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
     size_label = unquote(size_label)
-    
+
     sku = request.form.get('sku', '').strip()
-    
+
     # Update all ProductInventory entries for this variant/size combination
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
     ).all()
-    
+
     if not inventory_entries:
         flash('No inventory entries found for this variant/size combination', 'error')
         return redirect(url_for('products.view_sku', 
                                product_id=product_id, variant=variant, size_label=size_label))
-    
+
     # Check if SKU already exists for another product/variant/size combination
     if sku:
         existing_sku = ProductInventory.query.filter(
@@ -623,23 +673,23 @@ def edit_sku(product_id, variant, size_label):
                 ProductInventory.size_label != size_label
             )
         ).first()
-        
+
         if existing_sku:
             flash(f'SKU "{sku}" is already in use for another product/variant/size', 'error')
             return redirect(url_for('products.view_sku', 
                                    product_id=product_id, variant=variant, size_label=size_label))
-    
+
     # Update all entries
     for entry in inventory_entries:
         entry.sku = sku if sku else None
-    
+
     db.session.commit()
-    
+
     if sku:
         flash(f'SKU updated to "{sku}" for {variant} - {size_label}', 'success')
     else:
         flash(f'SKU removed for {variant} - {size_label}', 'success')
-    
+
     return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
@@ -684,13 +734,13 @@ def edit_variant(product_id, variation_id):
 def delete_product(product_id):
     """Delete a product and all its related data"""
     product = Product.query.get_or_404(product_id)
-    
+
     try:
         # Check if product has any batches
         if product.batches:
             flash('Cannot delete product with associated batches', 'error')
             return redirect(url_for('products.view_product', product_id=product_id))
-        
+
         # Delete related records in order
         # Delete product inventory history
         from models import ProductInventoryHistory
@@ -699,23 +749,23 @@ def delete_product(product_id):
                 db.session.query(ProductInventory.id).filter_by(product_id=product_id)
             )
         ).delete(synchronize_session=False)
-        
+
         # Delete product inventory
         ProductInventory.query.filter_by(product_id=product_id).delete()
-        
+
         # Delete product events
         ProductEvent.query.filter_by(product_id=product_id).delete()
-        
+
         # Delete product variations
         ProductVariation.query.filter_by(product_id=product_id).delete()
-        
+
         # Delete the product itself
         db.session.delete(product)
         db.session.commit()
-        
+
         flash(f'Product "{product.name}" deleted successfully', 'success')
         return redirect(url_for('products.product_list'))
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting product: {str(e)}', 'error')

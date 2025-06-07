@@ -40,96 +40,102 @@
             <div class="col-md-3">
               <strong>Size Label:</strong> {{ size_label }}
             </div>
-            <div class="col-md-3">
-              <strong>Size Label:</strong> {{ size_label }}
-            </div>
           </div>
         </div>
       </div>
 
-      <!-- FIFO Inventory Table -->
+      <!-- Transaction History Table -->
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4>FIFO Inventory History</h4>
-          <div>
-            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#recordSaleModal">
-              <i class="fas fa-dollar-sign"></i> Record Sale
+          <h4>Transaction History</h4>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="fas fa-ellipsis-v"></i>
             </button>
-            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#manualAdjustModal">
-              <i class="fas fa-edit"></i> Manual Adjust
-            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#filterSortModal">
+                <i class="fas fa-filter"></i> Filter & Sort
+              </a></li>
+              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#recordSaleModal">
+                <i class="fas fa-dollar-sign"></i> Record Sale
+              </a></li>
+              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#manualAdjustModal">
+                <i class="fas fa-edit"></i> Manual Adjust
+              </a></li>
+            </ul>
           </div>
         </div>
         <div class="card-body">
-          {% if fifo_entries %}
+          {% if history %}
             <div class="table-responsive">
               <table class="table table-hover">
                 <thead>
                   <tr>
-                    <th>Batch ID</th>
-                    <th>Date Added</th>
-                    <th>Original Qty</th>
-                    <th>Current Qty</th>
-                    <th>Unit Cost</th>
-                    <th>Container</th>
-                    <th>Expiration</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Timestamp</th>
+                    <th>Change Reason</th>
+                    <th>FIFO Code / Batch</th>
+                    <th>Quantity Added</th>
+                    <th>Quantity Remaining</th>
+                    <th>Cost Per Unit</th>
+                    <th>Expiration Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for entry in fifo_entries %}
-                  <tr class="{% if entry.quantity <= 0 %}table-secondary{% elif entry.expiration_date and entry.expiration_date < moment().date() %}table-danger{% endif %}">
-                    <td>
-                      <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch_id) }}">
-                        Batch {{ entry.batch_id }}
-                      </a>
-                    </td>
+                  {% for entry in history %}
+                  <tr class="{% if entry.expiration_date and entry.expiration_date.date() < now.date() and entry.remaining_quantity and entry.remaining_quantity > 0 %}bg-warning{% endif %}">
                     <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ "%.2f"|format(entry.original_quantity if entry.original_quantity else entry.quantity) }}</td>
-                    <td>{{ "%.2f"|format(entry.quantity) }}</td>
-                    <td>${{ "%.3f"|format(entry.batch_cost_per_unit) if entry.batch_cost_per_unit else 'N/A' }}</td>
                     <td>
-                      {% if entry.container %}
-                        {{ entry.container.name }}
+                      <span class="badge bg-{% if entry.change_type == 'batch_production' %}success{% elif entry.change_type in ['sold', 'spoil', 'damaged', 'sample'] %}danger{% elif entry.change_type == 'manual_addition' %}primary{% elif entry.change_type == 'recount' %}warning{% else %}secondary{% endif %}">
+                        {{ entry.change_type.replace('_', ' ').title() }}
+                      </span>
+                    </td>
+                    <td>
+                      {% if entry.batch_id %}
+                        <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch_id) }}">
+                          Batch {{ entry.batch_id }}
+                        </a>
+                      {% elif entry.fifo_code %}
+                        {{ entry.fifo_code }}
                       {% else %}
-                        <span class="text-muted">No container</span>
+                        {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) if entry.id else 'N/A' }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if entry.quantity_change > 0 %}
+                        +{{ "%.2f"|format(entry.quantity_change) }} {{ entry.unit }}
+                      {% else %}
+                        {{ "%.2f"|format(entry.quantity_change) }} {{ entry.unit }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if entry.remaining_quantity is not none and entry.change_type in ['batch_production', 'manual_addition', 'restock'] %}
+                        {{ "%.2f"|format(entry.remaining_quantity) }} {{ entry.unit }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if entry.unit_cost is not none %}
+                        ${{ "%.3f"|format(entry.unit_cost) }}
+                      {% else %}
+                        -
                       {% endif %}
                     </td>
                     <td>
                       {% if entry.expiration_date %}
-                        {% set today = moment().date() if moment else entry.expiration_date %}
-                        {% set days_until = (entry.expiration_date - today).days if entry.expiration_date else 0 %}
+                        {% set today = now.date() %}
+                        {% set exp_date = entry.expiration_date.date() if entry.expiration_date.date else entry.expiration_date %}
+                        {% set days_until = (exp_date - today).days %}
                         <span class="{% if days_until < 0 %}text-danger{% elif days_until < 7 %}text-warning{% endif %}">
-                          {{ entry.expiration_date.strftime('%Y-%m-%d') }}
-                          {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
+                          {{ exp_date.strftime('%Y-%m-%d') }}
+                          {% if days_until < 0 %}
+                            <small>(EXPIRED)</small>
+                          {% elif days_until < 30 %}
+                            <small>({{ days_until }} days)</small>
+                          {% endif %}
                         </span>
                       {% else %}
-                        <span class="text-muted">No expiration</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if entry.quantity <= 0 %}
-                        <span class="badge bg-secondary">Consumed</span>
-                      {% elif entry.expiration_date and entry.expiration_date < moment().date() %}
-                        <span class="badge bg-danger">Expired</span>
-                      {% elif entry.expiration_date and (entry.expiration_date - moment().date()).days < 7 %}
-                        <span class="badge bg-warning">Expiring Soon</span>
-                      {% else %}
-                        <span class="badge bg-success">Available</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if entry.quantity > 0 %}
-                        {% if get_fifo_summary %}
-                        {% set fifo_summary = get_fifo_summary(entry.id) %}
-                        {% if fifo_summary and fifo_summary.adjustments %}
-                        <button class="btn btn-info btn-xs" data-bs-toggle="modal" data-bs-target="#fifoDetailsModal" 
-                                onclick="showFifoDetails({{ entry.id }}, '{{ fifo_summary.adjustments|tojson|safe }}')">
-                          <i class="fas fa-list"></i> Details
-                        </button>
-                        {% endif %}
-                        {% endif %}
+                        <span class="text-muted">-</span>
                       {% endif %}
                     </td>
                   </tr>
@@ -139,46 +145,13 @@
             </div>
           {% else %}
             <div class="alert alert-info">
-              No inventory entries found for this SKU combination.
+              No transaction history found for this SKU combination.
             </div>
           {% endif %}
         </div>
       </div>
 
-      <!-- Recent Deductions -->
-      <div class="card">
-        <div class="card-header">
-          <h4>Recent Activity</h4>
-        </div>
-        <div class="card-body">
-          {% if recent_deductions %}
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Event Type</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for deduction in recent_deductions %}
-                <tr>
-                  <td>{{ deduction.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                  <td>
-                    <span class="badge bg-{% if 'sale' in deduction.event_type %}success{% elif 'spoil' in deduction.event_type %}danger{% else %}warning{% endif %}">
-                      {{ deduction.event_type.replace('_', ' ').title() }}
-                    </span>
-                  </td>
-                  <td>{{ deduction.note }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <div class="alert alert-info">No recent activity for this SKU.</div>
-          {% endif %}
-        </div>
-      </div>
+      
     </div>
   </div>
 </div>
@@ -282,7 +255,7 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">SKU for {{ product.name }} - {{ variant }} - {{ size_label }}</label>
-            <input type="text" name="sku" class="form-control" value="{{ fifo_entries[0].sku if fifo_entries else '' }}" placeholder="Enter SKU code">
+            <input type="text" name="sku" class="form-control" value="{{ history[0].sku if history else '' }}" placeholder="Enter SKU code">
             <small class="form-text text-muted">This SKU will apply to all inventory entries for this specific size/variant combination.</small>
           </div>
         </div>
@@ -295,11 +268,94 @@
   </div>
 </div>
 
+<!-- Filter & Sort Modal -->
+<div class="modal fade" id="filterSortModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Filter & Sort History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="filterForm">
+          <div class="mb-3">
+            <label class="form-label">Change Type</label>
+            <select class="form-select" name="change_type">
+              <option value="">All Types</option>
+              <option value="batch_production">Batch Production</option>
+              <option value="manual_addition">Manual Addition</option>
+              <option value="sold">Sales</option>
+              <option value="spoil">Spoilage</option>
+              <option value="damaged">Damaged</option>
+              <option value="sample">Samples</option>
+              <option value="recount">Inventory Recount</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Date Range</label>
+            <div class="row">
+              <div class="col-6">
+                <input type="date" class="form-control" name="date_from" placeholder="From">
+              </div>
+              <div class="col-6">
+                <input type="date" class="form-control" name="date_to" placeholder="To">
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Sort By</label>
+            <select class="form-select" name="sort_by">
+              <option value="timestamp_desc">Date (Newest First)</option>
+              <option value="timestamp_asc">Date (Oldest First)</option>
+              <option value="quantity_desc">Quantity (Highest First)</option>
+              <option value="quantity_asc">Quantity (Lowest First)</option>
+            </select>
+          </div>
+          
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="active_only" id="activeOnly">
+            <label class="form-check-label" for="activeOnly">
+              Show only active FIFO entries
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 function showFifoDetails(inventoryId, adjustments) {
   // Implementation for showing FIFO details would go here
   console.log('FIFO Details for inventory ID:', inventoryId);
   console.log('Adjustments:', adjustments);
+}
+
+function applyFilters() {
+  const form = document.getElementById('filterForm');
+  const formData = new FormData(form);
+  const params = new URLSearchParams();
+  
+  for (let [key, value] of formData.entries()) {
+    if (value) {
+      params.append(key, value);
+    }
+  }
+  
+  // Reload page with filter parameters
+  window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+function clearFilters() {
+  // Reload page without parameters
+  window.location.href = window.location.pathname;
 }
 </script>
 {% endblock %}

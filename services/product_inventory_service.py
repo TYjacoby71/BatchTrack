@@ -93,11 +93,14 @@ class ProductInventoryService:
             if batch.total_cost and batch.final_quantity:
                 batch_cost_per_unit = batch.total_cost / batch.final_quantity
 
+            # Use simple "Bulk" label for non-containerized inventory
+            size_label = "Bulk"
+
             inventory = ProductInventory(
                 product_id=product_id,
                 batch_id=batch_id,
                 variant=variant_label or 'Base',
-                size_label= f"Whole {product.name}" if product.product_base_unit in ['each', 'count', 'loaf', 'item'] else f"Bulk {product.name}",
+                size_label=size_label,
                 unit=unit,
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
