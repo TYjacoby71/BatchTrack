@@ -94,57 +94,85 @@
         </div>
         <div class="card-body">
           {% if size_groups %}
-            <div class="table-responsive">
-              <table class="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Size Label</th>
-                    <th>Unit</th>
-                    <th>Quantity Remaining</th>
-                    <th>Total Cost</th>
-                    <th>Total Value</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for group_key, group in size_groups.items() %}
-                  {% set size_display = group.size_label if group.size_label else 'Bulk' %}
-                  {% set total_cost = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit')|default(0) * group.total_quantity %}
-                  {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
-                  <tr>
-                    <td>
-                      <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
-                        {{ size_display }}
-                      </a>
-                    </td>
-                    <td>{{ group.unit }}</td>
-                    <td>{{ "%.2f"|format(group.total_quantity) }}</td>
-                    <td>${{ "%.2f"|format(total_cost) }}</td>
-                    <td>${{ "%.2f"|format(total_value) }}</td>
-                    <td>
-                      <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                          <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                          <li>
-                            <a class="dropdown-item" href="#" onclick="openSizeAdjustModal('{{ size_display }}', {{ group.total_quantity }})">
-                              <i class="fas fa-edit"></i> Adjust
-                            </a>
-                          </li>
-                          <li>
-                            <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
-                              <i class="fas fa-eye"></i> View
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+            {% for group_key, group in size_groups.items() %}
+            <div class="mb-4">
+              <h5>{{ group.size_label if group.size_label else 'bulk' }} ({{ group.unit }})</h5>
+              <div class="row mb-2">
+                <div class="col-md-3">
+                  <strong>Total Quantity:</strong> {{ "%.2f"|format(group.total_quantity) }}
+                </div>
+                <div class="col-md-3">
+                  {% set costs = group.batches|map(attribute='batch_cost_per_unit')|select('number')|list %}
+                  {% set avg_cost = (costs|sum / costs|length) if costs|length > 0 else 0 %}
+                  <strong>Avg Cost:</strong> ${{ "%.3f"|format(avg_cost) }}
+                </div>
+                <div class="col-md-3">
+                  <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name, size_label=group.size_label or 'Bulk') }}" class="btn btn-info btn-sm">
+                    View FIFO Details
+                  </a>
+                </div>
+                <div class="col-md-3">
+                  <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal" 
+                          data-variant="{{ variation.name }}" data-size="{{ group.size_label }}" data-unit="{{ group.unit }}">
+                    Quick Deduct
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Size Label</th>
+                      <th>Unit</th>
+                      <th>Quantity Remaining</th>
+                      <th>Total Cost</th>
+                      <th>Total Value</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ group.size_label if group.size_label else 'Bulk' }}</td>
+                      <td>{{ group.unit }}</td>
+                      <td>{{ "%.2f"|format(group.total_quantity) }}</td>
+                      <td>
+                        {% set total_cost = 0 %}
+                        {% for batch in group.batches %}
+                          {% if batch.quantity > 0 %}
+                            {% set total_cost = total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
+                          {% endif %}
+                        {% endfor %}
+                        ${{ "%.2f"|format(total_cost) }}
+                      </td>
+                      <td>
+                        {% if group.size_label and group.size_label != 'Bulk' %}
+                          <!-- Packaged items - calculate by container count -->
+                          {% set container_count = group.total_quantity|int %}
+                          {% set retail_per_container = 0 %}  {# TODO: Add retail price field #}
+                          ${{ "%.2f"|format(retail_per_container * container_count) }}
+                        {% else %}
+                          <!-- Bulk items - calculate by weight/volume -->
+                          {% set retail_per_unit = 0 %}  {# TODO: Add retail price field #}
+                          ${{ "%.2f"|format(retail_per_unit * group.total_quantity) }}
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="btn-group" role="group">
+                          <button class="btn btn-outline-primary btn-sm" onclick="openSizeAdjustModal('{{ group.size_label if group.size_label else 'Bulk' }}', {{ group.total_quantity }})">
+                            Adjust
+                          </button>
+                          <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=(group.size_label if group.size_label else 'Bulk')|urlencode) }}" class="btn btn-outline-secondary btn-sm">
+                            View SKU
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
+            {% endfor %}
           {% else %}
             <div class="alert alert-info">
               No inventory found for this variation. Inventory is added when batches are completed.
