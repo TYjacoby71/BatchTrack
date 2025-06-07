@@ -39,15 +39,40 @@
         </div>
         <div class="card-body">
           <div class="row">
-            <div class="col-md-4">
-              <strong>Product Base Unit:</strong> {{ product.product_base_unit }}
-            </div>
-            <div class="col-md-4">
-              <strong>Created:</strong> {{ variation.created_at.strftime('%Y-%m-%d') }}
-            </div>
-            <div class="col-md-4">
-              <strong>Size Variants:</strong> {{ size_groups|length }}
-            </div>
+          <div class="col-md-2">
+            {% set total_bulk = 0 %}
+            {% set total_packaged = 0 %}
+            {% for group_key, group in size_groups.items() %}
+              {% if group.size_label and group.size_label != 'Bulk' %}
+                {% set total_packaged = total_packaged + group.total_quantity %}
+              {% else %}
+                {% set total_bulk = total_bulk + group.total_quantity %}
+              {% endif %}
+            {% endfor %}
+            <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.product_base_unit }}
+          </div>
+          <div class="col-md-2">
+            <strong>Total Packaged:</strong> {{ total_packaged|int }} items
+          </div>
+          <div class="col-md-2">
+            <strong>Size Count:</strong> {{ size_groups|length }}
+          </div>
+          <div class="col-md-3">
+            {% set variant_total_cost = 0 %}
+            {% for group_key, group in size_groups.items() %}
+              {% for batch in group.batches %}
+                {% if batch.quantity > 0 %}
+                  {% set variant_total_cost = variant_total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
+          </div>
+          <div class="col-md-3">
+            {% set variant_total_value = 0 %}
+            {# TODO: Calculate total value when retail prices are added #}
+            <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
+          </div>
           </div></div>
           {% if variation.description %}
           <div class="row mt-2">
@@ -94,65 +119,58 @@
                 </div>
               </div>
 
-              <table class="table table-sm table-bordered">
-                <thead>
-                  <tr>
-                    <th>Batch</th>
-                    <th>Date Created</th>
-                    <th>Quantity</th>
-                    <th>Container</th>
-                    <th>Expiration</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for inv in group.batches %}
-                  <tr>
-                    <td>
-                      {% if inv.batch_id %}
-                        <a href="{{ url_for('batches.view_batch', batch_identifier=inv.batch_id) }}">
-                          Batch {{ inv.batch_id }}
-                        </a>
-                      {% else %}
-                        <span class="text-muted">Manual Entry</span>
-                      {% endif %}
-                    </td>
-                    <td>{{ inv.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ "%.2f"|format(inv.quantity) }} {{ inv.unit }}</td>
-                    <td>
-                      {% if inv.container %}
-                        {{ inv.container.name }}
-                      {% else %}
-                        <span class="text-muted">Not specified</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if inv.expiration_date %}
-                        {% set today = moment().date() if moment else inv.expiration_date %}
-                        {% set days_until = (inv.expiration_date - today).days if inv.expiration_date else 0 %}
-                        <span class="{% if days_until < 7 %}text-danger{% elif days_until < 30 %}text-warning{% endif %}">
-                          {{ inv.expiration_date.strftime('%Y-%m-%d') }}
-                          {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
-                        </span>
-                      {% else %}
-                        <span class="text-muted">No expiration</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if inv.quantity <= 0 %}
-                        <span class="badge bg-secondary">Consumed</span>
-                      {% elif inv.expiration_date and inv.expiration_date < moment().date() %}
-                        <span class="badge bg-danger">Expired</span>
-                      {% elif inv.expiration_date and (inv.expiration_date - moment().date()).days < 7 %}
-                        <span class="badge bg-warning">Expiring Soon</span>
-                      {% else %}
-                        <span class="badge bg-success">Available</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Size Label</th>
+                      <th>Unit</th>
+                      <th>Quantity Remaining</th>
+                      <th>Total Cost</th>
+                      <th>Total Value</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ group.size_label if group.size_label else 'Bulk' }}</td>
+                      <td>{{ group.unit }}</td>
+                      <td>{{ "%.2f"|format(group.total_quantity) }}</td>
+                      <td>
+                        {% set total_cost = 0 %}
+                        {% for batch in group.batches %}
+                          {% if batch.quantity > 0 %}
+                            {% set total_cost = total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
+                          {% endif %}
+                        {% endfor %}
+                        ${{ "%.2f"|format(total_cost) }}
+                      </td>
+                      <td>
+                        {% if group.size_label and group.size_label != 'Bulk' %}
+                          <!-- Packaged items - calculate by container count -->
+                          {% set container_count = group.total_quantity|int %}
+                          {% set retail_per_container = 0 %}  {# TODO: Add retail price field #}
+                          ${{ "%.2f"|format(retail_per_container * container_count) }}
+                        {% else %}
+                          <!-- Bulk items - calculate by weight/volume -->
+                          {% set retail_per_unit = 0 %}  {# TODO: Add retail price field #}
+                          ${{ "%.2f"|format(retail_per_unit * group.total_quantity) }}
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="btn-group" role="group">
+                          <button class="btn btn-outline-primary btn-sm" onclick="openSizeAdjustModal('{{ group.size_label if group.size_label else 'Bulk' }}', {{ group.total_quantity }})">
+                            Adjust
+                          </button>
+                          <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=(group.size_label if group.size_label else 'Bulk')|urlencode) }}" class="btn btn-outline-secondary btn-sm">
+                            View SKU
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
             {% endfor %}
           {% else %}
@@ -163,7 +181,7 @@
         </div>
       </div>
 
-      
+
     </div>
   </div>
 </div>
@@ -300,5 +318,19 @@ document.getElementById('deductModal').addEventListener('show.bs.modal', functio
   document.getElementById('deductVariant').value = variant;
   document.getElementById('deductSize').value = size;
 });
+
+function openAdjustModal(inventoryId, sizeLabel, currentQuantity) {
+  document.getElementById('adjustInventoryId').value = inventoryId;
+  document.getElementById('adjustSizeLabel').textContent = sizeLabel;
+  document.getElementById('adjustCurrentQuantity').textContent = currentQuantity;
+}
+
+function openSizeAdjustModal(sizeLabel, totalQuantity) {
+  // For size-level adjustments, we'll need to handle this differently
+  // since it affects multiple FIFO entries
+  document.getElementById('adjustSizeLabel').textContent = sizeLabel;
+  document.getElementById('adjustCurrentQuantity').textContent = totalQuantity;
+  // TODO: Implement size-level adjustment logic
+}
 </script>
 {% endblock %}
