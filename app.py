@@ -96,15 +96,15 @@ def attr_multiply_filter(item, attr1, attr2):
     """Multiply two attributes of a single item"""
     if item is None:
         return 0
-    
+
     val1 = getattr(item, attr1, 0)
     val2 = getattr(item, attr2, 0)
-    
+
     if val1 is None:
         val1 = 0
     if val2 is None:
         val2 = 0
-        
+
     return float(val1) * float(val2)
 
 @app.context_processor
