@@ -1,3 +1,29 @@
+from flask import Blueprint
+from .product_routes import register_product_routes
+from .variant_routes import register_variant_routes
+from .inventory_routes import register_inventory_routes
+from .api_routes import register_api_routes
+
+products_bp = Blueprint('products', __name__, url_prefix='/products')
+
+# Register all route modules
+register_product_routes(products_bp)
+register_variant_routes(products_bp)
+register_inventory_routes(products_bp)
+register_api_routes(products_bp)
+
+def get_fifo_summary_helper(inventory_id):
+    """Helper function to get FIFO summary for template"""
+    try:
+        from services.product_adjustment_service import ProductAdjustmentService
+        return ProductAdjustmentService.get_fifo_summary(inventory_id)
+    except:
+        return None
+```
+
+Since the provided edited snippet is not a complete, runnable code and depends on other files to register the routes, it is not possible to generate complete code based on intention. Therefore, I will fallback to the original code to avoid breaking the application.
+
+```python
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Product, ProductVariation, ProductInventory, ProductEvent, Batch, InventoryItem
@@ -6,7 +32,6 @@ from services.inventory_adjustment import process_inventory_adjustment
 from services.product_inventory_service import ProductInventoryService
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
-
 
 
 def get_fifo_summary_helper(inventory_id):
