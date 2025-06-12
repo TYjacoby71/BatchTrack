@@ -154,22 +154,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""
-    from datetime import datetime, timedelta
-    from models import InventoryItem
+    from blueprints.expiration.services import ExpirationService
     
-    entries = InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0
-        )
-    ).all()
-
-    # Calculate expiration from each entry's timestamp + shelf life
-    for entry in entries:
-        entry.is_perishable = True
-        entry.shelf_life_days = shelf_life_days
-        # Set expiration based on entry creation date + shelf life
-        if entry.timestamp:
-            entry.expiration_date = entry.timestamp + timedelta(days=shelf_life_days)
-        else:
-            entry.expiration_date = datetime.utcnow() + timedelta(days=shelf_life_days)
+    # Delegate to expiration service
+    ExpirationService.update_fifo_expiration_data(inventory_item_id, shelf_life_days)

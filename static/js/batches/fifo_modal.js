@@ -233,6 +233,17 @@ function getLifeBadgeClass(percent) {
     return 'bg-danger';
 }
 
+async function getLifeRemaining(fifoId) {
+    try {
+        const response = await fetch(`/expiration/api/life-remaining/${fifoId}`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching life remaining:', error);
+        return { life_remaining_percent: null, non_perishable: true };
+    }
+}
+
 function showFifoError(message) {
     document.getElementById('fifoModalContent').innerHTML = `
         <div class="alert alert-danger">

@@ -1,0 +1,214 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container-fluid">
+    <h2>Expiration Management</h2>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h3 class="text-danger">{{ expired.fifo_entries|length + expired.product_inventory|length }}</h3>
+                    <p class="card-text">Expired Items</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</h3>
+                    <p class="card-text">Expiring Within 7 Days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <button class="btn btn-info" onclick="archiveExpired()">Archive Expired</button>
+                    <p class="card-text small">Remove zero-quantity expired items</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expired Items -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h4>Expired Items</h4>
+        </div>
+        <div class="card-body">
+            {% if expired.fifo_entries or expired.product_inventory %}
+                <div class="row">
+                    {% if expired.fifo_entries %}
+                    <div class="col-md-6">
+                        <h5>Ingredient Inventory (FIFO)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Quantity</th>
+                                        <th>Expired</th>
+                                        <th>FIFO ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in expired.fifo_entries %}
+                                    <tr>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if expired.product_inventory %}
+                    <div class="col-md-6">
+                        <h5>Product Inventory</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Variant/Size</th>
+                                        <th>Quantity</th>
+                                        <th>Expired</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in expired.product_inventory %}
+                                    <tr>
+                                        <td>Product #{{ item.product_id }}</td>
+                                        <td>{{ item.variant }} - {{ item.size_label }}</td>
+                                        <td>{{ item.quantity }} {{ item.unit }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="alert alert-success">No expired items found!</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Expiring Soon -->
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h4>Expiring Within 7 Days</h4>
+        </div>
+        <div class="card-body">
+            {% if expiring_soon.fifo_entries or expiring_soon.product_inventory %}
+                <div class="row">
+                    {% if expiring_soon.fifo_entries %}
+                    <div class="col-md-6">
+                        <h5>Ingredient Inventory (FIFO)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Quantity</th>
+                                        <th>Expires</th>
+                                        <th>Days Left</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in expiring_soon.fifo_entries %}
+                                    {% set days_left = (item.expiration_date - today).days %}
+                                    <tr>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning{% else %}bg-info{% endif %}">
+                                                {{ days_left }} days
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if expiring_soon.product_inventory %}
+                    <div class="col-md-6">
+                        <h5>Product Inventory</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Variant/Size</th>
+                                        <th>Quantity</th>
+                                        <th>Expires</th>
+                                        <th>Days Left</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in expiring_soon.product_inventory %}
+                                    {% set days_left = (item.expiration_date - today).days %}
+                                    <tr>
+                                        <td>Product #{{ item.product_id }}</td>
+                                        <td>{{ item.variant }} - {{ item.size_label }}</td>
+                                        <td>{{ item.quantity }} {{ item.unit }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning{% else %}bg-info{% endif %}">
+                                                {{ days_left }} days
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="alert alert-success">No items expiring soon!</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+async function archiveExpired() {
+    if (!confirm('Archive all expired items with zero quantity? This cannot be undone.')) return;
+    
+    try {
+        const response = await fetch('/expiration/api/archive-expired', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken() }
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(`Archived ${data.archived_count} expired items`);
+            location.reload();
+        } else {
+            alert('Error archiving items');
+        }
+    } catch (error) {
+        console.error('Archive error:', error);
+        alert('Network error occurred');
+    }
+}
+
+// Add today variable for template
+const today = new Date('{{ "now"|strftime("%Y-%m-%d") }}');
+</script>
+{% endblock %}
