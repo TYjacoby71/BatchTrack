@@ -528,6 +528,53 @@ def view_variant(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
+@login_required
+def view_sku(product_id, variant, size_label):
+    """View individual SKU (product variant + size combination) details"""
+    from urllib.parse import unquote
+    from utils.unit_utils import get_global_unit_list
+
+    product = Product.query.get_or_404(product_id)
+    variant = unquote(variant)
+    size_label = unquote(size_label)
+
+    # Get inventory entries for this specific variant/size combination
+    inventory_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+
+    if not inventory_entries:
+        flash('No active inventory found for this variant/size combination', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+
+    # Calculate totals
+    total_quantity = sum(entry.quantity for entry in inventory_entries)
+    total_batches = len(inventory_entries)
+    avg_cost_per_unit = sum(entry.batch_cost_per_unit or 0 for entry in inventory_entries) / len(inventory_entries) if inventory_entries else 0
+    total_cost = sum((entry.batch_cost_per_unit or 0) * entry.quantity for entry in inventory_entries)
+
+    # Get recent activity for this specific SKU
+    recent_events = ProductEvent.query.filter(
+        ProductEvent.product_id == product_id,
+        ProductEvent.note.like(f'%{variant}%'),
+        ProductEvent.note.like(f'%{size_label}%')
+    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+
+    return render_template('products/variant_inventory.html',
+                         product=product,
+                         variant=variant,
+                         size_label=size_label,
+                         inventory_entries=inventory_entries,
+                         total_quantity=total_quantity,
+                         total_batches=total_batches,
+                         avg_cost_per_unit=avg_cost_per_unit,
+                         total_cost=total_cost,
+                         recent_events=recent_events,
+                         get_global_unit_list=get_global_unit_list)
+
 @products_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])
 @login_required
 def edit_sku(product_id, variant, size_label):
