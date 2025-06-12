@@ -146,6 +146,10 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/homepage')
+def homepage():
     return render_template('homepage.html')
 
 if __name__ == '__main__':
