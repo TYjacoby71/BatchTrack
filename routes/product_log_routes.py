@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from models import db, Product, ProductEvent
 from datetime import datetime
 
@@ -14,7 +14,7 @@ def view_product(product_id):
     if request.method == 'POST':
         event_type = request.form.get('event_type')
         note = request.form.get('note')
-        db.session.add(ProductEvent(product_id=product.id, event_type=event_type, note=note))
+        db.session.add(ProductEvent(product_id=product.id, event_type=event_type, note=note, created_by=current_user.id))
         db.session.commit()
         flash(f"Logged event: {event_type}")
         return redirect(url_for('product_log.view_product', product_id=product.id))

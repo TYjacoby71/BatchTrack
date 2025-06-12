@@ -2,6 +2,7 @@ from models import db, ProductInventory, ProductInventoryHistory, Product, Produ
 from datetime import datetime
 from services.inventory_adjustment import generate_fifo_code
 import base64
+from flask_login import current_user
 
 class ProductAdjustmentService:
     """Service for handling all product inventory adjustments with FIFO tracking"""
@@ -55,7 +56,7 @@ class ProductAdjustmentService:
             unit_cost=unit_cost,
             fifo_code=fifo_code,
             note=notes,
-            created_by=1  # TODO: Get current user
+            created_by=current_user.id if current_user.is_authenticated else None
         )
 
         db.session.add(history)
@@ -99,7 +100,7 @@ class ProductAdjustmentService:
                 unit=inventory.unit,
                 remaining_quantity=quantity if quantity_change > 0 else None,
                 note=f"Recount: {old_quantity} → {quantity}. {notes}",
-                created_by=1  # TODO: Get current user
+                created_by=current_user.id if current_user.is_authenticated else None
             )
 
             db.session.add(history)
@@ -205,7 +206,7 @@ class ProductAdjustmentService:
                 remaining_quantity=0,
                 fifo_reference_id=entry.id,
                 note=f"{reason.title()} deduction from FIFO {entry.fifo_code}. {notes}",
-                created_by=1  # TODO: Get current user
+                created_by=current_user.id if current_user.is_authenticated else None
             )
 
             db.session.add(deduction_history)

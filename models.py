@@ -106,6 +106,7 @@ class Batch(db.Model):
     shelf_life_days = db.Column(db.Integer)
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     @property
     def status_display(self):
@@ -134,6 +135,7 @@ class BatchIngredient(db.Model):
     amount_used = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     ingredient = db.relationship('InventoryItem', backref='batch_ingredients')
 
 class BatchContainer(db.Model):
@@ -235,6 +237,7 @@ class ProductInventory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     expiration_date = db.Column(db.Date, nullable=True)
     batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost from specific batch FIFO calculation
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
 
@@ -252,6 +255,7 @@ class ProductEvent(db.Model):
     event_type = db.Column(db.String(64))
     note = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 
 
@@ -285,6 +289,7 @@ class BatchInventoryLog(db.Model):
     reason = db.Column(db.String(32), nullable=False)  # consumed, expired, lost, disposed
     notes = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     batch = db.relationship('Batch', backref='inventory_logs')
 

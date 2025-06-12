@@ -1,3 +1,5 @@
+from flask import current_app
+from flask_login import current_user
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
@@ -12,15 +14,15 @@ def validate_inventory_fifo_sync(item_id):
     item = InventoryItem.query.get(item_id)
     if not item:
         return False, "Item not found", 0, 0
-    
+
     fifo_entries = get_fifo_entries(item_id)
     fifo_total = sum(entry.remaining_quantity for entry in fifo_entries)
-    
+
     # Allow small floating point differences (0.001)
     if abs(item.quantity - fifo_total) > 0.001:
         error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total})"
         return False, error_msg, item.quantity, fifo_total
-    
+
     return True, "", item.quantity, fifo_total
 
 def generate_fifo_code(prefix):
@@ -74,12 +76,12 @@ def process_inventory_adjustment(
         current_value = item.quantity * item.cost_per_unit
         new_value = qty_change * (cost_override or item.cost_per_unit)
         total_quantity = item.quantity + qty_change
-        
+
         if total_quantity > 0:
             weighted_avg_cost = (current_value + new_value) / total_quantity
             # Update the item's cost_per_unit to the new weighted average
             item.cost_per_unit = weighted_avg_cost
-        
+
         cost_per_unit = cost_override or item.cost_per_unit
     elif cost_override is not None and change_type == 'cost_override':
         # Only use cost_override for manual edits from the edit modal (true overrides)
@@ -101,10 +103,10 @@ def process_inventory_adjustment(
             # Create deduction history for each FIFO entry used
             # Ensure unit is never None for containers
             history_unit = item.unit if item.unit else 'count'
-            
+
             # Only set quantity_used for actual consumption (spoil, trash, batch usage)
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
-            
+
             history = InventoryHistory(
                 inventory_item_id=item.id,
                 change_type=change_type,
@@ -207,12 +209,12 @@ def process_inventory_adjustment(
         item.quantity += qty_change
 
     db.session.commit()
-    
+
     # Validate inventory/FIFO sync after adjustment
     is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
     if not is_valid:
         # Rollback the transaction
         db.session.rollback()
         raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-    
+
     return True
