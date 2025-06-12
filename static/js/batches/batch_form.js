@@ -25,10 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
-  if (!modalForm) {
-    console.warn('Modal form not found on initial load');
-  }
-
   // Initialize tooltips
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
   tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
