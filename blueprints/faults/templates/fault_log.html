@@ -2,25 +2,55 @@
 {% block content %}
 <div class="container">
     <h2>System Fault Log</h2>
-    {% if faults %}
-    <table>
-        <tr>
-            <th>Date</th>
-            <th>Batch ID</th>
-            <th>Description</th>
-            <th>Status</th>
-        </tr>
-        {% for fault in faults %}
-        <tr>
-            <td>{{ fault.date }}</td>
-            <td>{{ fault.batch_id }}</td>
-            <td>{{ fault.description }}</td>
-            <td class="status-{{ fault.status|lower }}">{{ fault.status }}</td>
-        </tr>
-        {% endfor %}
+    
+    <div class="mb-3">
+        <form method="POST" action="{{ url_for('faults.add_fault') }}" class="d-inline-block me-2">
+            <input type="text" name="message" placeholder="Fault message" required class="form-control d-inline-block" style="width: auto;">
+            <select name="severity" class="form-select d-inline-block" style="width: auto;">
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Add Fault</button>
+        </form>
+        
+        <form method="POST" action="{{ url_for('faults.clear_logs') }}" class="d-inline-block" 
+              onsubmit="return confirm('Are you sure you want to clear all fault logs?')">
+            <button type="submit" class="btn btn-danger">Clear All Logs</button>
+        </form>
+    </div>
+    
+    {% if logs %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Message</th>
+                <th>Source</th>
+                <th>Batch ID</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fault in logs %}
+            <tr>
+                <td>{{ fault.timestamp }}</td>
+                <td>{{ fault.message }}</td>
+                <td>{{ fault.source }}</td>
+                <td>{{ fault.batch_id or '-' }}</td>
+                <td><span class="badge bg-{{ 'danger' if fault.status == 'NEW' else 'secondary' }}">{{ fault.status }}</span></td>
+                <td>
+                    {% if fault.details %}
+                        <small class="text-muted">{{ fault.details | truncate(100) }}</small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
     {% else %}
-    <p>No faults have been logged.</p>
+    <div class="alert alert-info">No faults have been logged.</div>
     {% endif %}
 </div>
 {% endblock %}
