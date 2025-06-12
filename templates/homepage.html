@@ -14,7 +14,7 @@
 <!-- Simple Recipe Selection Modal -->
 <div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
   <h3>Select Recipe</h3>
-  <form method="post" action="{{ url_for('plan_production.plan_for_recipe') }}">
+  <form method="post" action="{{ url_for('recipes.plan_production') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
     <div style="margin-bottom: 1rem;">
