@@ -143,9 +143,10 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/')
-@login_required
 def index():
-    return redirect(url_for('dashboard.dashboard'))
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
+    return render_template('homepage.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
