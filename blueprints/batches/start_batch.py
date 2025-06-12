@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
@@ -33,7 +32,8 @@ def start_batch():
         notes=data.get('notes', ''),
         status='in_progress',
         projected_yield=scale * recipe.predicted_yield,
-        projected_yield_unit=recipe.predicted_yield_unit
+        projected_yield_unit=recipe.predicted_yield_unit,
+        created_by=current_user.id
     )
 
     db.session.add(new_batch)

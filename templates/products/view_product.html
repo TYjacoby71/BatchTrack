@@ -267,7 +267,7 @@
                     </div>
                   </td>
                   <td>
-                    {% for group_key, group in var_inventory.items() %}
+                    {% for group in var_inventory %}
                       <span class="badge bg-light text-dark me-1 mb-1">{{ group.size_label or 'Bulk' }}</span>
                     {% endfor %}
                   </td>
@@ -768,12 +768,13 @@ function confirmDeleteProduct(productId, productName) {
     form.action = `/products/${productId}/delete`;
 
     // Add CSRF token if available
-    const csrfToken = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = document.querySelector('input[name="csrf_token"]') || 
+                     document.querySelector('meta[name="csrf-token"]');
     if (csrfToken) {
       const csrfInput = document.createElement('input');
       csrfInput.type = 'hidden';
       csrfInput.name = 'csrf_token';
-      csrfInput.value = csrfToken.value;
+      csrfInput.value = csrfToken.value || csrfToken.content;
       form.appendChild(csrfInput);
     }
 
