@@ -14,7 +14,7 @@
 <!-- Simple Recipe Selection Modal -->
 <div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
   <h3>Select Recipe</h3>
-  <form method="post" action="{{ url_for('recipes.plan_production') }}">
+  <form id="recipeForm" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
     <div style="margin-bottom: 1rem;">
@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const recipeSelect = document.getElementById('recipe_id');
   const variantSection = document.getElementById('variantSection');
   const variantSelect = document.getElementById('variant_id');
+  const recipeForm = document.getElementById('recipeForm');
   
   // Recipe data with variants (this would be populated from your backend)
   const recipeVariants = {
@@ -84,6 +85,19 @@ document.addEventListener('DOMContentLoaded', function() {
       // Hide variant section
       variantSection.style.display = 'none';
       variantSelect.innerHTML = '<option value="">No variant</option>';
+    }
+  });
+
+  // Handle form submission with dynamic action
+  recipeForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const selectedRecipeId = recipeSelect.value;
+    if (selectedRecipeId) {
+      // Set the form action to the correct recipe planning URL
+      this.action = `/recipes/${selectedRecipeId}/plan`;
+      this.submit();
+    } else {
+      alert('Please select a recipe');
     }
   });
 });
