@@ -41,6 +41,11 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Import and register blueprints
+from blueprints.admin import admin_bp
+from blueprints.dashboard import dashboard_bp
+from blueprints.expiration import expiration_bp
+from blueprints.faults import faults_bp
+from blueprints.marketplace import marketplace_bp
 from blueprints.batches.start_batch import start_batch_bp
 from blueprints.batches.finish_batch import finish_batch_bp
 from blueprints.batches.cancel_batch import cancel_batch_bp
@@ -52,32 +57,28 @@ from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
-# Inventory adjustments now handled in blueprints/inventory/routes.py
-from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
 from blueprints.products.routes import products_bp
 from blueprints.fifo import fifo_bp
-from routes.expiration_routes import expiration_bp
-from routes.admin_routes import admin_bp
-from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
 
 # Register blueprints
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(expiration_bp, url_prefix='/expiration')
+app.register_blueprint(faults_bp, url_prefix='/faults')
+app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
 app.register_blueprint(fifo_bp)
-app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(products_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
-app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
-app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(inventory_bp, url_prefix='/inventory')
 app.register_blueprint(recipes_bp, url_prefix='/recipes')
 app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(faults_bp, url_prefix='/logs')
 app.register_blueprint(product_log_bp, url_prefix='/product-logs')
 app.register_blueprint(tag_bp, url_prefix='/tags')
 app.register_blueprint(timers_bp, url_prefix='/timers')

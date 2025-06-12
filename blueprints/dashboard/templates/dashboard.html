@@ -1,7 +1,9 @@
 {% extends 'layout.html' %}
 {% block content %}
 
-<h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+<div class="text-center mb-4">
+  <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+</div>
 
 {% if expired %}
 <div class="alert alert-danger mb-3">
@@ -25,48 +27,54 @@
 </div>
 {% endif %}
 
-<div class="mb-3 d-flex gap-2">
-  {% if active_batch %}
-    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
-  {% endif %}
-  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
+<div class="text-center mb-4">
+  <div class="d-inline-flex gap-3">
+    {% if active_batch %}
+      <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
+    {% endif %}
+    <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
+  </div>
 </div>
 
-<!-- Simple Recipe Selection Modal -->
-<div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
-  <h3>Select Recipe</h3>
-  <form id="recipeForm" method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    
-    <div style="margin-bottom: 1rem;">
-      <label for="recipe_id">Recipe:</label>
-      <select name="recipe_id" id="recipe_id" required style="width: 100%; padding: 0.5rem;">
-        <option value="">Choose Recipe...</option>
-        {% for recipe in recipes %}
-        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
-        {% endfor %}
-      </select>
+<!-- Recipe Selection Modal -->
+<div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 500px;">
+  <div class="card shadow-lg">
+    <div class="card-header">
+      <h5 class="card-title mb-0 text-center">Start New Batch</h5>
     </div>
+    <div class="card-body">
+      <form id="recipeForm" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-3">
+          <label for="recipe_id" class="form-label">Recipe</label>
+          <select name="recipe_id" id="recipe_id" class="form-select" required>
+            <option value="">Choose Recipe...</option>
+            {% for recipe in recipes %}
+            <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <!-- Check if selected recipe has variants -->
-    <div id="variantSection" style="display: none; margin-bottom: 1rem;">
-      <label for="variant_id">Variant (optional):</label>
-      <select name="variant_id" id="variant_id" style="width: 100%; padding: 0.5rem;">
-        <option value="">No variant</option>
-      </select>
-    </div>
+        <!-- Check if selected recipe has variants -->
+        <div id="variantSection" class="mb-3" style="display: none;">
+          <label for="variant_id" class="form-label">Variant <span class="text-muted">(optional)</span></label>
+          <select name="variant_id" id="variant_id" class="form-select">
+            <option value="">No variant</option>
+          </select>
+        </div>
 
-    <div style="margin-bottom: 1rem;">
-      <label for="scale">Scale:</label>
-      <input type="number" step="0.1" name="scale" value="1.0" required style="width: 100%; padding: 0.5rem;">
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="submit" class="btn btn-primary">Continue to Production Planning</button>
+          <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
     </div>
-
-    <div style="display: flex; gap: 1rem;">
-      <button type="submit" class="btn btn-primary">Continue to Production Planning</button>
-      <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="btn btn-secondary">Cancel</button>
-    </div>
-  </form>
+  </div>
 </div>
+
+<!-- Modal backdrop -->
+<div id="modalBackdrop" class="position-fixed top-0 start-0 w-100 h-100 bg-dark" style="display:none; z-index: 1040; opacity: 0.5;" onclick="document.getElementById('startFlowModal').style.display='none'; this.style.display='none';"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -74,6 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const variantSection = document.getElementById('variantSection');
   const variantSelect = document.getElementById('variant_id');
   const recipeForm = document.getElementById('recipeForm');
+  const modal = document.getElementById('startFlowModal');
+  const backdrop = document.getElementById('modalBackdrop');
   
   // Recipe data with variants (this would be populated from your backend)
   const recipeVariants = {
@@ -86,6 +96,21 @@ document.addEventListener('DOMContentLoaded', function() {
     ]{% if not loop.last %},{% endif %}
     {% endif %}
     {% endfor %}
+  };
+  
+  // Update the Start Batch button to show backdrop
+  const startBatchBtn = document.querySelector('button[onclick*="startFlowModal"]');
+  if (startBatchBtn) {
+    startBatchBtn.onclick = function() {
+      modal.style.display = 'block';
+      backdrop.style.display = 'block';
+    };
+  }
+  
+  // Update close functionality
+  window.closeModal = function() {
+    modal.style.display = 'none';
+    backdrop.style.display = 'none';
   };
   
   if (recipeSelect) {

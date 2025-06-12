@@ -8,6 +8,7 @@
         <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Recipe
         </a>
+        {% if recipes %}
         <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
             <i class="fas fa-filter"></i> Filters
         </button>
@@ -15,8 +16,30 @@
             <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
             <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
         </div>
+        {% endif %}
     </div>
 </div>
+
+{% if not recipes %}
+<!-- Empty State Message -->
+<div class="text-center py-5">
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-book fa-4x text-muted mb-4"></i>
+            <h4 class="text-muted mb-3">No Recipes Yet</h4>
+            <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Create Your First Recipe
+                </a>
+                <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-boxes"></i> Add Ingredients
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
 
 <!-- Filter Section -->
 <div class="collapse mb-4" id="filterSection">
@@ -440,4 +463,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% endif %}
 {% endblock %}
