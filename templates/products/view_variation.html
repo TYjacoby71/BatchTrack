@@ -109,7 +109,13 @@
                 <tbody>
                   {% for group_key, group in size_groups.items() %}
                   {% set size_display = group.size_label if group.size_label else 'Bulk' %}
-                  {% set total_cost = group.batches|selectattr('quantity', 'gt', 0)|sum(attribute='batch_cost_per_unit')|default(0) * group.total_quantity %}
+                  {% set cost_sum = 0 %}
+                  {% for batch in group.batches %}
+                    {% if batch.quantity > 0 and batch.batch_cost_per_unit %}
+                      {% set cost_sum = cost_sum + (batch.batch_cost_per_unit * batch.quantity) %}
+                    {% endif %}
+                  {% endfor %}
+                  {% set total_cost = cost_sum %}
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
                   <tr>
                     <td>

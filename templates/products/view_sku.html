@@ -32,7 +32,7 @@
             </div>
             <div class="col-md-3">
               <strong>SKU:</strong> 
-              <span id="current-sku">{{ fifo_entries[0].sku if fifo_entries else 'Not set' }}</span>
+              <span id="current-sku">{{ fifo_entries[0].sku if fifo_entries and fifo_entries[0].sku else 'Not set' }}</span>
               <button class="btn btn-outline-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#editSkuModal">
                 <i class="fas fa-edit"></i> Edit SKU
               </button>
@@ -255,7 +255,7 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">SKU for {{ product.name }} - {{ variant }} - {{ size_label }}</label>
-            <input type="text" name="sku" class="form-control" value="{{ history[0].sku if history else '' }}" placeholder="Enter SKU code">
+            <input type="text" name="sku" class="form-control" value="{{ fifo_entries[0].sku if fifo_entries and fifo_entries[0].sku else '' }}" placeholder="Enter SKU code">
             <small class="form-text text-muted">This SKU will apply to all inventory entries for this specific size/variant combination.</small>
           </div>
         </div>
