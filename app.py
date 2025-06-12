@@ -145,10 +145,7 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    from models import Recipe, Batch
-    recipes = Recipe.query.all()
-    active_batch = Batch.query.filter_by(status='in_progress').first()
-    return render_template('homepage.html', recipes=recipes, active_batch=active_batch)
+    return redirect(url_for('dashboard.dashboard'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
