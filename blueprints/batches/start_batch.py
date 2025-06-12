@@ -140,4 +140,3 @@ def start_batch():
 
     db.session.commit()
     return jsonify({'batch_id': new_batch.id})
-`
