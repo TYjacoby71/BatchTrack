@@ -174,11 +174,6 @@ def deduct_product(product_id):
     return redirect(url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
-@login_required
-def adjust_inventory_placeholder(product_id, inventory_id):
-    """Placeholder route - functionality moved to product_adjustment_service"""
-    flash('This functionality has been moved to the adjustment service', 'info')
-    return redirect(url_for('products.view_product', product_id=product_id))
 
 
 @products_bp.route('/api/<int:product_id>/variants', methods=['GET'])
@@ -402,6 +397,122 @@ def add_manual_stock(product_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 
+@products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
+@login_required
+def adjust_inventory(product_id, inventory_id):
+    """Process inventory adjustments with FIFO tracking"""
+    from services.product_adjustment_service import ProductAdjustmentService
+
+    adjustment_type = request.form.get('adjustment_type')  # sold, spoil, trash, tester, damaged, recount
+    quantity = float(request.form.get('quantity', 0))
+    notes = request.form.get('notes', '')
+
+    if quantity <= 0:
+        flash('Quantity must be positive', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+
+    try:
+        ProductAdjustmentService.process_adjustment(
+            inventory_id=inventory_id,
+            adjustment_type=adjustment_type,
+            quantity=quantity,
+            notes=notes
+        )
+
+        flash(f'Adjustment processed: {adjustment_type}', 'success')
+    except Exception as e:
+        flash(f'Error processing adjustment: {str(e)}', 'error')
+
+    return redirect(url_for('products.view_product', product_id=product_id))
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
+@login_required  
+def view_sku(product_id, variant, size_label):
+    """View detailed SKU-level inventory with FIFO tracking"""
+    from models import ProductInventory, ProductInventoryHistory
+    from utils.fifo_generator import get_change_type_prefix, int_to_base36
+    from datetime import datetime
+
+    product = Product.query.get_or_404(product_id)
+
+    # Get filter parameters
+    change_type = request.args.get('change_type')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    sort_by = request.args.get('sort_by', 'timestamp_desc')
+    active_only = request.args.get('active_only') == 'on'
+
+    # Get all inventory entries for this SKU combination
+    fifo_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+
+    # Get transaction history for this SKU
+    history_query = ProductInventoryHistory.query.join(
+        ProductInventory, ProductInventoryHistory.product_inventory_id == ProductInventory.id
+    ).filter(
+        ProductInventory.product_id == product_id,
+        ProductInventory.variant == variant,
+        ProductInventory.size_label == size_label
+    )
+
+    # Apply filters
+    if change_type:
+        history_query = history_query.filter(ProductInventoryHistory.change_type == change_type)
+
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, '%Y-%m-%d')
+            history_query = history_query.filter(ProductInventoryHistory.timestamp >= from_date)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, '%Y-%m-%d')
+            history_query = history_query.filter(ProductInventoryHistory.timestamp <= to_date)
+        except ValueError:
+            pass
+
+    if active_only:
+        history_query = history_query.filter(ProductInventoryHistory.remaining_quantity > 0)
+
+    # Apply sorting
+    if sort_by == 'timestamp_asc':
+        history_query = history_query.order_by(ProductInventoryHistory.timestamp.asc())
+    elif sort_by == 'quantity_desc':
+        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.desc())
+    elif sort_by == 'quantity_asc':
+        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.asc())
+    else:  # timestamp_desc (default)
+        history_query = history_query.order_by(ProductInventoryHistory.timestamp.desc())
+
+    history = history_query.all()
+
+    # Calculate totals
+    total_quantity = sum(entry.quantity for entry in fifo_entries)
+    total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
+
+    # Get the variation object if it exists
+    variation = ProductVariation.query.filter_by(
+        product_id=product_id,
+        name=variant
+    ).first()
+
+    return render_template('products/view_sku.html',
+                         product=product,
+                         variant=variant,
+                         size_label=size_label,
+                         variation=variation,
+                         fifo_entries=fifo_entries,
+                         history=history,
+                         total_quantity=total_quantity,
+                         total_batches=total_batches,
+                         moment=datetime,
+                         now=datetime.utcnow(),
+                         get_change_type_prefix=get_change_type_prefix,
+                         int_to_base36=int_to_base36)
 @products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
@@ -526,53 +637,6 @@ def view_variant(product_id, variation_id):
                          size_groups=size_groups,
                          recent_events=recent_events,
                          available_containers=available_containers,
-                         get_global_unit_list=get_global_unit_list)
-
-@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
-@login_required
-def view_sku(product_id, variant, size_label):
-    """View individual SKU (product variant + size combination) details"""
-    from urllib.parse import unquote
-    from utils.unit_utils import get_global_unit_list
-
-    product = Product.query.get_or_404(product_id)
-    variant = unquote(variant)
-    size_label = unquote(size_label)
-
-    # Get inventory entries for this specific variant/size combination
-    inventory_entries = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        size_label=size_label
-    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
-
-    if not inventory_entries:
-        flash('No active inventory found for this variant/size combination', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
-
-    # Calculate totals
-    total_quantity = sum(entry.quantity for entry in inventory_entries)
-    total_batches = len(inventory_entries)
-    avg_cost_per_unit = sum(entry.batch_cost_per_unit or 0 for entry in inventory_entries) / len(inventory_entries) if inventory_entries else 0
-    total_cost = sum((entry.batch_cost_per_unit or 0) * entry.quantity for entry in inventory_entries)
-
-    # Get recent activity for this specific SKU
-    recent_events = ProductEvent.query.filter(
-        ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variant}%'),
-        ProductEvent.note.like(f'%{size_label}%')
-    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
-
-    return render_template('products/variant_inventory.html',
-                         product=product,
-                         variant=variant,
-                         size_label=size_label,
-                         inventory_entries=inventory_entries,
-                         total_quantity=total_quantity,
-                         total_batches=total_batches,
-                         avg_cost_per_unit=avg_cost_per_unit,
-                         total_cost=total_cost,
-                         recent_events=recent_events,
                          get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])

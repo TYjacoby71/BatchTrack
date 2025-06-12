@@ -267,7 +267,7 @@
                     </div>
                   </td>
                   <td>
-                    {% for group in var_inventory %}
+                    {% for group_key, group in var_inventory.items() %}
                       <span class="badge bg-light text-dark me-1 mb-1">{{ group.size_label or 'Bulk' }}</span>
                     {% endfor %}
                   </td>
