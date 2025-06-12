@@ -1,4 +1,4 @@
-2025-06-12 03:32:29,303 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-12 04:13:45,440 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,9 +15,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 151, in index
-    return render_template('homepage.html', recipes=recipes, active_batch=active_batch)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/dashboard/routes.py", line 13, in dashboard
+    return render_template('dashboard.html', recipes=recipes, active_batches=active_batches)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,14 +28,11 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/homepage.html", line 2, in top-level template code
+  File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 109, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/homepage.html", line 17, in block 'content'
-    <form method="post" action="{{ url_for('plan_production.plan_for_recipe') }}">
+  File "/home/runner/workspace/templates/layout.html", line 77, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -45,9 +42,21 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'plan_production.plan_for_recipe'. Did you mean 'recipes.plan_production' instead?
-2025-06-12 03:33:26,002 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
-2025-06-12 03:33:26,453 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'expiration.alerts'. Did you mean 'expiration.expiration_alerts' instead?
+2025-06-12 04:14:38,961 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-12 04:14:39,997 ERROR: Dashboard error: type object 'Batch' has no attribute 'created_at' [in /home/runner/workspace/blueprints/dashboard/routes.py:23]
+2025-06-12 04:14:40,023 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/blueprints/dashboard/routes.py", line 14, in dashboard
+    recent_batches = DashboardService.get_recent_batches()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/dashboard/services.py", line 27, in get_recent_batches
+    return Batch.query.order_by(Batch.created_at.desc()).limit(limit).all()
+                                ^^^^^^^^^^^^^^^^
+AttributeError: type object 'Batch' has no attribute 'created_at'
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -64,9 +73,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 151, in index
-    return render_template('homepage.html', recipes=recipes, active_batch=active_batch)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/dashboard/routes.py", line 27, in dashboard
+    return render_template('dashboard.html', recipes=recipes, active_batches=active_batches)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,14 +86,11 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/homepage.html", line 1, in top-level template code
+  File "/home/runner/workspace/blueprints/dashboard/templates/dashboard.html", line 1, in top-level template code
     {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/layout.html", line 109, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/templates/homepage.html", line 95, in block 'content'
-    form.action = "{{ url_for('recipes.plan_production') }}";
+  File "/home/runner/workspace/templates/layout.html", line 83, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -94,5 +100,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.plan_production'. Did you forget to specify values ['recipe_id']?
-2025-06-12 03:33:47,114 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'faults.view_fault_log'. Did you mean 'faults.fault_logs' instead?
+2025-06-12 04:16:11,250 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-12 04:20:55,944 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-12 04:23:28,405 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-12 04:25:43,602 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-12 04:42:09,428 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
