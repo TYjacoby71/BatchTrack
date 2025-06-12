@@ -6,29 +6,88 @@
 
 <div style="margin-top: 2rem;">
   {% if active_batch %}
-    <a href="{{ url_for('batch_view.view_batch', batch_id=active_batch.id) }}" class="button" style="margin-right: 1rem;">Finish Batch</a>
+    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="button" style="margin-right: 1rem;">Continue Batch</a>
   {% endif %}
-  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="button">Start Flow</button>
+  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="button">Start Batch</button>
 </div>
 
-<!-- Modal for Start Flow -->
+<!-- Simple Recipe Selection Modal -->
 <div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
+  <h3>Select Recipe</h3>
   <form method="post" action="{{ url_for('plan_production.plan_for_recipe') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label for="recipe_id">Select Recipe:</label>
-    <select name="recipe_id" required>
-      {% for recipe in recipes %}
+    
+    <div style="margin-bottom: 1rem;">
+      <label for="recipe_id">Recipe:</label>
+      <select name="recipe_id" id="recipe_id" required style="width: 100%; padding: 0.5rem;">
+        <option value="">Choose Recipe...</option>
+        {% for recipe in recipes %}
         <option value="{{ recipe.id }}">{{ recipe.name }}</option>
-      {% endfor %}
-    </select><br><br>
+        {% endfor %}
+      </select>
+    </div>
 
-    <label for="scale">Scale:</label>
-    <input type="number" step="0.1" name="scale" value="1.0" required><br><br>
+    <!-- Check if selected recipe has variants -->
+    <div id="variantSection" style="display: none; margin-bottom: 1rem;">
+      <label for="variant_id">Variant (optional):</label>
+      <select name="variant_id" id="variant_id" style="width: 100%; padding: 0.5rem;">
+        <option value="">No variant</option>
+      </select>
+    </div>
 
-    <button type="submit" class="button">Continue</button>
-    <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
+    <div style="margin-bottom: 1rem;">
+      <label for="scale">Scale:</label>
+      <input type="number" step="0.1" name="scale" value="1.0" required style="width: 100%; padding: 0.5rem;">
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+      <button type="submit" class="button">Continue to Production Planning</button>
+      <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
+    </div>
   </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const recipeSelect = document.getElementById('recipe_id');
+  const variantSection = document.getElementById('variantSection');
+  const variantSelect = document.getElementById('variant_id');
+  
+  // Recipe data with variants (this would be populated from your backend)
+  const recipeVariants = {
+    {% for recipe in recipes %}
+    {% if recipe.variations %}
+    "{{ recipe.id }}": [
+      {% for variant in recipe.variations %}
+      {"id": "{{ variant.id }}", "name": "{{ variant.name }}"}{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endif %}
+    {% endfor %}
+  };
+  
+  recipeSelect.addEventListener('change', function() {
+    const selectedRecipeId = this.value;
+    
+    if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
+      // Show variant section and populate variants
+      variantSection.style.display = 'block';
+      variantSelect.innerHTML = '<option value="">No variant</option>';
+      
+      recipeVariants[selectedRecipeId].forEach(variant => {
+        const option = document.createElement('option');
+        option.value = variant.id;
+        option.textContent = variant.name;
+        variantSelect.appendChild(option);
+      });
+    } else {
+      // Hide variant section
+      variantSection.style.display = 'none';
+      variantSelect.innerHTML = '<option value="">No variant</option>';
+    }
+  });
+});
+</script>
 
 {% if alert %}
 <div style="margin-top: 2rem; background-color: #ffe0e0; padding: 1rem; border-radius: 8px;">
