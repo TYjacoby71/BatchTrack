@@ -117,7 +117,7 @@ def list_batches():
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     from models import InventoryItem
     
-    return render_template('batches_list.html',
+    return render_template('batches/batches_list.html',
         InventoryItem=InventoryItem, 
         batches=all_batches,
         in_progress_batches=in_progress_batches,
@@ -150,7 +150,7 @@ def view_batch(batch_identifier):
             Batch.id > batch.id
         ).order_by(Batch.id.asc()).first()
         
-        return render_template('view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
+        return render_template('batches/view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
         flash('Error viewing batch. Please try again.')
         return redirect(url_for('batches.list_batches'))
@@ -234,7 +234,7 @@ def view_batch_in_progress(batch_identifier):
                     'original_used': container_usage.quantity_used or 0
                 })
 
-    return render_template('batch_in_progress.html',
+    return render_template('batches/batch_in_progress.html',
                          batch=batch,
                          units=units,
                          batch_cost=batch_cost,
