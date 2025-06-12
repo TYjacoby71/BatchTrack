@@ -140,12 +140,6 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const selectedRecipeId = recipeSelect.value;
       if (selectedRecipeId) {
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
-        submitBtn.disabled = true;
-        
         // Set the form action to the correct recipe planning URL
         this.action = `/recipes/${selectedRecipeId}/plan`;
         this.submit();
