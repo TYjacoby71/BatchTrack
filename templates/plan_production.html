@@ -1,14 +1,26 @@
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div x-data="planProduction()" x-init="init()" class="container">
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="z-index: 9999;">
+  <div class="text-center">
+    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <h5>Preparing Production Plan...</h5>
+    <p class="text-muted">Loading recipe data and checking containers</p>
+  </div>
+</div>
+
+<div x-data="planProduction()" x-init="init()" class="container" style="display: none;" id="mainContent">
   <h2>Plan Production: {{ recipe.name }}</h2>
 
   <!-- Scale + Yield -->
   <div class="row mb-4">
     <div class="col-md-6">
       <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
+      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input.debounce.500ms="fetchContainerPlan">
     </div>
     <div class="col-md-6">
       <label>Projected Yield:</label>
@@ -107,8 +119,21 @@ function planProduction() {
       remainingToContain: 0,
       containmentIssue: '',
 
-    init() {
-      this.fetchContainerPlan();
+    async init() {
+      try {
+        // Show main content and hide loading
+        document.getElementById('mainContent').style.display = 'block';
+        
+        // Delay container fetching slightly to allow page to render
+        setTimeout(() => {
+          this.fetchContainerPlan();
+          document.getElementById('loadingOverlay').style.display = 'none';
+        }, 100);
+      } catch (error) {
+        console.error('Initialization error:', error);
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+      }
     },
 
     getRemainingStock(containerId, currentIndex) {
@@ -144,16 +169,19 @@ function planProduction() {
       return this.stockChecked && this.stockCheckPassed;
     },
 
-    fetchContainerPlan() {
+    async fetchContainerPlan() {
       if (!this.recipeNeedsContainers) {
         this.allowedContainers = [];
         this.containersSelected = [];
         return;
       }
 
-      fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
-        .then(res => res.json())
-        .then(data => {
+      try {
+        const response = await fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
           this.allowedContainers = data.available || [];
 
           if (this.autoFill && this.recipeNeedsContainers) {
@@ -201,7 +229,12 @@ function planProduction() {
           }
 
           this.refreshContainmentStatus();
-        });
+      } catch (error) {
+        console.error('Error fetching container plan:', error);
+        this.allowedContainers = [];
+        this.containersSelected = [];
+      }
+    },
     },
 
     updateProgress() {
@@ -394,5 +427,5 @@ function planProduction() {
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
 {% endblock %}
