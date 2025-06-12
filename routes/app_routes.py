@@ -8,7 +8,7 @@ app_routes_bp = Blueprint('dashboard', __name__)
 from services.inventory_alerts import get_low_stock_ingredients
 from services.expiration_alerts import get_expired_inventory
 
-@app_routes_bp.route("/dashboard", methods=["GET", "POST"])
+@app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
     recipes = Recipe.query.all()
