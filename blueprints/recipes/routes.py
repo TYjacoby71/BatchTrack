@@ -5,7 +5,7 @@ from utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
 
 
-recipes_bp = Blueprint('recipes', __name__, template_folder='templates')
+recipes_bp = Blueprint('recipes', __name__)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -127,7 +127,7 @@ def plan_production(recipe_id):
 
     inventory_units = get_global_unit_list()
 
-    return render_template('recipes/plan_production.html', 
+    return render_template('plan_production.html', 
                          recipe=recipe,
                          base_recipe=base_recipe,
                          hide_variations=True,
