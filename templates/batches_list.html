@@ -3,6 +3,27 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <h2>Batches</h2>
 
+{% if not batches %}
+<!-- Empty State Message -->
+<div class="text-center py-5">
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-flask fa-4x text-muted mb-4"></i>
+            <h4 class="text-muted mb-3">No Batches Yet</h4>
+            <p class="text-muted mb-4">Get started by creating recipes and adding inventory, then you can start your first batch!</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Recipes
+                </a>
+                <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-boxes"></i> Manage Inventory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+
 <!-- Global Filter Section (Hidden by default) -->
 <div class="collapse mb-4" id="filterSection">
     <div class="card card-body">
@@ -429,4 +450,5 @@ document.getElementById('columnForm').addEventListener('submit', function(e) {
     collapseFilters();
 });
 </script>
+{% endif %}
 {% endblock %}
