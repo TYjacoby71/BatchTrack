@@ -127,7 +127,7 @@ def plan_production(recipe_id):
 
     inventory_units = get_global_unit_list()
 
-    return render_template('recipes/plan_production.html', 
+    return render_template('plan_production.html', 
                          recipe=recipe,
                          base_recipe=base_recipe,
                          hide_variations=True,
