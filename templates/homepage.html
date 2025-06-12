@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -14,37 +13,33 @@
 <!-- Simple Recipe Selection Modal -->
 <div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
   <h3>Select Recipe</h3>
-  <form method="post" action="{{ url_for('plan_production.plan_for_recipe') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    
-    <div style="margin-bottom: 1rem;">
-      <label for="recipe_id">Recipe:</label>
-      <select name="recipe_id" id="recipe_id" required style="width: 100%; padding: 0.5rem;">
-        <option value="">Choose Recipe...</option>
-        {% for recipe in recipes %}
-        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+  <div style="margin-bottom: 1rem;">
+    <label for="recipe_id">Recipe:</label>
+    <select name="recipe_id" id="recipe_id" required style="width: 100%; padding: 0.5rem;">
+      <option value="">Choose Recipe...</option>
+      {% for recipe in recipes %}
+      <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-    <!-- Check if selected recipe has variants -->
-    <div id="variantSection" style="display: none; margin-bottom: 1rem;">
-      <label for="variant_id">Variant (optional):</label>
-      <select name="variant_id" id="variant_id" style="width: 100%; padding: 0.5rem;">
-        <option value="">No variant</option>
-      </select>
-    </div>
+  <!-- Check if selected recipe has variants -->
+  <div id="variantSection" style="display: none; margin-bottom: 1rem;">
+    <label for="variant_id">Variant (optional):</label>
+    <select name="variant_id" id="variant_id" style="width: 100%; padding: 0.5rem;">
+      <option value="">No variant</option>
+    </select>
+  </div>
 
-    <div style="margin-bottom: 1rem;">
-      <label for="scale">Scale:</label>
-      <input type="number" step="0.1" name="scale" value="1.0" required style="width: 100%; padding: 0.5rem;">
-    </div>
+  <div style="margin-bottom: 1rem;">
+    <label for="scale">Scale:</label>
+    <input type="number" step="0.1" name="scale" value="1.0" required style="width: 100%; padding: 0.5rem;">
+  </div>
 
-    <div style="display: flex; gap: 1rem;">
-      <button type="submit" class="button">Continue to Production Planning</button>
-      <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
-    </div>
-  </form>
+  <div style="display: flex; gap: 1rem;">
+    <button type="button" onclick="planProduction()" class="button">Continue to Production Planning</button>
+    <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="button-secondary">Cancel</button>
+  </div>
 </div>
 
 <script>
@@ -52,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const recipeSelect = document.getElementById('recipe_id');
   const variantSection = document.getElementById('variantSection');
   const variantSelect = document.getElementById('variant_id');
-  
+
   // Recipe data with variants (this would be populated from your backend)
   const recipeVariants = {
     {% for recipe in recipes %}
@@ -65,15 +60,15 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
     {% endfor %}
   };
-  
+
   recipeSelect.addEventListener('change', function() {
     const selectedRecipeId = this.value;
-    
+
     if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
       // Show variant section and populate variants
       variantSection.style.display = 'block';
       variantSelect.innerHTML = '<option value="">No variant</option>';
-      
+
       recipeVariants[selectedRecipeId].forEach(variant => {
         const option = document.createElement('option');
         option.value = variant.id;
@@ -87,6 +82,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+function planProduction() {
+  const recipeId = document.getElementById('recipe_id').value;
+  const variantId = document.getElementById('variant_id').value;
+  const scale = document.querySelector('input[name="scale"]').value;
+  const csrfToken = "{{ csrf_token() }}";
+
+  // Create form dynamically
+  const form = document.createElement('form');
+  form.method = 'post';
+  form.action = "{{ url_for('recipes.plan_production') }}";
+
+  // Add CSRF token
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'csrf_token';
+  csrfInput.value = csrfToken;
+  form.appendChild(csrfInput);
+
+  // Add recipe_id
+  const recipeIdInput = document.createElement('input');
+  recipeIdInput.type = 'hidden';
+  recipeIdInput.name = 'recipe_id';
+  recipeIdInput.value = recipeId;
+  form.appendChild(recipeIdInput);
+
+    // Add variant_id
+  const variantIdInput = document.createElement('input');
+  variantIdInput.type = 'hidden';
+  variantIdInput.name = 'variant_id';
+  variantIdInput.value = variantId;
+  form.appendChild(variantIdInput);
+
+
+  // Add scale
+  const scaleInput = document.createElement('input');
+  scaleInput.type = 'hidden';
+  scaleInput.name = 'scale';
+  scaleInput.value = scale;
+  form.appendChild(scaleInput);
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
 </script>
 
 {% if alert %}
