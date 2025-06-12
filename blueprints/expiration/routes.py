@@ -7,6 +7,12 @@ from . import expiration_bp
 
 @expiration_bp.route('/alerts')
 @login_required
+def alerts():
+    """Alias for expiration_alerts to support both URL patterns"""
+    return expiration_alerts()
+
+@expiration_bp.route('/expiration-alerts')
+@login_required
 def expiration_alerts():
     """Show expiration alerts"""
     # Get items expiring soon
