@@ -241,17 +241,17 @@
                 {% set all_batches = [] %}
                 {% for group in var_inventory %}
                   {% if group.batches %}
-                    {% for batch in group.batches %}
-                      {% set _ = all_batches.append(batch) %}
-                    {% endfor %}
+                    {% set _ = all_batches.extend(group.batches) %}
                   {% endif %}
                 {% endfor %}
-                {% set total_cost = 0 %}
+                {% set cost_values = [] %}
                 {% for batch in all_batches %}
-                  {% if batch.quantity > 0 and batch.batch_cost_per_unit %}
-                    {% set total_cost = total_cost + (batch.quantity * batch.batch_cost_per_unit) %}
+                  {% if batch.quantity > 0 %}
+                    {% set cost = batch|attr_multiply('quantity', 'batch_cost_per_unit') %}
+                    {% set _ = cost_values.append(cost) %}
                   {% endif %}
                 {% endfor %}
+                {% set total_cost = cost_values|sum %}
 
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>
@@ -267,7 +267,7 @@
                     </div>
                   </td>
                   <td>
-                    {% for group in var_inventory %}
+                    {% for group_key, group in var_inventory.items() %}
                       <span class="badge bg-light text-dark me-1 mb-1">{{ group.size_label or 'Bulk' }}</span>
                     {% endfor %}
                   </td>
