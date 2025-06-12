@@ -45,7 +45,7 @@ from blueprints.batches.start_batch import start_batch_bp
 from blueprints.batches.finish_batch import finish_batch_bp
 from blueprints.batches.cancel_batch import cancel_batch_bp
 from blueprints.batches.add_extra import add_extra_bp
-from routes.batch_routes import batches_bp
+from blueprints.batches.routes import batches_bp
 from blueprints.inventory.routes import inventory_bp
 from blueprints.recipes.routes import recipes_bp
 from blueprints.conversion.routes import conversion_bp

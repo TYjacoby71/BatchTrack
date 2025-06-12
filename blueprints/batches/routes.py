@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
@@ -11,8 +12,6 @@ from werkzeug.utils import secure_filename
 from services.inventory_adjustment import process_inventory_adjustment
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
-
-
 
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
@@ -212,11 +211,9 @@ def view_batch_in_progress(batch_identifier):
     container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
     batch_cost = round(ingredient_total + container_total, 3)
 
-
     # Only pass product_quantity if it exists in the batch
     product_quantity = batch.product_quantity if hasattr(batch, 'product_quantity') else None
     # Only pass batch_cost if ingredients are used
-
 
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
@@ -248,8 +245,3 @@ def view_batch_in_progress(batch_identifier):
                          container_breakdown=container_breakdown,
                          prev_batch=prev_batch,
                          next_batch=next_batch)
-
-
-
-
-# Inventory adjustments now handled through FIFO system
