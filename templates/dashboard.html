@@ -29,120 +29,101 @@
   {% if active_batch %}
     <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
   {% endif %}
-  <button onclick="openPlanBatchModal()" class="btn btn-primary">Start Batch</button>
+  <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
 </div>
 
-<!-- Start Batch Modal -->
-<div class="modal fade" id="planBatchModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Start a New Batch</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Use the homepage "Start Batch" button to begin a new batch.</p></div>splay: none;">
-                <div class="mb-3">
-                  <label for="batchNotes" class="form-label">Batch Notes (optional)</label>
-                  <textarea id="batchNotes" class="form-control" rows="3"></textarea>
-                </div>
-                <button type="button" class="btn btn-success" onclick="startBatch()">Start Batch</button>
-              </div>
-              <button type="button" class="btn btn-secondary mt-2" onclick="showStep(1)">Back</button>
-            </div>
-          </div>
-        </div>
-      </div>
+<!-- Simple Recipe Selection Modal -->
+<div id="startFlowModal" style="display:none; padding: 1rem; margin-top: 2rem; background: #f9f9f9; border: 1px solid #ccc;">
+  <h3>Select Recipe</h3>
+  <form id="recipeForm" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div style="margin-bottom: 1rem;">
+      <label for="recipe_id">Recipe:</label>
+      <select name="recipe_id" id="recipe_id" required style="width: 100%; padding: 0.5rem;">
+        <option value="">Choose Recipe...</option>
+        {% for recipe in recipes %}
+        <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-  </div>
+
+    <!-- Check if selected recipe has variants -->
+    <div id="variantSection" style="display: none; margin-bottom: 1rem;">
+      <label for="variant_id">Variant (optional):</label>
+      <select name="variant_id" id="variant_id" style="width: 100%; padding: 0.5rem;">
+        <option value="">No variant</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <label for="scale">Scale:</label>
+      <input type="number" step="0.1" name="scale" value="1.0" required style="width: 100%; padding: 0.5rem;">
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+      <button type="submit" class="btn btn-primary">Continue to Production Planning</button>
+      <button type="button" onclick="document.getElementById('startFlowModal').style.display='none'" class="btn btn-secondary">Cancel</button>
+    </div>
+  </form>
 </div>
 
 <script>
-function openPlanBatchModal() {
-  const modal = new bootstrap.Modal(document.getElementById('planBatchModal'));
-  modal.show();
-}
-
-function showStep(step) {
-  document.querySelectorAll('.flow-step').forEach(el => el.style.display = 'none');
-  document.getElementById(`step${step}`).style.display = 'block';
-}
-
-async function checkStock() {
-  const recipeId = document.getElementById('recipeSelect').value;
-  const scale = document.getElementById('scaleInput').value;
-
-  if (!recipeId || scale <= 0) {
-    alert('Please select a recipe and enter a valid scale');
-    return;
-  }
-
-  try {
-    const response = await fetch('/stock/check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipe_id: recipeId, scale: parseFloat(scale) })
+document.addEventListener('DOMContentLoaded', function() {
+  const recipeSelect = document.getElementById('recipe_id');
+  const variantSection = document.getElementById('variantSection');
+  const variantSelect = document.getElementById('variant_id');
+  const recipeForm = document.getElementById('recipeForm');
+  
+  // Recipe data with variants (this would be populated from your backend)
+  const recipeVariants = {
+    {% for recipe in recipes %}
+    {% if recipe.variations %}
+    "{{ recipe.id }}": [
+      {% for variant in recipe.variations %}
+      {"id": "{{ variant.id }}", "name": "{{ variant.name }}"}{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endif %}
+    {% endfor %}
+  };
+  
+  if (recipeSelect) {
+    recipeSelect.addEventListener('change', function() {
+      const selectedRecipeId = this.value;
+      
+      if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
+        // Show variant section and populate variants
+        variantSection.style.display = 'block';
+        variantSelect.innerHTML = '<option value="">No variant</option>';
+        
+        recipeVariants[selectedRecipeId].forEach(variant => {
+          const option = document.createElement('option');
+          option.value = variant.id;
+          option.textContent = variant.name;
+          variantSelect.appendChild(option);
+        });
+      } else {
+        // Hide variant section
+        variantSection.style.display = 'none';
+        variantSelect.innerHTML = '<option value="">No variant</option>';
+      }
     });
 
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const data = await response.json();
-    displayStockResults(data);
-    showStep(2);
-  } catch (error) {
-    alert('Error checking stock: ' + error.message);
-  }
-}
-
-function displayStockResults(data) {
-  const resultsDiv = document.getElementById('stockCheckResults');
-  document.getElementById('stockCheckTitle').textContent = `Stock Check for ${data.recipe_name} (${data.status.toUpperCase()})`;
-
-  let html = '<table class="table"><thead><tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
-
-  data.stock_check.forEach(item => {
-    html += `<tr>
-      <td>${item.name}</td>
-      <td>${item.needed} ${item.unit}</td>
-      <td>${item.available} ${item.unit}</td>
-      <td>${item.status}</td>
-    </tr>`;
-  });
-
-  html += '</tbody></table>';
-  resultsDiv.innerHTML = html;
-
-  document.getElementById('startBatchControls').style.display = data.all_ok ? 'block' : 'none';
-}
-
-async function startBatch() {
-  const recipeId = document.getElementById('recipeSelect').value;
-  const scale = document.getElementById('scaleInput').value;
-  const notes = document.getElementById('batchNotes').value;
-
-  try {
-    const response = await fetch('/start-batch/start_batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        recipe_id: recipeId, 
-        scale: parseFloat(scale),
-        notes: notes
-      })
+    // Handle form submission with dynamic action
+    recipeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const selectedRecipeId = recipeSelect.value;
+      if (selectedRecipeId) {
+        // Set the form action to the correct recipe planning URL
+        this.action = `/recipes/${selectedRecipeId}/plan`;
+        this.submit();
+      } else {
+        alert('Please select a recipe');
+      }
     });
-
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const data = await response.json();
-    if (data.batch_id) {
-      window.location.href = `/batches/in-progress/${data.batch_id}`;
-    } else {
-      throw new Error('No batch ID returned');
-    }
-  } catch (error) {
-    alert('Error starting batch: ' + error.message);
   }
-}
+});
 </script>
 
 {% if alert %}
