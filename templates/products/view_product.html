@@ -768,12 +768,13 @@ function confirmDeleteProduct(productId, productName) {
     form.action = `/products/${productId}/delete`;
 
     // Add CSRF token if available
-    const csrfToken = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = document.querySelector('input[name="csrf_token"]') || 
+                     document.querySelector('meta[name="csrf-token"]');
     if (csrfToken) {
       const csrfInput = document.createElement('input');
       csrfInput.type = 'hidden';
       csrfInput.name = 'csrf_token';
-      csrfInput.value = csrfToken.value;
+      csrfInput.value = csrfToken.value || csrfToken.content;
       form.appendChild(csrfInput);
     }
 
