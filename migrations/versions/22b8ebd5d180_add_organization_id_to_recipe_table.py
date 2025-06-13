@@ -17,8 +17,39 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    # Add organization_id column to recipe table
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
+
+    # Set default organization_id for existing recipes (get from recipe creator's organization)
+    connection = op.get_bind()
+    
+    # Update recipes with organization_id based on their creator's organization
+    connection.execute(sa.text("""
+        UPDATE recipe 
+        SET organization_id = (
+            SELECT user.organization_id 
+            FROM user 
+            WHERE user.id = recipe.created_by
+        ) 
+        WHERE recipe.created_by IS NOT NULL
+    """))
+    
+    # For recipes without a creator, assign to the first organization
+    connection.execute(sa.text("""
+        UPDATE recipe 
+        SET organization_id = (SELECT MIN(id) FROM organization) 
+        WHERE organization_id IS NULL
+    """))
+
+    # Make the column non-nullable after setting defaults
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        batch_op.alter_column('organization_id', nullable=False)
+        batch_op.create_foreign_key('fk_recipe_organization_id', 'organization', ['organization_id'], ['id'])
 
 
 def downgrade():
-    pass
+    # Remove foreign key constraint
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_recipe_organization_id', type_='foreignkey')
+        batch_op.drop_column('organization_id')
