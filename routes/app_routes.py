@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from models import Recipe, InventoryItem, Batch
 from services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
+from utils.permissions import require_permission, user_scoped_query
 
 app_routes_bp = Blueprint('dashboard', __name__)
 
@@ -11,6 +12,7 @@ from services.dashboard_alerts import DashboardAlertService
 
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
+@require_permission('dashboard.view')
 def dashboard():
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
@@ -50,6 +52,7 @@ def dashboard():
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
+@require_permission('recipes.view')
 def check_stock():
     try:
         data = request.get_json()

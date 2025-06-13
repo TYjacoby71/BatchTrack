@@ -65,17 +65,31 @@
                     <li><hr class="dropdown-divider"></li>
                     
                     <!-- Core Features -->
+                    {% if has_permission('inventory.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    {% endif %}
+                    {% if has_permission('recipes.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+                    {% endif %}
+                    {% if has_permission('batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
+                    {% endif %}
+                    {% if has_permission('products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
+                    {% endif %}
 
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Production Tools -->
+                    {% if has_permission('timers.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+                    {% endif %}
+                    {% if has_permission('products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
+                    {% endif %}
+                    {% if has_permission('batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+                    {% endif %}
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
                             Expiration Management
@@ -85,8 +99,12 @@
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Settings & Management -->
+                    {% if has_permission('settings.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+                    {% endif %}
+                    {% if has_permission('tags.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
 
                     <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>

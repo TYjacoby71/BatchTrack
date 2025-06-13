@@ -1,0 +1,49 @@
+
+{
+  "admin": ["*"],
+  "manager": [
+    "alerts.*",
+    "batch_rules.*",
+    "recipe_builder.*",
+    "inventory.view",
+    "inventory.edit",
+    "inventory.adjust",
+    "products.view",
+    "products.edit",
+    "products.create",
+    "batches.view",
+    "batches.create",
+    "batches.edit",
+    "batches.finish",
+    "batches.cancel",
+    "recipes.view",
+    "recipes.edit",
+    "recipes.create",
+    "dashboard.view",
+    "settings.view",
+    "settings.edit",
+    "tags.manage",
+    "timers.manage"
+  ],
+  "operator": [
+    "alerts.show_timer_alerts",
+    "alerts.show_batch_alerts",
+    "batch_rules.require_timer_completion",
+    "batches.view",
+    "batches.create",
+    "batches.finish",
+    "recipes.view",
+    "inventory.view",
+    "dashboard.view",
+    "timers.view",
+    "timers.start",
+    "timers.stop"
+  ],
+  "viewer": [
+    "alerts.show_expiration_alerts",
+    "dashboard.view",
+    "batches.view",
+    "recipes.view",
+    "inventory.view"
+  ]
+}

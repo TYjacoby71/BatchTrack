@@ -729,6 +729,12 @@ function settingsManager() {
             saving: false,
 
             updateSetting(key, value) {
+                // Check permission before allowing update
+                if (!this.hasPermission(key)) {
+                    this.showFutureFeature();
+                    return;
+                }
+
                 // Convert string values to proper types
                 if (value === 'true') value = true;
                 if (value === 'false') value = false;
@@ -947,6 +953,52 @@ function settingsManager() {
                 this.messageType = 'error';
                 this.showMessage = true;
                 setTimeout(() => this.showMessage = false, 5000);
+            },
+
+            hasPermission(functionId) {
+                // Map setting IDs to permission strings
+                const settingPermissions = {
+                    'max_dashboard_alerts': 'alerts.max_dashboard_alerts',
+                    'show_expiration_alerts': 'alerts.show_expiration_alerts',
+                    'show_timer_alerts': 'alerts.show_timer_alerts',
+                    'show_low_stock_alerts': 'alerts.show_low_stock_alerts',
+                    'show_batch_alerts': 'alerts.show_batch_alerts',
+                    'show_fault_alerts': 'alerts.show_fault_alerts',
+                    'low_stock_threshold': 'alerts.low_stock_threshold',
+                    'expiration_warning_days': 'alerts.expiration_warning_days',
+                    'show_inventory_refund': 'alerts.show_inventory_refund',
+                    'show_alert_badges': 'alerts.show_alert_badges',
+                    'require_timer_completion': 'batch_rules.require_timer_completion',
+                    'allow_intermediate_tags': 'batch_rules.allow_intermediate_tags',
+                    'require_finish_confirmation': 'batch_rules.require_finish_confirmation',
+                    'stuck_batch_hours': 'batch_rules.stuck_batch_hours',
+                    'enable_variations': 'recipe_builder.enable_variations',
+                    'enable_containers': 'recipe_builder.enable_containers',
+                    'auto_scale_recipes': 'recipe_builder.auto_scale_recipes',
+                    'show_cost_breakdown': 'recipe_builder.show_cost_breakdown'
+                };
+                
+                const permission = settingPermissions[functionId];
+                if (!permission) return false;
+                
+                // Check permission server-side via template function
+                return {{ 'true' if has_permission('settings.edit') else 'false' }};
+            },
+
+            checkSectionPermission(sectionId) {
+                // Helper method to check if any setting in a section is accessible
+                const sectionSettings = {
+                    'alerts': ['max_dashboard_alerts', 'show_expiration_alerts', 'show_timer_alerts'],
+                    'batch_rules': ['require_timer_completion', 'allow_intermediate_tags'],
+                    'recipe_builder': ['enable_variations', 'enable_containers'],
+                    'inventory': [],
+                    'products': [],
+                    'system': [],
+                    'user_preferences': [],
+                    'notifications': []
+                };
+                
+                return sectionSettings[sectionId]?.some(setting => this.hasPermission(setting)) || false;
             },
 
             showFutureFeature() {
