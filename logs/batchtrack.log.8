@@ -1,10 +1,10 @@
-2025-06-13 19:39:16,743 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-13 20:48:08,273 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: user.first_name
+sqlite3.OperationalError: no such column: user.organization_id
 
 The above exception was the direct cause of the following exception:
 
@@ -21,7 +21,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 185, in index
+  File "/home/runner/workspace/app.py", line 190, in index
     if current_user.is_authenticated:
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/local.py", line 318, in __get__
@@ -38,7 +38,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/login_manager.py", line 364, in _load_user
     user = self._user_callback(user_id)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 118, in load_user
+  File "/home/runner/workspace/app.py", line 123, in load_user
     return db.session.get(User, int(user_id))
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 1058, in get
@@ -81,10 +81,9 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: user.first_name
-[SQL: SELECT user.id AS user_id, user.username AS user_username, user.password_hash AS user_password_hash, user.role AS user_role, user.first_name AS user_first_name, user.last_name AS user_last_name, user.email AS user_email, user.phone AS user_phone, user.subscription_class AS user_subscription_class, user.created_at AS user_created_at, user.last_login AS user_last_login 
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: user.organization_id
+[SQL: SELECT user.id AS user_id, user.username AS user_username, user.password_hash AS user_password_hash, user.role AS user_role, user.first_name AS user_first_name, user.last_name AS user_last_name, user.email AS user_email, user.phone AS user_phone, user.subscription_class AS user_subscription_class, user.organization_id AS user_organization_id, user.created_at AS user_created_at, user.last_login AS user_last_login 
 FROM user 
 WHERE user.id = ?]
 [parameters: (1,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-06-13 19:40:05,583 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
