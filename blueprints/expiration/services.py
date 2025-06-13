@@ -204,3 +204,66 @@ class ExpirationService:
         
         db.session.commit()
         return len(expired_fifo) + len(expired_products)
+    
+    @staticmethod
+    def mark_as_spoiled(item_type: str, item_id: int):
+        """Mark an expired item as spoiled and remove from inventory"""
+        from flask_login import current_user
+        
+        if item_type == 'fifo':
+            # Handle FIFO entry spoilage
+            entry = InventoryHistory.query.get(item_id)
+            if not entry or entry.remaining_quantity <= 0:
+                raise ValueError("FIFO entry not found or has no remaining quantity")
+            
+            # Create spoilage record
+            spoilage_record = InventoryHistory(
+                inventory_item_id=entry.inventory_item_id,
+                change_type='spoilage',
+                quantity_change=-entry.remaining_quantity,
+                unit=entry.unit,
+                remaining_quantity=0,
+                fifo_reference_id=entry.id,
+                note=f"Marked as spoiled - expired on {entry.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                quantity_used=entry.remaining_quantity,
+                timestamp=datetime.utcnow()
+            )
+            
+            # Zero out the original entry
+            entry.remaining_quantity = 0
+            
+            db.session.add(spoilage_record)
+            db.session.commit()
+            return 1
+            
+        elif item_type == 'product':
+            # Handle product inventory spoilage
+            product_item = ProductInventory.query.get(item_id)
+            if not product_item or product_item.quantity <= 0:
+                raise ValueError("Product item not found or has no remaining quantity")
+            
+            # Create spoilage record in ProductInventoryHistory
+            from models import ProductInventoryHistory
+            spoilage_record = ProductInventoryHistory(
+                product_inventory_id=product_item.id,
+                product_id=product_item.product_id,
+                change_type='spoilage',
+                quantity_change=-product_item.quantity,
+                unit=product_item.unit,
+                note=f"Marked as spoiled - expired on {product_item.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                timestamp=datetime.utcnow()
+            )
+            
+            # Zero out the product inventory
+            product_item.quantity = 0
+            
+            db.session.add(spoilage_record)
+            db.session.commit()
+            return 1
+        
+        else:
+            raise ValueError("Invalid item type. Must be 'fifo' or 'product'")
+        
+        return 0
