@@ -206,61 +206,57 @@
     </form>
 
     <!-- Ingredients Table -->
-    <div class="card">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0" id="ingredientsTable">
-            <thead class="table-light">
-              <tr>
-                <th class="col-name">Name</th>
-                <th class="col-unit">Unit</th>
-                <th class="col-quantity">Quantity</th>
-                <th class="col-density">Density (g/ml)</th>
-                <th class="col-cost">Cost/Unit</th>
-                <th class="col-category">Category</th>
-                <th class="col-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="ingredientsTableBody">
-              {% for item in items if item.type != 'container' %}
-              <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
-                <td class="col-name">{{ item.name }}</td>
-                <td class="col-unit">{{ item.unit }}</td>
-                <td class="col-quantity">{{ item.quantity }}</td>
-                <td class="col-density">{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
-                <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
-                <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
-                <td class="col-actions">
-                  <div class="action-dropdown">
-                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-                    <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                      {% if not item.is_archived %}
-                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                           class="dropdown-item text-warning" 
-                           onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                      {% else %}
-                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                           class="dropdown-item text-success">Restore</a>
-                      {% endif %}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Pagination for Ingredients -->
-        <div class="d-flex justify-content-between align-items-center p-3 border-top">
-          <div id="ingredientsInfo" class="text-muted"></div>
-          <nav>
-            <ul class="pagination pagination-sm mb-0" id="ingredientsPagination">
-            </ul>
-          </nav>
-        </div>
-      </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="ingredientsTable">
+        <thead class="table-light">
+          <tr>
+            <th class="col-name">Name</th>
+            <th class="col-unit">Unit</th>
+            <th class="col-quantity">Quantity</th>
+            <th class="col-density">Density (g/ml)</th>
+            <th class="col-cost">Cost/Unit</th>
+            <th class="col-category">Category</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ingredientsTableBody">
+          {% for item in items if item.type != 'container' %}
+          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+            <td class="col-name">{{ item.name }}</td>
+            <td class="col-unit">{{ item.unit }}</td>
+            <td class="col-quantity">{{ item.quantity }}</td>
+            <td class="col-density">{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
+            <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+            <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
+            <td class="col-actions">
+              <div class="action-dropdown">
+                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                <div class="action-menu">
+                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                  {% if not item.is_archived %}
+                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                       class="dropdown-item text-warning" 
+                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                  {% else %}
+                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                       class="dropdown-item text-success">Restore</a>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination for Ingredients -->
+    <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+      <div id="ingredientsInfo" class="text-muted"></div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="ingredientsPagination">
+        </ul>
+      </nav>
     </div>
   </div>
 
@@ -442,59 +438,55 @@
     </form>
 
     <!-- Containers Table -->
-    <div class="card">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0" id="containersTable">
-            <thead class="table-light">
-              <tr>
-                <th class="col-name">Name</th>
-                <th class="col-storage">Storage Amount</th>
-                <th class="col-storage_unit">Storage Unit</th>
-                <th class="col-quantity">Quantity in Stock</th>
-                <th class="col-cost">Cost/Unit</th>
-                <th class="col-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="containersTableBody">
-              {% for item in items if item.type == 'container' %}
-              <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
-                <td class="col-name">{{ item.name }}</td>
-                <td class="col-storage">{{ item.storage_amount or 'N/A' }}</td>
-                <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
-                <td class="col-quantity">{{ item.quantity }}</td>
-                <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
-                <td class="col-actions">
-                  <div class="action-dropdown">
-                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-                    <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                      {% if not item.is_archived %}
-                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                           class="dropdown-item text-warning" 
-                           onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                      {% else %}
-                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                           class="dropdown-item text-success">Restore</a>
-                      {% endif %}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Pagination for Containers -->
-        <div class="d-flex justify-content-between align-items-center p-3 border-top">
-          <div id="containersInfo" class="text-muted"></div>
-          <nav>
-            <ul class="pagination pagination-sm mb-0" id="containersPagination">
-            </ul>
-          </nav>
-        </div>
-      </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="containersTable">
+        <thead class="table-light">
+          <tr>
+            <th class="col-name">Name</th>
+            <th class="col-storage">Storage Amount</th>
+            <th class="col-storage_unit">Storage Unit</th>
+            <th class="col-quantity">Quantity in Stock</th>
+            <th class="col-cost">Cost/Unit</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="containersTableBody">
+          {% for item in items if item.type == 'container' %}
+          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+            <td class="col-name">{{ item.name }}</td>
+            <td class="col-storage">{{ item.storage_amount or 'N/A' }}</td>
+            <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
+            <td class="col-quantity">{{ item.quantity }}</td>
+            <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+            <td class="col-actions">
+              <div class="action-dropdown">
+                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                <div class="action-menu">
+                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                  {% if not item.is_archived %}
+                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                       class="dropdown-item text-warning" 
+                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                  {% else %}
+                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                       class="dropdown-item text-success">Restore</a>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination for Containers -->
+    <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+      <div id="containersInfo" class="text-muted"></div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="containersPagination">
+        </ul>
+      </nav>
     </div>
   </div>
 </div>
