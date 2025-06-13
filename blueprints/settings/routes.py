@@ -8,11 +8,8 @@ settings_bp = Blueprint('settings', __name__)
 @settings_bp.route('/', endpoint='index')
 @login_required
 def index():
-    try:
-        with open("settings.json", "r") as f:
-            settings_data = json.load(f)
-    except FileNotFoundError:
-        settings_data = {
+    # Define default settings structure
+    default_settings = {
             "batch_display": {
                 "visible_columns": ["status", "recipe", "start_date", "end_date", "tags", "cost"],
                 "per_page": 20,
@@ -91,13 +88,38 @@ def index():
                 "quiet_hours_end": "08:00"
             }
         }
+    
+    try:
+        with open("settings.json", "r") as f:
+            settings_data = json.load(f)
+            # Merge with defaults in case new settings were added
+            for key, value in default_settings.items():
+                if key not in settings_data:
+                    settings_data[key] = value
+                elif isinstance(value, dict) and isinstance(settings_data[key], dict):
+                    for subkey, subvalue in value.items():
+                        if subkey not in settings_data[key]:
+                            settings_data[key][subkey] = subvalue
+    except FileNotFoundError:
+        settings_data = default_settings
         # Create settings.json if it doesn't exist
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
 
+    # Convert dictionary to nested object for template compatibility
+    class SettingsObject:
+        def __init__(self, data):
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    setattr(self, key, SettingsObject(value))
+                else:
+                    setattr(self, key, value)
+    
+    settings_obj = SettingsObject(settings_data)
+    
     return render_template(
         'settings/index.html',
-        settings=settings_data,
+        settings=settings_obj,
         inventory_units=Unit.query.all(),
         product_units=[]
     )
@@ -105,14 +127,86 @@ def index():
 @settings_bp.route('/save', methods=['POST'])
 @login_required
 def save_settings():
-    settings_data = request.get_json()
+    new_settings = request.get_json()
+    
     try:
+        # Load existing settings
+        try:
+            with open("settings.json", "r") as f:
+                settings_data = json.load(f)
+        except FileNotFoundError:
+            settings_data = {}
+        
+        # Handle both full settings update and individual setting updates
+        if len(new_settings) == 1 and not any(isinstance(v, dict) for v in new_settings.values()):
+            # Individual setting update - map back to nested structure
+            key, value = next(iter(new_settings.items()))
+            
+            # Map setting keys to their proper nested locations
+            setting_mappings = {
+                'max_dashboard_alerts': ('alerts', 'max_dashboard_alerts'),
+                'show_expiration_alerts': ('alerts', 'show_expiration_alerts'),
+                'show_timer_alerts': ('alerts', 'show_timer_alerts'),
+                'show_low_stock_alerts': ('alerts', 'show_low_stock_alerts'),
+                'show_batch_alerts': ('alerts', 'show_batch_alerts'),
+                'show_fault_alerts': ('alerts', 'show_fault_alerts'),
+                'low_stock_threshold': ('alerts', 'low_stock_threshold'),
+                'expiration_warning_days': ('alerts', 'expiration_warning_days'),
+                'show_inventory_refund': ('alerts', 'show_inventory_refund'),
+                'show_alert_badges': ('alerts', 'show_alert_badges'),
+                'require_timer_completion': ('batch_rules', 'require_timer_completion'),
+                'allow_intermediate_tags': ('batch_rules', 'allow_intermediate_tags'),
+                'require_finish_confirmation': ('batch_rules', 'require_finish_confirmation'),
+                'stuck_batch_hours': ('batch_rules', 'stuck_batch_hours'),
+                'enable_variations': ('recipe_builder', 'enable_variations'),
+                'enable_containers': ('recipe_builder', 'enable_containers'),
+                'auto_scale_recipes': ('recipe_builder', 'auto_scale_recipes'),
+                'show_cost_breakdown': ('recipe_builder', 'show_cost_breakdown'),
+                'enable_fifo_tracking': ('inventory', 'enable_fifo_tracking'),
+                'show_expiration_dates': ('inventory', 'show_expiration_dates'),
+                'auto_calculate_costs': ('inventory', 'auto_calculate_costs'),
+                'enable_barcode_scanning': ('inventory', 'enable_barcode_scanning'),
+                'show_supplier_info': ('inventory', 'show_supplier_info'),
+                'enable_bulk_operations': ('inventory', 'enable_bulk_operations'),
+                'enable_product_variants': ('products', 'enable_variants'),
+                'show_profit_margins': ('products', 'show_profit_margins'),
+                'auto_generate_skus': ('products', 'auto_generate_skus'),
+                'enable_product_images': ('products', 'enable_product_images'),
+                'track_production_costs': ('products', 'track_production_costs'),
+                'items_per_page': ('display', 'per_page'),
+                'enable_csv_export': ('display', 'enable_csv_export'),
+                'auto_save_forms': ('display', 'auto_save_forms'),
+                'dashboard_layout': ('display', 'dashboard_layout'),
+                'show_quick_actions': ('display', 'show_quick_actions'),
+                'compact_view': ('display', 'compact_view'),
+                'reduce_animations': ('accessibility', 'reduce_animations'),
+                'high_contrast_mode': ('accessibility', 'high_contrast_mode'),
+                'keyboard_navigation': ('accessibility', 'keyboard_navigation'),
+                'large_buttons': ('accessibility', 'large_buttons'),
+                'auto_backup': ('system', 'auto_backup'),
+                'log_level': ('system', 'log_level'),
+                'browser_notifications': ('notifications', 'browser_notifications'),
+                'email_alerts': ('notifications', 'email_alerts'),
+                'alert_frequency': ('notifications', 'alert_frequency'),
+                'quiet_hours_start': ('notifications', 'quiet_hours_start'),
+                'quiet_hours_end': ('notifications', 'quiet_hours_end')
+            }
+            
+            if key in setting_mappings:
+                section, setting_key = setting_mappings[key]
+                if section not in settings_data:
+                    settings_data[section] = {}
+                settings_data[section][setting_key] = value
+        else:
+            # Full settings update
+            settings_data.update(new_settings)
+        
+        # Save updated settings
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
-        flash('Settings saved successfully')
+        
         return jsonify({"status": "success"})
     except Exception as e:
-        flash('Error saving settings')
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # Catch-all route for unimplemented settings
