@@ -47,6 +47,7 @@ body {
   padding: var(--space-6);
   margin-bottom: var(--space-8);
   border: 1px solid var(--color-border);
+  overflow: visible;
 }
 
 /* Ensure navbar fits within app container */
@@ -87,6 +88,7 @@ body {
 /* Table responsive wrapper for horizontal scrolling */
 .table-responsive {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-2);
   box-shadow: var(--shadow-1);
@@ -142,7 +144,7 @@ body {
   border: 1px solid var(--color-border);
   padding: var(--space-2);
   min-width: 120px;
-  z-index: 9999;
+  z-index: 10000;
   display: none;
 }
 
