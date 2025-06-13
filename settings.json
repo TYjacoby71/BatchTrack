@@ -42,7 +42,7 @@
     "show_cost_breakdown": true
   },
   "inventory": {
-    "enable_fifo_tracking": null,
+    "enable_fifo_tracking": true,
     "show_expiration_dates": true,
     "auto_calculate_costs": true,
     "enable_barcode_scanning": false,
@@ -51,8 +51,8 @@
   },
   "accessibility": {
     "reduce_animations": false,
-    "high_contrast_mode": null,
-    "keyboard_navigation": null,
+    "high_contrast_mode": false,
+    "keyboard_navigation": false,
     "large_buttons": false
   },
   "system": {

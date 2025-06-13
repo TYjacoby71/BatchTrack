@@ -289,77 +289,71 @@
     <!-- Inventory Management Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-boxes text-success"></i> Inventory Management
+            <div class="card border-secondary">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0 text-muted">
+                        <i class="fas fa-boxes text-muted"></i> Inventory Management
+                        <span class="badge bg-secondary ms-2">Future Feature</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Tracking Features</h6>
+                            <h6 class="text-muted">Tracking Features</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-fifo-tracking"
-                                       x-model="settings.inventory.enable_fifo_tracking"
-                                       @change="updateSetting('enable_fifo_tracking', $event.target.checked)">
-                                <label class="form-check-label" for="enable-fifo-tracking">
+                                <input class="form-check-input" type="checkbox" id="enable-fifo-tracking" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-fifo-tracking">
                                     Enable FIFO (First In, First Out) tracking
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="show-expiration-dates"
-                                       x-model="settings.inventory.show_expiration_dates"
-                                       @change="updateSetting('show_expiration_dates', $event.target.checked)">
-                                <label class="form-check-label" for="show-expiration-dates">
+                                <input class="form-check-input" type="checkbox" id="show-expiration-dates" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="show-expiration-dates">
                                     Show expiration dates in inventory
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="auto-calculate-costs"
-                                       x-model="settings.inventory.auto_calculate_costs"
-                                       @change="updateSetting('auto_calculate_costs', $event.target.checked)">
-                                <label class="form-check-label" for="auto-calculate-costs">
+                                <input class="form-check-input" type="checkbox" id="auto-calculate-costs" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="auto-calculate-costs">
                                     Auto-calculate ingredient costs
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="show-supplier-info"
-                                       x-model="settings.inventory.show_supplier_info"
-                                       @change="updateSetting('show_supplier_info', $event.target.checked)">
-                                <label class="form-check-label" for="show-supplier-info">
+                                <input class="form-check-input" type="checkbox" id="show-supplier-info" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="show-supplier-info">
                                     Show supplier information
                                 </label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6>Advanced Features</h6>
+                            <h6 class="text-muted">Advanced Features</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-barcode-scanning"
-                                       x-model="settings.inventory.enable_barcode_scanning"
-                                       @change="updateSetting('enable_barcode_scanning', $event.target.checked)">
-                                <label class="form-check-label" for="enable-barcode-scanning">
-                                    Enable barcode scanning (future feature)
+                                <input class="form-check-input" type="checkbox" id="enable-barcode-scanning" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-barcode-scanning">
+                                    Enable barcode scanning
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-bulk-operations"
-                                       x-model="settings.inventory.enable_bulk_operations"
-                                       @change="updateSetting('enable_bulk_operations', $event.target.checked)">
-                                <label class="form-check-label" for="enable-bulk-operations">
+                                <input class="form-check-input" type="checkbox" id="enable-bulk-operations" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-bulk-operations">
                                     Enable bulk inventory operations
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
-                                       x-model="settings.alerts.show_inventory_refund"
-                                       @change="updateSetting('show_inventory_refund', $event.target.checked)">
-                                <label class="form-check-label" for="showInventoryRefund">
+                                <input class="form-check-input" type="checkbox" id="showInventoryRefund" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="showInventoryRefund">
                                     Show inventory refund details
                                 </label>
                             </div>
@@ -373,59 +367,55 @@
     <!-- Product Management Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-shopping-bag text-info"></i> Product Management
+            <div class="card border-secondary">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0 text-muted">
+                        <i class="fas fa-shopping-bag text-muted"></i> Product Management
+                        <span class="badge bg-secondary ms-2">Future Feature</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Product Features</h6>
+                            <h6 class="text-muted">Product Features</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-product-variants"
-                                       x-model="settings.products.enable_variants"
-                                       @change="updateSetting('enable_variants', $event.target.checked)">
-                                <label class="form-check-label" for="enable-product-variants">
+                                <input class="form-check-input" type="checkbox" id="enable-product-variants" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-product-variants">
                                     Enable product variants
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="show-profit-margins"
-                                       x-model="settings.products.show_profit_margins"
-                                       @change="updateSetting('show_profit_margins', $event.target.checked)">
-                                <label class="form-check-label" for="show-profit-margins">
+                                <input class="form-check-input" type="checkbox" id="show-profit-margins" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="show-profit-margins">
                                     Show profit margins
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="track-production-costs"
-                                       x-model="settings.products.track_production_costs"
-                                       @change="updateSetting('track_production_costs', $event.target.checked)">
-                                <label class="form-check-label" for="track-production-costs">
+                                <input class="form-check-input" type="checkbox" id="track-production-costs" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="track-production-costs">
                                     Track production costs
                                 </label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6>Product Display</h6>
+                            <h6 class="text-muted">Product Display</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-product-images"
-                                       x-model="settings.products.enable_product_images"
-                                       @change="updateSetting('enable_product_images', $event.target.checked)">
-                                <label class="form-check-label" for="enable-product-images">
+                                <input class="form-check-input" type="checkbox" id="enable-product-images" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-product-images">
                                     Enable product images
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="auto-generate-skus"
-                                       x-model="settings.products.auto_generate_skus"
-                                       @change="updateSetting('auto_generate_skus', $event.target.checked)">
-                                <label class="form-check-label" for="auto-generate-skus">
+                                <input class="form-check-input" type="checkbox" id="auto-generate-skus" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="auto-generate-skus">
                                     Auto-generate SKU codes
                                 </label>
                             </div>
@@ -439,16 +429,17 @@
     <!-- System Management Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-tools text-secondary"></i> System Management
+            <div class="card border-secondary">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0 text-muted">
+                        <i class="fas fa-tools text-muted"></i> System Management
+                        <span class="badge bg-secondary ms-2">Future Feature</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Data Management</h6>
+                            <h6 class="text-muted">Data Management</h6>
                             <div class="list-group mb-3">
                                 <a href="{{ url_for('conversion_bp.manage_units') }}" class="list-group-item list-group-item-action">
                                     <i class="fas fa-ruler text-info"></i> Unit Management
@@ -459,19 +450,16 @@
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="auto-backup"
-                                       x-model="settings.system.auto_backup"
-                                       @change="updateSetting('auto_backup', $event.target.checked)">
-                                <label class="form-check-label" for="auto-backup">
+                                <input class="form-check-input" type="checkbox" id="auto-backup" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="auto-backup">
                                     Enable automatic backups
                                 </label>
                             </div>
 
                             <div class="mb-3">
-                                <label for="log-level" class="form-label">System log level</label>
-                                <select class="form-select" id="log-level"
-                                        x-model="settings.system.log_level"
-                                        @change="updateSetting('log_level', $event.target.value)">
+                                <label for="log-level" class="form-label text-muted">System log level</label>
+                                <select class="form-select" id="log-level" disabled @click="showFutureFeature()">
                                     <option value="ERROR">Error only</option>
                                     <option value="WARNING">Warning & above</option>
                                     <option value="INFO">Info & above</option>
@@ -480,12 +468,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6>Display Preferences</h6>
+                            <h6 class="text-muted">Display Preferences</h6>
                             <div class="mb-3">
-                                <label for="items-per-page" class="form-label">Items per page</label>
-                                <select class="form-select" id="items-per-page"
-                                        x-model="settings.display.per_page"
-                                        @change="updateSetting('per_page', $event.target.value)">
+                                <label for="items-per-page" class="form-label text-muted">Items per page</label>
+                                <select class="form-select" id="items-per-page" disabled @click="showFutureFeature()">
                                     <option value="10">10 items</option>
                                     <option value="20">20 items</option>
                                     <option value="50">50 items</option>
@@ -494,28 +480,25 @@
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="enable-csv-export" 
-                                       x-model="settings.display.enable_csv_export"
-                                       @change="updateSetting('enable_csv_export', $event.target.checked)">
-                                <label class="form-check-label" for="enable-csv-export">
+                                <input class="form-check-input" type="checkbox" id="enable-csv-export" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="enable-csv-export">
                                     Enable CSV export functionality
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="auto-save-forms"
-                                       x-model="settings.display.auto_save_forms"
-                                       @change="updateSetting('auto_save_forms', $event.target.checked)">
-                                <label class="form-check-label" for="auto-save-forms">
+                                <input class="form-check-input" type="checkbox" id="auto-save-forms" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="auto-save-forms">
                                     Auto-save form progress
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="compact-view"
-                                       x-model="settings.display.compact_view"
-                                       @change="updateSetting('compact_view', $event.target.checked)">
-                                <label class="form-check-label" for="compact-view">
+                                <input class="form-check-input" type="checkbox" id="compact-view" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="compact-view">
                                     Use compact view layouts
                                 </label>
                             </div>
@@ -529,21 +512,20 @@
     <!-- User Preferences Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-user text-info"></i> User Preferences
+            <div class="card border-secondary">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0 text-muted">
+                        <i class="fas fa-user text-muted"></i> User Preferences
+                        <span class="badge bg-secondary ms-2">Future Feature</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Dashboard Layout</h6>
+                            <h6 class="text-muted">Dashboard Layout</h6>
                             <div class="mb-3">
-                                <label for="dashboard-layout" class="form-label">Default dashboard view</label>
-                                <select class="form-select" id="dashboard-layout"
-                                        x-model="settings.display.dashboard_layout"
-                                        @change="updateSetting('dashboard_layout', $event.target.value)">
+                                <label for="dashboard-layout" class="form-label text-muted">Default dashboard view</label>
+                                <select class="form-select" id="dashboard-layout" disabled @click="showFutureFeature()">
                                     <option value="compact">Compact (minimal information)</option>
                                     <option value="standard">Standard (balanced view)</option>
                                     <option value="detailed">Detailed (all information)</option>
@@ -551,48 +533,43 @@
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="show-quick-actions" 
-                                       x-model="settings.display.show_quick_actions"
-                                       @change="updateSetting('show_quick_actions', $event.target.checked)">
-                                <label class="form-check-label" for="show-quick-actions">
+                                <input class="form-check-input" type="checkbox" id="show-quick-actions" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="show-quick-actions">
                                     Show quick action buttons
                                 </label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6>Accessibility</h6>
+                            <h6 class="text-muted">Accessibility</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="reduce-animations"
-                                       x-model="settings.accessibility.reduce_animations"
-                                       @change="updateSetting('reduce_animations', $event.target.checked)">
-                                <label class="form-check-label" for="reduce-animations">
+                                <input class="form-check-input" type="checkbox" id="reduce-animations" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="reduce-animations">
                                     Reduce animations and transitions
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="high-contrast-mode"
-                                       x-model="settings.accessibility.high_contrast_mode"
-                                       @change="updateSetting('high_contrast_mode', $event.target.checked)">
-                                <label class="form-check-label" for="high-contrast-mode">
+                                <input class="form-check-input" type="checkbox" id="high-contrast-mode" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="high-contrast-mode">
                                     High contrast mode
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="keyboard-navigation" 
-                                       x-model="settings.accessibility.keyboard_navigation"
-                                       @change="updateSetting('keyboard_navigation', $event.target.checked)">
-                                <label class="form-check-label" for="keyboard-navigation">
+                                <input class="form-check-input" type="checkbox" id="keyboard-navigation" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="keyboard-navigation">
                                     Enhanced keyboard navigation
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="large-buttons"
-                                       x-model="settings.accessibility.large_buttons"
-                                       @change="updateSetting('large_buttons', $event.target.checked)">
-                                <label class="form-check-label" for="large-buttons">
+                                <input class="form-check-input" type="checkbox" id="large-buttons" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="large-buttons">
                                     Use larger buttons and controls
                                 </label>
                             </div>
@@ -606,39 +583,36 @@
     <!-- Notifications Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-envelope text-warning"></i> Notifications
+            <div class="card border-secondary">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0 text-muted">
+                        <i class="fas fa-envelope text-muted"></i> Notifications
+                        <span class="badge bg-secondary ms-2">Future Feature</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Notification Types</h6>
+                            <h6 class="text-muted">Notification Types</h6>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="browser-notifications"
-                                       x-model="settings.notifications.browser_notifications"
-                                       @change="updateSetting('browser_notifications', $event.target.checked)">
-                                <label class="form-check-label" for="browser-notifications">
+                                <input class="form-check-input" type="checkbox" id="browser-notifications" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="browser-notifications">
                                     Browser notifications
                                 </label>
                             </div>
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="email-alerts"
-                                       x-model="settings.notifications.email_alerts"
-                                       @change="updateSetting('email_alerts', $event.target.checked)">
-                                <label class="form-check-label" for="email-alerts">
-                                    Email alerts (future feature)
+                                <input class="form-check-input" type="checkbox" id="email-alerts" disabled
+                                       @click="showFutureFeature()">
+                                <label class="form-check-label text-muted" for="email-alerts">
+                                    Email alerts
                                 </label>
                             </div>
 
                             <div class="mb-3">
-                                <label for="alert-frequency" class="form-label">Alert frequency</label>
-                                <select class="form-select" id="alert-frequency"
-                                        x-model="settings.notifications.alert_frequency"
-                                        @change="updateSetting('alert_frequency', $event.target.value)">
+                                <label for="alert-frequency" class="form-label text-muted">Alert frequency</label>
+                                <select class="form-select" id="alert-frequency" disabled @click="showFutureFeature()">
                                     <option value="immediate">Immediate</option>
                                     <option value="hourly">Hourly digest</option>
                                     <option value="daily">Daily digest</option>
@@ -646,19 +620,17 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6>Quiet Hours</h6>
+                            <h6 class="text-muted">Quiet Hours</h6>
                             <div class="mb-3">
-                                <label for="quiet-hours-start" class="form-label">Quiet hours start</label>
-                                <input type="time" class="form-control" id="quiet-hours-start" 
-                                       x-model="settings.notifications.quiet_hours_start"
-                                       @change="updateSetting('quiet_hours_start', $event.target.value)">
+                                <label for="quiet-hours-start" class="form-label text-muted">Quiet hours start</label>
+                                <input type="time" class="form-control" id="quiet-hours-start" disabled
+                                       @click="showFutureFeature()">
                             </div>
 
                             <div class="mb-3">
-                                <label for="quiet-hours-end" class="form-label">Quiet hours end</label>
-                                <input type="time" class="form-control" id="quiet-hours-end" 
-                                       x-model="settings.notifications.quiet_hours_end"
-                                       @change="updateSetting('quiet_hours_end', $event.target.value)">
+                                <label for="quiet-hours-end" class="form-label text-muted">Quiet hours end</label>
+                                <input type="time" class="form-control" id="quiet-hours-end" disabled
+                                       @click="showFutureFeature()">
                             </div>
                         </div>
                     </div>
@@ -754,6 +726,7 @@ function settingsManager() {
             message: '',
             messageType: 'success',
             showPasswordModal: false,
+            saving: false,
 
             updateSetting(key, value) {
                 // Convert string values to proper types
@@ -974,6 +947,10 @@ function settingsManager() {
                 this.messageType = 'error';
                 this.showMessage = true;
                 setTimeout(() => this.showMessage = false, 5000);
+            },
+
+            showFutureFeature() {
+                this.showErrorMessage('Future feature coming soon!');
             }
         }
     }
@@ -1016,6 +993,8 @@ function settingsManager() {
         </div>
     </div>
 </div>
+{% endblock %}
+
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 {% endblock %}
