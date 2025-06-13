@@ -5,27 +5,8 @@
   <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 </div>
 
-{% if expired %}
-<div class="alert alert-danger mb-3">
-    <strong>⚠️ Expired Inventory:</strong>
-    <ul class="mb-0">
-        {% for item in expired %}
-            <li>{{ item.variant_label }} {{ item.size_label }} – {{ item.unit }} (Batch #{{ item.batch_id }}) – Expired on {{ item.expiration_date }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-{% if low_stock_items %}
-<div class="alert alert-warning">
-  <strong>⚠️ Low Stock Alerts:</strong>
-  <ul class="list-unstyled mb-0 mt-2">
-    {% for item in low_stock_items %}
-      <li>{{ item.name }} – {{ item.quantity }} {{ item.unit }} remaining (Threshold: {{ item.low_stock_threshold }} {{ item.unit }})</li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
+<!-- Unified Dashboard Alerts -->
+{% include 'components/dashboard_alerts.html' %}
 
 <div class="text-center mb-4">
   <div class="d-inline-flex gap-3">

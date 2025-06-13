@@ -14,8 +14,10 @@ from services.dashboard_alerts import DashboardAlertService
 def dashboard():
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
-    low_stock_items = get_low_stock_ingredients()
-    expired = ExpirationService.get_expired_inventory_items()
+    
+    # Get unified dashboard alerts
+    alert_data = DashboardAlertService.get_dashboard_alerts()
+    
     stock_check = None
     selected_recipe = None
     scale = 1
@@ -44,8 +46,7 @@ def dashboard():
                          status=status,
                          active_batch=active_batch,
                          current_user=current_user,
-                         low_stock_items=low_stock_items,
-                         expired=expired)
+                         alert_data=alert_data)
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
