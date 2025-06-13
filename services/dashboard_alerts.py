@@ -95,22 +95,22 @@ class DashboardAlertService:
         if DashboardAlertService._is_alert_enabled('show_timer_alerts'):
             timer_alerts = DashboardAlertService._get_timer_alerts()
             if timer_alerts['expired_count'] > 0:
-            # Get the first expired timer's batch for redirection
-            batch_url = '/batches/'
-            if timer_alerts['expired_timers']:
-                first_timer = timer_alerts['expired_timers'][0]
-                if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
-                    batch_url = f'/batches/in-progress/{first_timer.batch_id}'
-            
-            alerts.append({
-                'priority': 'HIGH',
-                'type': 'expired_timers',
-                'title': 'Timer Alert',
-                'message': f"{timer_alerts['expired_count']} timers have expired",
-                'action_url': batch_url,
-                'action_text': 'View Batch',
-                'dismissible': True
-            })
+                # Get the first expired timer's batch for redirection
+                batch_url = '/batches/'
+                if timer_alerts['expired_timers']:
+                    first_timer = timer_alerts['expired_timers'][0]
+                    if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
+                        batch_url = f'/batches/in-progress/{first_timer.batch_id}'
+                
+                alerts.append({
+                    'priority': 'HIGH',
+                    'type': 'expired_timers',
+                    'title': 'Timer Alert',
+                    'message': f"{timer_alerts['expired_count']} timers have expired",
+                    'action_url': batch_url,
+                    'action_text': 'View Batch',
+                    'dismissible': True
+                })
         
         # MEDIUM: Active batches needing attention
         active_batches = Batch.query.filter_by(status='in_progress').count()
