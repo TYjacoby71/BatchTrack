@@ -731,7 +731,7 @@ function resetToDefaults() {
         ];
 
         const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-        allCheckboxes.forEachcheckbox => {
+        allCheckboxes.forEach(checkbox => {
             checkbox.checked = defaultChecked.includes(checkbox.id);
         });
 
@@ -739,11 +739,8 @@ function resetToDefaults() {
     }
 }
 </script>
+{% endblock %}
+
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 {% endblock %}
-    <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
-    </body>
-</html>
