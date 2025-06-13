@@ -2,31 +2,38 @@
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container-fluid">
-    <h2>Expiration Management</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Expiration Management</h2>
+        <button class="btn btn-outline-secondary btn-sm" onclick="archiveExpired()">
+            <i class="fas fa-archive"></i> Archive Expired Items
+        </button>
+    </div>
     
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card border-danger">
+            <div class="card">
                 <div class="card-body text-center">
-                    <h3 class="text-danger">{{ expired.fifo_entries|length + expired.product_inventory|length }}</h3>
-                    <p class="card-text">Expired Items</p>
+                    <h3 class="text-danger mb-2">{{ expired.fifo_entries|length + expired.product_inventory|length }}</h3>
+                    <p class="card-text text-muted mb-0">Expired Items</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-warning">
+            <div class="card">
                 <div class="card-body text-center">
-                    <h3 class="text-warning">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</h3>
-                    <p class="card-text">Expiring Within 7 Days</p>
+                    <h3 class="text-warning mb-2">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</h3>
+                    <p class="card-text text-muted mb-0">Expiring Within 7 Days</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-info">
+            <div class="card">
                 <div class="card-body text-center">
-                    <button class="btn btn-info" onclick="archiveExpired()">Archive Expired</button>
-                    <p class="card-text small">Remove zero-quantity expired items</p>
+                    <h3 class="text-success mb-2">
+                        <i class="fas fa-check-circle"></i>
+                    </h3>
+                    <p class="card-text text-muted mb-0">System Status: Active</p>
                 </div>
             </div>
         </div>
@@ -34,23 +41,29 @@
 
     <!-- Expired Items -->
     <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h4>Expired Items</h4>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                Expired Items
+            </h5>
+            {% if expired.fifo_entries or expired.product_inventory %}
+                <span class="badge bg-danger">{{ expired.fifo_entries|length + expired.product_inventory|length }}</span>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if expired.fifo_entries or expired.product_inventory %}
                 <div class="row">
                     {% if expired.fifo_entries %}
                     <div class="col-md-6">
-                        <h5>Ingredient Inventory (FIFO)</h5>
+                        <h6 class="text-muted mb-3">Ingredient Inventory (FIFO)</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
                                         <th>Expired</th>
-                                        <th>FIFO ID</th>
+                                        <th class="text-muted">ID</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -58,7 +71,11 @@
                                     <tr>
                                         <td>{{ item.name }}</td>
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
-                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <small class="text-danger">
+                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
+                                            </small>
+                                        </td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                     </tr>
                                     {% endfor %}
@@ -70,10 +87,10 @@
                     
                     {% if expired.product_inventory %}
                     <div class="col-md-6">
-                        <h5>Product Inventory</h5>
+                        <h6 class="text-muted mb-3">Product Inventory</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
                                         <th>Variant/Size</th>
@@ -87,7 +104,11 @@
                                         <td>Product #{{ item.product_id }}</td>
                                         <td>{{ item.variant }} - {{ item.size_label }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
-                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <small class="text-danger">
+                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
+                                            </small>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -97,25 +118,34 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="alert alert-success">No expired items found!</div>
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
+                    <p class="text-muted mb-0">No expired items found!</p>
+                </div>
             {% endif %}
         </div>
     </div>
 
     <!-- Expiring Soon -->
     <div class="card">
-        <div class="card-header bg-warning text-dark">
-            <h4>Expiring Within 7 Days</h4>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-clock text-warning me-2"></i>
+                Expiring Within 7 Days
+            </h5>
+            {% if expiring_soon.fifo_entries or expiring_soon.product_inventory %}
+                <span class="badge bg-warning text-dark">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</span>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if expiring_soon.fifo_entries or expiring_soon.product_inventory %}
                 <div class="row">
                     {% if expiring_soon.fifo_entries %}
                     <div class="col-md-6">
-                        <h5>Ingredient Inventory (FIFO)</h5>
+                        <h6 class="text-muted mb-3">Ingredient Inventory (FIFO)</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
@@ -129,10 +159,12 @@
                                     <tr>
                                         <td>{{ item.name }}</td>
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
-                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>
-                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning{% else %}bg-info{% endif %}">
-                                                {{ days_left }} days
+                                            <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>
                                     </tr>
@@ -145,10 +177,10 @@
                     
                     {% if expiring_soon.product_inventory %}
                     <div class="col-md-6">
-                        <h5>Product Inventory</h5>
+                        <h6 class="text-muted mb-3">Product Inventory</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
                                         <th>Variant/Size</th>
@@ -164,10 +196,12 @@
                                         <td>Product #{{ item.product_id }}</td>
                                         <td>{{ item.variant }} - {{ item.size_label }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
-                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>
-                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning{% else %}bg-info{% endif %}">
-                                                {{ days_left }} days
+                                            <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>
                                     </tr>
@@ -179,7 +213,10 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="alert alert-success">No items expiring soon!</div>
+                <div class="text-center py-4">
+                    <i class="fas fa-smile text-success fa-2x mb-3"></i>
+                    <p class="text-muted mb-0">No items expiring soon!</p>
+                </div>
             {% endif %}
         </div>
     </div>
