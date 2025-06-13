@@ -35,9 +35,15 @@
             left: -9999px !important;
             pointer-events: none !important;
         }
+
+        .app-container {
+            max-width: 1200px; /* Adjust as needed */
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
+    <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('dashboard.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">Batchtrack 8.968(2) pre bp recactor</a>
@@ -63,7 +69,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard') }}">User Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Core Features -->
                     {% if has_permission('inventory.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
@@ -115,19 +121,23 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-info">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <main class="container-xl mt-4">
+        <div class="section-spacing">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-info">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
 
-        {% block content %}{% endblock %}
-    </div>
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
 
     {% include 'components/modals/unit_converter_modal.html' %}
+    </div>
 
     <!-- jQuery first -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
