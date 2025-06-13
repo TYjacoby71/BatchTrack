@@ -3,609 +3,698 @@
 {% block content %}
 <h2>Inventory Management</h2>
 
-<!-- Global Controls -->
-<div class="card mb-4">
-  <div class="card-body">
-    <div class="row align-items-end">
-      <div class="col-md-4">
-        <label class="form-label">Search by Name</label>
-        <input type="text" id="globalSearch" class="form-control" placeholder="Search inventory items...">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Items per page</label>
-        <select id="itemsPerPage" class="form-select">
-          <option value="10">10 items</option>
-          <option value="20" selected>20 items</option>
-          <option value="50">50 items</option>
-        </select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Show Columns</label>
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleColumnFilter()">
-            <i class="fas fa-columns"></i> Columns
-          </button>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Actions</label>
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIngredientModal">
-            <i class="fas fa-plus"></i> Add Ingredient
-          </button>
-          <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContainerModal">
-            <i class="fas fa-plus"></i> Add Container
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Column Filter Panel (Hidden by default) -->
-    <div id="columnFilterPanel" class="row mt-3" style="display: none;">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">
-            <h6>Show/Hide Columns</h6>
-            <div class="row">
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-unit" checked data-column="unit">
-                  <label class="form-check-label" for="col-unit">Unit</label>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-quantity" checked data-column="quantity">
-                  <label class="form-check-label" for="col-quantity">Quantity</label>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-density" checked data-column="density">
-                  <label class="form-check-label" for="col-density">Density</label>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-cost" checked data-column="cost">
-                  <label class="form-check-label" for="col-cost">Cost/Unit</label>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-category" checked data-column="category">
-                  <label class="form-check-label" for="col-category">Category</label>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="form-check">
-                  <input class="form-check-input column-toggle" type="checkbox" id="col-storage" checked data-column="storage">
-                  <label class="form-check-label" for="col-storage">Storage</label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="inventory-sections">
-  <!-- Ingredients Section -->
   <div class="section">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3>Ingredients</h3>
-      <small class="text-muted">Showing <span id="ingredientCount">0</span> items</small>
+    <h3>Ingredients</h3>
+
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
+      <button type="button" class="btn btn-outline-secondary" onclick="toggleIngredientsFilter()">
+        <i class="fas fa-filter"></i> Filters
+      </button>
     </div>
-    
-    <div class="table-responsive">
-      <table class="table" id="ingredientsTable">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th class="column-unit">Unit</th>
-            <th class="column-quantity">Quantity</th>
-            <th class="column-density">Density (g/ml)</th>
-            <th class="column-cost">Cost/Unit</th>
-            <th class="column-category">Category</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="ingredientsTableBody">
-          {% for item in items if item.type != 'container' %}
-          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="ingredient">
-            <td>
-              <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
-                {{ item.name }}
-                {% if item.is_archived %}<span class="badge bg-secondary ms-1">Archived</span>{% endif %}
-              </a>
-            </td>
-            <td class="column-unit">{{ item.unit or 'count' }}</td>
-            <td class="column-quantity">
-              {% if item.quantity < item.low_stock_threshold and item.low_stock_threshold > 0 %}
-                <span class="text-danger fw-bold">{{ "%.2f"|format(item.quantity) }}</span>
-              {% else %}
-                {{ "%.2f"|format(item.quantity) }}
-              {% endif %}
-            </td>
-            <td class="column-density">{{ "%.2f"|format(item.density) if item.density else '-' }}</td>
-            <td class="column-cost">${{ "%.2f"|format(item.cost_per_unit) if item.cost_per_unit else '0.00' }}</td>
-            <td class="column-category">{{ item.category.name if item.category else 'Custom' }}</td>
-            <td>
-              <div class="action-dropdown">
-                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-                <div class="action-menu">
-                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                  {% if not item.is_archived %}
-                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                       class="dropdown-item text-warning" 
-                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                  {% else %}
-                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                       class="dropdown-item text-success">Restore</a>
-                  {% endif %}
-                </div>
+
+    <!-- Filter Section for Ingredients -->
+    <div class="collapse mb-3" id="ingredientsFilterSection">
+      <div class="card card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <input type="text" id="ingredientsNameFilter" class="form-control" placeholder="Search by name...">
+          </div>
+          <div class="col-md-3">
+            <select id="ingredientsSortFilter" class="form-select">
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="quantity_asc">Quantity (Low to High)</option>
+              <option value="quantity_desc">Quantity (High to Low)</option>
+              <option value="cost_asc">Cost (Low to High)</option>
+              <option value="cost_desc">Cost (High to Low)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="ingredientsPerPage" class="form-select">
+              <option value="10">10 per page</option>
+              <option value="20" selected>20 per page</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                Column Selection
+              </button>
+              <ul class="dropdown-menu p-2">
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="name"> Name</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="unit"> Unit</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="density"> Density</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="category"> Category</label></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-Adjust Inventory Form -->
+    <form id="updateInventoryForm" style="display: none;" 
+      x-data="{ 
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        submitForm(e) {
+          e.preventDefault();
+          const promises = this.rows.map(row => {
+            if (!row.id || !row.quantity) return null;
+
+            const formData = new FormData();
+            formData.append('quantity', row.quantity);
+            formData.append('input_unit', row.unit);
+            formData.append('change_type', row.change_type);
+            formData.append('cost_entry_type', row.cost_entry_type);
+
+            if (row.cost_entry_type !== 'no_change') {
+              formData.append('cost_per_unit', row.cost || 0);
+            }
+
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            return fetch('/inventory/adjust/' + row.id, {
+              method: 'POST',
+              body: formData
+            });
+          });
+
+          Promise.all(promises)
+            .then(() => window.location.reload())
+            .catch(err => alert('Error updating inventory'));
+        },
+        resetRows() {
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+        },
+        updateCostHelp(event, index) {
+          const costType = event.target.value;
+          if (costType === 'no_change') {
+            this.rows[index].costHelp = 'Cost will remain unchanged';
+          } else if (costType === 'per_unit') {
+            this.rows[index].costHelp = 'Enter cost per unit';
+          } else if (costType === 'total') {
+            this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
+          }
+        }
+      }">
+
+      <template x-for="(row, index) in rows" :key="index">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col">
+            <label class="form-label">Item</label>
+            <select x-model="row.id" class="form-select" required>
+              <option value="">Select Item</option>
+              {% for item in items if item.type != 'container' %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Unit</label>
+            <select x-model="row.unit" class="form-select" required>
+              {% for unit in get_global_unit_list() %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost Entry Type</label>
+            <select x-model="row.cost_entry_type" class="form-select" @change="updateCostHelp($event, index)">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost</label>
+            <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+            <small class="form-text text-muted" x-text="row.costHelp"></small>
+            <input type="hidden" x-model="row.change_type" value="restock">
+          </div>
+          <div class="col-auto d-flex align-items-end">
+            <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <div class="mt-3">
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
+        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
+      </div>
+    </form>
+
+    <!-- Add New Ingredient Form -->
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="type" value="ingredient">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Quantity</label>
+          <input type="number" step="0.01" name="quantity" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Unit</label>
+          <select name="unit" class="form-select" required>
+            {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <div x-data="{ isPerishable: false }">
+            <h5 class="mb-2">Perishable</h5>
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
               </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <input type="number" name="shelf_life_days" class="form-control" 
+                     placeholder="Shelf Life (days)" min="1"
+                     :required="isPerishable"
+                     :disabled="!isPerishable"
+                     :class="{ 'bg-light': !isPerishable }">
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cost/Unit</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          </div>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-success">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Ingredients Table -->
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="ingredientsTable">
+            <thead class="table-light">
+              <tr>
+                <th class="col-name">Name</th>
+                <th class="col-unit">Unit</th>
+                <th class="col-quantity">Quantity</th>
+                <th class="col-density">Density (g/ml)</th>
+                <th class="col-cost">Cost/Unit</th>
+                <th class="col-category">Category</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ingredientsTableBody">
+              {% for item in items if item.type != 'container' %}
+              <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+                <td class="col-name">{{ item.name }}</td>
+                <td class="col-unit">{{ item.unit }}</td>
+                <td class="col-quantity">{{ item.quantity }}</td>
+                <td class="col-density">{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
+                <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+                <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
+                <td class="col-actions">
+                  <div class="action-dropdown">
+                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                    <div class="action-menu">
+                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      {% if not item.is_archived %}
+                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                           class="dropdown-item text-warning" 
+                           onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                      {% else %}
+                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                           class="dropdown-item text-success">Restore</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination for Ingredients -->
+        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+          <div id="ingredientsInfo" class="text-muted"></div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0" id="ingredientsPagination">
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
-    
-    <!-- Ingredients Pagination -->
-    <nav id="ingredientsPagination">
-      <ul class="pagination pagination-sm justify-content-center">
-        <!-- Pagination will be generated by JavaScript -->
-      </ul>
-    </nav>
   </div>
 
-  <!-- Containers Section -->
   <div class="section">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3>Containers</h3>
-      <small class="text-muted">Showing <span id="containerCount">0</span> items</small>
-    </div>
-    
-    <div class="table-responsive">
-      <table class="table" id="containersTable">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th class="column-quantity">Quantity</th>
-            <th class="column-storage">Storage Capacity</th>
-            <th class="column-cost">Cost/Unit</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="containersTableBody">
-          {% for item in items if item.type == 'container' %}
-          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="container">
-            <td>
-              <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
-                {{ item.name }}
-                {% if item.is_archived %}<span class="badge bg-secondary ms-1">Archived</span>{% endif %}
-              </a>
-            </td>
-            <td class="column-quantity">
-              {% if item.quantity < item.low_stock_threshold and item.low_stock_threshold > 0 %}
-                <span class="text-danger fw-bold">{{ "%.0f"|format(item.quantity) }}</span>
-              {% else %}
-                {{ "%.0f"|format(item.quantity) }}
-              {% endif %}
-            </td>
-            <td class="column-storage">
-              {% if item.storage_amount and item.storage_unit %}
-                {{ "%.2f"|format(item.storage_amount) }} {{ item.storage_unit }}
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td class="column-cost">${{ "%.2f"|format(item.cost_per_unit) if item.cost_per_unit else '0.00' }}</td>
-            <td>
-              <div class="action-dropdown">
-                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-                <div class="action-menu">
-                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                  {% if not item.is_archived %}
-                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                       class="dropdown-item text-warning" 
-                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                  {% else %}
-                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                       class="dropdown-item text-success">Restore</a>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    
-    <!-- Containers Pagination -->
-    <nav id="containersPagination">
-      <ul class="pagination pagination-sm justify-content-center">
-        <!-- Pagination will be generated by JavaScript -->
-      </ul>
-    </nav>
-  </div>
-</div>
+    <h3>Containers</h3>
 
-<!-- Add Ingredient Modal -->
-<div class="modal fade" id="addIngredientModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add New Ingredient</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="POST" action="{{ url_for('inventory.add_inventory') }}">
-        <div class="modal-body">
-          <input type="hidden" name="type" value="ingredient">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Name *</label>
-                <input type="text" class="form-control" name="name" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Unit</label>
-                <select class="form-control" name="unit">
-                  {% for unit in get_global_unit_list() %}
-                    <option value="{{ unit }}">{{ unit }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Initial Quantity</label>
-                <input type="number" class="form-control" name="quantity" min="0" step="0.01" value="0">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Cost Per Unit</label>
-                <input type="number" class="form-control" name="cost_per_unit" min="0" step="0.01" value="0">
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Low Stock Threshold</label>
-                <input type="number" class="form-control" name="low_stock_threshold" min="0" step="0.01" value="0">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-check mt-4">
-                <input class="form-check-input" type="checkbox" name="is_perishable">
-                <label class="form-check-label">Perishable Item</label>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Ingredient</button>
-        </div>
-      </form>
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-primary" onclick="toggleContainerForm()">Add Container</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
+      <button type="button" class="btn btn-outline-secondary" onclick="toggleContainersFilter()">
+        <i class="fas fa-filter"></i> Filters
+      </button>
     </div>
-  </div>
-</div>
 
-<!-- Add Container Modal -->
-<div class="modal fade" id="addContainerModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add New Container</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Filter Section for Containers -->
+    <div class="collapse mb-3" id="containersFilterSection">
+      <div class="card card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <input type="text" id="containersNameFilter" class="form-control" placeholder="Search by name...">
+          </div>
+          <div class="col-md-3">
+            <select id="containersSortFilter" class="form-select">
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="quantity_asc">Quantity (Low to High)</option>
+              <option value="quantity_desc">Quantity (High to Low)</option>
+              <option value="cost_asc">Cost (Low to High)</option>
+              <option value="cost_desc">Cost (High to Low)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="containersPerPage" class="form-select">
+              <option value="10">10 per page</option>
+              <option value="20" selected>20 per page</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                Column Selection
+              </button>
+              <ul class="dropdown-menu p-2">
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="name"> Name</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="storage"> Storage Amount</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="storage_unit"> Storage Unit</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-      <form method="POST" action="{{ url_for('inventory.add_inventory') }}">
-        <div class="modal-body">
-          <input type="hidden" name="type" value="container">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Name *</label>
-                <input type="text" class="form-control" name="name" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Initial Quantity</label>
-                <input type="number" class="form-control" name="quantity" min="0" step="1" value="0">
-              </div>
-            </div>
+    </div>
+
+    <!-- Add New Container Form -->
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="type" value="container">
+      <div class="row g-3 align-items-end">
+        <div class="col">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Storage Amount</label>
+          <input type="number" step="0.01" name="storage_amount" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Storage Unit</label>
+          <select name="storage_unit" class="form-select select2" required>
+            {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col">
+          <label class="form-label">Quantity in Stock</label>
+          <input type="number" step="1" name="quantity" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Cost/Unit</label>
+          <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-success">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleContainerForm()">Cancel</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Multi-Adjust Container Form -->
+    <form id="updateContainerForm" style="display: none;" 
+      x-data="{ 
+        rows: [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        submitForm(e) {
+          e.preventDefault();
+          const promises = this.rows.map(row => {
+            if (!row.id || !row.quantity) return null;
+
+            const formData = new FormData();
+            formData.append('quantity', row.quantity);
+            formData.append('change_type', row.change_type);
+            formData.append('cost_entry_type', row.cost_entry_type);
+
+            if (row.cost_entry_type !== 'no_change') {
+              formData.append('cost_per_unit', row.cost || 0);
+            }
+
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            return fetch('/inventory/adjust/' + row.id, {
+              method: 'POST',
+              body: formData
+            });
+          });
+
+          Promise.all(promises)
+            .then(() => window.location.reload())
+            .catch(err => alert('Error updating inventory'));
+        },
+        resetContainerRows() {
+          this.rows = [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+        },
+        updateContainerCostHelp(event, index) {
+          const costType = event.target.value;
+          if (costType === 'no_change') {
+            this.rows[index].costHelp = 'Cost will remain unchanged';
+          } else if (costType === 'per_unit') {
+            this.rows[index].costHelp = 'Enter cost per container';
+          } else if (costType === 'total') {
+            this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
+          }
+        }
+      }">
+
+      <template x-for="(row, index) in rows" :key="index">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col">
+            <label class="form-label">Item</label>
+            <select x-model="row.id" class="form-select" required>
+              <option value="">Select Item</option>
+              {% for item in items if item.type == 'container' %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Storage Amount</label>
-                <input type="number" class="form-control" name="storage_amount" min="0" step="0.01">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Storage Unit</label>
-                <select class="form-control" name="storage_unit">
-                  {% for unit in get_global_unit_list() %}
-                    <option value="{{ unit }}">{{ unit }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
+          <div class="col">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
           </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Cost Per Unit</label>
-                <input type="number" class="form-control" name="cost_per_unit" min="0" step="0.01" value="0">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Low Stock Threshold</label>
-                <input type="number" class="form-control" name="low_stock_threshold" min="0" step="1" value="0">
-              </div>
-            </div>
+          <div class="col">
+            <label class="form-label">Cost Entry Type</label>
+            <select x-model="row.cost_entry_type" class="form-select" @change="updateContainerCostHelp($event, index)">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost</label>
+            <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+            <small class="form-text text-muted" x-text="row.costHelp"></small>
+            <input type="hidden" x-model="row.change_type" value="restock">
+          </div>
+          <div class="col-auto d-flex align-items-end">
+            <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Container</button>
+      </template>
+
+      <div class="mt-3">
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
+        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-secondary" @click="resetContainerRows(); toggleContainerUpdateForm()">Cancel</button>
+      </div>
+    </form>
+
+    <!-- Containers Table -->
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="containersTable">
+            <thead class="table-light">
+              <tr>
+                <th class="col-name">Name</th>
+                <th class="col-storage">Storage Amount</th>
+                <th class="col-storage_unit">Storage Unit</th>
+                <th class="col-quantity">Quantity in Stock</th>
+                <th class="col-cost">Cost/Unit</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="containersTableBody">
+              {% for item in items if item.type == 'container' %}
+              <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+                <td class="col-name">{{ item.name }}</td>
+                <td class="col-storage">{{ item.storage_amount or 'N/A' }}</td>
+                <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
+                <td class="col-quantity">{{ item.quantity }}</td>
+                <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+                <td class="col-actions">
+                  <div class="action-dropdown">
+                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                    <div class="action-menu">
+                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      {% if not item.is_archived %}
+                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                           class="dropdown-item text-warning" 
+                           onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                      {% else %}
+                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                           class="dropdown-item text-success">Restore</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-      </form>
+        
+        <!-- Pagination for Containers -->
+        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+          <div id="containersInfo" class="text-muted"></div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0" id="containersPagination">
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// Global pagination state
-let currentIngredientPage = 1;
-let currentContainerPage = 1;
-let itemsPerPage = 20;
-let searchTerm = '';
-
-// Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
-    updatePagination();
-    
-    // Search functionality
-    document.getElementById('globalSearch').addEventListener('input', function(e) {
-        searchTerm = e.target.value.toLowerCase();
-        currentIngredientPage = 1;
-        currentContainerPage = 1;
-        updatePagination();
-    });
-    
-    // Items per page change
-    document.getElementById('itemsPerPage').addEventListener('change', function(e) {
-        itemsPerPage = parseInt(e.target.value);
-        currentIngredientPage = 1;
-        currentContainerPage = 1;
-        updatePagination();
-    });
-    
-    // Column toggles
-    document.querySelectorAll('.column-toggle').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const column = this.dataset.column;
-            const isVisible = this.checked;
-            toggleColumn(column, isVisible);
-        });
-    });
+  // Initialize pagination for both tables
+  initTablePagination('ingredients');
+  initTablePagination('containers');
 });
 
-function toggleColumnFilter() {
-    const panel = document.getElementById('columnFilterPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
+function initTablePagination(tableType) {
+  const tableId = tableType + 'Table';
+  const tableBodyId = tableType + 'TableBody';
+  const paginationId = tableType + 'Pagination';
+  const infoId = tableType + 'Info';
+  const nameFilterId = tableType + 'NameFilter';
+  const sortFilterId = tableType + 'SortFilter';
+  const perPageId = tableType + 'PerPage';
+  
+  let currentPage = 1;
+  let itemsPerPage = 20;
+  let allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+  let filteredRows = [...allRows];
 
-function toggleColumn(columnClass, isVisible) {
-    const columns = document.querySelectorAll('.column-' + columnClass);
-    columns.forEach(function(col) {
-        col.style.display = isVisible ? '' : 'none';
-    });
-}
-
-function updatePagination() {
-    // Filter and paginate ingredients
-    const ingredientRows = Array.from(document.querySelectorAll('[data-type="ingredient"]'));
-    const filteredIngredients = ingredientRows.filter(row => {
-        const name = row.dataset.name;
-        return searchTerm === '' || name.includes(searchTerm);
-    });
-    
-    paginateTable(filteredIngredients, 'ingredientsTableBody', 'ingredientsPagination', currentIngredientPage, 'ingredient');
-    document.getElementById('ingredientCount').textContent = filteredIngredients.length;
-    
-    // Filter and paginate containers
-    const containerRows = Array.from(document.querySelectorAll('[data-type="container"]'));
-    const filteredContainers = containerRows.filter(row => {
-        const name = row.dataset.name;
-        return searchTerm === '' || name.includes(searchTerm);
-    });
-    
-    paginateTable(filteredContainers, 'containersTableBody', 'containersPagination', currentContainerPage, 'container');
-    document.getElementById('containerCount').textContent = filteredContainers.length;
-}
-
-function paginateTable(rows, tbodyId, paginationId, currentPage, type) {
-    const tbody = document.getElementById(tbodyId);
-    const pagination = document.getElementById(paginationId);
-    
-    // Hide all rows first
-    rows.forEach(row => row.style.display = 'none');
-    
-    // Calculate pagination
-    const totalPages = Math.ceil(rows.length / itemsPerPage);
+  function updateTable() {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, rows.length);
+    const endIndex = startIndex + itemsPerPage;
+    const visibleRows = filteredRows.slice(startIndex, endIndex);
+    
+    // Hide all rows
+    allRows.forEach(row => row.style.display = 'none');
     
     // Show current page rows
-    for (let i = startIndex; i < endIndex; i++) {
-        if (rows[i]) {
-            rows[i].style.display = '';
-        }
-    }
+    visibleRows.forEach(row => row.style.display = '');
     
-    // Generate pagination controls
-    generatePaginationControls(pagination, currentPage, totalPages, type);
-}
-
-function generatePaginationControls(container, currentPage, totalPages, type) {
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    let html = '<ul class="pagination pagination-sm justify-content-center">';
-    
-    // Previous button
-    if (currentPage > 1) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage - 1}, '${type}')">&laquo;</a></li>`;
-    }
-    
-    // Page numbers
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
-    
-    if (startPage > 1) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(1, '${type}')">1</a></li>`;
-        if (startPage > 2) {
-            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
-        }
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        const activeClass = i === currentPage ? 'active' : '';
-        html += `<li class="page-item ${activeClass}"><a class="page-link" href="#" onclick="changePage(${i}, '${type}')">${i}</a></li>`;
-    }
-    
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
-        }
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${totalPages}, '${type}')">${totalPages}</a></li>`;
-    }
-    
-    // Next button
-    if (currentPage < totalPages) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage + 1}, '${type}')">&raquo;</a></li>`;
-    }
-    
-    html += '</ul>';
-    container.innerHTML = html;
-}
-
-function changePage(page, type) {
-    if (type === 'ingredient') {
-        currentIngredientPage = page;
-    } else {
-        currentContainerPage = page;
-    }
     updatePagination();
-    return false;
+    updateInfo();
+  }
+
+  function updatePagination() {
+    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+    const pagination = document.getElementById(paginationId);
+    pagination.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = '<a class="page-link" href="#" data-page="prev">&laquo;</a>';
+    pagination.appendChild(prevLi);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+      li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+      pagination.appendChild(li);
+    }
+
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = '<a class="page-link" href="#" data-page="next">&raquo;</a>';
+    pagination.appendChild(nextLi);
+
+    // Add click handlers
+    pagination.addEventListener('click', function(e) {
+      e.preventDefault();
+      const page = e.target.dataset.page;
+      if (page === 'prev' && currentPage > 1) {
+        currentPage--;
+      } else if (page === 'next' && currentPage < totalPages) {
+        currentPage++;
+      } else if (page && !isNaN(page)) {
+        currentPage = parseInt(page);
+      }
+      updateTable();
+    });
+  }
+
+  function updateInfo() {
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredRows.length);
+    const info = document.getElementById(infoId);
+    info.textContent = `Showing ${startIndex}-${endIndex} of ${filteredRows.length} items`;
+  }
+
+  function filterAndSort() {
+    const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
+    const sortFilter = document.getElementById(sortFilterId).value;
+    
+    // Filter by name
+    filteredRows = allRows.filter(row => {
+      const name = row.dataset.name || '';
+      return name.includes(nameFilter);
+    });
+
+    // Sort
+    filteredRows.sort((a, b) => {
+      const [field, direction] = sortFilter.split('_');
+      let aVal, bVal;
+
+      if (field === 'name') {
+        aVal = a.dataset.name || '';
+        bVal = b.dataset.name || '';
+      } else if (field === 'quantity') {
+        aVal = parseFloat(a.dataset.quantity) || 0;
+        bVal = parseFloat(b.dataset.quantity) || 0;
+      } else if (field === 'cost') {
+        aVal = parseFloat(a.dataset.cost) || 0;
+        bVal = parseFloat(b.dataset.cost) || 0;
+      }
+
+      if (direction === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    currentPage = 1;
+    updateTable();
+  }
+
+  // Event listeners
+  document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
+  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
+  document.getElementById(perPageId).addEventListener('change', function() {
+    itemsPerPage = parseInt(this.value);
+    currentPage = 1;
+    updateTable();
+  });
+
+  // Column visibility toggle
+  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
+  columnCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const column = this.dataset.column;
+      const isVisible = this.checked;
+      const columnElements = document.querySelectorAll(`#${tableId} .col-${column}`);
+      columnElements.forEach(el => {
+        el.style.display = isVisible ? '' : 'none';
+      });
+    });
+  });
+
+  // Initial load
+  updateTable();
+}
+
+function toggleIngredientsFilter() {
+  const filterSection = document.getElementById('ingredientsFilterSection');
+  const collapse = new bootstrap.Collapse(filterSection);
+  collapse.toggle();
+}
+
+function toggleContainersFilter() {
+  const filterSection = document.getElementById('containersFilterSection');
+  const collapse = new bootstrap.Collapse(filterSection);
+  collapse.toggle();
+}
+
+function toggleIngredientForm() {
+  const form = document.getElementById('addIngredientForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleUpdateForm() {
+  const form = document.getElementById('updateInventoryForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleContainerUpdateForm() {
+  const form = document.getElementById('updateContainerForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleContainerForm() {
+  const form = document.getElementById('addContainerForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 function toggleActionMenu(button) {
-    // Close any open menus first
-    document.querySelectorAll('.action-menu').forEach(menu => {
-        if (menu !== button.nextElementSibling) {
-            menu.style.display = 'none';
-        }
-    });
-    
-    // Toggle the clicked menu
-    const menu = button.nextElementSibling;
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-    
-    // Close menu when clicking outside
-    document.addEventListener('click', function closeMenu(e) {
-        if (!button.contains(e.target) && !menu.contains(e.target)) {
-            menu.style.display = 'none';
-            document.removeEventListener('click', closeMenu);
-        }
-    });
+  const menu = button.nextElementSibling;
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Close the dropdown menu if the user clicks outside of it
+window.onclick = function(event) {
+  if (!event.target.matches('.action-toggle')) {
+    const dropdowns = document.getElementsByClassName("action-menu");
+    for (let i = 0; i < dropdowns.length; i++) {
+      const openDropdown = dropdowns[i];
+      if (openDropdown.style.display === 'block') {
+        openDropdown.style.display = 'none';
+      }
+    }
+  }
 }
 </script>
-
-<style>
-.inventory-sections {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.inventory-sections .section {
-  flex: 1 1 300px;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: visible;
-}
-
-.table-responsive {
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-.table {
-  overflow: visible;
-}
-
-.action-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.action-toggle {
-  background-color: #f1f1f1;
-  color: #333;
-  padding: 5px 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.action-menu {
-  display: none;
-  position: absolute;
-  background-color: #fff;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 10000;
-  right: 0;
-  border-radius: 4px;
-  padding: 5px 0;
-}
-
-.action-menu a {
-  color: black;
-  padding: 8px 12px;
-  text-decoration: none;
-  display: block;
-  text-align: left;
-}
-
-.action-menu a:hover {
-  background-color: #ddd;
-}
-
-.table td, .table th {
-  padding: 0.75rem;
-  vertical-align: middle;
-}
-</style>
 {% endblock %}
