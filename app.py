@@ -189,7 +189,7 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for('homepage'))
 
 @app.route('/homepage')
 def homepage():

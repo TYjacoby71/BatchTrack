@@ -339,31 +339,22 @@ def edit_inventory(id):
             return redirect(url_for('inventory.view_inventory', id=id))
         item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
 
-    # Handle cost override
+    # Handle cost override (only for manual cost changes from edit modal)
     new_cost = float(request.form.get('cost_per_unit', 0))
-    cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-
-    if request.form.get('override_cost'):
+    if request.form.get('override_cost') and new_cost != item.cost_per_unit:
         # This is a true cost override - bypasses weighted average
-        if cost_entry_type == 'per_unit':
-            cost_override = new_cost
-        elif cost_entry_type == 'total' and new_quantity > 0:
-            cost_override = new_cost / new_quantity
-        else:
-            cost_override = new_cost # no_change
-
         history = InventoryHistory(
             inventory_item_id=item.id,
             change_type='cost_override',
             quantity_change=0,
             unit=item.unit,  # Add the required unit field
-            unit_cost=cost_override,
-            note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost} ({cost_entry_type})',
+            unit_cost=new_cost,
+            note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,
             quantity_used=0.0  # Cost overrides don't consume inventory - always null
         )
         db.session.add(history)
-        item.cost_per_unit = cost_override
+        item.cost_per_unit = new_cost
 
     # Type-specific updates
     if item.type == 'container':
