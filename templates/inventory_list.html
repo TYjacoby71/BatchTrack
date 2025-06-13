@@ -160,68 +160,70 @@
       </div>
     </form>
 
-    <table class="table" id="ingredientsTable">
-      <thead>
-        <tr>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Name">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Unit">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Quantity">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Density">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Cost/Unit">
-          </th>
-          <th>
-            <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
-          </th>
-          <th>Actions</th>
-        </tr>
-        <tr>
-          <th>Name</th>
-          <th>Unit</th>
-          <th>Quantity</th>
-          <th>Density (g/ml)</th>
-          <th>Cost/Unit</th>
-          <th>Category</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items if item.type != 'container' %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td>{{ item.unit }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
-          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
-          <td>{{ item.category.name if item.category else 'None' }}</td>
-          <td>
-            <div class="action-dropdown">
-              <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-              <div class="action-menu">
-                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                {% if not item.is_archived %}
-                  <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                     class="dropdown-item text-warning" 
-                     onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                {% else %}
-                  <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                     class="dropdown-item text-success">Restore</a>
-                {% endif %}
+    <div class="table-responsive">
+      <table class="table" id="ingredientsTable">
+        <thead>
+          <tr>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Name">
+            </th>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Unit">
+            </th>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Quantity">
+            </th>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Density">
+            </th>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Cost/Unit">
+            </th>
+            <th>
+              <input type="text" class="form-control form-control-sm filter-input" placeholder="Category">
+            </th>
+            <th>Actions</th>
+          </tr>
+          <tr>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>Quantity</th>
+            <th>Density (g/ml)</th>
+            <th>Cost/Unit</th>
+            <th>Category</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items if item.type != 'container' %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.unit }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
+            <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+            <td>{{ item.category.name if item.category else 'None' }}</td>
+            <td>
+              <div class="action-dropdown">
+                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                <div class="action-menu">
+                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                  {% if not item.is_archived %}
+                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                       class="dropdown-item text-warning" 
+                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                  {% else %}
+                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                       class="dropdown-item text-success">Restore</a>
+                  {% endif %}
+                </div>
               </div>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="section">
@@ -359,47 +361,47 @@
       </div>
     </form>
 
-
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Storage Amount</th>
-          <th>Storage Unit</th>
-          <th>Quantity in Stock</th>
-          <th>Cost/Unit</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items if item.type == 'container' %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td>{{ item.storage_amount or 'N/A' }}</td>
-          <td>{{ item.storage_unit or 'N/A' }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
-          <td>
-            <div class="action-dropdown">
-              <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
-              <div class="action-menu">
-                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
-                {% if not item.is_archived %}
-                  <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                     class="dropdown-item text-warning" 
-                     onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-                {% else %}
-                  <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
-                     class="dropdown-item text-success">Restore</a>
-                {% endif %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Storage Amount</th>
+            <th>Storage Unit</th>
+            <th>Quantity in Stock</th>
+            <th>Cost/Unit</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items if item.type == 'container' %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.storage_amount or 'N/A' }}</td>
+            <td>{{ item.storage_unit or 'N/A' }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+            <td>
+              <div class="action-dropdown">
+                <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                <div class="action-menu">
+                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                  {% if not item.is_archived %}
+                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                       class="dropdown-item text-warning" 
+                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                  {% else %}
+                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                       class="dropdown-item text-success">Restore</a>
+                  {% endif %}
+                </div>
               </div>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -472,6 +474,16 @@ window.onclick = function(event) {
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
+  overflow: visible;
+}
+
+/* Ensure table containers allow dropdowns to overflow */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table {
+  overflow: visible;
 }
 
 /* Action Dropdown Styles */
