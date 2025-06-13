@@ -95,9 +95,20 @@ def index():
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
 
+    # Convert flat dictionary to nested object for template compatibility
+    class SettingsObject:
+        def __init__(self, data):
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    setattr(self, key, SettingsObject(value))
+                else:
+                    setattr(self, key, value)
+    
+    settings_obj = SettingsObject(settings_data)
+    
     return render_template(
         'settings/index.html',
-        settings=settings_data,
+        settings=settings_obj,
         inventory_units=Unit.query.all(),
         product_units=[]
     )
