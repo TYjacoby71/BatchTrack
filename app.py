@@ -120,8 +120,11 @@ def load_user(user_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     from flask_wtf import FlaskForm
+    from werkzeug.security import generate_password_hash
+    
     form = FlaskForm()
     if request.method == 'POST' and form.validate_on_submit():
+        form_type = request.form.get('form_type')
         username = request.form.get('username')
         password = request.form.get('password')
 
@@ -129,12 +132,47 @@ def login():
             flash('Please provide both username and password')
             return render_template('login.html', form=form)
 
-        u = User.query.filter_by(username=username).first()
-        if u and u.check_password(password):
-            login_user(u)
-            return redirect(url_for('dashboard.dashboard'))
-        flash('Invalid credentials')
+        if form_type == 'register':
+            # Handle registration
+            confirm_password = request.form.get('confirm_password')
+            
+            if password != confirm_password:
+                flash('Passwords do not match')
+                return render_template('login.html', form=form)
+            
+            # Check if username already exists
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                flash('Username already exists')
+                return render_template('login.html', form=form)
+            
+            # Create new user
+            new_user = User(
+                username=username,
+                password_hash=generate_password_hash(password),
+                role='user'
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            
+            flash('Account created successfully! Please log in.')
+            return render_template('login.html', form=form)
+            
+        else:
+            # Handle login
+            u = User.query.filter_by(username=username).first()
+            if u and u.check_password(password):
+                login_user(u)
+                return redirect(url_for('dashboard.dashboard'))
+            flash('Invalid credentials')
+            
     return render_template('login.html', form=form)
+
+@app.route('/dev-login')
+def dev_login():
+    # Placeholder for future dev login page
+    flash('Developer login coming soon!')
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required
@@ -146,6 +184,10 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/homepage')
+def homepage():
     return render_template('homepage.html')
 
 if __name__ == '__main__':
