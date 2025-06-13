@@ -13,7 +13,7 @@ def alerts():
     expired = ExpirationService.get_expired_inventory_items()
     expiring_soon = ExpirationService.get_expiring_soon_items(7)
     
-    return render_template('expiration/alerts.html', 
+    return render_template('alerts.html', 
                          expired=expired, 
                          expiring_soon=expiring_soon,
                          today=datetime.now().date())
