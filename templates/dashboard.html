@@ -24,9 +24,26 @@
       <h5 class="card-title mb-0 text-center">Start New Batch</h5>
     </div>
     <div class="card-body">
+      {% if not recipes %}
+      <!-- Empty State Message -->
+      <div class="text-center py-4">
+        <i class="fas fa-book fa-4x text-muted mb-4"></i>
+        <h4 class="text-muted mb-3">No Recipes Yet</h4>
+        <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
+        <div class="d-flex gap-3 justify-content-center mb-3">
+          <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Recipe
+          </a>
+          <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+            <i class="fas fa-boxes"></i> Add Ingredients
+          </a>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+      {% else %}
       <form id="recipeForm" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="mb-3">
           <label for="recipe_id" class="form-label">Recipe</label>
           <select name="recipe_id" id="recipe_id" class="form-select" required>
@@ -50,6 +67,7 @@
           <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
         </div>
       </form>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -65,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const recipeForm = document.getElementById('recipeForm');
   const modal = document.getElementById('startFlowModal');
   const backdrop = document.getElementById('modalBackdrop');
-  
+
   // Recipe data with variants (this would be populated from your backend)
   const recipeVariants = {
     {% for recipe in recipes %}
@@ -78,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
     {% endfor %}
   };
-  
+
   // Update the Start Batch button to show backdrop
   const startBatchBtn = document.querySelector('button[onclick*="startFlowModal"]');
   if (startBatchBtn) {
@@ -87,22 +105,22 @@ document.addEventListener('DOMContentLoaded', function() {
       backdrop.style.display = 'block';
     };
   }
-  
+
   // Update close functionality
   window.closeModal = function() {
     modal.style.display = 'none';
     backdrop.style.display = 'none';
   };
-  
+
   if (recipeSelect) {
     recipeSelect.addEventListener('change', function() {
       const selectedRecipeId = this.value;
-      
+
       if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
         // Show variant section and populate variants
         variantSection.style.display = 'block';
         variantSelect.innerHTML = '<option value="">No variant</option>';
-        
+
         recipeVariants[selectedRecipeId].forEach(variant => {
           const option = document.createElement('option');
           option.value = variant.id;
