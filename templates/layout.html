@@ -65,23 +65,18 @@
                     <li><hr class="dropdown-divider"></li>
                     
                     <!-- Core Features -->
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
-                    <li><hr class="dropdown-divider"></li>
-
-                    <!-- Inventory Management -->
-                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-                    <!-- Inventory adjust menu item removed -->
                     <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
 
-                    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Production Tools -->
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('expiration.alerts') }}">Expiration Alerts</a></li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Settings & Management -->
