@@ -585,21 +585,6 @@ input:checked + .toggle-label:before {
     font-weight: bold;
 }
 
-/* Inventory sections layout */
-.inventory-sections {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-}
-
-.inventory-sections .section {
-  flex: 1 1 300px;
-  padding: var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
-  overflow: visible;
-}
-
 .badge-status {
     color: white;
 }
