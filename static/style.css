@@ -386,7 +386,7 @@ body {
 
 .container {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: var(--space-5) auto 0 auto;
     padding: 0 var(--space-5);
 }
 
@@ -579,10 +579,6 @@ input:checked + .toggle-label:before {
 }
 
 /* Custom styles for the app */
-.container {
-    margin-top: var(--space-5);
-}
-
 .batch-status {
     font-weight: bold;
 }
@@ -599,13 +595,7 @@ input:checked + .toggle-label:before {
     background-color: #f8f9fa;
 }
 
-.card {
-    margin-bottom: var(--space-5);
-}
 
-.form-group {
-    margin-bottom: var(--space-3);
-}
 
 .alert {
     margin-bottom: var(--space-5);
