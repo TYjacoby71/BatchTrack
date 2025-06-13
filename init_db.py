@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import User, Unit, IngredientCategory
+from models import User, Organization, Unit, IngredientCategory
 from werkzeug.security import generate_password_hash
 
 from seeders.unit_seeder import seed_units
@@ -12,17 +12,31 @@ def init_db():
         seed_units()
         seed_categories()
 
-        # Default admin user
-        if not User.query.filter_by(username='admin').first():
-            admin = User(
-                username='admin',
-                password_hash=generate_password_hash('admin'),
-                role='admin'
+        # Create default organization
+        if not Organization.query.first():
+            org = Organization(
+                name="Jacob Boulette's Organization",
+                subscription_tier='free'
             )
-            db.session.add(admin)
+            db.session.add(org)
+            db.session.flush()  # Get the ID
+            
+            # Create Jacob Boulette as first user
+            if not User.query.filter_by(username='admin').first():
+                jacob = User(
+                    username='admin',
+                    password_hash=generate_password_hash('admin'),
+                    role='admin',
+                    first_name='Jacob',
+                    last_name='Boulette',
+                    email='jacobboulette@outlook.com',
+                    phone='775-934-5968',
+                    organization_id=org.id
+                )
+                db.session.add(jacob)
 
         db.session.commit()
-        print("✅ Database initialized")
+        print("✅ Database initialized with Jacob Boulette as admin user")
 
 if __name__ == "__main__":
     init_db()
