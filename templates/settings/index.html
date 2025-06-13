@@ -603,8 +603,8 @@
 </div>
 
 <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('settingsManager', () => ({
+function settingsManager() {
+    return {
         settings: {
             alerts: {
                 max_dashboard_alerts: {{ settings.alerts.max_dashboard_alerts or 3 }},
@@ -814,8 +814,8 @@ document.addEventListener('alpine:init', () => {
             this.showMessage = true;
             setTimeout(() => { this.showMessage = false; }, 5000);
         }
-    }));
-});
+    }
+}
 </script>
 {% endblock %}
 
