@@ -7,8 +7,27 @@
 <div class="card mb-4">
   <div class="card-body">
     <div class="row align-items-end">
-      <!-- Left: Action Buttons -->
       <div class="col-md-4">
+        <label class="form-label">Search by Name</label>
+        <input type="text" id="globalSearch" class="form-control" placeholder="Search inventory items...">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Items per page</label>
+        <select id="itemsPerPage" class="form-select">
+          <option value="10">10 items</option>
+          <option value="20" selected>20 items</option>
+          <option value="50">50 items</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Show Columns</label>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleColumnFilter()">
+            <i class="fas fa-columns"></i> Columns
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
         <label class="form-label">Actions</label>
         <div class="btn-group" role="group">
           <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIngredientModal">
@@ -17,64 +36,6 @@
           <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContainerModal">
             <i class="fas fa-plus"></i> Add Container
           </button>
-          <button type="button" class="btn btn-outline-secondary" onclick="toggleBulkEditMode()">
-            <i class="fas fa-edit"></i> Bulk Edit
-          </button>
-        </div>
-      </div>
-      
-      <!-- Center: Search -->
-      <div class="col-md-4">
-        <label class="form-label">Search by Name</label>
-        <input type="text" id="globalSearch" class="form-control" placeholder="Search inventory items...">
-      </div>
-      
-      <!-- Right: Filters -->
-      <div class="col-md-4">
-        <label class="form-label">Filters & Display</label>
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="fas fa-filter"></i> Filters
-          </button>
-          <ul class="dropdown-menu">
-            <li class="px-3 py-2">
-              <label class="form-label small">Items per page</label>
-              <select id="itemsPerPage" class="form-select form-select-sm">
-                <option value="10">10 items</option>
-                <option value="20" selected>20 items</option>
-                <option value="50">50 items</option>
-              </select>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li class="px-3">
-              <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="toggleColumnFilter()">
-                <i class="fas fa-columns"></i> Show/Hide Columns
-              </button>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Bulk Edit Mode Panel (Hidden by default) -->
-    <div id="bulkEditPanel" class="row mt-3" style="display: none;">
-      <div class="col-12">
-        <div class="card border-warning">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h6 class="text-warning mb-0">
-                <i class="fas fa-edit"></i> Bulk Edit Mode - Select items to edit
-              </h6>
-              <div>
-                <button type="button" class="btn btn-warning btn-sm" onclick="bulkEditSelected()" id="bulkEditButton" disabled>
-                  Edit Selected (<span id="selectedCount">0</span>)
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleBulkEditMode()">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -142,9 +103,6 @@
       <table class="table" id="ingredientsTable">
         <thead>
           <tr>
-            <th class="bulk-edit-column" style="display: none;">
-              <input type="checkbox" class="form-check-input" id="selectAllIngredients" onchange="toggleSelectAll('ingredient')">
-            </th>
             <th>Name</th>
             <th class="column-unit">Unit</th>
             <th class="column-quantity">Quantity</th>
@@ -156,10 +114,7 @@
         </thead>
         <tbody id="ingredientsTableBody">
           {% for item in items if item.type != 'container' %}
-          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="ingredient" data-id="{{ item.id }}">
-            <td class="bulk-edit-column" style="display: none;">
-              <input type="checkbox" class="form-check-input item-checkbox" data-type="ingredient" data-id="{{ item.id }}" onchange="updateSelectedCount()">
-            </td>
+          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="ingredient">
             <td>
               <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
                 {{ item.name }}
@@ -218,9 +173,6 @@
       <table class="table" id="containersTable">
         <thead>
           <tr>
-            <th class="bulk-edit-column" style="display: none;">
-              <input type="checkbox" class="form-check-input" id="selectAllContainers" onchange="toggleSelectAll('container')">
-            </th>
             <th>Name</th>
             <th class="column-quantity">Quantity</th>
             <th class="column-storage">Storage Capacity</th>
@@ -230,10 +182,7 @@
         </thead>
         <tbody id="containersTableBody">
           {% for item in items if item.type == 'container' %}
-          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="container" data-id="{{ item.id }}">
-            <td class="bulk-edit-column" style="display: none;">
-              <input type="checkbox" class="form-check-input item-checkbox" data-type="container" data-id="{{ item.id }}" onchange="updateSelectedCount()">
-            </td>
+          <tr class="inventory-row" data-name="{{ item.name|lower }}" data-type="container">
             <td>
               <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
                 {{ item.name }}
@@ -567,64 +516,6 @@ function changePage(page, type) {
     }
     updatePagination();
     return false;
-}
-
-// Bulk edit functionality
-let bulkEditMode = false;
-
-function toggleBulkEditMode() {
-    bulkEditMode = !bulkEditMode;
-    const panel = document.getElementById('bulkEditPanel');
-    const columns = document.querySelectorAll('.bulk-edit-column');
-    
-    if (bulkEditMode) {
-        panel.style.display = 'block';
-        columns.forEach(col => col.style.display = '');
-    } else {
-        panel.style.display = 'none';
-        columns.forEach(col => col.style.display = 'none');
-        // Clear all selections
-        document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
-        document.querySelectorAll('#selectAllIngredients, #selectAllContainers').forEach(cb => cb.checked = false);
-        updateSelectedCount();
-    }
-}
-
-function toggleSelectAll(type) {
-    const selectAllId = type === 'ingredient' ? 'selectAllIngredients' : 'selectAllContainers';
-    const isChecked = document.getElementById(selectAllId).checked;
-    
-    document.querySelectorAll(`.item-checkbox[data-type="${type}"]`).forEach(checkbox => {
-        checkbox.checked = isChecked;
-    });
-    
-    updateSelectedCount();
-}
-
-function updateSelectedCount() {
-    const selectedCount = document.querySelectorAll('.item-checkbox:checked').length;
-    document.getElementById('selectedCount').textContent = selectedCount;
-    document.getElementById('bulkEditButton').disabled = selectedCount === 0;
-}
-
-function bulkEditSelected() {
-    const selectedItems = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => ({
-        id: cb.getAttribute('data-id'),
-        type: cb.getAttribute('data-type')
-    }));
-    
-    if (selectedItems.length === 0) {
-        alert('Please select items to edit');
-        return;
-    }
-    
-    // Redirect to settings page with selected items
-    const params = new URLSearchParams();
-    selectedItems.forEach(item => {
-        params.append('selected_items', JSON.stringify(item));
-    });
-    
-    window.location.href = `/settings/?${params.toString()}#bulk-edit`;
 }
 
 function toggleActionMenu(button) {
