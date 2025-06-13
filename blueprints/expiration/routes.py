@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, jsonify, request
+
+<code>
+from flask import render_template, jsonify, request
 from flask_login import login_required
 from .services import ExpirationService
-
-expiration_bp = Blueprint('expiration', __name__)
+from . import expiration_bp
 
 @expiration_bp.route('/alerts')
 @login_required
@@ -80,3 +81,4 @@ def api_archive_expired():
     """Archive expired items with zero quantity"""
     count = ExpirationService.archive_expired_items()
     return jsonify({'archived_count': count})
+</code>
