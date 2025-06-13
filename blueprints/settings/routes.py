@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from models import db, Unit, User
+from models import db, Unit, User, InventoryItem
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
@@ -90,7 +90,7 @@ def index():
                 "quiet_hours_end": "08:00"
             }
         }
-    
+
     try:
         with open("settings.json", "r") as f:
             settings_data = json.load(f)
@@ -116,9 +116,9 @@ def index():
                     setattr(self, key, SettingsObject(value))
                 else:
                     setattr(self, key, value)
-    
+
     settings_obj = SettingsObject(settings_data)
-    
+
     return render_template(
         'settings/index.html',
         settings=settings_obj,
@@ -131,7 +131,7 @@ def index():
 @login_required
 def save_settings():
     new_settings = request.get_json()
-    
+
     try:
         # Load existing settings
         try:
@@ -139,12 +139,12 @@ def save_settings():
                 settings_data = json.load(f)
         except FileNotFoundError:
             settings_data = {}
-        
+
         # Handle both full settings update and individual setting updates
         if len(new_settings) == 1 and not any(isinstance(v, dict) for v in new_settings.values()):
             # Individual setting update - map back to nested structure
             key, value = next(iter(new_settings.items()))
-            
+
             # Map setting keys to their proper nested locations
             setting_mappings = {
                 'max_dashboard_alerts': ('alerts', 'max_dashboard_alerts'),
@@ -194,7 +194,7 @@ def save_settings():
                 'quiet_hours_start': ('notifications', 'quiet_hours_start'),
                 'quiet_hours_end': ('notifications', 'quiet_hours_end')
             }
-            
+
             if key in setting_mappings:
                 section, setting_key = setting_mappings[key]
                 if section not in settings_data:
@@ -203,11 +203,11 @@ def save_settings():
         else:
             # Full settings update
             settings_data.update(new_settings)
-        
+
         # Save updated settings
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
-        
+
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -217,7 +217,7 @@ def save_settings():
 def save_profile():
     try:
         data = request.get_json()
-        
+
         # Update user profile fields
         if 'first_name' in data:
             current_user.first_name = data['first_name']
@@ -227,7 +227,7 @@ def save_profile():
             current_user.email = data['email']
         if 'phone' in data:
             current_user.phone = data['phone']
-            
+
         db.session.commit()
         return jsonify({"status": "success", "message": "Profile updated successfully"})
     except Exception as e:
@@ -241,25 +241,72 @@ def change_password():
         current_password = data.get('current_password')
         new_password = data.get('new_password')
         confirm_password = data.get('confirm_password')
-        
+
         if not current_password or not new_password or not confirm_password:
             return jsonify({"status": "error", "message": "All fields are required"}), 400
-            
+
         if not current_user.check_password(current_password):
             return jsonify({"status": "error", "message": "Current password is incorrect"}), 400
-            
+
         if new_password != confirm_password:
             return jsonify({"status": "error", "message": "New passwords do not match"}), 400
-            
+
         if len(new_password) < 6:
             return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
-            
+
         current_user.password_hash = generate_password_hash(new_password)
         db.session.commit()
-        
+
         return jsonify({"status": "success", "message": "Password changed successfully"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@settings_bp.route('/bulk-update-ingredients', methods=['POST'])
+@login_required
+def bulk_update_ingredients():
+    try:
+        data = request.get_json()
+        ingredients = data.get('ingredients', [])
+
+        updated_count = 0
+        for ingredient_data in ingredients:
+            ingredient = InventoryItem.query.get(ingredient_data['id'])
+            if ingredient:
+                ingredient.name = ingredient_data['name']
+                ingredient.unit = ingredient_data['unit']
+                ingredient.cost_per_unit = ingredient_data['cost_per_unit']
+                updated_count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'updated_count': updated_count})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@settings_bp.route('/bulk-update-containers', methods=['POST'])
+@login_required
+def bulk_update_containers():
+    try:
+        data = request.get_json()
+        containers = data.get('containers', [])
+
+        updated_count = 0
+        for container_data in containers:
+            container = InventoryItem.query.get(container_data['id'])
+            if container and container.type == 'container':
+                container.name = container_data['name']
+                container.storage_amount = container_data['storage_amount']
+                container.storage_unit = container_data['storage_unit']
+                container.cost_per_unit = container_data['cost_per_unit']
+                updated_count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'updated_count': updated_count})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 # Catch-all route for unimplemented settings
 @settings_bp.route('/<path:subpath>')

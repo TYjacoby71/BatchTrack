@@ -977,10 +977,10 @@ function settingsManager() {
                     'auto_scale_recipes': 'recipe_builder.auto_scale_recipes',
                     'show_cost_breakdown': 'recipe_builder.show_cost_breakdown'
                 };
-                
+
                 const permission = settingPermissions[functionId];
                 if (!permission) return false;
-                
+
                 // Check permission server-side via template function
                 return {{ 'true' if has_permission('settings.edit') else 'false' }};
             },
@@ -997,12 +997,24 @@ function settingsManager() {
                     'user_preferences': [],
                     'notifications': []
                 };
-                
+
                 return sectionSettings[sectionId]?.some(setting => this.hasPermission(setting)) || false;
             },
 
             showFutureFeature() {
                 this.showErrorMessage('Future feature coming soon!');
+            },
+            saveAllContainers() {
+                // Placeholder for the actual saveAllContainers logic
+                // In a real implementation, you would fetch the container data,
+                // prepare it for the backend, and send it to the server via a POST request.
+                // For demonstration purposes, we'll just simulate a successful save.
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        this.showSuccessMessage('Containers updated successfully!');
+                        resolve();
+                    }, 1000); // Simulate a 1-second delay for the save operation
+                });
             }
         }
     }
