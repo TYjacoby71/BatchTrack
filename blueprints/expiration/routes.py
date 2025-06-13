@@ -9,12 +9,14 @@ expiration_bp = Blueprint('expiration', __name__)
 @login_required
 def alerts():
     """Main expiration alerts dashboard"""
+    from datetime import datetime
     expired = ExpirationService.get_expired_inventory_items()
     expiring_soon = ExpirationService.get_expiring_soon_items(7)
     
     return render_template('expiration/alerts.html', 
                          expired=expired, 
-                         expiring_soon=expiring_soon)
+                         expiring_soon=expiring_soon,
+                         today=datetime.now().date())
 
 @expiration_bp.route('/api/expired-items')
 @login_required
