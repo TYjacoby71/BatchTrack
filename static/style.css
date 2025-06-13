@@ -3,6 +3,15 @@ body {
   background-color: #f9fafb; /* soft light grey */
 }
 
+/* App-wide container constraint */
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #fff;
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
 /* Global card styling */
 .card {
   background-color: #fff;
@@ -13,18 +22,17 @@ body {
   border: 1px solid #e5e7eb;
 }
 
-/* Header container fix - match Bootstrap container-xl behavior */
+/* Ensure navbar fits within app container */
+.navbar {
+  margin: 0;
+  border-radius: 0;
+}
+
 .navbar .container-fluid {
   max-width: 1140px;
   margin: 0 auto;
   padding-left: 1rem;
   padding-right: 1rem;
-}
-
-/* Ensure navbar uses same width as main content */
-.navbar {
-  padding-left: 0;
-  padding-right: 0;
 }
 
 /* Page section layout */
