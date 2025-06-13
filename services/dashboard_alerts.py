@@ -91,13 +91,20 @@ class DashboardAlertService:
         # HIGH: Expired timers
         timer_alerts = DashboardAlertService._get_timer_alerts()
         if timer_alerts['expired_count'] > 0:
+            # Get the first expired timer's batch for redirection
+            batch_url = '/batches/'
+            if timer_alerts['expired_timers']:
+                first_timer = timer_alerts['expired_timers'][0]
+                if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
+                    batch_url = f'/batches/in-progress/{first_timer.batch_id}'
+            
             alerts.append({
                 'priority': 'HIGH',
                 'type': 'expired_timers',
                 'title': 'Timer Alert',
                 'message': f"{timer_alerts['expired_count']} timers have expired",
-                'action_url': '/timers/list_timers',
-                'action_text': 'Check Timers',
+                'action_url': batch_url,
+                'action_text': 'View Batch',
                 'dismissible': True
             })
         
@@ -192,23 +199,25 @@ class DashboardAlertService:
     def _get_timer_alerts() -> Dict:
         """Get timer-related alerts"""
         try:
-            # Try to import Timer model dynamically
-            from models import Timer
-            active_timers = Timer.query.filter_by(is_active=True).all()
-            expired_count = 0
+            # Use BatchTimer model which exists in your system
+            from models import BatchTimer
+            active_timers = BatchTimer.query.filter_by(status='active').all()
+            expired_timers = []
             
             for timer in active_timers:
-                if hasattr(timer, 'end_time') and timer.end_time:
-                    if datetime.utcnow() > timer.end_time:
-                        expired_count += 1
+                if timer.start_time and timer.duration_seconds:
+                    end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                    if datetime.utcnow() > end_time:
+                        expired_timers.append(timer)
             
             return {
-                'expired_count': expired_count,
+                'expired_count': len(expired_timers),
+                'expired_timers': expired_timers,
                 'active_count': len(active_timers)
             }
         except (ImportError, AttributeError):
-            # Timer model doesn't exist or has different structure
-            return {'expired_count': 0, 'active_count': 0}
+            # Fallback if BatchTimer doesn't exist
+            return {'expired_count': 0, 'expired_timers': [], 'active_count': 0}
     
     @staticmethod
     def _get_product_inventory_issues() -> int:
