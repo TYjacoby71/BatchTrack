@@ -203,12 +203,20 @@
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>{{ item.category.name if item.category else 'None' }}</td>
           <td>
-            <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
-            {% if not item.is_archived %}
-              <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-            {% else %}
-              <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" class="btn btn-sm btn-success">Restore</a>
-            {% endif %}
+            <div class="action-dropdown">
+              <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+              <div class="action-menu">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                {% if not item.is_archived %}
+                  <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                     class="dropdown-item text-warning" 
+                     onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                {% else %}
+                  <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                     class="dropdown-item text-success">Restore</a>
+                {% endif %}
+              </div>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -373,12 +381,20 @@
           <td>{{ item.quantity }}</td>
           <td>${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
           <td>
-            <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="btn btn-sm btn-primary">View</a>
-            {% if not item.is_archived %}
-              <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
-            {% else %}
-              <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" class="btn btn-sm btn-success">Restore</a>
-            {% endif %}
+            <div class="action-dropdown">
+              <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+              <div class="action-menu">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                {% if not item.is_archived %}
+                  <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                     class="dropdown-item text-warning" 
+                     onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                {% else %}
+                  <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                     class="dropdown-item text-success">Restore</a>
+                {% endif %}
+              </div>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -425,5 +441,108 @@ function toggleContainerForm() {
   const form = document.getElementById('addContainerForm');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
+
+function toggleActionMenu(button) {
+  const menu = button.nextElementSibling;
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Close the dropdown menu if the user clicks outside of it
+window.onclick = function(event) {
+  if (!event.target.matches('.action-toggle')) {
+    const dropdowns = document.getElementsByClassName("action-menu");
+    for (let i = 0; i < dropdowns.length; i++) {
+      const openDropdown = dropdowns[i];
+      if (openDropdown.style.display === 'block') {
+        openDropdown.style.display = 'none';
+      }
+    }
+  }
+}
 </script>
+<style>
+.inventory-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.inventory-sections .section {
+  flex: 1 1 300px; /* grow | shrink | basis */
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Action Dropdown Styles */
+.action-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.action-toggle {
+  background-color: #f1f1f1;
+  color: #333;
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.action-menu {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  right: 0; /* Aligns the menu to the right of the button */
+  border-radius: 4px;
+  padding: 5px 0;
+}
+
+.action-menu a {
+  color: black;
+  padding: 8px 12px;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+}
+
+.action-menu a:hover {
+  background-color: #ddd;
+}
+/* Increased padding for table cells */
+.table td, .table th {
+  padding: 0.75rem; /* Adjust as needed */
+  vertical-align: middle;
+}
+
+/* Added margin to the right of the Name, Unit, Quantity, Density, Cost/Unit, Category columns */
+#ingredientsTable th:nth-child(1),
+#ingredientsTable td:nth-child(1) {
+  padding-right: 10px;
+}
+#ingredientsTable th:nth-child(2),
+#ingredientsTable td:nth-child(2) {
+  padding-right: 10px;
+}
+#ingredientsTable th:nth-child(3),
+#ingredientsTable td:nth-child(3) {
+  padding-right: 10px;
+}
+#ingredientsTable th:nth-child(4),
+#ingredientsTable td:nth-child(4) {
+  padding-right: 10px;
+}
+#ingredientsTable th:nth-child(5),
+#ingredientsTable td:nth-child(5) {
+  padding-right: 10px;
+}
+#ingredientsTable th:nth-child(6),
+#ingredientsTable td:nth-child(6) {
+  padding-right: 10px;
+}
+</style>
 {% endblock %}
