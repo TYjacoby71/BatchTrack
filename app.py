@@ -113,6 +113,11 @@ def inject_units():
     categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
     return dict(units=units, categories=categories)
 
+@app.context_processor
+def inject_permissions():
+    from utils.permissions import has_permission, has_role
+    return dict(has_permission=has_permission, has_role=has_role)
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))

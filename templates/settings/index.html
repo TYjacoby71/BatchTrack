@@ -956,33 +956,33 @@ function settingsManager() {
             },
 
             hasPermission(functionId) {
-                // Current implementation: hardcoded permissions
-                // Future: will check user role against permission matrix
-                const userRole = '{{ current_user.role }}'; // Get from template
+                // Map setting IDs to permission strings
+                const settingPermissions = {
+                    'max_dashboard_alerts': 'alerts.max_dashboard_alerts',
+                    'show_expiration_alerts': 'alerts.show_expiration_alerts',
+                    'show_timer_alerts': 'alerts.show_timer_alerts',
+                    'show_low_stock_alerts': 'alerts.show_low_stock_alerts',
+                    'show_batch_alerts': 'alerts.show_batch_alerts',
+                    'show_fault_alerts': 'alerts.show_fault_alerts',
+                    'low_stock_threshold': 'alerts.low_stock_threshold',
+                    'expiration_warning_days': 'alerts.expiration_warning_days',
+                    'show_inventory_refund': 'alerts.show_inventory_refund',
+                    'show_alert_badges': 'alerts.show_alert_badges',
+                    'require_timer_completion': 'batch_rules.require_timer_completion',
+                    'allow_intermediate_tags': 'batch_rules.allow_intermediate_tags',
+                    'require_finish_confirmation': 'batch_rules.require_finish_confirmation',
+                    'stuck_batch_hours': 'batch_rules.stuck_batch_hours',
+                    'enable_variations': 'recipe_builder.enable_variations',
+                    'enable_containers': 'recipe_builder.enable_containers',
+                    'auto_scale_recipes': 'recipe_builder.auto_scale_recipes',
+                    'show_cost_breakdown': 'recipe_builder.show_cost_breakdown'
+                };
                 
-                // Currently unlocked sections
-                const unlockedPrefixes = [
-                    'max_dashboard_alerts',
-                    'show_expiration_alerts', 
-                    'show_timer_alerts',
-                    'show_low_stock_alerts',
-                    'show_batch_alerts',
-                    'show_fault_alerts',
-                    'low_stock_threshold',
-                    'expiration_warning_days',
-                    'show_inventory_refund',
-                    'show_alert_badges',
-                    'require_timer_completion',
-                    'allow_intermediate_tags',
-                    'require_finish_confirmation',
-                    'stuck_batch_hours',
-                    'enable_variations',
-                    'enable_containers',
-                    'auto_scale_recipes',
-                    'show_cost_breakdown'
-                ];
+                const permission = settingPermissions[functionId];
+                if (!permission) return false;
                 
-                return unlockedPrefixes.some(prefix => functionId.includes(prefix));
+                // Check permission server-side via template function
+                return {{ 'true' if has_permission('settings.edit') else 'false' }};
             },
 
             checkSectionPermission(sectionId) {
