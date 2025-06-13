@@ -80,3 +80,49 @@ def api_archive_expired():
     """Archive expired items with zero quantity"""
     count = ExpirationService.archive_expired_items()
     return jsonify({'archived_count': count})
+
+@expiration_bp.route('/api/mark-spoiled', methods=['POST'])
+@login_required
+def api_mark_spoiled():
+    """Mark expired items as spoiled and remove from inventory"""
+    data = request.get_json()
+    item_type = data.get('type')  # 'fifo' or 'product'
+    item_id = data.get('id')
+    
+    if not item_type or not item_id:
+        return jsonify({'error': 'Missing type or id'}), 400
+    
+    try:
+        count = ExpirationService.mark_as_spoiled(item_type, item_id)
+        return jsonify({'spoiled_count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@expiration_bp.route('/api/summary')
+@login_required
+def api_expiration_summary():
+    """Get expiration summary for dashboard widgets"""
+    summary = ExpirationService.get_expiration_summary()
+    return jsonify(summary)
+
+@expiration_bp.route('/api/inventory-status/<int:inventory_item_id>')
+@login_required
+def api_inventory_status(inventory_item_id):
+    """Get expiration status for a specific inventory item"""
+    status = ExpirationService.get_inventory_item_expiration_status(inventory_item_id)
+    return jsonify({
+        'expired_count': len(status['expired_entries']),
+        'expiring_soon_count': len(status['expiring_soon_entries']),
+        'has_expiration_issues': status['has_expiration_issues']
+    })
+
+@expiration_bp.route('/api/product-status/<int:product_id>')
+@login_required
+def api_product_status(product_id):
+    """Get expiration status for a specific product"""
+    status = ExpirationService.get_product_expiration_status(product_id)
+    return jsonify({
+        'expired_count': len(status['expired_inventory']),
+        'expiring_soon_count': len(status['expiring_soon_inventory']),
+        'has_expiration_issues': status['has_expiration_issues']
+    })

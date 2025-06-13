@@ -7,6 +7,7 @@ app_routes_bp = Blueprint('dashboard', __name__)
 
 from services.inventory_alerts import get_low_stock_ingredients
 from blueprints.expiration.services import ExpirationService
+from services.dashboard_alerts import DashboardAlertService
 
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required

@@ -204,3 +204,175 @@ class ExpirationService:
         
         db.session.commit()
         return len(expired_fifo) + len(expired_products)
+    
+    @staticmethod
+    def get_expiration_summary():
+        """Get summary counts for dashboard integration"""
+        today = datetime.now().date()
+        future_date = today + timedelta(days=7)
+        
+        # Count expired items with remaining quantity
+        expired_fifo_count = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today,
+                InventoryHistory.remaining_quantity > 0
+            )
+        ).count()
+        
+        expired_products_count = ProductInventory.query.filter(
+            and_(
+                ProductInventory.expiration_date != None,
+                ProductInventory.expiration_date < today,
+                ProductInventory.quantity > 0
+            )
+        ).count()
+        
+        # Count items expiring soon
+        expiring_fifo_count = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date.between(today, future_date),
+                InventoryHistory.remaining_quantity > 0
+            )
+        ).count()
+        
+        expiring_products_count = ProductInventory.query.filter(
+            and_(
+                ProductInventory.expiration_date != None,
+                ProductInventory.expiration_date.between(today, future_date),
+                ProductInventory.quantity > 0
+            )
+        ).count()
+        
+        return {
+            'expired_total': expired_fifo_count + expired_products_count,
+            'expired_fifo': expired_fifo_count,
+            'expired_products': expired_products_count,
+            'expiring_soon_total': expiring_fifo_count + expiring_products_count,
+            'expiring_soon_fifo': expiring_fifo_count,
+            'expiring_soon_products': expiring_products_count
+        }
+    
+    @staticmethod
+    def get_inventory_item_expiration_status(inventory_item_id: int):
+        """Get expiration status for a specific inventory item"""
+        today = datetime.now().date()
+        future_date = today + timedelta(days=7)
+        
+        # Get all FIFO entries for this item
+        entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None
+            )
+        ).all()
+        
+        expired_entries = []
+        expiring_soon_entries = []
+        
+        for entry in entries:
+            if entry.expiration_date < today:
+                expired_entries.append(entry)
+            elif entry.expiration_date <= future_date:
+                expiring_soon_entries.append(entry)
+        
+        return {
+            'expired_entries': expired_entries,
+            'expiring_soon_entries': expiring_soon_entries,
+            'has_expiration_issues': len(expired_entries) > 0 or len(expiring_soon_entries) > 0
+        }
+    
+    @staticmethod
+    def get_product_expiration_status(product_id: int):
+        """Get expiration status for a specific product"""
+        today = datetime.now().date()
+        future_date = today + timedelta(days=7)
+        
+        # Get all product inventory for this product
+        inventory = ProductInventory.query.filter(
+            and_(
+                ProductInventory.product_id == product_id,
+                ProductInventory.quantity > 0,
+                ProductInventory.expiration_date != None
+            )
+        ).all()
+        
+        expired_inventory = []
+        expiring_soon_inventory = []
+        
+        for item in inventory:
+            if item.expiration_date < today:
+                expired_inventory.append(item)
+            elif item.expiration_date <= future_date:
+                expiring_soon_inventory.append(item)
+        
+        return {
+            'expired_inventory': expired_inventory,
+            'expiring_soon_inventory': expiring_soon_inventory,
+            'has_expiration_issues': len(expired_inventory) > 0 or len(expiring_soon_inventory) > 0
+        }
+    
+    @staticmethod
+    def mark_as_spoiled(item_type: str, item_id: int):
+        """Mark an expired item as spoiled and remove from inventory"""
+        from flask_login import current_user
+        
+        if item_type == 'fifo':
+            # Handle FIFO entry spoilage
+            entry = InventoryHistory.query.get(item_id)
+            if not entry or entry.remaining_quantity <= 0:
+                raise ValueError("FIFO entry not found or has no remaining quantity")
+            
+            # Create spoilage record
+            spoilage_record = InventoryHistory(
+                inventory_item_id=entry.inventory_item_id,
+                change_type='spoilage',
+                quantity_change=-entry.remaining_quantity,
+                unit=entry.unit,
+                remaining_quantity=0,
+                fifo_reference_id=entry.id,
+                note=f"Marked as spoiled - expired on {entry.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                quantity_used=entry.remaining_quantity,
+                timestamp=datetime.utcnow()
+            )
+            
+            # Zero out the original entry
+            entry.remaining_quantity = 0
+            
+            db.session.add(spoilage_record)
+            db.session.commit()
+            return 1
+            
+        elif item_type == 'product':
+            # Handle product inventory spoilage
+            product_item = ProductInventory.query.get(item_id)
+            if not product_item or product_item.quantity <= 0:
+                raise ValueError("Product item not found or has no remaining quantity")
+            
+            # Create spoilage record in ProductInventoryHistory
+            from models import ProductInventoryHistory
+            spoilage_record = ProductInventoryHistory(
+                product_inventory_id=product_item.id,
+                product_id=product_item.product_id,
+                change_type='spoilage',
+                quantity_change=-product_item.quantity,
+                unit=product_item.unit,
+                note=f"Marked as spoiled - expired on {product_item.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                timestamp=datetime.utcnow()
+            )
+            
+            # Zero out the product inventory
+            product_item.quantity = 0
+            
+            db.session.add(spoilage_record)
+            db.session.commit()
+            return 1
+        
+        else:
+            raise ValueError("Invalid item type. Must be 'fifo' or 'product'")
+        
+        return 0
