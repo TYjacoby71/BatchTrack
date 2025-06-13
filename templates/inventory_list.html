@@ -213,8 +213,13 @@
   <div class="section">
     <h3>Containers</h3>
 
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-primary" onclick="toggleContainerForm()">Add Container</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
+    </div>
+
     <!-- Add New Container Form -->
-    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4">
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="container">
       <div class="row g-3 align-items-end">
@@ -242,15 +247,12 @@
           <label class="form-label">Cost/Unit</label>
           <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
         </div>
-        <div class="col">
-          <button type="submit" class="btn btn-primary">Add Container</button>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-success">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleContainerForm()">Cancel</button>
         </div>
       </div>
     </form>
-
-        <div class="d-flex gap-2 mb-3">
-      <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
-    </div>
 
     <!-- Multi-Adjust Container Form -->
     <form id="updateContainerForm" style="display: none;" 
@@ -412,6 +414,11 @@ function toggleUpdateForm() {
 
 function toggleContainerUpdateForm() {
   const form = document.getElementById('updateContainerForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleContainerForm() {
+  const form = document.getElementById('addContainerForm');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 </script>
