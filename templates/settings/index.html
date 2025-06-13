@@ -731,7 +731,7 @@ function resetToDefaults() {
         ];
 
         const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-        allCheckboxes.forEachcheckbox => {
+        allCheckboxes.forEach(checkbox => {
             checkbox.checked = defaultChecked.includes(checkbox.id);
         });
 
