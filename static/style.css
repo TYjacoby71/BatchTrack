@@ -13,8 +13,9 @@ body {
   border: 1px solid #e5e7eb;
 }
 
-/* Header container fix - match Bootstrap container-xl behavior */
-.navbar .container-fluid {
+/* Header container fix */
+header.navbar,
+header {
   max-width: 1140px;
   margin: 0 auto;
   padding-left: 1rem;
