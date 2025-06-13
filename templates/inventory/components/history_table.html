@@ -4,7 +4,8 @@
     <h5 class="mb-0">History</h5>
   </div>
   <div class="card-body">
-    <table class="table">
+    <div class="table-responsive">
+      <table class="table">
       <thead>
         <tr>
           <th>Date</th>
@@ -107,7 +108,8 @@
         </tr>
         {% endfor %}
       </tbody>
-    </table>
+      </table>
+    </div>
 
     {% if pagination.pages > 1 %}
     <nav aria-label="History navigation">

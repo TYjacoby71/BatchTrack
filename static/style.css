@@ -84,6 +84,19 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+/* Table responsive wrapper for horizontal scrolling */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-1);
+}
+
+.table-responsive .table {
+  margin-bottom: 0;
+  min-width: 800px; /* Minimum width to trigger horizontal scroll */
+}
+
 .table th,
 .table td {
   padding: var(--space-3) var(--space-4);
