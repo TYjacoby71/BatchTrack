@@ -25,7 +25,7 @@
             formData.append('input_unit', row.unit);
             formData.append('change_type', row.change_type);
             formData.append('cost_entry_type', row.cost_entry_type);
-            formData.append('cost', row.cost);
+            formData.append('cost_per_unit', row.cost);
             formData.append('csrf_token', '{{ csrf_token() }}');
 
             return fetch('/inventory/adjust/' + row.id, {
@@ -267,7 +267,7 @@
             formData.append('quantity', row.quantity);
             formData.append('change_type', row.change_type);
             formData.append('cost_entry_type', row.cost_entry_type);
-            formData.append('cost', row.cost);
+            formData.append('cost_per_unit', row.cost);
             formData.append('csrf_token', '{{ csrf_token() }}');
 
             return fetch('/inventory/adjust/' + row.id, {
