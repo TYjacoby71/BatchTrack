@@ -682,25 +682,28 @@ function settingsManager() {
             if (value === 'false') value = false;
             if (!isNaN(value) && value !== '') value = parseInt(value);
 
+            var data = {};
+            data[key] = value;
+
             fetch('/settings/save', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({[key]: value})
+                body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
                 if (data.status === 'success') {
                     this.showSuccessMessage('Setting saved');
                 } else {
-                    this.showErrorMessage('Error saving setting: ' + data.message);
+                    this.showErrorMessage('Error saving setting: ' + (data.message || 'Unknown error'));
                 }
-            })
-            .catch(error => {
+            }.bind(this))
+            .catch(function(error) {
                 console.error('Settings save error:', error);
                 this.showErrorMessage('Error saving setting');
-            });
+            }.bind(this));
         },
 
         saveAllSettings() {
@@ -713,20 +716,20 @@ function settingsManager() {
                 },
                 body: JSON.stringify(this.settings)
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
                 this.saving = false;
                 if (data.status === 'success') {
                     this.showSuccessMessage('All settings saved successfully!');
                 } else {
-                    this.showErrorMessage('Error saving settings: ' + data.message);
+                    this.showErrorMessage('Error saving settings: ' + (data.message || 'Unknown error'));
                 }
-            })
-            .catch(error => {
+            }.bind(this))
+            .catch(function(error) {
                 this.saving = false;
                 console.error('Settings save error:', error);
                 this.showErrorMessage('Error saving settings. Please try again.');
-            });
+            }.bind(this));
         },
 
         resetToDefaults() {
@@ -805,14 +808,14 @@ function settingsManager() {
             this.message = msg;
             this.messageType = 'success';
             this.showMessage = true;
-            setTimeout(() => { this.showMessage = false; }, 3000);
+            setTimeout(function() { this.showMessage = false; }.bind(this), 3000);
         },
 
         showErrorMessage(msg) {
             this.message = msg;
             this.messageType = 'error';
             this.showMessage = true;
-            setTimeout(() => { this.showMessage = false; }, 5000);
+            setTimeout(function() { this.showMessage = false; }.bind(this), 5000);
         }
     }
 }
