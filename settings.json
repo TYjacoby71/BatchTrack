@@ -3,8 +3,67 @@
   "per_page": 20,
   "enable_csv_export": true,
   "alerts": {
-        "low_stock_threshold": 5,
-        "notification_type": "dashboard",
-        "show_inventory_refund": true
-    }
+    "max_dashboard_alerts": 1,
+    "show_expiration_alerts": false,
+    "show_timer_alerts": true,
+    "show_low_stock_alerts": true,
+    "show_batch_alerts": false,
+    "show_fault_alerts": true,
+    "low_stock_threshold": 5,
+    "expiration_warning_days": 12,
+    "show_inventory_refund": true,
+    "show_alert_badges": true
+  },
+  "batch_rules": {
+    "require_timer_completion": true,
+    "allow_intermediate_tags": false,
+    "require_finish_confirmation": true,
+    "stuck_batch_hours": "24"
+  },
+  "products": {
+    "enable_variants": true,
+    "show_profit_margins": true,
+    "auto_generate_skus": false,
+    "enable_product_images": true,
+    "track_production_costs": true
+  },
+  "display": {
+    "per_page": 20,
+    "enable_csv_export": true,
+    "auto_save_forms": false,
+    "dashboard_layout": "detailed",
+    "show_quick_actions": false,
+    "compact_view": false
+  },
+  "recipe_builder": {
+    "enable_variations": true,
+    "enable_containers": true,
+    "auto_scale_recipes": false,
+    "show_cost_breakdown": true
+  },
+  "inventory": {
+    "enable_fifo_tracking": null,
+    "show_expiration_dates": true,
+    "auto_calculate_costs": true,
+    "enable_barcode_scanning": false,
+    "show_supplier_info": true,
+    "enable_bulk_operations": true
+  },
+  "accessibility": {
+    "reduce_animations": false,
+    "high_contrast_mode": null,
+    "keyboard_navigation": null,
+    "large_buttons": false
+  },
+  "system": {
+    "auto_backup": true,
+    "log_level": "INFO"
+  },
+  "notifications": {
+    "browser_notifications": true,
+    "email_alerts": false,
+    "alert_frequency": "immediate",
+    "quiet_hours_start": "22:00",
+    "quiet_hours_end": "08:00"
+  }
 }
