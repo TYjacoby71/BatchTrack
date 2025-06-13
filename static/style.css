@@ -21,6 +21,12 @@ body {
   padding-right: 1rem;
 }
 
+/* Ensure navbar uses same width as main content */
+.navbar {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* Page section layout */
 .container-xl {
   max-width: 1140px;
