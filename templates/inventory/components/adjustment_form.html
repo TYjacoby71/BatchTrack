@@ -1,3 +1,4 @@
+
 <!-- Inventory Adjustment -->
 <div class="card mb-4">
   <div class="card-header">
@@ -21,27 +22,32 @@
           <div class="form-group">
             <label>Quantity Change</label>
             <div class="input-group">
-              <input type="number" class="form-control" name="quantity" step="0.01" required>
+              <input type="number" class="form-control" name="quantity" {% if item.type == 'container' %}step="1" min="1"{% else %}step="0.01" min="0.01"{% endif %} required>
+              {% if item.type != 'container' %}
+              <select class="form-control" name="input_unit" required>
+                {% for unit in get_global_unit_list() %}
+                  <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <input type="hidden" name="input_unit" value="count">
+              {% endif %}
+            </div>
           </div>
         </div>
         <div class="col-md-4">
           <div class="form-group">
-            <label>Unit</label>
-            <select class="form-control" name="unit" required>
-              {% for unit in get_global_unit_list() %}
-                <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>
-                  {{ unit.name }}
-                </option>
-              {% endfor %}
+            <label>Cost Entry Type</label>
+            <select class="form-control" name="cost_entry_type" id="costEntryType">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
             </select>
           </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-6">
-          <div class="form-group">
-            <label>Cost Override (for restock only)</label>
-            <input type="number" class="form-control" name="restock_cost" step="0.01" placeholder="Leave blank to use current cost">
+          <div class="form-group mt-2">
+            <label>Cost</label>
+            <input type="number" class="form-control" name="cost_per_unit" step="0.01" id="costPerUnit">
+            <small class="form-text text-muted" id="costHelp"></small>
           </div>
         </div>
       </div>
