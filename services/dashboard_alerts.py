@@ -1,7 +1,7 @@
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from models import db, InventoryItem, Batch, ProductInventory, Timer
+from models import db, InventoryItem, Batch, ProductInventory
 from services.inventory_alerts import get_low_stock_ingredients
 from blueprints.expiration.services import ExpirationService
 import json
@@ -22,15 +22,16 @@ class DashboardAlertService:
         """Get prioritized alerts for dashboard with cognitive load management"""
         alerts = []
         
+        # Get expiration summary once
+        expiration_summary = ExpirationService.get_expiration_summary()
+        
         # CRITICAL: Expired items with remaining quantity
-        expired_data = ExpirationService.get_expired_inventory_items()
-        if expired_data['fifo_entries'] or expired_data['product_inventory']:
-            expired_count = len(expired_data['fifo_entries']) + len(expired_data['product_inventory'])
+        if expiration_summary['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',
-                'type': 'expiration',
+                'type': 'expired_inventory',
                 'title': 'Expired Inventory',
-                'message': f"{expired_count} items have expired and need attention",
+                'message': f"{expiration_summary['expired_total']} items have expired and need attention",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Review Expired Items',
                 'dismissible': False
@@ -51,7 +52,7 @@ class DashboardAlertService:
         
         # CRITICAL: Recent fault log errors
         recent_faults = DashboardAlertService._get_recent_faults()
-        if recent_faults:
+        if recent_faults > 0:
             alerts.append({
                 'priority': 'CRITICAL',
                 'type': 'fault_errors',
@@ -62,16 +63,15 @@ class DashboardAlertService:
                 'dismissible': False
             })
         
-        # HIGH: Expired/expiring timers
-        timer_alerts = DashboardAlertService._get_timer_alerts()
-        if timer_alerts['expired_count'] > 0:
+        # HIGH: Items expiring soon (within 3 days)
+        if expiration_summary['expiring_soon_total'] > 0:
             alerts.append({
                 'priority': 'HIGH',
-                'type': 'expired_timers',
-                'title': 'Timer Alert',
-                'message': f"{timer_alerts['expired_count']} timers have expired",
-                'action_url': '/timers/list_timers',
-                'action_text': 'Check Timers',
+                'type': 'expiring_soon',
+                'title': 'Expiring Soon',
+                'message': f"{expiration_summary['expiring_soon_total']} items expire within 3 days",
+                'action_url': '/expiration/alerts',
+                'action_text': 'Plan Usage',
                 'dismissible': True
             })
         
@@ -88,30 +88,23 @@ class DashboardAlertService:
                 'dismissible': True
             })
         
-        # HIGH: Items expiring soon
-        expiring_data = ExpirationService.get_expiring_soon_items(3)  # 3 days
-        expiring_count = len(expiring_data['fifo_entries']) + len(expiring_data['product_inventory'])
-        if expiring_count > 0:
+        # HIGH: Expired timers
+        timer_alerts = DashboardAlertService._get_timer_alerts()
+        if timer_alerts['expired_count'] > 0:
+            # Get the first expired timer's batch for redirection
+            batch_url = '/batches/'
+            if timer_alerts['expired_timers']:
+                first_timer = timer_alerts['expired_timers'][0]
+                if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
+                    batch_url = f'/batches/in-progress/{first_timer.batch_id}'
+            
             alerts.append({
                 'priority': 'HIGH',
-                'type': 'expiring_soon',
-                'title': 'Expiring Soon',
-                'message': f"{expiring_count} items expire within 3 days",
-                'action_url': '/expiration/alerts',
-                'action_text': 'Plan Usage',
-                'dismissible': True
-            })
-        
-        # HIGH: Product inventory issues
-        product_issues = DashboardAlertService._get_product_inventory_issues()
-        if product_issues:
-            alerts.append({
-                'priority': 'HIGH',
-                'type': 'product_issues',
-                'title': 'Product Stock Issues',
-                'message': f"{product_issues} products have inventory issues",
-                'action_url': '/products/product_list',
-                'action_text': 'Review Products',
+                'type': 'expired_timers',
+                'title': 'Timer Alert',
+                'message': f"{timer_alerts['expired_count']} timers have expired",
+                'action_url': batch_url,
+                'action_text': 'View Batch',
                 'dismissible': True
             })
         
@@ -158,10 +151,10 @@ class DashboardAlertService:
         recent_faults = DashboardAlertService._get_recent_faults()
         timer_alerts = DashboardAlertService._get_timer_alerts()
         
-        critical_count = summary['expired_total'] + stuck_batches + (1 if recent_faults > 0 else 0)
+        critical_count = (summary['expired_total'] + stuck_batches + 
+                         (1 if recent_faults > 0 else 0))
         high_count = (summary['expiring_soon_total'] + low_stock_count + 
-                     timer_alerts['expired_count'] + 
-                     DashboardAlertService._get_product_inventory_issues())
+                     timer_alerts['expired_count'])
         
         return {
             'critical_count': critical_count,
@@ -206,22 +199,25 @@ class DashboardAlertService:
     def _get_timer_alerts() -> Dict:
         """Get timer-related alerts"""
         try:
-            # Check if Timer model exists and get expired timers
-            active_timers = Timer.query.filter_by(is_active=True).all()
-            expired_count = 0
+            # Use BatchTimer model which exists in your system
+            from models import BatchTimer
+            active_timers = BatchTimer.query.filter_by(status='active').all()
+            expired_timers = []
             
             for timer in active_timers:
-                if hasattr(timer, 'end_time') and timer.end_time:
-                    if datetime.utcnow() > timer.end_time:
-                        expired_count += 1
+                if timer.start_time and timer.duration_seconds:
+                    end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                    if datetime.utcnow() > end_time:
+                        expired_timers.append(timer)
             
             return {
-                'expired_count': expired_count,
+                'expired_count': len(expired_timers),
+                'expired_timers': expired_timers,
                 'active_count': len(active_timers)
             }
-        except:
-            # Timer model might not exist or have different structure
-            return {'expired_count': 0, 'active_count': 0}
+        except (ImportError, AttributeError):
+            # Fallback if BatchTimer doesn't exist
+            return {'expired_count': 0, 'expired_timers': [], 'active_count': 0}
     
     @staticmethod
     def _get_product_inventory_issues() -> int:

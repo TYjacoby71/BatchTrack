@@ -5,9 +5,6 @@
   <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
 </div>
 
-<!-- Unified Dashboard Alerts -->
-{% include 'components/dashboard_alerts.html' %}
-
 <div class="text-center mb-4">
   <div class="d-inline-flex gap-3">
     {% if active_batch %}
@@ -16,6 +13,9 @@
     <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
   </div>
 </div>
+
+<!-- Unified Dashboard Alerts -->
+{% include 'components/dashboard_alerts.html' %}
 
 <!-- Recipe Selection Modal -->
 <div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 500px;">

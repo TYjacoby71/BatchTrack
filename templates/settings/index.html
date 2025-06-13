@@ -1,43 +1,682 @@
+
 {% extends "layout.html" %}
 {% block content %}
 <div class="container">
-    <h2>Settings</h2>
-    <div class="row">
-        <div class="col-md-6">
+    <h2><i class="fas fa-cog"></i> System Settings</h2>
+    <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
+    
+    <!-- Alert Management Section -->
+    <div class="row mb-4">
+        <div class="col-12">
             <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bell text-warning"></i> Alert Management
+                    </h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">System Settings</h5>
-
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6>Alerts</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dashboard Alerts</h6>
+                            <div class="mb-3">
+                                <label for="max-dashboard-alerts" class="form-label">
+                                    Maximum alerts on dashboard (recommended: 1-3 for focus)
+                                </label>
+                                <select class="form-select" id="max-dashboard-alerts" name="max_dashboard_alerts">
+                                    <option value="1">1 alert (minimal)</option>
+                                    <option value="2">2 alerts (focused)</option>
+                                    <option value="3" {% if settings.alerts.max_dashboard_alerts == 3 %}selected{% endif %}>3 alerts (balanced)</option>
+                                    <option value="5">5 alerts (detailed)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="low-stock-threshold" class="form-label">Low stock threshold</label>
+                                <input type="number" class="form-control" id="low-stock-threshold" 
+                                       value="{{ settings.alerts.low_stock_threshold or 5 }}" min="1" max="100">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="expiration-warning-days" class="form-label">Expiration warning (days ahead)</label>
+                                <input type="number" class="form-control" id="expiration-warning-days" 
+                                       value="{{ settings.alerts.expiration_warning_days or 7 }}" min="1" max="30">
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="form-check form-switch">
+                        <div class="col-md-6">
+                            <h6>Alert Types</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-expiration-alerts" 
+                                       {% if settings.alerts.show_expiration_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="show-expiration-alerts">
+                                    Expiration alerts (expired & expiring soon)
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-timer-alerts" 
+                                       {% if settings.alerts.show_timer_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="show-timer-alerts">
+                                    Timer alerts (expired timers)
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-low-stock-alerts" 
+                                       {% if settings.alerts.show_low_stock_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="show-low-stock-alerts">
+                                    Low stock alerts
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-batch-alerts"
+                                       {% if settings.alerts.show_batch_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="show-batch-alerts">
+                                    Stuck batch alerts
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-fault-alerts" 
+                                       {% if settings.alerts.show_fault_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="show-fault-alerts">
+                                    System fault alerts
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-alert-badges" 
+                                       {% if settings.alerts.show_alert_badges %}checked{% endif %}>
+                                <label class="form-check-label" for="show-alert-badges">
+                                    Show alert badges in navigation
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Tools Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cogs text-primary"></i> Production Tools
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Batch Management</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="require-timer-completion" 
+                                       {% if settings.batch_rules.require_timer_completion %}checked{% endif %}>
+                                <label class="form-check-label" for="require-timer-completion">
+                                    Require timer completion before finishing batch
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="allow-intermediate-tags"
+                                       {% if settings.batch_rules.allow_intermediate_tags %}checked{% endif %}>
+                                <label class="form-check-label" for="allow-intermediate-tags">
+                                    Allow intermediate tags during batch
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="require-finish-confirmation"
+                                       {% if settings.batch_rules.require_finish_confirmation %}checked{% endif %}>
+                                <label class="form-check-label" for="require-finish-confirmation">
+                                    Require confirmation before finishing batch
+                                </label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="stuck-batch-hours" class="form-label">Mark batches as stuck after (hours)</label>
+                                <input type="number" class="form-control" id="stuck-batch-hours" 
+                                       value="{{ settings.batch_rules.stuck_batch_hours or 24 }}" min="1" max="168">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Recipe & Planning</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-variations" 
+                                       {% if settings.recipe_builder.enable_variations %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-variations">
+                                    Enable recipe variations
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-containers" 
+                                       {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-containers">
+                                    Enable container management
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-scale-recipes"
+                                       {% if settings.recipe_builder.auto_scale_recipes %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-scale-recipes">
+                                    Auto-scale recipes based on inventory
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-cost-breakdown"
+                                       {% if settings.recipe_builder.show_cost_breakdown %}checked{% endif %}>
+                                <label class="form-check-label" for="show-cost-breakdown">
+                                    Show cost breakdown in recipes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Management Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-boxes text-success"></i> Inventory Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Tracking Features</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-fifo-tracking"
+                                       {% if settings.inventory.enable_fifo_tracking %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-fifo-tracking">
+                                    Enable FIFO (First In, First Out) tracking
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-expiration-dates"
+                                       {% if settings.inventory.show_expiration_dates %}checked{% endif %}>
+                                <label class="form-check-label" for="show-expiration-dates">
+                                    Show expiration dates in inventory
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-calculate-costs"
+                                       {% if settings.inventory.auto_calculate_costs %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-calculate-costs">
+                                    Auto-calculate ingredient costs
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-supplier-info"
+                                       {% if settings.inventory.show_supplier_info %}checked{% endif %}>
+                                <label class="form-check-label" for="show-supplier-info">
+                                    Show supplier information
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Advanced Features</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-barcode-scanning"
+                                       {% if settings.inventory.enable_barcode_scanning %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-barcode-scanning">
+                                    Enable barcode scanning (future feature)
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-bulk-operations"
+                                       {% if settings.inventory.enable_bulk_operations %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-bulk-operations">
+                                    Enable bulk inventory operations
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
-                                       {% if settings.alerts.show_inventory_refund %}checked{% endif %}
-                                       onchange="updateSetting('alerts.show_inventory_refund', this.checked)">
+                                       {% if settings.alerts.show_inventory_refund %}checked{% endif %}>
                                 <label class="form-check-label" for="showInventoryRefund">
                                     Show inventory refund details
                                 </label>
                             </div>
                         </div>
                     </div>
-
-                    <ul class="list-group">
-                        <li class="list-group-item">
-                            <a href="{{ url_for('conversion_bp.manage_units') }}">Unit Management</a>
-                        </li>
-                        <li class="list-group-item">
-                            <a href="{{ url_for('tags.manage_tags') }}">Tag Management</a>
-                        </li>
-                        <li class="list-group-item">
-                            <a href="{{ url_for('admin.cleanup_tools') }}">Database Cleanup Tools</a>
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Product Management Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shopping-bag text-info"></i> Product Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Product Features</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-product-variants"
+                                       {% if settings.products.enable_variants %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-product-variants">
+                                    Enable product variants
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-profit-margins"
+                                       {% if settings.products.show_profit_margins %}checked{% endif %}>
+                                <label class="form-check-label" for="show-profit-margins">
+                                    Show profit margins
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="track-production-costs"
+                                       {% if settings.products.track_production_costs %}checked{% endif %}>
+                                <label class="form-check-label" for="track-production-costs">
+                                    Track production costs
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Product Display</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-product-images"
+                                       {% if settings.products.enable_product_images %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-product-images">
+                                    Enable product images
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-generate-skus"
+                                       {% if settings.products.auto_generate_skus %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-generate-skus">
+                                    Auto-generate SKU codes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Management Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tools text-secondary"></i> System Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Data Management</h6>
+                            <div class="list-group mb-3">
+                                <a href="{{ url_for('conversion_bp.manage_units') }}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-ruler text-info"></i> Unit Management
+                                </a>
+                                <a href="{{ url_for('tags.manage_tags') }}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-tags text-success"></i> Tag Management
+                                </a>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-backup"
+                                       {% if settings.system.auto_backup %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-backup">
+                                    Enable automatic backups
+                                </label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="log-level" class="form-label">System log level</label>
+                                <select class="form-select" id="log-level">
+                                    <option value="ERROR">Error only</option>
+                                    <option value="WARNING">Warning & above</option>
+                                    <option value="INFO" {% if settings.system.log_level == 'INFO' %}selected{% endif %}>Info & above</option>
+                                    <option value="DEBUG">Debug (verbose)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Display Preferences</h6>
+                            <div class="mb-3">
+                                <label for="items-per-page" class="form-label">Items per page</label>
+                                <select class="form-select" id="items-per-page">
+                                    <option value="10">10 items</option>
+                                    <option value="20" {% if settings.display.per_page == 20 %}selected{% endif %}>20 items</option>
+                                    <option value="50">50 items</option>
+                                    <option value="100">100 items</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable-csv-export" 
+                                       {% if settings.display.enable_csv_export %}checked{% endif %}>
+                                <label class="form-check-label" for="enable-csv-export">
+                                    Enable CSV export functionality
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-save-forms"
+                                       {% if settings.display.auto_save_forms %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-save-forms">
+                                    Auto-save form progress
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="compact-view"
+                                       {% if settings.display.compact_view %}checked{% endif %}>
+                                <label class="form-check-label" for="compact-view">
+                                    Use compact view layouts
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Preferences Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user text-info"></i> User Preferences
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dashboard Layout</h6>
+                            <div class="mb-3">
+                                <label for="dashboard-layout" class="form-label">Default dashboard view</label>
+                                <select class="form-select" id="dashboard-layout">
+                                    <option value="compact">Compact (minimal information)</option>
+                                    <option value="standard" {% if settings.display.dashboard_layout == 'standard' %}selected{% endif %}>Standard (balanced view)</option>
+                                    <option value="detailed">Detailed (all information)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-quick-actions" 
+                                       {% if settings.display.show_quick_actions %}checked{% endif %}>
+                                <label class="form-check-label" for="show-quick-actions">
+                                    Show quick action buttons
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Accessibility</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="reduce-animations"
+                                       {% if settings.accessibility.reduce_animations %}checked{% endif %}>
+                                <label class="form-check-label" for="reduce-animations">
+                                    Reduce animations and transitions
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="high-contrast-mode"
+                                       {% if settings.accessibility.high_contrast_mode %}checked{% endif %}>
+                                <label class="form-check-label" for="high-contrast-mode">
+                                    High contrast mode
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="keyboard-navigation" 
+                                       {% if settings.accessibility.keyboard_navigation %}checked{% endif %}>
+                                <label class="form-check-label" for="keyboard-navigation">
+                                    Enhanced keyboard navigation
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="large-buttons"
+                                       {% if settings.accessibility.large_buttons %}checked{% endif %}>
+                                <label class="form-check-label" for="large-buttons">
+                                    Use larger buttons and controls
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-envelope text-warning"></i> Notifications
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Notification Types</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="browser-notifications"
+                                       {% if settings.notifications.browser_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="browser-notifications">
+                                    Browser notifications
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email-alerts"
+                                       {% if settings.notifications.email_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="email-alerts">
+                                    Email alerts (future feature)
+                                </label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="alert-frequency" class="form-label">Alert frequency</label>
+                                <select class="form-select" id="alert-frequency">
+                                    <option value="immediate" {% if settings.notifications.alert_frequency == 'immediate' %}selected{% endif %}>Immediate</option>
+                                    <option value="hourly">Hourly digest</option>
+                                    <option value="daily">Daily digest</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Quiet Hours</h6>
+                            <div class="mb-3">
+                                <label for="quiet-hours-start" class="form-label">Quiet hours start</label>
+                                <input type="time" class="form-control" id="quiet-hours-start" 
+                                       value="{{ settings.notifications.quiet_hours_start or '22:00' }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="quiet-hours-end" class="form-label">Quiet hours end</label>
+                                <input type="time" class="form-control" id="quiet-hours-end" 
+                                       value="{{ settings.notifications.quiet_hours_end or '08:00' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Settings Button -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <button type="button" class="btn btn-primary btn-lg" onclick="saveAllSettings()">
+                <i class="fas fa-save"></i> Save All Settings
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg ms-2" onclick="resetToDefaults()">
+                <i class="fas fa-undo"></i> Reset to Defaults
+            </button>
+        </div>
+    </div>
 </div>
+
+<script>
+function updateSetting(key, value) {
+    fetch('/settings/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({[key]: value})
+    });
+}
+
+function saveAllSettings() {
+    const settings = {
+        alerts: {
+            max_dashboard_alerts: parseInt(document.getElementById('max-dashboard-alerts').value),
+            show_expiration_alerts: document.getElementById('show-expiration-alerts').checked,
+            show_timer_alerts: document.getElementById('show-timer-alerts').checked,
+            show_low_stock_alerts: document.getElementById('show-low-stock-alerts').checked,
+            show_batch_alerts: document.getElementById('show-batch-alerts').checked,
+            show_fault_alerts: document.getElementById('show-fault-alerts').checked,
+            low_stock_threshold: parseInt(document.getElementById('low-stock-threshold').value),
+            expiration_warning_days: parseInt(document.getElementById('expiration-warning-days').value),
+            show_inventory_refund: document.getElementById('showInventoryRefund').checked,
+            show_alert_badges: document.getElementById('show-alert-badges').checked
+        },
+        batch_rules: {
+            require_timer_completion: document.getElementById('require-timer-completion').checked,
+            allow_intermediate_tags: document.getElementById('allow-intermediate-tags').checked,
+            require_finish_confirmation: document.getElementById('require-finish-confirmation').checked,
+            stuck_batch_hours: parseInt(document.getElementById('stuck-batch-hours').value)
+        },
+        recipe_builder: {
+            enable_variations: document.getElementById('enable-variations').checked,
+            enable_containers: document.getElementById('enable-containers').checked,
+            auto_scale_recipes: document.getElementById('auto-scale-recipes').checked,
+            show_cost_breakdown: document.getElementById('show-cost-breakdown').checked
+        },
+        inventory: {
+            enable_fifo_tracking: document.getElementById('enable-fifo-tracking').checked,
+            show_expiration_dates: document.getElementById('show-expiration-dates').checked,
+            auto_calculate_costs: document.getElementById('auto-calculate-costs').checked,
+            enable_barcode_scanning: document.getElementById('enable-barcode-scanning').checked,
+            show_supplier_info: document.getElementById('show-supplier-info').checked,
+            enable_bulk_operations: document.getElementById('enable-bulk-operations').checked
+        },
+        products: {
+            enable_variants: document.getElementById('enable-product-variants').checked,
+            show_profit_margins: document.getElementById('show-profit-margins').checked,
+            auto_generate_skus: document.getElementById('auto-generate-skus').checked,
+            enable_product_images: document.getElementById('enable-product-images').checked,
+            track_production_costs: document.getElementById('track-production-costs').checked
+        },
+        display: {
+            per_page: parseInt(document.getElementById('items-per-page').value),
+            enable_csv_export: document.getElementById('enable-csv-export').checked,
+            auto_save_forms: document.getElementById('auto-save-forms').checked,
+            dashboard_layout: document.getElementById('dashboard-layout').value,
+            show_quick_actions: document.getElementById('show-quick-actions').checked,
+            compact_view: document.getElementById('compact-view').checked
+        },
+        accessibility: {
+            reduce_animations: document.getElementById('reduce-animations').checked,
+            high_contrast_mode: document.getElementById('high-contrast-mode').checked,
+            keyboard_navigation: document.getElementById('keyboard-navigation').checked,
+            large_buttons: document.getElementById('large-buttons').checked
+        },
+        system: {
+            auto_backup: document.getElementById('auto-backup').checked,
+            log_level: document.getElementById('log-level').value
+        },
+        notifications: {
+            browser_notifications: document.getElementById('browser-notifications').checked,
+            email_alerts: document.getElementById('email-alerts').checked,
+            alert_frequency: document.getElementById('alert-frequency').value,
+            quiet_hours_start: document.getElementById('quiet-hours-start').value,
+            quiet_hours_end: document.getElementById('quiet-hours-end').value
+        }
+    };
+    
+    fetch('/settings/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Settings saved successfully!');
+            // Optional: reload page to reflect changes
+            // window.location.reload();
+        } else {
+            alert('Error saving settings: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving settings. Please try again.');
+    });
+}
+
+function resetToDefaults() {
+    if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+        // Reset select elements
+        document.getElementById('max-dashboard-alerts').value = '3';
+        document.getElementById('low-stock-threshold').value = '5';
+        document.getElementById('expiration-warning-days').value = '7';
+        document.getElementById('stuck-batch-hours').value = '24';
+        document.getElementById('items-per-page').value = '20';
+        document.getElementById('dashboard-layout').value = 'standard';
+        document.getElementById('log-level').value = 'INFO';
+        document.getElementById('alert-frequency').value = 'immediate';
+        document.getElementById('quiet-hours-start').value = '22:00';
+        document.getElementById('quiet-hours-end').value = '08:00';
+        
+        // Reset checkboxes to defaults
+        const defaultChecked = [
+            'show-expiration-alerts', 'show-timer-alerts', 'show-low-stock-alerts', 
+            'show-fault-alerts', 'show-alert-badges', 'require-timer-completion',
+            'require-finish-confirmation', 'enable-variations', 'enable-containers',
+            'show-cost-breakdown', 'enable-fifo-tracking', 'show-expiration-dates',
+            'auto-calculate-costs', 'show-supplier-info', 'enable-bulk-operations',
+            'enable-product-variants', 'show-profit-margins', 'enable-product-images',
+            'track-production-costs', 'enable-csv-export', 'show-quick-actions',
+            'keyboard-navigation', 'browser-notifications', 'auto-backup'
+        ];
+        
+        const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+        allCheckboxes.forEach(checkbox => {
+            checkbox.checked = defaultChecked.includes(checkbox.id);
+        });
+        
+        saveAllSettings();
+    }
+}
+</script>
 {% endblock %}
