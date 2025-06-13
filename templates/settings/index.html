@@ -115,6 +115,85 @@
         </div>
     </div>
 
+    <!-- User Management Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user text-primary"></i> User Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Profile Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">User ID</label>
+                                <input type="text" class="form-control" value="{{ current_user.id }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="firstName" 
+                                       value="{{ current_user.first_name or '' }}"
+                                       @change="updateProfile('first_name', $event.target.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="lastName" 
+                                       value="{{ current_user.last_name or '' }}"
+                                       @change="updateProfile('last_name', $event.target.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" 
+                                       value="{{ current_user.email or '' }}"
+                                       @change="updateProfile('email', $event.target.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" id="phone" 
+                                       value="{{ current_user.phone or '' }}"
+                                       @change="updateProfile('phone', $event.target.value)">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Account Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Role</label>
+                                <input type="text" class="form-control" value="{{ current_user.role }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Subscription Class</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" value="{{ current_user.subscription_class or 'free' }}" readonly>
+                                    <span class="input-group-text">
+                                        <i class="fas fa-lock text-muted" title="Future Feature"></i>
+                                    </span>
+                                </div>
+                                <small class="text-muted">Subscription management coming soon</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Member Since</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ current_user.created_at.strftime('%Y-%m-%d') if current_user.created_at else 'N/A' }}" readonly>
+                            </div>
+
+                            <h6 class="mt-4">Password Management</h6>
+                            <button type="button" class="btn btn-outline-primary" @click="showPasswordModal = true">
+                                <i class="fas fa-key"></i> Change Password
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Production Tools Section -->
     <div class="row mb-4">
         <div class="col-12">
@@ -604,226 +683,339 @@
 
 <script>
 function settingsManager() {
-    return {
-        settings: {
-            alerts: {
-                max_dashboard_alerts: {{ (settings.alerts.max_dashboard_alerts or 3)|tojson }},
-                show_expiration_alerts: {{ (settings.alerts.show_expiration_alerts or false)|tojson }},
-                show_timer_alerts: {{ (settings.alerts.show_timer_alerts or true)|tojson }},
-                show_low_stock_alerts: {{ (settings.alerts.show_low_stock_alerts or true)|tojson }},
-                show_batch_alerts: {{ (settings.alerts.show_batch_alerts or false)|tojson }},
-                show_fault_alerts: {{ (settings.alerts.show_fault_alerts or true)|tojson }},
-                low_stock_threshold: {{ (settings.alerts.low_stock_threshold or 5)|tojson }},
-                expiration_warning_days: {{ (settings.alerts.expiration_warning_days or 7)|tojson }},
-                show_inventory_refund: {{ (settings.alerts.show_inventory_refund or false)|tojson }},
-                show_alert_badges: {{ (settings.alerts.show_alert_badges or true)|tojson }}
-            },
-            batch_rules: {
-                require_timer_completion: {{ (settings.batch_rules.require_timer_completion or true)|tojson }},
-                allow_intermediate_tags: {{ (settings.batch_rules.allow_intermediate_tags or false)|tojson }},
-                require_finish_confirmation: {{ (settings.batch_rules.require_finish_confirmation or true)|tojson }},
-                stuck_batch_hours: {{ (settings.batch_rules.stuck_batch_hours or 24)|tojson }}
-            },
-            recipe_builder: {
-                enable_variations: {{ (settings.recipe_builder.enable_variations or true)|tojson }},
-                enable_containers: {{ (settings.recipe_builder.enable_containers or true)|tojson }},
-                auto_scale_recipes: {{ (settings.recipe_builder.auto_scale_recipes or false)|tojson }},
-                show_cost_breakdown: {{ (settings.recipe_builder.show_cost_breakdown or true)|tojson }}
-            },
-            inventory: {
-                enable_fifo_tracking: {{ (settings.inventory.enable_fifo_tracking or true)|tojson }},
-                show_expiration_dates: {{ (settings.inventory.show_expiration_dates or true)|tojson }},
-                auto_calculate_costs: {{ (settings.inventory.auto_calculate_costs or true)|tojson }},
-                enable_barcode_scanning: {{ (settings.inventory.enable_barcode_scanning or false)|tojson }},
-                show_supplier_info: {{ (settings.inventory.show_supplier_info or true)|tojson }},
-                enable_bulk_operations: {{ (settings.inventory.enable_bulk_operations or true)|tojson }}
-            },
-            products: {
-                enable_variants: {{ (settings.products.enable_variants or false)|tojson }},
-                show_profit_margins: {{ (settings.products.show_profit_margins or false)|tojson }},
-                auto_generate_skus: {{ (settings.products.auto_generate_skus or false)|tojson }},
-                enable_product_images: {{ (settings.products.enable_product_images or false)|tojson }},
-                track_production_costs: {{ (settings.products.track_production_costs or false)|tojson }}
-            },
-            display: {
-                per_page: {{ (settings.display.per_page or 20)|tojson }},
-                enable_csv_export: {{ (settings.display.enable_csv_export or false)|tojson }},
-                auto_save_forms: {{ (settings.display.auto_save_forms or false)|tojson }},
-                dashboard_layout: {{ (settings.display.dashboard_layout or "standard")|tojson }},
-                show_quick_actions: {{ (settings.display.show_quick_actions or false)|tojson }},
-                compact_view: {{ (settings.display.compact_view or false)|tojson }}
-            },
-            accessibility: {
-                reduce_animations: {{ (settings.accessibility.reduce_animations or false)|tojson }},
-                high_contrast_mode: {{ (settings.accessibility.high_contrast_mode or false)|tojson }},
-                keyboard_navigation: {{ (settings.accessibility.keyboard_navigation or false)|tojson }},
-                large_buttons: {{ (settings.accessibility.large_buttons or false)|tojson }}
-            },
-            system: {
-                auto_backup: {{ (settings.system.auto_backup or false)|tojson }},
-                log_level: {{ (settings.system.log_level or "INFO")|tojson }}
-            },
-            notifications: {
-                browser_notifications: {{ (settings.notifications.browser_notifications or false)|tojson }},
-                email_alerts: {{ (settings.notifications.email_alerts or false)|tojson }},
-                alert_frequency: {{ (settings.notifications.alert_frequency or "immediate")|tojson }},
-                quiet_hours_start: {{ (settings.notifications.quiet_hours_start or "22:00")|tojson }},
-                quiet_hours_end: {{ (settings.notifications.quiet_hours_end or "08:00")|tojson }}
-            }
-        },
-        saving: false,
-        showMessage: false,
-        message: '',
-        messageType: 'success',
-
-        updateSetting(key, value) {
-            // Convert string values to proper types
-            if (value === 'true') value = true;
-            if (value === 'false') value = false;
-            if (!isNaN(value) && value !== '') value = parseInt(value);
-
-            var data = {};
-            data[key] = value;
-
-            fetch('/settings/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        return {
+            settings: {
+                alerts: {
+                    max_dashboard_alerts: {{ (settings.alerts.max_dashboard_alerts or 3)|tojson }},
+                    show_expiration_alerts: {{ (settings.alerts.show_expiration_alerts or false)|tojson }},
+                    show_timer_alerts: {{ (settings.alerts.show_timer_alerts or true)|tojson }},
+                    show_low_stock_alerts: {{ (settings.alerts.show_low_stock_alerts or true)|tojson }},
+                    show_batch_alerts: {{ (settings.alerts.show_batch_alerts or false)|tojson }},
+                    show_fault_alerts: {{ (settings.alerts.show_fault_alerts or true)|tojson }},
+                    low_stock_threshold: {{ (settings.alerts.low_stock_threshold or 5)|tojson }},
+                    expiration_warning_days: {{ (settings.alerts.expiration_warning_days or 7)|tojson }},
+                    show_inventory_refund: {{ (settings.alerts.show_inventory_refund or false)|tojson }},
+                    show_alert_badges: {{ (settings.alerts.show_alert_badges or true)|tojson }}
                 },
-                body: JSON.stringify(data)
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.status === 'success') {
-                    this.showSuccessMessage('Setting saved');
-                } else {
-                    this.showErrorMessage('Error saving setting: ' + (data.message || 'Unknown error'));
-                }
-            }.bind(this))
-            .catch(function(error) {
-                console.error('Settings save error:', error);
-                this.showErrorMessage('Error saving setting');
-            }.bind(this));
-        },
-
-        saveAllSettings() {
-            this.saving = true;
-
-            fetch('/settings/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                batch_rules: {
+                    require_timer_completion: {{ (settings.batch_rules.require_timer_completion or true)|tojson }},
+                    allow_intermediate_tags: {{ (settings.batch_rules.allow_intermediate_tags or false)|tojson }},
+                    require_finish_confirmation: {{ (settings.batch_rules.require_finish_confirmation or true)|tojson }},
+                    stuck_batch_hours: {{ (settings.batch_rules.stuck_batch_hours or 24)|tojson }}
                 },
-                body: JSON.stringify(this.settings)
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                this.saving = false;
-                if (data.status === 'success') {
-                    this.showSuccessMessage('All settings saved successfully!');
-                } else {
-                    this.showErrorMessage('Error saving settings: ' + (data.message || 'Unknown error'));
+                recipe_builder: {
+                    enable_variations: {{ (settings.recipe_builder.enable_variations or true)|tojson }},
+                    enable_containers: {{ (settings.recipe_builder.enable_containers or true)|tojson }},
+                    auto_scale_recipes: {{ (settings.recipe_builder.auto_scale_recipes or false)|tojson }},
+                    show_cost_breakdown: {{ (settings.recipe_builder.show_cost_breakdown or true)|tojson }}
+                },
+                inventory: {
+                    enable_fifo_tracking: {{ (settings.inventory.enable_fifo_tracking or true)|tojson }},
+                    show_expiration_dates: {{ (settings.inventory.show_expiration_dates or true)|tojson }},
+                    auto_calculate_costs: {{ (settings.inventory.auto_calculate_costs or true)|tojson }},
+                    enable_barcode_scanning: {{ (settings.inventory.enable_barcode_scanning or false)|tojson }},
+                    show_supplier_info: {{ (settings.inventory.show_supplier_info or true)|tojson }},
+                    enable_bulk_operations: {{ (settings.inventory.enable_bulk_operations or true)|tojson }}
+                },
+                products: {
+                    enable_variants: {{ (settings.products.enable_variants or false)|tojson }},
+                    show_profit_margins: {{ (settings.products.show_profit_margins or false)|tojson }},
+                    auto_generate_skus: {{ (settings.products.auto_generate_skus or false)|tojson }},
+                    enable_product_images: {{ (settings.products.enable_product_images or false)|tojson }},
+                    track_production_costs: {{ (settings.products.track_production_costs or false)|tojson }}
+                },
+                display: {
+                    per_page: {{ (settings.display.per_page or 20)|tojson }},
+                    enable_csv_export: {{ (settings.display.enable_csv_export or false)|tojson }},
+                    auto_save_forms: {{ (settings.display.auto_save_forms or false)|tojson }},
+                    dashboard_layout: {{ (settings.display.dashboard_layout or "standard")|tojson }},
+                    show_quick_actions: {{ (settings.display.show_quick_actions or false)|tojson }},
+                    compact_view: {{ (settings.display.compact_view or false)|tojson }}
+                },
+                accessibility: {
+                    reduce_animations: {{ (settings.accessibility.reduce_animations or false)|tojson }},
+                    high_contrast_mode: {{ (settings.accessibility.high_contrast_mode or false)|tojson }},
+                    keyboard_navigation: {{ (settings.accessibility.keyboard_navigation or false)|tojson }},
+                    large_buttons: {{ (settings.accessibility.large_buttons or false)|tojson }}
+                },
+                system: {
+                    auto_backup: {{ (settings.system.auto_backup or false)|tojson }},
+                    log_level: {{ (settings.system.log_level or "INFO")|tojson }}
+                },
+                notifications: {
+                    browser_notifications: {{ (settings.notifications.browser_notifications or false)|tojson }},
+                    email_alerts: {{ (settings.notifications.email_alerts or false)|tojson }},
+                    alert_frequency: {{ (settings.notifications.alert_frequency or "immediate")|tojson }},
+                    quiet_hours_start: {{ (settings.notifications.quiet_hours_start or "22:00")|tojson }},
+                    quiet_hours_end: {{ (settings.notifications.quiet_hours_end or "08:00")|tojson }}
                 }
-            }.bind(this))
-            .catch(function(error) {
-                this.saving = false;
-                console.error('Settings save error:', error);
-                this.showErrorMessage('Error saving settings. Please try again.');
-            }.bind(this));
-        },
+            },
+            showMessage: false,
+            message: '',
+            messageType: 'success',
+            showPasswordModal: false,
 
-        resetToDefaults() {
-            if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-                this.settings = {
-                    alerts: {
-                        max_dashboard_alerts: 3,
-                        show_expiration_alerts: true,
-                        show_timer_alerts: true,
-                        show_low_stock_alerts: true,
-                        show_batch_alerts: false,
-                        show_fault_alerts: true,
-                        low_stock_threshold: 5,
-                        expiration_warning_days: 7,
-                        show_inventory_refund: false,
-                        show_alert_badges: true
+            updateSetting(key, value) {
+                // Convert string values to proper types
+                if (value === 'true') value = true;
+                if (value === 'false') value = false;
+                if (!isNaN(value) && value !== '') value = parseInt(value);
+
+                var data = {};
+                data[key] = value;
+
+                fetch('/settings/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
-                    batch_rules: {
-                        require_timer_completion: true,
-                        allow_intermediate_tags: false,
-                        require_finish_confirmation: true,
-                        stuck_batch_hours: 24
-                    },
-                    recipe_builder: {
-                        enable_variations: true,
-                        enable_containers: true,
-                        auto_scale_recipes: false,
-                        show_cost_breakdown: true
-                    },
-                    inventory: {
-                        enable_fifo_tracking: true,
-                        show_expiration_dates: true,
-                        auto_calculate_costs: true,
-                        enable_barcode_scanning: false,
-                        show_supplier_info: true,
-                        enable_bulk_operations: true
-                    },
-                    products: {
-                        enable_variants: false,
-                        show_profit_margins: false,
-                        auto_generate_skus: false,
-                        enable_product_images: false,
-                        track_production_costs: false
-                    },
-                    display: {
-                        per_page: 20,
-                        enable_csv_export: false,
-                        auto_save_forms: false,
-                        dashboard_layout: 'standard',
-                        show_quick_actions: false,
-                        compact_view: false
-                    },
-                    accessibility: {
-                        reduce_animations: false,
-                        high_contrast_mode: false,
-                        keyboard_navigation: false,
-                        large_buttons: false
-                    },
-                    system: {
-                        auto_backup: false,
-                        log_level: 'INFO'
-                    },
-                    notifications: {
-                        browser_notifications: false,
-                        email_alerts: false,
-                        alert_frequency: 'immediate',
-                        quiet_hours_start: '22:00',
-                        quiet_hours_end: '08:00'
+                    body: JSON.stringify(data)
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.status === 'success') {
+                        this.showSuccessMessage('Setting saved');
+                    } else {
+                        this.showErrorMessage('Error saving setting: ' + (data.message || 'Unknown error'));
                     }
-                };
-                this.saveAllSettings();
+                }.bind(this))
+                .catch(function(error) {
+                    console.error('Settings save error:', error);
+                    this.showErrorMessage('Error saving setting');
+                }.bind(this));
+            },
+
+            saveAllSettings() {
+                this.saving = true;
+
+                fetch('/settings/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(this.settings)
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    this.saving = false;
+                    if (data.status === 'success') {
+                        this.showSuccessMessage('All settings saved successfully!');
+                    } else {
+                        this.showErrorMessage('Error saving settings: ' + (data.message || 'Unknown error'));
+                    }
+                }.bind(this))
+                .catch(function(error) {
+                    this.saving = false;
+                    console.error('Settings save error:', error);
+                    this.showErrorMessage('Error saving settings. Please try again.');
+                }.bind(this));
+            },
+
+            resetToDefaults() {
+                if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+                    this.settings = {
+                        alerts: {
+                            max_dashboard_alerts: 3,
+                            show_expiration_alerts: true,
+                            show_timer_alerts: true,
+                            show_low_stock_alerts: true,
+                            show_batch_alerts: false,
+                            show_fault_alerts: true,
+                            low_stock_threshold: 5,
+                            expiration_warning_days: 7,
+                            show_inventory_refund: false,
+                            show_alert_badges: true
+                        },
+                        batch_rules: {
+                            require_timer_completion: true,
+                            allow_intermediate_tags: false,
+                            require_finish_confirmation: true,
+                            stuck_batch_hours: 24
+                        },
+                        recipe_builder: {
+                            enable_variations: true,
+                            enable_containers: true,
+                            auto_scale_recipes: false,
+                            show_cost_breakdown: true
+                        },
+                        inventory: {
+                            enable_fifo_tracking: true,
+                            show_expiration_dates: true,
+                            auto_calculate_costs: true,
+                            enable_barcode_scanning: false,
+                            show_supplier_info: true,
+                            enable_bulk_operations: true
+                        },
+                        products: {
+                            enable_variants: false,
+                            show_profit_margins: false,
+                            auto_generate_skus: false,
+                            enable_product_images: false,
+                            track_production_costs: false
+                        },
+                        display: {
+                            per_page: 20,
+                            enable_csv_export: false,
+                            auto_save_forms: false,
+                            dashboard_layout: 'standard',
+                            show_quick_actions: false,
+                            compact_view: false
+                        },
+                        accessibility: {
+                            reduce_animations: false,
+                            high_contrast_mode: false,
+                            keyboard_navigation: false,
+                            large_buttons: false
+                        },
+                        system: {
+                            auto_backup: false,
+                            log_level: 'INFO'
+                        },
+                        notifications: {
+                            browser_notifications: false,
+                            email_alerts: false,
+                            alert_frequency: 'immediate',
+                            quiet_hours_start: '22:00',
+                            quiet_hours_end: '08:00'
+                        }
+                    };
+                    this.saveAllSettings();
+                }
+            },
+
+            updateProfile(field, value) {
+                const data = {};
+                data[field] = value;
+
+                fetch('/settings/profile/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        this.showSuccessMessage('Profile updated successfully');
+                    } else {
+                        this.showErrorMessage(data.message || 'Failed to update profile');
+                    }
+                })
+                .catch(error => {
+                    console.error('Profile update error:', error);
+                    this.showErrorMessage('Failed to update profile');
+                });
+            },
+
+            changePassword() {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    this.showErrorMessage('All password fields are required');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    this.showErrorMessage('New passwords do not match');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    this.showErrorMessage('Password must be at least 6 characters');
+                    return;
+                }
+
+                fetch('/settings/password/change', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        this.showSuccessMessage('Password changed successfully');
+                        this.showPasswordModal = false;
+                        // Clear form
+                        document.getElementById('currentPassword').value = '';
+                        document.getElementById('newPassword').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                    } else {
+                        this.showErrorMessage(data.message || 'Failed to change password');
+                    }
+                })
+                .catch(error => {
+                    console.error('Password change error:', error);
+                    this.showErrorMessage('Failed to change password');
+                });
+            },
+
+            showSuccessMessage(msg) {
+                this.message = msg;
+                this.messageType = 'success';
+                this.showMessage = true;
+                setTimeout(() => this.showMessage = false, 3000);
+            },
+
+            showErrorMessage(msg) {
+                this.message = msg;
+                this.messageType = 'error';
+                this.showMessage = true;
+                setTimeout(() => this.showMessage = false, 5000);
             }
-        },
-
-        showSuccessMessage(msg) {
-            this.message = msg;
-            this.messageType = 'success';
-            this.showMessage = true;
-            setTimeout(function() { this.showMessage = false; }.bind(this), 3000);
-        },
-
-        showErrorMessage(msg) {
-            this.message = msg;
-            this.messageType = 'error';
-            this.showMessage = true;
-            setTimeout(function() { this.showMessage = false; }.bind(this), 5000);
         }
     }
-}
-</script>
-{% endblock %}
 
+    // Initialize settings data structure
+    window.settingsData = {
+        showPasswordModal: false
+    };
+</script>
+
+<!-- Password Change Modal -->
+<div class="modal fade" x-show="showPasswordModal" x-transition tabindex="-1" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Password</h5>
+                <button type="button" class="btn-close" @click="showPasswordModal = false"></button>
+            </div>
+            <div class="modal-body">
+                <form @submit.prevent="changePassword()">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" required minlength="6">
+                        <small class="text-muted">Password must be at least 6 characters</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="showPasswordModal = false">Cancel</button>
+                <button type="button" class="btn btn-primary" @click="changePassword()">Change Password</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 {% endblock %}

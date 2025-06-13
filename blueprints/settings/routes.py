@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from flask_login import login_required
-from models import db, Unit
+from flask_login import login_required, current_user
+from models import db, Unit, User
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 import json
 
 settings_bp = Blueprint('settings', __name__)
@@ -120,6 +122,7 @@ def index():
     return render_template(
         'settings/index.html',
         settings=settings_obj,
+        settings_data=settings_data,
         inventory_units=Unit.query.all(),
         product_units=[]
     )
@@ -206,6 +209,55 @@ def save_settings():
             json.dump(settings_data, f, indent=2)
         
         return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@settings_bp.route('/profile/save', methods=['POST'])
+@login_required
+def save_profile():
+    try:
+        data = request.get_json()
+        
+        # Update user profile fields
+        if 'first_name' in data:
+            current_user.first_name = data['first_name']
+        if 'last_name' in data:
+            current_user.last_name = data['last_name']
+        if 'email' in data:
+            current_user.email = data['email']
+        if 'phone' in data:
+            current_user.phone = data['phone']
+            
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Profile updated successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@settings_bp.route('/password/change', methods=['POST'])
+@login_required
+def change_password():
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        if not current_password or not new_password or not confirm_password:
+            return jsonify({"status": "error", "message": "All fields are required"}), 400
+            
+        if not current_user.check_password(current_password):
+            return jsonify({"status": "error", "message": "Current password is incorrect"}), 400
+            
+        if new_password != confirm_password:
+            return jsonify({"status": "error", "message": "New passwords do not match"}), 400
+            
+        if len(new_password) < 6:
+            return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
+            
+        current_user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        return jsonify({"status": "success", "message": "Password changed successfully"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
