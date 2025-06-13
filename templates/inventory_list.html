@@ -257,7 +257,7 @@
     <!-- Multi-Adjust Container Form -->
     <form id="updateContainerForm" style="display: none;" 
       x-data="{ 
-        rows: [{unit: '{{ get_global_unit_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
         submitForm(e) {
           e.preventDefault();
           const promises = this.rows.map(row => {
