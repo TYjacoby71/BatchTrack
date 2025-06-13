@@ -89,23 +89,44 @@ class PermissionManager:
         """Get all permissions for a user role"""
         return self.role_permissions.get(user_role, [])
     
-    def filter_data_by_user(self, query, user_id=None):
-        """Apply user-based filtering for multi-tenancy"""
-        if not user_id:
-            user_id = current_user.id if current_user.is_authenticated else None
-            
-        # For now, we'll implement basic user filtering
-        # You can expand this based on your tenancy model
-        if hasattr(query.column_descriptions[0]['type'], 'created_by'):
-            return query.filter_by(created_by=user_id)
+    def filter_data_by_scope(self, query, scope_context):
+        """Apply scoping based on user, organization, or global access"""
+        scope_type = scope_context.get('scope_type', 'user')
+        user_id = scope_context.get('user_id')
+        org_id = scope_context.get('organization_id')
+        
+        # Get the model from the query
+        model = query.column_descriptions[0]['type'] if query.column_descriptions else None
+        
+        if scope_type == 'global':
+            # Admin/system level - no filtering
+            return query
+        elif scope_type == 'organization' and org_id:
+            # Organization level - filter by org
+            if hasattr(model, 'organization_id'):
+                return query.filter_by(organization_id=org_id)
+            elif hasattr(model, 'created_by'):
+                # Fallback: get all users in org, then filter by those users
+                # This would need User.organization_id relationship
+                return query.join(User).filter(User.organization_id == org_id)
+        else:
+            # User level - filter by user
+            if hasattr(model, 'created_by'):
+                return query.filter_by(created_by=user_id)
+                
         return query
 
 # Global permission manager instance
 permission_manager = PermissionManager()
 
 # Decorators for route protection
-def require_permission(permission):
-    """Decorator to require specific permission for route access"""
+def require_permission(permission, scope_type='user'):
+    """Decorator to require specific permission for route access with multi-tenant scoping
+    
+    Args:
+        permission: Required permission string
+        scope_type: 'user', 'organization', or 'global' - determines data scoping level
+    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -116,10 +137,18 @@ def require_permission(permission):
             
             user_role = getattr(current_user, 'role', 'viewer')
             
+            # Check permissions
             if not permission_manager.has_permission(user_role, permission):
                 if request.is_json:
                     return jsonify({'error': 'Insufficient permissions'}), 403
                 abort(403)
+            
+            # Apply scoping context
+            kwargs['scope_context'] = {
+                'user_id': current_user.id,
+                'organization_id': getattr(current_user, 'organization_id', None),
+                'scope_type': scope_type
+            }
                 
             return f(*args, **kwargs)
         return decorated_function
