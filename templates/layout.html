@@ -63,7 +63,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard') }}">User Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Core Features -->
                     {% if has_permission('inventory.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
@@ -115,17 +115,20 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-info">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <main class="container-xl mt-4">
+        <div class="section-spacing">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-info">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
 
-        {% block content %}{% endblock %}
-    </div>
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
 
     {% include 'components/modals/unit_converter_modal.html' %}
 
