@@ -84,6 +84,87 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: middle;
+}
+
+.table th:last-child,
+.table td:last-child {
+  width: 80px;
+  text-align: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Action dropdown for tables */
+.action-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.action-toggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-1);
+  transition: all 0.2s ease;
+}
+
+.action-toggle:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.action-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-3);
+  border: 1px solid var(--color-border);
+  padding: var(--space-2);
+  min-width: 120px;
+  z-index: 1000;
+  display: none;
+}
+
+.action-menu.show {
+  display: block;
+}
+
+.action-menu .dropdown-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  text-align: left;
+  color: #374151;
+  text-decoration: none;
+  border-radius: var(--radius-1);
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+.action-menu .dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+.action-menu .dropdown-item.text-warning:hover {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.action-menu .dropdown-item.text-success:hover {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
 /* Form improvements */
 .form-control, .form-select {
   border-radius: var(--radius-2);
