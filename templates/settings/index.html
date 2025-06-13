@@ -550,8 +550,69 @@ function updateSetting(key, value) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({[key]: value})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Show brief success indicator
+            showSaveIndicator();
+        }
     });
 }
+
+function showSaveIndicator() {
+    // Create or update save indicator
+    let indicator = document.getElementById('save-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'save-indicator';
+        indicator.style.cssText = `
+            position: fixed; top: 20px; right: 20px; 
+            background: #28a745; color: white; 
+            padding: 8px 16px; border-radius: 4px; 
+            z-index: 1000; transition: opacity 0.3s;
+        `;
+        document.body.appendChild(indicator);
+    }
+    indicator.textContent = 'Settings saved';
+    indicator.style.opacity = '1';
+    setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+}
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox event listeners
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const settingPath = this.id.replace(/-/g, '_');
+            updateSetting(settingPath, this.checked);
+        });
+    });
+    
+    // Select dropdown event listeners
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            const settingPath = this.id.replace(/-/g, '_');
+            updateSetting(settingPath, this.value);
+        });
+    });
+    
+    // Number input event listeners
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const settingPath = this.id.replace(/-/g, '_');
+            updateSetting(settingPath, parseInt(this.value));
+        });
+    });
+    
+    // Time input event listeners
+    document.querySelectorAll('input[type="time"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const settingPath = this.id.replace(/-/g, '_');
+            updateSetting(settingPath, this.value);
+        });
+    });
+});
 
 function saveAllSettings() {
     const settings = {
