@@ -1,5 +1,4 @@
 
-<code>
 from flask import render_template, jsonify, request
 from flask_login import login_required
 from .services import ExpirationService
@@ -81,4 +80,3 @@ def api_archive_expired():
     """Archive expired items with zero quantity"""
     count = ExpirationService.archive_expired_items()
     return jsonify({'archived_count': count})
-</code>
