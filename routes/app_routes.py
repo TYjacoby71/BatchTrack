@@ -13,7 +13,7 @@ from services.dashboard_alerts import DashboardAlertService
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
 @require_permission('dashboard.view')
-def dashboard():
+def dashboard(scope_context=None):
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
     

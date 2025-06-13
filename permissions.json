@@ -1,6 +1,12 @@
 
 {
   "admin": ["*"],
+  "organization_owner": [
+    "*",
+    "organization.manage_users",
+    "organization.manage_settings", 
+    "organization.view_billing"
+  ],
   "manager": [
     "alerts.*",
     "batch_rules.*",
