@@ -47,6 +47,7 @@ body {
   padding: var(--space-6);
   margin-bottom: var(--space-8);
   border: 1px solid var(--color-border);
+  overflow: visible;
 }
 
 /* Ensure navbar fits within app container */
@@ -87,6 +88,7 @@ body {
 /* Table responsive wrapper for horizontal scrolling */
 .table-responsive {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-2);
   box-shadow: var(--shadow-1);
@@ -142,7 +144,7 @@ body {
   border: 1px solid var(--color-border);
   padding: var(--space-2);
   min-width: 120px;
-  z-index: 9999;
+  z-index: 10000;
   display: none;
 }
 
@@ -386,7 +388,7 @@ body {
 
 .container {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: var(--space-5) auto 0 auto;
     padding: 0 var(--space-5);
 }
 
@@ -579,10 +581,6 @@ input:checked + .toggle-label:before {
 }
 
 /* Custom styles for the app */
-.container {
-    margin-top: var(--space-5);
-}
-
 .batch-status {
     font-weight: bold;
 }
@@ -599,13 +597,7 @@ input:checked + .toggle-label:before {
     background-color: #f8f9fa;
 }
 
-.card {
-    margin-bottom: var(--space-5);
-}
 
-.form-group {
-    margin-bottom: var(--space-3);
-}
 
 .alert {
     margin-bottom: var(--space-5);
