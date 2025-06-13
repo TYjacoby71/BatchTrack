@@ -461,4 +461,3 @@ def deduct_fifo(item_id, quantity, change_type, notes):
 
     db.session.commit()
     return True, deduction_plan
-`
