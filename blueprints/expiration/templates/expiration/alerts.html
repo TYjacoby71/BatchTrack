@@ -209,6 +209,6 @@ async function archiveExpired() {
 }
 
 // Add today variable for template
-const today = new Date('{{ "now"|strftime("%Y-%m-%d") }}');
+const today = new Date('{{ today.strftime("%Y-%m-%d") }}');
 </script>
 {% endblock %}
