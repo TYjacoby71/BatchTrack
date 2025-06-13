@@ -664,7 +664,7 @@ function settingsManager() {
                 log_level: '{{ settings.system.log_level or "INFO" }}'
             },
             notifications: {
-                browser_notifications: {{ 'true' ifsettings.notifications.browser_notifications else 'false' }},
+                browser_notifications: {{ 'true' if settings.notifications.browser_notifications else 'false' }},
                 email_alerts: {{ 'true' if settings.notifications.email_alerts else 'false' }},
                 alert_frequency: '{{ settings.notifications.alert_frequency or "immediate" }}',
                 quiet_hours_start: '{{ settings.notifications.quiet_hours_start or "22:00" }}',
@@ -698,7 +698,7 @@ function settingsManager() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Settings save error:', error);
                 this.showErrorMessage('Error saving setting');
             });
         },
@@ -724,7 +724,7 @@ function settingsManager() {
             })
             .catch(error => {
                 this.saving = false;
-                console.error('Error:', error);
+                console.error('Settings save error:', error);
                 this.showErrorMessage('Error saving settings. Please try again.');
             });
         },
