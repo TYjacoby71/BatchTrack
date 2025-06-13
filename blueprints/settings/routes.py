@@ -8,11 +8,8 @@ settings_bp = Blueprint('settings', __name__)
 @settings_bp.route('/', endpoint='index')
 @login_required
 def index():
-    try:
-        with open("settings.json", "r") as f:
-            settings_data = json.load(f)
-    except FileNotFoundError:
-        settings_data = {
+    # Define default settings structure
+    default_settings = {
             "batch_display": {
                 "visible_columns": ["status", "recipe", "start_date", "end_date", "tags", "cost"],
                 "per_page": 20,
@@ -91,11 +88,25 @@ def index():
                 "quiet_hours_end": "08:00"
             }
         }
+    
+    try:
+        with open("settings.json", "r") as f:
+            settings_data = json.load(f)
+            # Merge with defaults in case new settings were added
+            for key, value in default_settings.items():
+                if key not in settings_data:
+                    settings_data[key] = value
+                elif isinstance(value, dict) and isinstance(settings_data[key], dict):
+                    for subkey, subvalue in value.items():
+                        if subkey not in settings_data[key]:
+                            settings_data[key][subkey] = subvalue
+    except FileNotFoundError:
+        settings_data = default_settings
         # Create settings.json if it doesn't exist
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
 
-    # Convert flat dictionary to nested object for template compatibility
+    # Convert dictionary to nested object for template compatibility
     class SettingsObject:
         def __init__(self, data):
             for key, value in data.items():
