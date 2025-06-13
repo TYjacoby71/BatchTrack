@@ -1,8 +1,14 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="container">
+<div class="container" x-data="settingsManager()">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
+
+    <!-- Success/Error Messages -->
+    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'" style="display: none;">
+        <span x-text="message"></span>
+        <button type="button" class="btn-close" @click="showMessage = false"></button>
+    </div>
 
     <!-- Alert Management Section -->
     <div class="row mb-4">
@@ -21,10 +27,12 @@
                                 <label for="max-dashboard-alerts" class="form-label">
                                     Maximum alerts on dashboard (recommended: 1-3 for focus)
                                 </label>
-                                <select class="form-select" id="max-dashboard-alerts" name="max_dashboard_alerts">
+                                <select class="form-select" id="max-dashboard-alerts" 
+                                        x-model="settings.alerts.max_dashboard_alerts" 
+                                        @change="updateSetting('max_dashboard_alerts', $event.target.value)">
                                     <option value="1">1 alert (minimal)</option>
                                     <option value="2">2 alerts (focused)</option>
-                                    <option value="3" {% if settings.alerts.max_dashboard_alerts == 3 %}selected{% endif %}>3 alerts (balanced)</option>
+                                    <option value="3">3 alerts (balanced)</option>
                                     <option value="5">5 alerts (detailed)</option>
                                 </select>
                             </div>
@@ -32,20 +40,25 @@
                             <div class="mb-3">
                                 <label for="low-stock-threshold" class="form-label">Low stock threshold</label>
                                 <input type="number" class="form-control" id="low-stock-threshold" 
-                                       value="{{ settings.alerts.low_stock_threshold or 5 }}" min="1" max="100">
+                                       x-model="settings.alerts.low_stock_threshold" 
+                                       @change="updateSetting('low_stock_threshold', $event.target.value)"
+                                       min="1" max="100">
                             </div>
 
                             <div class="mb-3">
                                 <label for="expiration-warning-days" class="form-label">Expiration warning (days ahead)</label>
                                 <input type="number" class="form-control" id="expiration-warning-days" 
-                                       value="{{ settings.alerts.expiration_warning_days or 7 }}" min="1" max="30">
+                                       x-model="settings.alerts.expiration_warning_days"
+                                       @change="updateSetting('expiration_warning_days', $event.target.value)"
+                                       min="1" max="30">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <h6>Alert Types</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-expiration-alerts" 
-                                       {% if settings.alerts.show_expiration_alerts %}checked{% endif %}>
+                                       x-model="settings.alerts.show_expiration_alerts"
+                                       @change="updateSetting('show_expiration_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-expiration-alerts">
                                     Expiration alerts (expired & expiring soon)
                                 </label>
@@ -53,7 +66,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-timer-alerts" 
-                                       {% if settings.alerts.show_timer_alerts %}checked{% endif %}>
+                                       x-model="settings.alerts.show_timer_alerts"
+                                       @change="updateSetting('show_timer_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-timer-alerts">
                                     Timer alerts (expired timers)
                                 </label>
@@ -61,7 +75,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-low-stock-alerts" 
-                                       {% if settings.alerts.show_low_stock_alerts %}checked{% endif %}>
+                                       x-model="settings.alerts.show_low_stock_alerts"
+                                       @change="updateSetting('show_low_stock_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-low-stock-alerts">
                                     Low stock alerts
                                 </label>
@@ -69,7 +84,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-batch-alerts"
-                                       {% if settings.alerts.show_batch_alerts %}checked{% endif %}>
+                                       x-model="settings.alerts.show_batch_alerts"
+                                       @change="updateSetting('show_batch_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-batch-alerts">
                                     Stuck batch alerts
                                 </label>
@@ -77,7 +93,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-fault-alerts" 
-                                       {% if settings.alerts.show_fault_alerts %}checked{% endif %}>
+                                       x-model="settings.alerts.show_fault_alerts"
+                                       @change="updateSetting('show_fault_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-fault-alerts">
                                     System fault alerts
                                 </label>
@@ -85,7 +102,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-alert-badges" 
-                                       {% if settings.alerts.show_alert_badges %}checked{% endif %}>
+                                       x-model="settings.alerts.show_alert_badges"
+                                       @change="updateSetting('show_alert_badges', $event.target.checked)">
                                 <label class="form-check-label" for="show-alert-badges">
                                     Show alert badges in navigation
                                 </label>
@@ -112,7 +130,8 @@
                             <h6>Batch Management</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="require-timer-completion" 
-                                       {% if settings.batch_rules.require_timer_completion %}checked{% endif %}>
+                                       x-model="settings.batch_rules.require_timer_completion"
+                                       @change="updateSetting('require_timer_completion', $event.target.checked)">
                                 <label class="form-check-label" for="require-timer-completion">
                                     Require timer completion before finishing batch
                                 </label>
@@ -120,7 +139,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="allow-intermediate-tags"
-                                       {% if settings.batch_rules.allow_intermediate_tags %}checked{% endif %}>
+                                       x-model="settings.batch_rules.allow_intermediate_tags"
+                                       @change="updateSetting('allow_intermediate_tags', $event.target.checked)">
                                 <label class="form-check-label" for="allow-intermediate-tags">
                                     Allow intermediate tags during batch
                                 </label>
@@ -128,7 +148,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="require-finish-confirmation"
-                                       {% if settings.batch_rules.require_finish_confirmation %}checked{% endif %}>
+                                       x-model="settings.batch_rules.require_finish_confirmation"
+                                       @change="updateSetting('require_finish_confirmation', $event.target.checked)">
                                 <label class="form-check-label" for="require-finish-confirmation">
                                     Require confirmation before finishing batch
                                 </label>
@@ -137,14 +158,17 @@
                             <div class="mb-3">
                                 <label for="stuck-batch-hours" class="form-label">Mark batches as stuck after (hours)</label>
                                 <input type="number" class="form-control" id="stuck-batch-hours" 
-                                       value="{{ settings.batch_rules.stuck_batch_hours or 24 }}" min="1" max="168">
+                                       x-model="settings.batch_rules.stuck_batch_hours"
+                                       @change="updateSetting('stuck_batch_hours', $event.target.value)"
+                                       min="1" max="168">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <h6>Recipe & Planning</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-variations" 
-                                       {% if settings.recipe_builder.enable_variations %}checked{% endif %}>
+                                       x-model="settings.recipe_builder.enable_variations"
+                                       @change="updateSetting('enable_variations', $event.target.checked)">
                                 <label class="form-check-label" for="enable-variations">
                                     Enable recipe variations
                                 </label>
@@ -152,7 +176,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-containers" 
-                                       {% if settings.recipe_builder.enable_containers %}checked{% endif %}>
+                                       x-model="settings.recipe_builder.enable_containers"
+                                       @change="updateSetting('enable_containers', $event.target.checked)">
                                 <label class="form-check-label" for="enable-containers">
                                     Enable container management
                                 </label>
@@ -160,7 +185,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="auto-scale-recipes"
-                                       {% if settings.recipe_builder.auto_scale_recipes %}checked{% endif %}>
+                                       x-model="settings.recipe_builder.auto_scale_recipes"
+                                       @change="updateSetting('auto_scale_recipes', $event.target.checked)">
                                 <label class="form-check-label" for="auto-scale-recipes">
                                     Auto-scale recipes based on inventory
                                 </label>
@@ -168,7 +194,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-cost-breakdown"
-                                       {% if settings.recipe_builder.show_cost_breakdown %}checked{% endif %}>
+                                       x-model="settings.recipe_builder.show_cost_breakdown"
+                                       @change="updateSetting('show_cost_breakdown', $event.target.checked)">
                                 <label class="form-check-label" for="show-cost-breakdown">
                                     Show cost breakdown in recipes
                                 </label>
@@ -195,7 +222,8 @@
                             <h6>Tracking Features</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-fifo-tracking"
-                                       {% if settings.inventory.enable_fifo_tracking %}checked{% endif %}>
+                                       x-model="settings.inventory.enable_fifo_tracking"
+                                       @change="updateSetting('enable_fifo_tracking', $event.target.checked)">
                                 <label class="form-check-label" for="enable-fifo-tracking">
                                     Enable FIFO (First In, First Out) tracking
                                 </label>
@@ -203,7 +231,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-expiration-dates"
-                                       {% if settings.inventory.show_expiration_dates %}checked{% endif %}>
+                                       x-model="settings.inventory.show_expiration_dates"
+                                       @change="updateSetting('show_expiration_dates', $event.target.checked)">
                                 <label class="form-check-label" for="show-expiration-dates">
                                     Show expiration dates in inventory
                                 </label>
@@ -211,7 +240,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="auto-calculate-costs"
-                                       {% if settings.inventory.auto_calculate_costs %}checked{% endif %}>
+                                       x-model="settings.inventory.auto_calculate_costs"
+                                       @change="updateSetting('auto_calculate_costs', $event.target.checked)">
                                 <label class="form-check-label" for="auto-calculate-costs">
                                     Auto-calculate ingredient costs
                                 </label>
@@ -219,7 +249,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-supplier-info"
-                                       {% if settings.inventory.show_supplier_info %}checked{% endif %}>
+                                       x-model="settings.inventory.show_supplier_info"
+                                       @change="updateSetting('show_supplier_info', $event.target.checked)">
                                 <label class="form-check-label" for="show-supplier-info">
                                     Show supplier information
                                 </label>
@@ -229,7 +260,8 @@
                             <h6>Advanced Features</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-barcode-scanning"
-                                       {% if settings.inventory.enable_barcode_scanning %}checked{% endif %}>
+                                       x-model="settings.inventory.enable_barcode_scanning"
+                                       @change="updateSetting('enable_barcode_scanning', $event.target.checked)">
                                 <label class="form-check-label" for="enable-barcode-scanning">
                                     Enable barcode scanning (future feature)
                                 </label>
@@ -237,7 +269,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-bulk-operations"
-                                       {% if settings.inventory.enable_bulk_operations %}checked{% endif %}>
+                                       x-model="settings.inventory.enable_bulk_operations"
+                                       @change="updateSetting('enable_bulk_operations', $event.target.checked)">
                                 <label class="form-check-label" for="enable-bulk-operations">
                                     Enable bulk inventory operations
                                 </label>
@@ -245,7 +278,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="showInventoryRefund" 
-                                       {% if settings.alerts.show_inventory_refund %}checked{% endif %}>
+                                       x-model="settings.alerts.show_inventory_refund"
+                                       @change="updateSetting('show_inventory_refund', $event.target.checked)">
                                 <label class="form-check-label" for="showInventoryRefund">
                                     Show inventory refund details
                                 </label>
@@ -272,7 +306,8 @@
                             <h6>Product Features</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-product-variants"
-                                       {% if settings.products.enable_variants %}checked{% endif %}>
+                                       x-model="settings.products.enable_variants"
+                                       @change="updateSetting('enable_variants', $event.target.checked)">
                                 <label class="form-check-label" for="enable-product-variants">
                                     Enable product variants
                                 </label>
@@ -280,7 +315,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-profit-margins"
-                                       {% if settings.products.show_profit_margins %}checked{% endif %}>
+                                       x-model="settings.products.show_profit_margins"
+                                       @change="updateSetting('show_profit_margins', $event.target.checked)">
                                 <label class="form-check-label" for="show-profit-margins">
                                     Show profit margins
                                 </label>
@@ -288,7 +324,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="track-production-costs"
-                                       {% if settings.products.track_production_costs %}checked{% endif %}>
+                                       x-model="settings.products.track_production_costs"
+                                       @change="updateSetting('track_production_costs', $event.target.checked)">
                                 <label class="form-check-label" for="track-production-costs">
                                     Track production costs
                                 </label>
@@ -298,7 +335,8 @@
                             <h6>Product Display</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-product-images"
-                                       {% if settings.products.enable_product_images %}checked{% endif %}>
+                                       x-model="settings.products.enable_product_images"
+                                       @change="updateSetting('enable_product_images', $event.target.checked)">
                                 <label class="form-check-label" for="enable-product-images">
                                     Enable product images
                                 </label>
@@ -306,7 +344,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="auto-generate-skus"
-                                       {% if settings.products.auto_generate_skus %}checked{% endif %}>
+                                       x-model="settings.products.auto_generate_skus"
+                                       @change="updateSetting('auto_generate_skus', $event.target.checked)">
                                 <label class="form-check-label" for="auto-generate-skus">
                                     Auto-generate SKU codes
                                 </label>
@@ -342,7 +381,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="auto-backup"
-                                       {% if settings.system.auto_backup %}checked{% endif %}>
+                                       x-model="settings.system.auto_backup"
+                                       @change="updateSetting('auto_backup', $event.target.checked)">
                                 <label class="form-check-label" for="auto-backup">
                                     Enable automatic backups
                                 </label>
@@ -350,10 +390,12 @@
 
                             <div class="mb-3">
                                 <label for="log-level" class="form-label">System log level</label>
-                                <select class="form-select" id="log-level">
+                                <select class="form-select" id="log-level"
+                                        x-model="settings.system.log_level"
+                                        @change="updateSetting('log_level', $event.target.value)">
                                     <option value="ERROR">Error only</option>
                                     <option value="WARNING">Warning & above</option>
-                                    <option value="INFO" {% if settings.system.log_level == 'INFO' %}selected{% endif %}>Info & above</option>
+                                    <option value="INFO">Info & above</option>
                                     <option value="DEBUG">Debug (verbose)</option>
                                 </select>
                             </div>
@@ -362,9 +404,11 @@
                             <h6>Display Preferences</h6>
                             <div class="mb-3">
                                 <label for="items-per-page" class="form-label">Items per page</label>
-                                <select class="form-select" id="items-per-page">
+                                <select class="form-select" id="items-per-page"
+                                        x-model="settings.display.per_page"
+                                        @change="updateSetting('per_page', $event.target.value)">
                                     <option value="10">10 items</option>
-                                    <option value="20" {% if settings.display.per_page == 20 %}selected{% endif %}>20 items</option>
+                                    <option value="20">20 items</option>
                                     <option value="50">50 items</option>
                                     <option value="100">100 items</option>
                                 </select>
@@ -372,7 +416,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="enable-csv-export" 
-                                       {% if settings.display.enable_csv_export %}checked{% endif %}>
+                                       x-model="settings.display.enable_csv_export"
+                                       @change="updateSetting('enable_csv_export', $event.target.checked)">
                                 <label class="form-check-label" for="enable-csv-export">
                                     Enable CSV export functionality
                                 </label>
@@ -380,7 +425,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="auto-save-forms"
-                                       {% if settings.display.auto_save_forms %}checked{% endif %}>
+                                       x-model="settings.display.auto_save_forms"
+                                       @change="updateSetting('auto_save_forms', $event.target.checked)">
                                 <label class="form-check-label" for="auto-save-forms">
                                     Auto-save form progress
                                 </label>
@@ -388,7 +434,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="compact-view"
-                                       {% if settings.display.compact_view %}checked{% endif %}>
+                                       x-model="settings.display.compact_view"
+                                       @change="updateSetting('compact_view', $event.target.checked)">
                                 <label class="form-check-label" for="compact-view">
                                     Use compact view layouts
                                 </label>
@@ -415,16 +462,19 @@
                             <h6>Dashboard Layout</h6>
                             <div class="mb-3">
                                 <label for="dashboard-layout" class="form-label">Default dashboard view</label>
-                                <select class="form-select" id="dashboard-layout">
+                                <select class="form-select" id="dashboard-layout"
+                                        x-model="settings.display.dashboard_layout"
+                                        @change="updateSetting('dashboard_layout', $event.target.value)">
                                     <option value="compact">Compact (minimal information)</option>
-                                    <option value="standard" {% if settings.display.dashboard_layout == 'standard' %}selected{% endif %}>Standard (balanced view)</option>
+                                    <option value="standard">Standard (balanced view)</option>
                                     <option value="detailed">Detailed (all information)</option>
                                 </select>
                             </div>
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-quick-actions" 
-                                       {% if settings.display.show_quick_actions %}checked{% endif %}>
+                                       x-model="settings.display.show_quick_actions"
+                                       @change="updateSetting('show_quick_actions', $event.target.checked)">
                                 <label class="form-check-label" for="show-quick-actions">
                                     Show quick action buttons
                                 </label>
@@ -434,7 +484,8 @@
                             <h6>Accessibility</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="reduce-animations"
-                                       {% if settings.accessibility.reduce_animations %}checked{% endif %}>
+                                       x-model="settings.accessibility.reduce_animations"
+                                       @change="updateSetting('reduce_animations', $event.target.checked)">
                                 <label class="form-check-label" for="reduce-animations">
                                     Reduce animations and transitions
                                 </label>
@@ -442,7 +493,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="high-contrast-mode"
-                                       {% if settings.accessibility.high_contrast_mode %}checked{% endif %}>
+                                       x-model="settings.accessibility.high_contrast_mode"
+                                       @change="updateSetting('high_contrast_mode', $event.target.checked)">
                                 <label class="form-check-label" for="high-contrast-mode">
                                     High contrast mode
                                 </label>
@@ -450,7 +502,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="keyboard-navigation" 
-                                       {% if settings.accessibility.keyboard_navigation %}checked{% endif %}>
+                                       x-model="settings.accessibility.keyboard_navigation"
+                                       @change="updateSetting('keyboard_navigation', $event.target.checked)">
                                 <label class="form-check-label" for="keyboard-navigation">
                                     Enhanced keyboard navigation
                                 </label>
@@ -458,7 +511,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="large-buttons"
-                                       {% if settings.accessibility.large_buttons %}checked{% endif %}>
+                                       x-model="settings.accessibility.large_buttons"
+                                       @change="updateSetting('large_buttons', $event.target.checked)">
                                 <label class="form-check-label" for="large-buttons">
                                     Use larger buttons and controls
                                 </label>
@@ -485,7 +539,8 @@
                             <h6>Notification Types</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="browser-notifications"
-                                       {% if settings.notifications.browser_notifications %}checked{% endif %}>
+                                       x-model="settings.notifications.browser_notifications"
+                                       @change="updateSetting('browser_notifications', $event.target.checked)">
                                 <label class="form-check-label" for="browser-notifications">
                                     Browser notifications
                                 </label>
@@ -493,7 +548,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="email-alerts"
-                                       {% if settings.notifications.email_alerts %}checked{% endif %}>
+                                       x-model="settings.notifications.email_alerts"
+                                       @change="updateSetting('email_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="email-alerts">
                                     Email alerts (future feature)
                                 </label>
@@ -501,8 +557,10 @@
 
                             <div class="mb-3">
                                 <label for="alert-frequency" class="form-label">Alert frequency</label>
-                                <select class="form-select" id="alert-frequency">
-                                    <option value="immediate" {% if settings.notifications.alert_frequency == 'immediate' %}selected{% endif %}>Immediate</option>
+                                <select class="form-select" id="alert-frequency"
+                                        x-model="settings.notifications.alert_frequency"
+                                        @change="updateSetting('alert_frequency', $event.target.value)">
+                                    <option value="immediate">Immediate</option>
                                     <option value="hourly">Hourly digest</option>
                                     <option value="daily">Daily digest</option>
                                 </select>
@@ -513,13 +571,15 @@
                             <div class="mb-3">
                                 <label for="quiet-hours-start" class="form-label">Quiet hours start</label>
                                 <input type="time" class="form-control" id="quiet-hours-start" 
-                                       value="{{ settings.notifications.quiet_hours_start or '22:00' }}">
+                                       x-model="settings.notifications.quiet_hours_start"
+                                       @change="updateSetting('quiet_hours_start', $event.target.value)">
                             </div>
 
                             <div class="mb-3">
                                 <label for="quiet-hours-end" class="form-label">Quiet hours end</label>
                                 <input type="time" class="form-control" id="quiet-hours-end" 
-                                       value="{{ settings.notifications.quiet_hours_end or '08:00' }}">
+                                       x-model="settings.notifications.quiet_hours_end"
+                                       @change="updateSetting('quiet_hours_end', $event.target.value)">
                             </div>
                         </div>
                     </div>
@@ -531,10 +591,11 @@
     <!-- Save Settings Button -->
     <div class="row">
         <div class="col-12 text-center">
-            <button type="button" class="btn btn-primary btn-lg" onclick="saveAllSettings()">
-                <i class="fas fa-save"></i> Save All Settings
+            <button type="button" class="btn btn-primary btn-lg" @click="saveAllSettings()" :disabled="saving">
+                <i class="fas fa-save"></i> 
+                <span x-text="saving ? 'Saving...' : 'Save All Settings'"></span>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-lg ms-2" onclick="resetToDefaults()">
+            <button type="button" class="btn btn-outline-secondary btn-lg ms-2" @click="resetToDefaults()" :disabled="saving">
                 <i class="fas fa-undo"></i> Reset to Defaults
             </button>
         </div>
@@ -542,205 +603,225 @@
 </div>
 
 <script>
-function updateSetting(key, value) {
-    fetch('/settings/save', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
+function settingsManager() {
+    return {
+        settings: {
+            alerts: {
+                max_dashboard_alerts: {{ settings.alerts.max_dashboard_alerts or 3 }},
+                show_expiration_alerts: {{ 'true' if settings.alerts.show_expiration_alerts else 'false' }},
+                show_timer_alerts: {{ 'true' if settings.alerts.show_timer_alerts else 'false' }},
+                show_low_stock_alerts: {{ 'true' if settings.alerts.show_low_stock_alerts else 'false' }},
+                show_batch_alerts: {{ 'true' if settings.alerts.show_batch_alerts else 'false' }},
+                show_fault_alerts: {{ 'true' if settings.alerts.show_fault_alerts else 'false' }},
+                low_stock_threshold: {{ settings.alerts.low_stock_threshold or 5 }},
+                expiration_warning_days: {{ settings.alerts.expiration_warning_days or 7 }},
+                show_inventory_refund: {{ 'true' if settings.alerts.show_inventory_refund else 'false' }},
+                show_alert_badges: {{ 'true' if settings.alerts.show_alert_badges else 'false' }}
+            },
+            batch_rules: {
+                require_timer_completion: {{ 'true' if settings.batch_rules.require_timer_completion else 'false' }},
+                allow_intermediate_tags: {{ 'true' if settings.batch_rules.allow_intermediate_tags else 'false' }},
+                require_finish_confirmation: {{ 'true' if settings.batch_rules.require_finish_confirmation else 'false' }},
+                stuck_batch_hours: {{ settings.batch_rules.stuck_batch_hours or 24 }}
+            },
+            recipe_builder: {
+                enable_variations: {{ 'true' if settings.recipe_builder.enable_variations else 'false' }},
+                enable_containers: {{ 'true' if settings.recipe_builder.enable_containers else 'false' }},
+                auto_scale_recipes: {{ 'true' if settings.recipe_builder.auto_scale_recipes else 'false' }},
+                show_cost_breakdown: {{ 'true' if settings.recipe_builder.show_cost_breakdown else 'false' }}
+            },
+            inventory: {
+                enable_fifo_tracking: {{ 'true' if settings.inventory.enable_fifo_tracking else 'false' }},
+                show_expiration_dates: {{ 'true' if settings.inventory.show_expiration_dates else 'false' }},
+                auto_calculate_costs: {{ 'true' if settings.inventory.auto_calculate_costs else 'false' }},
+                enable_barcode_scanning: {{ 'true' if settings.inventory.enable_barcode_scanning else 'false' }},
+                show_supplier_info: {{ 'true' if settings.inventory.show_supplier_info else 'false' }},
+                enable_bulk_operations: {{ 'true' if settings.inventory.enable_bulk_operations else 'false' }}
+            },
+            products: {
+                enable_variants: {{ 'true' if settings.products.enable_variants else 'false' }},
+                show_profit_margins: {{ 'true' if settings.products.show_profit_margins else 'false' }},
+                auto_generate_skus: {{ 'true' if settings.products.auto_generate_skus else 'false' }},
+                enable_product_images: {{ 'true' if settings.products.enable_product_images else 'false' }},
+                track_production_costs: {{ 'true' if settings.products.track_production_costs else 'false' }}
+            },
+            display: {
+                per_page: {{ settings.display.per_page or 20 }},
+                enable_csv_export: {{ 'true' if settings.display.enable_csv_export else 'false' }},
+                auto_save_forms: {{ 'true' if settings.display.auto_save_forms else 'false' }},
+                dashboard_layout: '{{ settings.display.dashboard_layout or "standard" }}',
+                show_quick_actions: {{ 'true' if settings.display.show_quick_actions else 'false' }},
+                compact_view: {{ 'true' if settings.display.compact_view else 'false' }}
+            },
+            accessibility: {
+                reduce_animations: {{ 'true' if settings.accessibility.reduce_animations else 'false' }},
+                high_contrast_mode: {{ 'true' if settings.accessibility.high_contrast_mode else 'false' }},
+                keyboard_navigation: {{ 'true' if settings.accessibility.keyboard_navigation else 'false' }},
+                large_buttons: {{ 'true' if settings.accessibility.large_buttons else 'false' }}
+            },
+            system: {
+                auto_backup: {{ 'true' if settings.system.auto_backup else 'false' }},
+                log_level: '{{ settings.system.log_level or "INFO" }}'
+            },
+            notifications: {
+                browser_notifications: {{ 'true' if settings.notifications.browser_notifications else 'false' }},
+                email_alerts: {{ 'true' if settings.notifications.email_alerts else 'false' }},
+                alert_frequency: '{{ settings.notifications.alert_frequency or "immediate" }}',
+                quiet_hours_start: '{{ settings.notifications.quiet_hours_start or "22:00" }}',
+                quiet_hours_end: '{{ settings.notifications.quiet_hours_end or "08:00" }}'
+            }
         },
-        body: JSON.stringify({[key]: value})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Show brief success indicator
-            showSaveIndicator();
+        saving: false,
+        showMessage: false,
+        message: '',
+        messageType: 'success',
+
+        updateSetting(key, value) {
+            // Convert string values to proper types
+            if (value === 'true') value = true;
+            if (value === 'false') value = false;
+            if (!isNaN(value) && value !== '') value = parseInt(value);
+
+            var data = {};
+            data[key] = value;
+
+            fetch('/settings/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.status === 'success') {
+                    this.showSuccessMessage('Setting saved');
+                } else {
+                    this.showErrorMessage('Error saving setting: ' + (data.message || 'Unknown error'));
+                }
+            }.bind(this))
+            .catch(function(error) {
+                console.error('Settings save error:', error);
+                this.showErrorMessage('Error saving setting');
+            }.bind(this));
+        },
+
+        saveAllSettings() {
+            this.saving = true;
+
+            fetch('/settings/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(this.settings)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                this.saving = false;
+                if (data.status === 'success') {
+                    this.showSuccessMessage('All settings saved successfully!');
+                } else {
+                    this.showErrorMessage('Error saving settings: ' + (data.message || 'Unknown error'));
+                }
+            }.bind(this))
+            .catch(function(error) {
+                this.saving = false;
+                console.error('Settings save error:', error);
+                this.showErrorMessage('Error saving settings. Please try again.');
+            }.bind(this));
+        },
+
+        resetToDefaults() {
+            if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+                this.settings = {
+                    alerts: {
+                        max_dashboard_alerts: 3,
+                        show_expiration_alerts: true,
+                        show_timer_alerts: true,
+                        show_low_stock_alerts: true,
+                        show_batch_alerts: false,
+                        show_fault_alerts: true,
+                        low_stock_threshold: 5,
+                        expiration_warning_days: 7,
+                        show_inventory_refund: false,
+                        show_alert_badges: true
+                    },
+                    batch_rules: {
+                        require_timer_completion: true,
+                        allow_intermediate_tags: false,
+                        require_finish_confirmation: true,
+                        stuck_batch_hours: 24
+                    },
+                    recipe_builder: {
+                        enable_variations: true,
+                        enable_containers: true,
+                        auto_scale_recipes: false,
+                        show_cost_breakdown: true
+                    },
+                    inventory: {
+                        enable_fifo_tracking: true,
+                        show_expiration_dates: true,
+                        auto_calculate_costs: true,
+                        enable_barcode_scanning: false,
+                        show_supplier_info: true,
+                        enable_bulk_operations: true
+                    },
+                    products: {
+                        enable_variants: false,
+                        show_profit_margins: false,
+                        auto_generate_skus: false,
+                        enable_product_images: false,
+                        track_production_costs: false
+                    },
+                    display: {
+                        per_page: 20,
+                        enable_csv_export: false,
+                        auto_save_forms: false,
+                        dashboard_layout: 'standard',
+                        show_quick_actions: false,
+                        compact_view: false
+                    },
+                    accessibility: {
+                        reduce_animations: false,
+                        high_contrast_mode: false,
+                        keyboard_navigation: false,
+                        large_buttons: false
+                    },
+                    system: {
+                        auto_backup: false,
+                        log_level: 'INFO'
+                    },
+                    notifications: {
+                        browser_notifications: false,
+                        email_alerts: false,
+                        alert_frequency: 'immediate',
+                        quiet_hours_start: '22:00',
+                        quiet_hours_end: '08:00'
+                    }
+                };
+                this.saveAllSettings();
+            }
+        },
+
+        showSuccessMessage(msg) {
+            this.message = msg;
+            this.messageType = 'success';
+            this.showMessage = true;
+            setTimeout(function() { this.showMessage = false; }.bind(this), 3000);
+        },
+
+        showErrorMessage(msg) {
+            this.message = msg;
+            this.messageType = 'error';
+            this.showMessage = true;
+            setTimeout(function() { this.showMessage = false; }.bind(this), 5000);
         }
-    });
-}
-
-function showSaveIndicator() {
-    // Create or update save indicator
-    let indicator = document.getElementById('save-indicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'save-indicator';
-        indicator.style.cssText = `
-            position: fixed; top: 20px; right: 20px; 
-            background: #28a745; color: white; 
-            padding: 8px 16px; border-radius: 4px; 
-            z-index: 1000; transition: opacity 0.3s;
-        `;
-        document.body.appendChild(indicator);
-    }
-    indicator.textContent = 'Settings saved';
-    indicator.style.opacity = '1';
-    setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
-}
-
-// Add event listeners when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Checkbox event listeners
-    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const settingPath = this.id.replace(/-/g, '_');
-            updateSetting(settingPath, this.checked);
-        });
-    });
-
-    // Select dropdown event listeners
-    document.querySelectorAll('select').forEach(select => {
-        select.addEventListener('change', function() {
-            const settingPath = this.id.replace(/-/g, '_');
-            updateSetting(settingPath, this.value);
-        });
-    });
-
-    // Number input event listeners
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('change', function() {
-            const settingPath = this.id.replace(/-/g, '_');
-            updateSetting(settingPath, parseInt(this.value));
-        });
-    });
-
-    // Time input event listeners
-    document.querySelectorAll('input[type="time"]').forEach(input => {
-        input.addEventListener('change', function() {
-            const settingPath = this.id.replace(/-/g, '_');
-            updateSetting(settingPath, this.value);
-        });
-    });
-});
-
-function saveAllSettings() {
-    const settings = {
-        alerts: {
-            max_dashboard_alerts: parseInt(document.getElementById('max-dashboard-alerts').value),
-            show_expiration_alerts: document.getElementById('show-expiration-alerts').checked,
-            show_timer_alerts: document.getElementById('show-timer-alerts').checked,
-            show_low_stock_alerts: document.getElementById('show-low-stock-alerts').checked,
-            show_batch_alerts: document.getElementById('show-batch-alerts').checked,
-            show_fault_alerts: document.getElementById('show-fault-alerts').checked,
-            low_stock_threshold: parseInt(document.getElementById('low-stock-threshold').value),
-            expiration_warning_days: parseInt(document.getElementById('expiration-warning-days').value),
-            show_inventory_refund: document.getElementById('showInventoryRefund').checked,
-            show_alert_badges: document.getElementById('show-alert-badges').checked
-        },
-        batch_rules: {
-            require_timer_completion: document.getElementById('require-timer-completion').checked,
-            allow_intermediate_tags: document.getElementById('allow-intermediate-tags').checked,
-            require_finish_confirmation: document.getElementById('require-finish-confirmation').checked,
-            stuck_batch_hours: parseInt(document.getElementById('stuck-batch-hours').value)
-        },
-        recipe_builder: {
-            enable_variations: document.getElementById('enable-variations').checked,
-            enable_containers: document.getElementById('enable-containers').checked,
-            auto_scale_recipes: document.getElementById('auto-scale-recipes').checked,
-            show_cost_breakdown: document.getElementById('show-cost-breakdown').checked
-        },
-        inventory: {
-            enable_fifo_tracking: document.getElementById('enable-fifo-tracking').checked,
-            show_expiration_dates: document.getElementById('show-expiration-dates').checked,
-            auto_calculate_costs: document.getElementById('auto-calculate-costs').checked,
-            enable_barcode_scanning: document.getElementById('enable-barcode-scanning').checked,
-            show_supplier_info: document.getElementById('show-supplier-info').checked,
-            enable_bulk_operations: document.getElementById('enable-bulk-operations').checked
-        },
-        products: {
-            enable_variants: document.getElementById('enable-product-variants').checked,
-            show_profit_margins: document.getElementById('show-profit-margins').checked,
-            auto_generate_skus: document.getElementById('auto-generate-skus').checked,
-            enable_product_images: document.getElementById('enable-product-images').checked,
-            track_production_costs: document.getElementById('track-production-costs').checked
-        },
-        display: {
-            per_page: parseInt(document.getElementById('items-per-page').value),
-            enable_csv_export: document.getElementById('enable-csv-export').checked,
-            auto_save_forms: document.getElementById('auto-save-forms').checked,
-            dashboard_layout: document.getElementById('dashboard-layout').value,
-            show_quick_actions: document.getElementById('show-quick-actions').checked,
-            compact_view: document.getElementById('compact-view').checked
-        },
-        accessibility: {
-            reduce_animations: document.getElementById('reduce-animations').checked,
-            high_contrast_mode: document.getElementById('high-contrast-mode').checked,
-            keyboard_navigation: document.getElementById('keyboard-navigation').checked,
-            large_buttons: document.getElementById('large-buttons').checked
-        },
-        system: {
-            auto_backup: document.getElementById('auto-backup').checked,
-            log_level: document.getElementById('log-level').value
-        },
-        notifications: {
-            browser_notifications: document.getElementById('browser-notifications').checked,
-            email_alerts: document.getElementById('email-alerts').checked,
-            alert_frequency: document.getElementById('alert-frequency').value,
-            quiet_hours_start: document.getElementById('quiet-hours-start').value,
-            quiet_hours_end: document.getElementById('quiet-hours-end').value
-        }
-    };
-
-    fetch('/settings/save', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Settings saved successfully!');
-            // Optional: reload page to reflect changes
-            // window.location.reload();
-        } else {
-            alert('Error saving settings: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error saving settings. Please try again.');
-    });
-}
-
-function resetToDefaults() {
-    if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-        // Reset select elements
-        document.getElementById('max-dashboard-alerts').value = '3';
-        document.getElementById('low-stock-threshold').value = '5';
-        document.getElementById('expiration-warning-days').value = '7';
-        document.getElementById('stuck-batch-hours').value = '24';
-        document.getElementById('items-per-page').value = '20';
-        document.getElementById('dashboard-layout').value = 'standard';
-        document.getElementById('log-level').value = 'INFO';
-        document.getElementById('alert-frequency').value = 'immediate';
-        document.getElementById('quiet-hours-start').value = '22:00';
-        document.getElementById('quiet-hours-end').value = '08:00';
-
-        // Reset checkboxes to defaults
-        const defaultChecked = [
-            'show-expiration-alerts', 'show-timer-alerts', 'show-low-stock-alerts', 
-            'show-fault-alerts', 'show-alert-badges', 'require-timer-completion',
-            'require-finish-confirmation', 'enable-variations', 'enable-containers',
-            'show-cost-breakdown', 'enable-fifo-tracking', 'show-expiration-dates',
-            'auto-calculate-costs', 'show-supplier-info', 'enable-bulk-operations',
-            'enable-product-variants', 'show-profit-margins', 'enable-product-images',
-            'track-production-costs', 'enable-csv-export', 'show-quick-actions',
-            'keyboard-navigation', 'browser-notifications', 'auto-backup'
-        ];
-
-        const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-        allCheckboxes.forEach(checkbox => {
-            checkbox.checked = defaultChecked.includes(checkbox.id);
-        });
-
-        saveAllSettings();
     }
 }
 </script>
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 {% endblock %}
