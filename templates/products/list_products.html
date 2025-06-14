@@ -282,7 +282,7 @@
               {% set size_inventory = variation_inventory|selectattr('size_label', 'equalto', size_label)|list %}
               {% set size_quantity = size_inventory|sum(attribute='quantity')|round(1) %}
               {% set size_unit = "count" if size_label != "Bulk" else product.product_base_unit %}
-              {% set avg_cost = (size_inventory|sum(attribute='unit_cost')|round(2) / size_inventory|length) if size_inventory else 0 %}
+              {% set avg_cost = (size_inventory|sum(attribute='cost_per_unit')|round(2) / size_inventory|length) if size_inventory else 0 %}
               {% set oldest_batch = size_inventory|sort(attribute='timestamp')|first if size_inventory else none %}
               <tr class="collapse" id="sizes-{{ product.id }}-{{ variation.id }}">
                 <td class="ps-6">
