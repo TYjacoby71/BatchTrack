@@ -4,38 +4,21 @@
 
 <div class="inventory-sections">
 
-  <!-- Unified Control Panel -->
-  <div class="card mb-4" id="controlPanelCard">
-    <div class="card-body p-0">
-      <!-- Split Button Design -->
-      <div class="row g-0">
-        <div class="col-6">
-          <div class="control-panel-button control-panel-left active" onclick="showAddSection()">
-            <div class="button-content">
-              <h6 class="mb-2">Add New Items</h6>
-              <div class="button-group">
-                <button type="button" class="btn btn-success btn-sm me-2" onclick="toggleIngredientForm()">+ Ingredient</button>
-                <button type="button" class="btn btn-info btn-sm" onclick="toggleContainerForm()">+ Container</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6">
-          <div class="control-panel-button control-panel-right" onclick="showUpdateSection()">
-            <div class="button-content">
-              <h6 class="mb-2">Update Existing</h6>
-              <div class="button-group">
-                <button type="button" class="btn btn-warning btn-sm me-2" onclick="toggleUpdateForm()">↻ Ingredients</button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleContainerUpdateForm()">↻ Containers</button>
-              </div>
-            </div>
-          </div>
-        </div>
+  <!-- Simple Action Buttons -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">
+          + Add Ingredient
+        </button>
+        <button type="button" class="btn btn-success" onclick="toggleContainerForm()">
+          + Add Container
+        </button>
       </div>
 
       <!-- Form Area (expands vertically) -->
       <div id="formArea" style="display: none;">
-        <div class="border-top p-4">
+        <div class="border-top p-4 mt-3">
           <!-- Add New Ingredient Form -->
           <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

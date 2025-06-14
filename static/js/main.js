@@ -21,23 +21,6 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
   }
 }
 
-// Control Panel Functions
-function showAddSection() {
-  const leftButton = document.querySelector('.control-panel-left');
-  const rightButton = document.querySelector('.control-panel-right');
-  
-  leftButton.classList.add('active');
-  rightButton.classList.remove('active');
-}
-
-function showUpdateSection() {
-  const leftButton = document.querySelector('.control-panel-left');
-  const rightButton = document.querySelector('.control-panel-right');
-  
-  rightButton.classList.add('active');
-  leftButton.classList.remove('active');
-}
-
 function hideAllForms() {
   const forms = ['addIngredientForm', 'addContainerForm', 'updateInventoryForm', 'updateContainerForm'];
   forms.forEach(formId => {
@@ -52,12 +35,6 @@ function hideAllForms() {
   if (formArea) {
     formArea.style.display = 'none';
   }
-  
-  // Reset button states
-  const leftButton = document.querySelector('.control-panel-left');
-  const rightButton = document.querySelector('.control-panel-right');
-  leftButton.classList.remove('active');
-  rightButton.classList.remove('active');
 }
 
 function showForm(formId) {
@@ -74,23 +51,11 @@ function showForm(formId) {
 }
 
 function toggleIngredientForm() {
-  showAddSection();
   showForm('addIngredientForm');
 }
 
 function toggleContainerForm() {
-  showAddSection();
   showForm('addContainerForm');
-}
-
-function toggleUpdateForm() {
-  showUpdateSection();
-  showForm('updateInventoryForm');
-}
-
-function toggleUpdateContainerForm() {
-  showUpdateSection();
-  showForm('updateContainerForm');
 }
 
 function toggleContainersFilter() {
