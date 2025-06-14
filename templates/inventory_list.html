@@ -4,295 +4,28 @@
 
 <div class="inventory-sections">
 
-  <!-- Simple Action Buttons -->
+  <!-- Unified Add/Update Card -->
   <div class="card mb-4">
-    <div class="card-body">
-      <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">
-          + Add Ingredient
-        </button>
-        <button type="button" class="btn btn-success" onclick="toggleContainerForm()">
-          + Add Container
-        </button>
-      </div>
-
-      <!-- Form Area (expands vertically) -->
-      <div id="formArea" style="display: none;">
-        <div class="border-top p-4 mt-3">
-          <!-- Add New Ingredient Form -->
-          <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="type" value="ingredient">
-            <div class="row g-3 align-items-end">
-              <div class="col-md-3">
-                <label class="form-label">Name</label>
-                <input type="text" name="name" class="form-control" required>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Quantity</label>
-                <input type="number" step="0.01" name="quantity" class="form-control" required>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Unit</label>
-                <select name="unit" class="form-select" required>
-                  {% for unit in units %}
-                  <option value="{{ unit.name }}">{{ unit.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="col-md-3">
-                <div x-data="{ isPerishable: false }">
-                  <h5 class="mb-2">Perishable</h5>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="form-check mb-0">
-                      <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
-                    </div>
-                    <input type="number" name="shelf_life_days" class="form-control" 
-                           placeholder="Shelf Life (days)" min="1"
-                           :required="isPerishable"
-                           :disabled="!isPerishable"
-                           :class="{ 'bg-light': !isPerishable }">
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Cost/Unit</label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
-                </div>
-              </div>
-              <div class="col-auto">
-                <button type="submit" class="btn btn-success">Save</button>
-                <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancel</button>
-              </div>
-            </div>
-          </form>
-
-          <!-- Add New Container Form -->
-          <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="type" value="container">
-            <div class="row g-3 align-items-end">
-              <div class="col">
-                <label class="form-label">Name</label>
-                <input type="text" name="name" class="form-control" required>
-              </div>
-              <div class="col">
-                <label class="form-label">Storage Amount</label>
-                <input type="number" step="0.01" name="storage_amount" class="form-control" required>
-              </div>
-              <div class="col">
-                <label class="form-label">Storage Unit</label>
-                <select name="storage_unit" class="form-select select2" required>
-                  {% for unit in get_global_unit_list() %}
-                  <option value="{{ unit.name }}">{{ unit.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="col">
-                <label class="form-label">Quantity in Stock</label>
-                <input type="number" step="1" name="quantity" class="form-control" required>
-              </div>
-              <div class="col">
-                <label class="form-label">Cost/Unit</label>
-                <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
-              </div>
-              <div class="col-auto">
-                <button type="submit" class="btn btn-success">Save</button>
-                <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancel</button>
-              </div>
-            </div>
-          </form>
-
-          <!-- Multi-Adjust Inventory Form -->
-          <form id="updateInventoryForm" style="display: none;" 
-            x-data="{ 
-              rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
-              submitForm(e) {
-                e.preventDefault();
-                const promises = this.rows.map(row => {
-                  if (!row.id || !row.quantity) return null;
-
-                  const formData = new FormData();
-                  formData.append('quantity', row.quantity);
-                  formData.append('input_unit', row.unit);
-                  formData.append('change_type', row.change_type);
-                  formData.append('cost_entry_type', row.cost_entry_type);
-
-                  if (row.cost_entry_type !== 'no_change') {
-                    formData.append('cost_per_unit', row.cost || 0);
-                  }
-
-                  formData.append('csrf_token', '{{ csrf_token() }}');
-
-                  return fetch('/inventory/adjust/' + row.id, {
-                    method: 'POST',
-                    body: formData
-                  });
-                });
-
-                Promise.all(promises)
-                  .then(() => window.location.reload())
-                  .catch(err => alert('Error updating inventory'));
-              },
-              resetRows() {
-                this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
-              },
-              updateCostHelp(event, index) {
-                const costType = event.target.value;
-                if (costType === 'no_change') {
-                  this.rows[index].costHelp = 'Cost will remain unchanged';
-                } else if (costType === 'per_unit') {
-                  this.rows[index].costHelp = 'Enter cost per unit';
-                } else if (costType === 'total') {
-                  this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
-                }
-              }
-            }">
-
-            <template x-for="(row, index) in rows" :key="index">
-              <div class="row g-3 align-items-end mb-2">
-                <div class="col">
-                  <label class="form-label">Item</label>
-                  <select x-model="row.id" class="form-select" required>
-                    <option value="">Select Item</option>
-                    {% for item in items if item.type != 'container' %}
-                    <option value="{{ item.id }}">{{ item.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col">
-                  <label class="form-label">Quantity</label>
-                  <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
-                </div>
-                <div class="col">
-                  <label class="form-label">Unit</label>
-                  <select x-model="row.unit" class="form-select" required>
-                    {% for unit in get_global_unit_list() %}
-                      <option value="{{ unit.name }}">{{ unit.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col">
-                  <label class="form-label">Cost Entry Type</label>
-                  <select x-model="row.cost_entry_type" class="form-select" @change="updateCostHelp($event, index)">
-                    <option value="no_change">No Change</option>
-                    <option value="per_unit">Per Unit Cost</option>
-                    <option value="total">Total Cost</option>
-                  </select>
-                </div>
-                <div class="col">
-                  <label class="form-label">Cost</label>
-                  <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
-                  <small class="form-text text-muted" x-text="row.costHelp"></small>
-                  <input type="hidden" x-model="row.change_type" value="restock">
-                </div>
-                <div class="col-auto d-flex align-items-end">
-                  <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </template>
-
-            <div class="mt-3">
-              <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
-              <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
-              <button type="button" class="btn btn-secondary" @click="resetRows(); hideAllForms()">Cancel</button>
-            </div>
-          </form>
-
-          <!-- Multi-Adjust Container Form -->
-          <form id="updateContainerForm" style="display: none;" 
-            x-data="{ 
-              rows: [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
-              submitForm(e) {
-                e.preventDefault();
-                const promises = this.rows.map(row => {
-                  if (!row.id || !row.quantity) return null;
-
-                  const formData = new FormData();
-                  formData.append('quantity', row.quantity);
-                  formData.append('change_type', row.change_type);
-                  formData.append('cost_entry_type', row.cost_entry_type);
-
-                  if (row.cost_entry_type !== 'no_change') {
-                    formData.append('cost_per_unit', row.cost || 0);
-                  }
-
-                  formData.append('csrf_token', '{{ csrf_token() }}');
-
-                  return fetch('/inventory/adjust/' + row.id, {
-                    method: 'POST',
-                    body: formData
-                  });
-                });
-
-                Promise.all(promises)
-                  .then(() => window.location.reload())
-                  .catch(err => alert('Error updating inventory'));
-              },
-              resetContainerRows() {
-                this.rows = [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
-              },
-              updateContainerCostHelp(event, index) {
-                const costType = event.target.value;
-                if (costType === 'no_change') {
-                  this.rows[index].costHelp = 'Cost will remain unchanged';
-                } else if (costType === 'per_unit') {
-                  this.rows[index].costHelp = 'Enter cost per container';
-                } else if (costType === 'total') {
-                  this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
-                }
-              }
-            }">
-
-            <template x-for="(row, index) in rows" :key="index">
-              <div class="row g-3 align-items-end mb-2">
-                <div class="col">
-                  <label class="form-label">Item</label>
-                  <select x-model="row.id" class="form-select" required>
-                    <option value="">Select Item</option>
-                    {% for item in items if item.type == 'container' %}
-                    <option value="{{ item.id }}">{{ item.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col">
-                  <label class="form-label">Quantity</label>
-                  <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
-                </div>
-                <div class="col">
-                  <label class="form-label">Cost Entry Type</label>
-                  <select x-model="row.cost_entry_type" class="form-select" @change="updateContainerCostHelp($event, index)">
-                    <option value="no_change">No Change</option>
-                    <option value="per_unit">Per Unit Cost</option>
-                    <option value="total">Total Cost</option>
-                  </select>
-                </div>
-                <div class="col">
-                  <label class="form-label">Cost</label>
-                  <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
-                  <small class="form-text text-muted" x-text="row.costHelp"></small>
-                  <input type="hidden" x-model="row.change_type" value="restock">
-                </div>
-                <div class="col-auto d-flex align-items-end">
-                  <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </template>
-
-            <div class="mt-3">
-              <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
-              <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
-              <button type="button" class="btn btn-secondary" @click="resetContainerRows(); hideAllForms()">Cancel</button>
-            </div>
-          </form>
+    <div class="row g-0">
+      <div class="col-md-6">
+        <div class="card-body">
+          <h5 class="card-title">Add New</h5>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+            <button type="button" class="btn btn-outline-primary" onclick="toggleContainerForm()">Add Container</button>
+          </div>
         </div>
       </div>
+      <div class="col-md-6">
+        <div class="card-body">
+          <h5 class="card-title">Update Existing</h5>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleUpdateForm()">Update Ingredients</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
+          </div>
+        </div>
+      </div>
+      <div class="vr"></div>
     </div>
   </div>
 
@@ -347,7 +80,153 @@
       </div>
     </div>
 
-    
+    <!-- Multi-Adjust Inventory Form -->
+    <form id="updateInventoryForm" style="display: none;" 
+      x-data="{ 
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        submitForm(e) {
+          e.preventDefault();
+          const promises = this.rows.map(row => {
+            if (!row.id || !row.quantity) return null;
+
+            const formData = new FormData();
+            formData.append('quantity', row.quantity);
+            formData.append('input_unit', row.unit);
+            formData.append('change_type', row.change_type);
+            formData.append('cost_entry_type', row.cost_entry_type);
+
+            if (row.cost_entry_type !== 'no_change') {
+              formData.append('cost_per_unit', row.cost || 0);
+            }
+
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            return fetch('/inventory/adjust/' + row.id, {
+              method: 'POST',
+              body: formData
+            });
+          });
+
+          Promise.all(promises)
+            .then(() => window.location.reload())
+            .catch(err => alert('Error updating inventory'));
+        },
+        resetRows() {
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+        },
+        updateCostHelp(event, index) {
+          const costType = event.target.value;
+          if (costType === 'no_change') {
+            this.rows[index].costHelp = 'Cost will remain unchanged';
+          } else if (costType === 'per_unit') {
+            this.rows[index].costHelp = 'Enter cost per unit';
+          } else if (costType === 'total') {
+            this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
+          }
+        }
+      }">
+
+      <template x-for="(row, index) in rows" :key="index">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col">
+            <label class="form-label">Item</label>
+            <select x-model="row.id" class="form-select" required>
+              <option value="">Select Item</option>
+              {% for item in items if item.type != 'container' %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Unit</label>
+            <select x-model="row.unit" class="form-select" required>
+              {% for unit in get_global_unit_list() %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost Entry Type</label>
+            <select x-model="row.cost_entry_type" class="form-select" @change="updateCostHelp($event, index)">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost</label>
+            <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+            <small class="form-text text-muted" x-text="row.costHelp"></small>
+            <input type="hidden" x-model="row.change_type" value="restock">
+          </div>
+          <div class="col-auto d-flex align-items-end">
+            <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <div class="mt-3">
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
+        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
+      </div>
+    </form>
+
+    <!-- Add New Ingredient Form -->
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="type" value="ingredient">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Quantity</label>
+          <input type="number" step="0.01" name="quantity" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Unit</label>
+          <select name="unit" class="form-select" required>
+            {% for unit in units %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <div x-data="{ isPerishable: false }">
+            <h5 class="mb-2">Perishable</h5>
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
+              </div>
+              <input type="number" name="shelf_life_days" class="form-control" 
+                     placeholder="Shelf Life (days)" min="1"
+                     :required="isPerishable"
+                     :disabled="!isPerishable"
+                     :class="{ 'bg-light': !isPerishable }">
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cost/Unit</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          </div>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-success">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
+        </div>
+      </div>
+    </form>
 
     <!-- Ingredients Table -->
     <div class="card">
@@ -458,7 +337,130 @@
       </div>
     </div>
 
-    
+    <!-- Add New Container Form -->
+    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="type" value="container">
+      <div class="row g-3 align-items-end">
+        <div class="col">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Storage Amount</label>
+          <input type="number" step="0.01" name="storage_amount" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Storage Unit</label>
+          <select name="storage_unit" class="form-select select2" required>
+            {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col">
+          <label class="form-label">Quantity in Stock</label>
+          <input type="number" step="1" name="quantity" class="form-control" required>
+        </div>
+        <div class="col">
+          <label class="form-label">Cost/Unit</label>
+          <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-success">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleContainerForm()">Cancel</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Multi-Adjust Container Form -->
+    <form id="updateContainerForm" style="display: none;" 
+      x-data="{ 
+        rows: [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        submitForm(e) {
+          e.preventDefault();
+          const promises = this.rows.map(row => {
+            if (!row.id || !row.quantity) return null;
+
+            const formData = new FormData();
+            formData.append('quantity', row.quantity);
+            formData.append('change_type', row.change_type);
+            formData.append('cost_entry_type', row.cost_entry_type);
+
+            if (row.cost_entry_type !== 'no_change') {
+              formData.append('cost_per_unit', row.cost || 0);
+            }
+
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            return fetch('/inventory/adjust/' + row.id, {
+              method: 'POST',
+              body: formData
+            });
+          });
+
+          Promise.all(promises)
+            .then(() => window.location.reload())
+            .catch(err => alert('Error updating inventory'));
+        },
+        resetContainerRows() {
+          this.rows = [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+        },
+        updateContainerCostHelp(event, index) {
+          const costType = event.target.value;
+          if (costType === 'no_change') {
+            this.rows[index].costHelp = 'Cost will remain unchanged';
+          } else if (costType === 'per_unit') {
+            this.rows[index].costHelp = 'Enter cost per container';
+          } else if (costType === 'total') {
+            this.rows[index].costHelp = 'Enter total cost (will be divided by quantity)';
+          }
+        }
+      }">
+
+      <template x-for="(row, index) in rows" :key="index">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col">
+            <label class="form-label">Item</label>
+            <select x-model="row.id" class="form-select" required>
+              <option value="">Select Item</option>
+              {% for item in items if item.type == 'container' %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" x-model="row.quantity" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost Entry Type</label>
+            <select x-model="row.cost_entry_type" class="form-select" @change="updateContainerCostHelp($event, index)">
+              <option value="no_change">No Change</option>
+              <option value="per_unit">Per Unit Cost</option>
+              <option value="total">Total Cost</option>
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Cost</label>
+            <input type="number" x-model="row.cost" class="form-control" step="0.01" :readonly="row.cost_entry_type === 'no_change'">
+            <small class="form-text text-muted" x-text="row.costHelp"></small>
+            <input type="hidden" x-model="row.change_type" value="restock">
+          </div>
+          <div class="col-auto d-flex align-items-end">
+            <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <div class="mt-3">
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
+        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-secondary" @click="resetContainerRows(); toggleContainerUpdateForm()">Cancel</button>
+      </div>
+    </form>
 
     <!-- Containers Table -->
     <div class="card">
