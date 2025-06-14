@@ -1,44 +1,21 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
 
 <div class="inventory-sections">
-
-  <!-- Unified Add/Update Card -->
-  <div class="card mb-4">
-    <div class="row g-0">
-      <div class="col-md-6">
-        <div class="card-body">
-          <h5 class="card-title">Add New</h5>
-          <div class="d-grid gap-2">
-            <button type="button" class="btn btn-outline-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
-            <button type="button" class="btn btn-outline-primary" onclick="toggleContainerForm()">Add Container</button>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card-body">
-          <h5 class="card-title">Update Existing</h5>
-          <div class="d-grid gap-2">
-            <button type="button" class="btn btn-outline-secondary" onclick="toggleUpdateForm()">Update Ingredients</button>
-            <button type="button" class="btn btn-outline-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
-          </div>
-        </div>
-      </div>
-      <div class="vr"></div>
-    </div>
-  </div>
-
   <div class="section">
     <h3>Ingredients</h3>
 
-    <!-- Filter Section for Ingredients -->
     <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
       <button type="button" class="btn btn-outline-secondary" onclick="toggleIngredientsFilter()">
         <i class="fas fa-filter"></i> Filters
       </button>
     </div>
 
+    <!-- Filter Section for Ingredients -->
     <div class="collapse mb-3" id="ingredientsFilterSection">
       <div class="card card-body">
         <div class="row g-3">
@@ -274,7 +251,7 @@
             </tbody>
           </table>
         </div>
-
+        
         <!-- Pagination for Ingredients -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top">
           <div id="ingredientsInfo" class="text-muted"></div>
@@ -290,13 +267,15 @@
   <div class="section">
     <h3>Containers</h3>
 
-    <!-- Filter Section for Containers -->
     <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-primary" onclick="toggleContainerForm()">Add Container</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
       <button type="button" class="btn btn-outline-secondary" onclick="toggleContainersFilter()">
         <i class="fas fa-filter"></i> Filters
       </button>
     </div>
 
+    <!-- Filter Section for Containers -->
     <div class="collapse mb-3" id="containersFilterSection">
       <div class="card card-body">
         <div class="row g-3">
@@ -506,7 +485,7 @@
             </tbody>
           </table>
         </div>
-
+        
         <!-- Pagination for Containers -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top">
           <div id="containersInfo" class="text-muted"></div>
@@ -535,7 +514,7 @@ function initTablePagination(tableType) {
   const nameFilterId = tableType + 'NameFilter';
   const sortFilterId = tableType + 'SortFilter';
   const perPageId = tableType + 'PerPage';
-
+  
   let currentPage = 1;
   let itemsPerPage = 20;
   let allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
@@ -545,13 +524,13 @@ function initTablePagination(tableType) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const visibleRows = filteredRows.slice(startIndex, endIndex);
-
+    
     // Hide all rows
     allRows.forEach(row => row.style.display = 'none');
-
+    
     // Show current page rows
     visibleRows.forEach(row => row.style.display = '');
-
+    
     updatePagination();
     updateInfo();
   }
@@ -608,7 +587,7 @@ function initTablePagination(tableType) {
   function filterAndSort() {
     const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
     const sortFilter = document.getElementById(sortFilterId).value;
-
+    
     // Filter by name
     filteredRows = allRows.filter(row => {
       const name = row.dataset.name || '';
