@@ -123,18 +123,18 @@
     <!-- Products Table View -->
     <div class="card" id="productsTableContainer" style="display: none; min-height: 200px;">
       <div class="card-body" style="padding-bottom: 3rem;">
-        <div class="table-responsive" style="min-height: 120px; padding-bottom: 1.5rem;">
-          <table class="table table-hover">
+        <div class="table-responsive" style="min-height: 120px; padding-bottom: 1.5rem; overflow-x: auto;">
+          <table class="table table-hover" style="min-width: 1200px; table-layout: fixed;"
             <thead>
               <tr>
-                <th>Product Name</th>
-                <th>Default Unit</th>
-                <th>Bulk Inventory</th>
-                <th>Packaged Items</th>
-                <th>Variants</th>
-                <th>Stock Status</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th style="width: 25%;">Product Name</th>
+                <th style="width: 10%;">Default Unit</th>
+                <th style="width: 12%;">Bulk Inventory</th>
+                <th style="width: 12%;">Packaged Items</th>
+                <th style="width: 10%;">Variants</th>
+                <th style="width: 11%;">Stock Status</th>
+                <th style="width: 10%;">Created</th>
+                <th style="width: 10%;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -339,14 +339,39 @@ tr[id^="sizes-"]:hover {
   background-color: #e9ecef;
 }
 
-/* Ensure table container has enough space for dropdowns */
+/* Responsive table container */
 #productsTableContainer .card-body {
   min-height: 200px;
   overflow: visible;
+  padding: 0;
 }
 
 #productsTableContainer .table-responsive {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 1rem;
+  margin: 0;
+}
+
+/* Table layout constraints */
+#productsTableContainer .table {
+  min-width: 1200px;
+  table-layout: fixed;
+  margin-bottom: 0;
+}
+
+#productsTableContainer .table th,
+#productsTableContainer .table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.75rem 0.5rem;
+}
+
+/* Specific column adjustments */
+#productsTableContainer .table th:first-child,
+#productsTableContainer .table td:first-child {
+  white-space: normal;
 }
 
 /* Add spacing after table rows */
@@ -357,6 +382,25 @@ tr[id^="sizes-"]:hover {
 /* Ensure dropdown menus appear above other content */
 .dropdown-menu {
   z-index: 1050;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  #productsTableContainer .table {
+    min-width: 1000px;
+  }
+}
+
+@media (max-width: 992px) {
+  #productsTableContainer .table {
+    min-width: 800px;
+    font-size: 0.875rem;
+  }
+  
+  #productsTableContainer .table th,
+  #productsTableContainer .table td {
+    padding: 0.5rem 0.25rem;
+  }
 }
 </style>
 
