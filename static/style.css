@@ -653,13 +653,11 @@ input:checked + .toggle-label:before {
 }
 
 .card .card-body {
-  overflow: visible;
   padding: 0;
 }
 
 .card .table {
   margin-bottom: 0;
-  overflow: visible;
 }
 
 .card .table thead th {
@@ -680,20 +678,29 @@ input:checked + .toggle-label:before {
 }
 
 .table {
-  overflow: visible;
   white-space: nowrap;
 }
 
-.table tbody {
-  overflow: visible;
+/* Universal Table Dropdown Fix - Apply to all card-based tables */
+.card,
+.card .card-body,
+.card .table-responsive,
+.card .table,
+.card .table tbody,
+.card .table tbody tr,
+.card .table tbody tr td {
+  overflow: visible !important;
 }
 
-.table tbody tr {
-  overflow: visible;
+/* Ensure Bootstrap dropdown menus in tables have proper z-index and positioning */
+.table .dropdown-menu {
+  z-index: 2147483647 !important;
+  position: absolute !important;
 }
 
-.table tbody tr td {
-  overflow: visible;
+.table .btn-group,
+.table .dropdown {
+  position: static !important;
 }
 
 /* Action Dropdown Styles */
