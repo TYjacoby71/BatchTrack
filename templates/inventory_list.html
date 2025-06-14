@@ -7,12 +7,16 @@
   <div class="section">
     <h3>Ingredients</h3>
 
-    <div class="d-flex gap-2 mb-3">
-      <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
-      <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
-      <button type="button" class="btn btn-outline-secondary" onclick="toggleIngredientsFilter()">
-        <i class="fas fa-filter"></i> Filters
-      </button>
+    <div class="d-flex justify-content-between mb-3">
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+        <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
+      </div>
+      <div>
+        <button type="button" class="btn btn-outline-secondary" onclick="toggleIngredientsFilter()">
+          <i class="fas fa-filter"></i> Filters
+        </button>
+      </div>
     </div>
 
     <!-- Filter Section for Ingredients -->
@@ -267,12 +271,16 @@
   <div class="section">
     <h3>Containers</h3>
 
-    <div class="d-flex gap-2 mb-3">
-      <button type="button" class="btn btn-primary" onclick="toggleContainerForm()">Add Container</button>
-      <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
-      <button type="button" class="btn btn-outline-secondary" onclick="toggleContainersFilter()">
-        <i class="fas fa-filter"></i> Filters
-      </button>
+    <div class="d-flex justify-content-between mb-3">
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" onclick="toggleContainerForm()">Add Container</button>
+        <button type="button" class="btn btn-secondary" onclick="toggleContainerUpdateForm()">Update Containers</button>
+      </div>
+      <div>
+        <button type="button" class="btn btn-outline-secondary" onclick="toggleContainersFilter()">
+          <i class="fas fa-filter"></i> Filters
+        </button>
+      </div>
     </div>
 
     <!-- Filter Section for Containers -->
