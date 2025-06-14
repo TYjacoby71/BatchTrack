@@ -121,10 +121,9 @@
     </div>
 
     <!-- Products Table View -->
-    <div class="card" id="productsTableContainer" style="display: none; min-height: 200px;">
-      <div class="card-body" style="padding-bottom: 3rem;">
-        <div class="table-responsive" style="min-height: 120px; padding-bottom: 1.5rem; overflow-x: auto;">
-          <table class="table table-hover" style="min-width: 1200px; table-layout: fixed;"
+    <div id="productsTableContainer" style="display: none; min-height: 200px;">
+      <div class="table-responsive" style="overflow-x: auto; padding-bottom: 2rem;">
+        <table class="table table-hover table-bordered" style="min-width: 1200px; table-layout: fixed; background-color: white;"
             <thead>
               <tr>
                 <th style="width: 25%;">Product Name</th>
@@ -295,7 +294,6 @@
             </tbody>
           </table>
         </div>
-      </div>
     </div>
   {% else %}
     <div class="alert alert-info text-center">
@@ -339,18 +337,18 @@ tr[id^="sizes-"]:hover {
   background-color: #e9ecef;
 }
 
-/* Responsive table container */
-#productsTableContainer .card-body {
-  min-height: 200px;
+/* Table container styling */
+#productsTableContainer {
   overflow: visible;
-  padding: 0;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid #dee2e6;
 }
 
 #productsTableContainer .table-responsive {
   overflow-x: auto;
   overflow-y: visible;
-  padding: 1rem;
-  margin: 0;
+  border-radius: 0.375rem;
 }
 
 /* Table layout constraints */
@@ -358,6 +356,7 @@ tr[id^="sizes-"]:hover {
   min-width: 1200px;
   table-layout: fixed;
   margin-bottom: 0;
+  border-radius: 0.375rem;
 }
 
 #productsTableContainer .table th,
@@ -366,6 +365,13 @@ tr[id^="sizes-"]:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0.75rem 0.5rem;
+  border-color: #dee2e6;
+}
+
+#productsTableContainer .table thead th {
+  background-color: #f8f9fa;
+  border-top: none;
+  font-weight: 600;
 }
 
 /* Specific column adjustments */
