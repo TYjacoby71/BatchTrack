@@ -654,6 +654,7 @@ input:checked + .toggle-label:before {
 
 .card .card-body {
   overflow: visible;
+  padding: 0;
 }
 
 .card .table {
@@ -675,11 +676,24 @@ input:checked + .toggle-label:before {
 .table-responsive {
   overflow-x: auto;
   overflow-y: visible;
+  padding-bottom: 50px; /* Add space for dropdowns */
 }
 
 .table {
   overflow: visible;
   white-space: nowrap;
+}
+
+.table tbody {
+  overflow: visible;
+}
+
+.table tbody tr {
+  overflow: visible;
+}
+
+.table tbody tr td {
+  overflow: visible;
 }
 
 /* Action Dropdown Styles */
