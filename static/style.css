@@ -802,3 +802,108 @@ input:checked + .toggle-label:before {
   color: #495057;
   font-weight: 600;
 }
+
+/* BATCH-SPECIFIC STYLES */
+
+/* FIFO Modal Styles */
+.fifo-ingredient-link {
+    color: #0d6efd;
+    cursor: pointer;
+}
+
+.fifo-ingredient-link:hover {
+    color: #0a58ca;
+    text-decoration: underline !important;
+}
+
+.fifo-ingredient-link:focus {
+    outline: 2px solid #86b7fe;
+    outline-offset: 2px;
+}
+
+#fifoInsightModal .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-top: none;
+    color: #495057;
+}
+
+#fifoInsightModal .table td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+    color: #212529;
+    font-weight: 400;
+}
+
+#fifoInsightModal .table td strong {
+    font-weight: 600;
+    color: #212529;
+}
+
+#fifoInsightModal .table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+#fifoInsightModal .badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+#fifoInsightModal h6 {
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* Batch Tools Section */
+.batch-tools-toggle {
+    transition: all 0.2s ease;
+}
+
+.batch-tools-toggle:hover {
+    transform: translateY(-1px);
+}
+
+.batch-tools-section {
+    border-left: 3px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+.batch-tools-section.active {
+    border-left-color: #0d6efd;
+}
+
+/* PRINT STYLES */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .card {
+    border: none;
+    box-shadow: none;
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table th, .table td {
+    border: 1px solid #ddd;
+  }
+}
