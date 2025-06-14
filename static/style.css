@@ -641,6 +641,7 @@ input:checked + .toggle-label:before {
 .inventory-sections .section {
   width: 100%;
   padding: 0;
+  overflow: visible;
 }
 
 /* Card-based table styling */
@@ -648,10 +649,16 @@ input:checked + .toggle-label:before {
   border: 1px solid #dee2e6;
   border-radius: 0.375rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  overflow: visible;
+}
+
+.card .card-body {
+  overflow: visible;
 }
 
 .card .table {
   margin-bottom: 0;
+  overflow: visible;
 }
 
 .card .table thead th {
@@ -703,8 +710,9 @@ input:checked + .toggle-label:before {
   background-color: #fff;
   min-width: 160px;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 2147483647;
   right: 0;
+  top: 100%;
   border-radius: 0.375rem;
   border: 1px solid #dee2e6;
   padding: 0.5rem 0;
