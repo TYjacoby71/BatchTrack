@@ -187,10 +187,15 @@
               </tr>
               {% if product.variations|length > 0 %}
               <!-- Variations Header Row -->
-              <tr class="collapse table-secondary" id="table-variations-{{ product.id }}">
-                <td colspan="8" class="fw-bold text-primary ps-4">
-                  <i class="fas fa-sitemap me-2"></i>Variations ({{ product.variations|length }})
-                </td>
+              <tr class="collapse table-info" id="table-variations-{{ product.id }}">
+                <th class="fw-bold text-primary ps-4">Variation</th>
+                <th class="fw-bold text-primary">Unit</th>
+                <th class="fw-bold text-primary">Bulk Inventory</th>
+                <th class="fw-bold text-primary">Packaged Items</th>
+                <th class="fw-bold text-primary">Sizes</th>
+                <th class="fw-bold text-primary">Stock Status</th>
+                <th class="fw-bold text-primary">SKU</th>
+                <th class="fw-bold text-primary">Actions</th>
               </tr>
               
               <!-- Individual Variation Rows -->
@@ -208,9 +213,6 @@
                     <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
                       <strong>{{ variation.name }}</strong>
                     </a>
-                  {% endif %}
-                  {% if variation.sku %}
-                  <br><span class="badge bg-secondary">{{ variation.sku }}</span>
                   {% endif %}
                 </td>
                 <td>{{ product.product_base_unit }}</td>
@@ -232,7 +234,13 @@
                     <span class="badge bg-success">In Stock</span>
                   {% endif %}
                 </td>
-                <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  {% if variation.sku %}
+                    <span class="badge bg-secondary">{{ variation.sku }}</span>
+                  {% else %}
+                    <small class="text-muted">-</small>
+                  {% endif %}
+                </td>
                 <td>
                   <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
@@ -256,12 +264,26 @@
                 </td>
               </tr>
               
-              <!-- Size/SKU Level Rows (if variation has multiple sizes) -->
+              <!-- Size/SKU Level Header (if variation has multiple sizes) -->
               {% if variation_sizes|length > 1 %}
+              <tr class="collapse table-warning" id="sizes-{{ product.id }}-{{ variation.id }}">
+                <th class="fw-bold text-dark ps-6">SKU</th>
+                <th class="fw-bold text-dark">Unit</th>
+                <th class="fw-bold text-dark">Avg Cost/Unit</th>
+                <th class="fw-bold text-dark">Stock Status</th>
+                <th class="fw-bold text-dark">Shelf Life</th>
+                <th class="fw-bold text-dark">-</th>
+                <th class="fw-bold text-dark">-</th>
+                <th class="fw-bold text-dark">Actions</th>
+              </tr>
+              
+              <!-- Individual Size/SKU Rows -->
               {% for size_label in variation_sizes %}
               {% set size_inventory = variation_inventory|selectattr('size_label', 'equalto', size_label)|list %}
               {% set size_quantity = size_inventory|sum(attribute='quantity')|round(1) %}
-              {% set size_unit = size_inventory[0].unit if size_inventory else product.product_base_unit %}
+              {% set size_unit = "count" if size_label != "Bulk" else product.product_base_unit %}
+              {% set avg_cost = (size_inventory|sum(attribute='unit_cost')|round(2) / size_inventory|length) if size_inventory else 0 %}
+              {% set oldest_batch = size_inventory|sort(attribute='timestamp')|first if size_inventory else none %}
               <tr class="collapse" id="sizes-{{ product.id }}-{{ variation.id }}">
                 <td class="ps-6">
                   <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_label|urlencode) }}" class="text-decoration-none">
@@ -269,9 +291,7 @@
                   </a>
                 </td>
                 <td>{{ size_unit }}</td>
-                <td>{{ size_quantity if size_label == 'Bulk' else '-' }}</td>
-                <td>{{ size_quantity|int if size_label != 'Bulk' else '-' }}</td>
-                <td>1</td>
+                <td>${{ "%.2f"|format(avg_cost) }}</td>
                 <td>
                   {% if size_quantity < product.low_stock_threshold %}
                     <span class="badge bg-warning">Low</span>
@@ -279,10 +299,25 @@
                     <span class="badge bg-success">OK</span>
                   {% endif %}
                 </td>
-                <td>{{ size_inventory[0].timestamp.strftime('%Y-%m-%d') if size_inventory else '-' }}</td>
+                <td>
+                  {% if oldest_batch and oldest_batch.expiration_date %}
+                    {% set days_left = ((oldest_batch.expiration_date - moment.utcnow()).days) %}
+                    {% if days_left < 7 %}
+                      <span class="badge bg-danger">{{ days_left }}d</span>
+                    {% elif days_left < 30 %}
+                      <span class="badge bg-warning">{{ days_left }}d</span>
+                    {% else %}
+                      <span class="badge bg-success">{{ days_left }}d</span>
+                    {% endif %}
+                  {% else %}
+                    <small class="text-muted">-</small>
+                  {% endif %}
+                </td>
+                <td>-</td>
+                <td>-</td>
                 <td>
                   <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_label|urlencode) }}" class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-eye"></i> View SKU
+                    <i class="fas fa-eye"></i> View
                   </a>
                 </td>
               </tr>
@@ -323,9 +358,24 @@
   padding-left: 4rem !important;
 }
 
-/* Variation rows styling */
-tr.table-secondary {
-  background-color: #e9ecef !important;
+/* Variation header styling */
+tr.table-info {
+  background-color: #d1ecf1 !important;
+}
+
+tr.table-info th {
+  background-color: #b8daff !important;
+  border-color: #7abaff !important;
+}
+
+/* Size/SKU header styling */
+tr.table-warning {
+  background-color: #fff3cd !important;
+}
+
+tr.table-warning th {
+  background-color: #ffeaa7 !important;
+  border-color: #ffdd57 !important;
 }
 
 /* Size/SKU rows styling */
