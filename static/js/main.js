@@ -24,7 +24,13 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
 function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
+  const containerForm = document.getElementById('addContainerForm');
+  const updateContainerForm = document.getElementById('updateContainerForm');
+  
+  // Hide other forms
   updateForm.style.display = 'none';
+  if (containerForm) containerForm.style.display = 'none';
+  if (updateContainerForm) updateContainerForm.style.display = 'none';
   
   if (form.style.display === 'none') {
     form.style.display = 'block';
@@ -37,7 +43,13 @@ function toggleIngredientForm() {
 function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
+  const containerForm = document.getElementById('addContainerForm');
+  const updateContainerForm = document.getElementById('updateContainerForm');
+  
+  // Hide other forms
   addForm.style.display = 'none';
+  if (containerForm) containerForm.style.display = 'none';
+  if (updateContainerForm) updateContainerForm.style.display = 'none';
   
   if (form.style.display === 'none') {
     form.style.display = 'block';
@@ -45,6 +57,50 @@ function toggleUpdateForm() {
   } else {
     form.style.display = 'none';
   }
+}
+
+function toggleContainerForm() {
+  const form = document.getElementById('addContainerForm');
+  const addForm = document.getElementById('addIngredientForm');
+  const updateForm = document.getElementById('updateInventoryForm');
+  const updateContainerForm = document.getElementById('updateContainerForm');
+  
+  // Hide other forms
+  addForm.style.display = 'none';
+  updateForm.style.display = 'none';
+  if (updateContainerForm) updateContainerForm.style.display = 'none';
+  
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    form.reset();
+  } else {
+    form.style.display = 'none';
+  }
+}
+
+function toggleUpdateContainerForm() {
+  const form = document.getElementById('updateContainerForm');
+  const addForm = document.getElementById('addIngredientForm');
+  const updateForm = document.getElementById('updateInventoryForm');
+  const containerForm = document.getElementById('addContainerForm');
+  
+  // Hide other forms
+  addForm.style.display = 'none';
+  updateForm.style.display = 'none';
+  if (containerForm) containerForm.style.display = 'none';
+  
+  if (form && form.style.display === 'none') {
+    form.style.display = 'block';
+    if (form.reset) form.reset();
+  } else if (form) {
+    form.style.display = 'none';
+  }
+}
+
+function toggleContainersFilter() {
+  const filterSection = document.getElementById('containersFilterSection');
+  const collapse = new bootstrap.Collapse(filterSection);
+  collapse.toggle();
 }
 
 
