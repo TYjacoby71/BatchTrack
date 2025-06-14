@@ -21,80 +21,76 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
   }
 }
 
-function toggleIngredientForm() {
-  const form = document.getElementById('addIngredientForm');
-  const updateForm = document.getElementById('updateInventoryForm');
-  const containerForm = document.getElementById('addContainerForm');
-  const updateContainerForm = document.getElementById('updateContainerForm');
+// Control Panel Functions
+function showAddSection() {
+  const leftButton = document.querySelector('.control-panel-left');
+  const rightButton = document.querySelector('.control-panel-right');
   
-  // Hide other forms
-  updateForm.style.display = 'none';
-  if (containerForm) containerForm.style.display = 'none';
-  if (updateContainerForm) updateContainerForm.style.display = 'none';
+  leftButton.classList.add('active');
+  rightButton.classList.remove('active');
+}
+
+function showUpdateSection() {
+  const leftButton = document.querySelector('.control-panel-left');
+  const rightButton = document.querySelector('.control-panel-right');
   
-  if (form.style.display === 'none') {
+  rightButton.classList.add('active');
+  leftButton.classList.remove('active');
+}
+
+function hideAllForms() {
+  const forms = ['addIngredientForm', 'addContainerForm', 'updateInventoryForm', 'updateContainerForm'];
+  forms.forEach(formId => {
+    const form = document.getElementById(formId);
+    if (form) {
+      form.style.display = 'none';
+      if (form.reset) form.reset();
+    }
+  });
+  
+  const formArea = document.getElementById('formArea');
+  if (formArea) {
+    formArea.style.display = 'none';
+  }
+  
+  // Reset button states
+  const leftButton = document.querySelector('.control-panel-left');
+  const rightButton = document.querySelector('.control-panel-right');
+  leftButton.classList.remove('active');
+  rightButton.classList.remove('active');
+}
+
+function showForm(formId) {
+  hideAllForms();
+  
+  const form = document.getElementById(formId);
+  const formArea = document.getElementById('formArea');
+  
+  if (form && formArea) {
+    formArea.style.display = 'block';
     form.style.display = 'block';
-    form.reset();
-  } else {
-    form.style.display = 'none';
+    if (form.reset) form.reset();
   }
 }
 
-function toggleUpdateForm() {
-  const form = document.getElementById('updateInventoryForm');
-  const addForm = document.getElementById('addIngredientForm');
-  const containerForm = document.getElementById('addContainerForm');
-  const updateContainerForm = document.getElementById('updateContainerForm');
-  
-  // Hide other forms
-  addForm.style.display = 'none';
-  if (containerForm) containerForm.style.display = 'none';
-  if (updateContainerForm) updateContainerForm.style.display = 'none';
-  
-  if (form.style.display === 'none') {
-    form.style.display = 'block';
-    form.reset();
-  } else {
-    form.style.display = 'none';
-  }
+function toggleIngredientForm() {
+  showAddSection();
+  showForm('addIngredientForm');
 }
 
 function toggleContainerForm() {
-  const form = document.getElementById('addContainerForm');
-  const addForm = document.getElementById('addIngredientForm');
-  const updateForm = document.getElementById('updateInventoryForm');
-  const updateContainerForm = document.getElementById('updateContainerForm');
-  
-  // Hide other forms
-  addForm.style.display = 'none';
-  updateForm.style.display = 'none';
-  if (updateContainerForm) updateContainerForm.style.display = 'none';
-  
-  if (form.style.display === 'none') {
-    form.style.display = 'block';
-    form.reset();
-  } else {
-    form.style.display = 'none';
-  }
+  showAddSection();
+  showForm('addContainerForm');
+}
+
+function toggleUpdateForm() {
+  showUpdateSection();
+  showForm('updateInventoryForm');
 }
 
 function toggleUpdateContainerForm() {
-  const form = document.getElementById('updateContainerForm');
-  const addForm = document.getElementById('addIngredientForm');
-  const updateForm = document.getElementById('updateInventoryForm');
-  const containerForm = document.getElementById('addContainerForm');
-  
-  // Hide other forms
-  addForm.style.display = 'none';
-  updateForm.style.display = 'none';
-  if (containerForm) containerForm.style.display = 'none';
-  
-  if (form && form.style.display === 'none') {
-    form.style.display = 'block';
-    if (form.reset) form.reset();
-  } else if (form) {
-    form.style.display = 'none';
-  }
+  showUpdateSection();
+  showForm('updateContainerForm');
 }
 
 function toggleContainersFilter() {
