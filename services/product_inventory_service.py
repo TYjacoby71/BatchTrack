@@ -6,7 +6,7 @@ from typing import Optional, Dict, List, Tuple
 class ProductInventoryService:
     """Service for handling product inventory operations and batch-to-product transitions"""
 
-    
+
 
     @staticmethod
     def add_product_from_batch(batch_id: int, product_id: int, variant_label: Optional[str] = None, 
@@ -50,6 +50,7 @@ class ProductInventoryService:
                     container_id=container.id,
                     batch_cost_per_unit=batch_cost_per_unit,
                     timestamp=datetime.utcnow(),
+                    expiration_date=batch.expiration_date if batch.expiration_date else None,
                     notes=f"From batch #{batch.id} using {container.name} (final count: {final_count})"
                 )
 
@@ -105,6 +106,7 @@ class ProductInventoryService:
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
                 timestamp=datetime.utcnow(),
+                expiration_date=batch.expiration_date if batch.expiration_date else None,
                 notes=f"From batch #{batch.id} (no containers - bulk output){conversion_note}"
             )
 

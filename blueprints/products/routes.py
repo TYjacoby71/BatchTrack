@@ -4,8 +4,39 @@ from models import db, Product, ProductVariation, ProductInventory, ProductEvent
 from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
 from services.product_inventory_service import ProductInventoryService
+import re
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
+
+@products_bp.app_template_filter('parse_sale_data')
+def parse_sale_data(note):
+    """Parse structured data from sale notes"""
+    if not note:
+        return {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
+    
+    data = {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
+    
+    # Parse FIFO deduction format: "FIFO deduction: 2.0 count of Base. Items used: 1. Reason: sale"
+    fifo_match = re.search(r'FIFO deduction:\s*([\d.]+)\s*\w+', note)
+    if fifo_match:
+        data['quantity'] = fifo_match.group(1)
+    
+    # Parse sale format: "Sale: 1 × 4 oz Jar for $15.00 ($15.00/unit) to Customer Name"
+    sale_match = re.search(r'Sale:\s*([\d.]+)\s*×.*?for\s*\$?([\d.]+)', note)
+    if sale_match:
+        data['quantity'] = sale_match.group(1)
+        data['sale_price'] = f"${sale_match.group(2)}"
+    
+    # Parse customer
+    customer_match = re.search(r'to\s+(.+?)(?:\.|$)', note)
+    if customer_match:
+        data['customer'] = customer_match.group(1).strip()
+    
+    # If no structured data found, put everything in notes
+    if not any([data['quantity'], data['sale_price'], data['customer']]):
+        data['notes'] = note
+    
+    return data
 
 
 
