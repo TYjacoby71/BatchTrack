@@ -15,7 +15,7 @@ def alerts():
     return render_template('expiration/alerts.html', 
                          expired=expired, 
                          expiring_soon=expiring_soon,
-                         today=datetime.now().date())
+                         today=datetime.now())
 
 @expiration_bp.route('/api/expired-items')
 @login_required
