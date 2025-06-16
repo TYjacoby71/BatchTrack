@@ -351,3 +351,31 @@ class ProductService:
         """Get summary of all products with inventory totals"""
         products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
         return products
+
+    @staticmethod
+    def get_fifo_inventory_groups(product_id):
+        """Get FIFO inventory grouped by variant and size for product view"""
+        inventory_entries = ProductInventory.query.filter_by(
+            product_id=product_id
+        ).filter(ProductInventory.quantity > 0).order_by(
+            ProductInventory.variant, 
+            ProductInventory.size_label,
+            ProductInventory.timestamp.asc()
+        ).all()
+
+        # Group by variant and size_label
+        groups = {}
+        for entry in inventory_entries:
+            key = f"{entry.variant}_{entry.size_label}"
+            if key not in groups:
+                groups[key] = {
+                    'variant': entry.variant,
+                    'size_label': entry.size_label,
+                    'unit': entry.unit,
+                    'total_quantity': 0,
+                    'batches': []
+                }
+            groups[key]['total_quantity'] += entry.quantity
+            groups[key]['batches'].append(entry)
+
+        return groups
