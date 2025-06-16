@@ -428,120 +428,40 @@ def adjust_inventory(product_id, inventory_id):
 @login_required  
 def view_sku(product_id, variant, size_label):
     """View detailed SKU-level inventory with FIFO tracking"""
-    from models import ProductInventory, ProductInventoryHistory
-    from utils.fifo_generator import get_change_type_prefix, int_to_base36
-    from datetime import datetime
-
+    from urllib.parse import unquote
+    from models import ProductInventoryHistory
+    
     product = Product.query.get_or_404(product_id)
+    variant = unquote(variant)
+    size_label = unquote(size_label)
 
-    # Get filter parameters
-    change_type = request.args.get('change_type')
-    date_from = request.args.get('date_from')
-    date_to = request.args.get('date_to')
-    sort_by = request.args.get('sort_by', 'timestamp_desc')
-    active_only = request.args.get('active_only') == 'on'
-
-    # Get all inventory entries for this SKU combination
+    # Get all FIFO entries for this SKU combination
     fifo_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
-    ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
-
-    # Get transaction history for this SKU - using ProductInventory as the main source
-    from models import ProductInventoryHistory
-    
-    # Get all inventory entries for this SKU to build history
-    inventory_entries = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        size_label=size_label
-    ).all()
-    
-    # Build history from inventory entries instead of separate history table
-    history = []
-    for entry in inventory_entries:
-        # Create history record from inventory entry
-        history_record = type('HistoryRecord', (), {
-            'id': entry.id,
-            'timestamp': entry.timestamp,
-            'change_type': 'batch_production' if entry.batch_id else 'manual_addition',
-            'quantity_change': entry.quantity,
-            'remaining_quantity': entry.quantity,
-            'unit_cost': entry.batch_cost_per_unit,
-            'unit': entry.unit,
-            'batch_id': entry.batch_id,
-            'expiration_date': None,  # Product inventory doesn't track expiration currently
-            'notes': entry.notes,
-            'fifo_code': f"PRD-{entry.id:06d}",
-            'is_perishable': False
-        })()
-        history.append(history_record)
-    
-    # Sort by timestamp descending  
-    history.sort(key=lambda x: x.timestamp, reverse=True)
-    
-    # Skip the complex filtering for now - just show all entries
-    history_query = None
-
-    # Apply filters to our history list
-    filtered_history = history
-    
-    if change_type:
-        filtered_history = [h for h in filtered_history if h.change_type == change_type]
-    
-    if date_from:
-        try:
-            from_date = datetime.strptime(date_from, '%Y-%m-%d')
-            filtered_history = [h for h in filtered_history if h.timestamp >= from_date]
-        except ValueError:
-            pass
-    
-    if date_to:
-        try:
-            to_date = datetime.strptime(date_to, '%Y-%m-%d')
-            filtered_history = [h for h in filtered_history if h.timestamp <= to_date]
-        except ValueError:
-            pass
-    
-    if active_only:
-        filtered_history = [h for h in filtered_history if h.remaining_quantity and h.remaining_quantity > 0]
-    
-    # Apply sorting
-    if sort_by == 'timestamp_asc':
-        filtered_history.sort(key=lambda x: x.timestamp)
-    elif sort_by == 'quantity_desc':
-        filtered_history.sort(key=lambda x: x.quantity_change, reverse=True)
-    elif sort_by == 'quantity_asc':
-        filtered_history.sort(key=lambda x: x.quantity_change)
-    else:  # timestamp_desc (default)
-        filtered_history.sort(key=lambda x: x.timestamp, reverse=True)
-    
-    history = filtered_history
+    ).order_by(ProductInventory.timestamp.asc()).all()
 
     # Calculate totals
-    total_quantity = sum(entry.quantity for entry in fifo_entries)
+    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    # Get the variation object if it exists
-    variation = ProductVariation.query.filter_by(
-        product_id=product_id,
-        name=variant
-    ).first()
+    # Get recent deductions/sales from product events
+    recent_deductions = ProductEvent.query.filter(
+        ProductEvent.product_id == product_id,
+        ProductEvent.note.like(f'%{variant}%'),
+        ProductEvent.note.like(f'%{size_label}%')
+    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
     return render_template('products/view_sku.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
-                         variation=variation,
                          fifo_entries=fifo_entries,
-                         history=history,
                          total_quantity=total_quantity,
                          total_batches=total_batches,
-                         moment=datetime,
-                         now=datetime.utcnow(),
-                         get_change_type_prefix=get_change_type_prefix,
-                         int_to_base36=int_to_base36)
+                         recent_deductions=recent_deductions,
+                         moment=datetime)
 @products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
@@ -613,44 +533,7 @@ def manual_adjust(product_id):
     return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
-@products_bp.route('/<int:product_id>/variant/<variant>/<size_label>/inventory')
-@login_required  
-def variant_inventory(product_id, variant, size_label):
-    """View variant inventory using the variant_inventory.html template"""
-    from urllib.parse import unquote
-    from models import ProductInventoryHistory
-    
-    product = Product.query.get_or_404(product_id)
-    variant = unquote(variant)
-    size_label = unquote(size_label)
 
-    # Get all FIFO entries for this SKU combination
-    fifo_entries = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        size_label=size_label
-    ).order_by(ProductInventory.timestamp.asc()).all()
-
-    # Calculate totals
-    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
-    total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
-
-    # Get recent deductions/sales from product events
-    recent_deductions = ProductEvent.query.filter(
-        ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variant}%'),
-        ProductEvent.note.like(f'%{size_label}%')
-    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
-
-    return render_template('products/variant_inventory.html',
-                         product=product,
-                         variant=variant,
-                         size_label=size_label,
-                         fifo_entries=fifo_entries,
-                         total_quantity=total_quantity,
-                         total_batches=total_batches,
-                         recent_deductions=recent_deductions,
-                         moment=datetime)
 
 @products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
