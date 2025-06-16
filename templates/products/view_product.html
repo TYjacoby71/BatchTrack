@@ -93,6 +93,8 @@
         {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
         {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
         {% set unique_size_labels = [] %}
+        {% set cost_values = [] %}
+        {% set total_cost = 0 %}
         {% for group in var_inventory %}
           {% if group.batches %}
             {% for batch in group.batches %}
@@ -101,12 +103,16 @@
                 {% if size_label not in unique_size_labels %}
                   {% set _ = unique_size_labels.append(size_label) %}
                 {% endif %}
+                {% if batch.batch_cost_per_unit %}
+                  {% set batch_total_cost = batch.quantity * batch.batch_cost_per_unit %}
+                  {% set total_cost = total_cost + batch_total_cost %}
+                {% endif %}
               {% endif %}
             {% endfor %}
           {% endif %}
         {% endfor %}
         {% set var_size_count = unique_size_labels|length %}
-        {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
+        {% set var_avg_cost = (total_cost / var_total_qty) if var_total_qty > 0 else 0 %}
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
         <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
@@ -157,19 +163,12 @@
 
               <!-- Action Buttons -->
               <div class="mt-auto">
-                <div class="btn-group w-100" role="group">
-                  {% if variation %}
-                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">
-                    <i class="fas fa-eye"></i> View
-                  </a>
-                  {% endif %}
-                  <button class="btn btn-outline-secondary btn-xs" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
-                    <i class="fas fa-edit"></i> Edit
-                  </button>
-                  <button class="btn btn-primary btn-xs" onclick="openAddStockModal('{{ variant_name }}')" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-                    <i class="fas fa-plus"></i> Add Stock
-                  </button>
-                </div>
+                {% if variation %}
+                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" 
+                   class="btn btn-outline-primary btn-sm w-100">
+                  View Details
+                </a>
+                {% endif %}
               </div>
             </div>
 
@@ -213,7 +212,6 @@
                   {% endif %}
                 {% endfor %}
                 {% set var_size_count = unique_size_labels|length %}
-                {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
                 {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
                 {% set all_batches = [] %}
@@ -244,14 +242,13 @@
                     {% set _ = all_batches.extend(group.batches) %}
                   {% endif %}
                 {% endfor %}
-                {% set cost_values = [] %}
+                {% set total_cost = 0 %}
                 {% for batch in all_batches %}
-                  {% if batch.quantity > 0 %}
-                    {% set cost = batch|attr_multiply('quantity', 'batch_cost_per_unit') %}
-                    {% set _ = cost_values.append(cost) %}
+                  {% if batch.quantity > 0 and batch.batch_cost_per_unit %}
+                    {% set batch_cost = batch.quantity * batch.batch_cost_per_unit %}
+                    {% set total_cost = total_cost + batch_cost %}
                   {% endif %}
                 {% endfor %}
-                {% set total_cost = cost_values|sum %}
 
                 <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
                   <td>

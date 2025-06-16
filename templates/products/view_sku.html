@@ -153,7 +153,6 @@
               </thead>
               <tbody>
                 {% for event in recent_deductions %}
-                {% set parsed_data = event.note | parse_sale_data %}
                 <tr>
                   <td>{{ event.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                   <td>
@@ -161,10 +160,10 @@
                       {{ event.event_type.replace('_', ' ').title() }}
                     </span>
                   </td>
-                  <td>{{ parsed_data.quantity or '-' }}</td>
-                  <td>{{ parsed_data.sale_price or '-' }}</td>
-                  <td>{{ parsed_data.customer or '-' }}</td>
-                  <td>{{ parsed_data.notes or event.note }}</td>
+                  <td>{{ event.quantity if event.quantity else '-' }}</td>
+                  <td>{{ ('$%.2f'|format(event.sale_price)) if event.sale_price else '-' }}</td>
+                  <td>{{ event.customer if event.customer else '-' }}</td>
+                  <td>{{ event.note if event.note else '-' }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
