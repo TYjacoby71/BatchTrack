@@ -70,9 +70,9 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # Use ProductInventoryService with container overrides
-            from services.product_inventory_service import ProductInventoryService
-            inventory_entries = ProductInventoryService.add_product_from_batch(
+            # Use unified ProductService with container overrides
+            from services.product_service import ProductService
+            inventory_entries = ProductService.add_product_from_batch(
                 batch_id=batch.id,
                 product_id=batch.product_id,
                 variant_label=batch.variant_label,

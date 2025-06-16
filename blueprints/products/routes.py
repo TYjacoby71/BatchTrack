@@ -3,8 +3,8 @@ from flask_login import login_required, current_user
 from models import db, Product, ProductVariation, ProductInventory, ProductEvent, Batch, InventoryItem
 from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
-from services.product_inventory_service import ProductInventoryService
 import re
+from services.product_service import ProductService
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -13,29 +13,29 @@ def parse_sale_data(note):
     """Parse structured data from sale notes"""
     if not note:
         return {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
-    
+
     data = {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
-    
+
     # Parse FIFO deduction format: "FIFO deduction: 2.0 count of Base. Items used: 1. Reason: sale"
     fifo_match = re.search(r'FIFO deduction:\s*([\d.]+)\s*\w+', note)
     if fifo_match:
         data['quantity'] = fifo_match.group(1)
-    
+
     # Parse sale format: "Sale: 1 × 4 oz Jar for $15.00 ($15.00/unit) to Customer Name"
     sale_match = re.search(r'Sale:\s*([\d.]+)\s*×.*?for\s*\$?([\d.]+)', note)
     if sale_match:
         data['quantity'] = sale_match.group(1)
         data['sale_price'] = f"${sale_match.group(2)}"
-    
+
     # Parse customer
     customer_match = re.search(r'to\s+(.+?)(?:\.|$)', note)
     if customer_match:
         data['customer'] = customer_match.group(1).strip()
-    
+
     # If no structured data found, put everything in notes
     if not any([data['quantity'], data['sale_price'], data['customer']]):
         data['notes'] = note
-    
+
     return data
 
 
@@ -43,8 +43,7 @@ def parse_sale_data(note):
 def get_fifo_summary_helper(inventory_id):
     """Helper function to get FIFO summary for template"""
     try:
-        from services.product_adjustment_service import ProductAdjustmentService
-        return ProductAdjustmentService.get_fifo_summary(inventory_id)
+        return ProductService.get_fifo_summary(inventory_id)
     except:
         return None
 
@@ -54,12 +53,12 @@ def product_list():
     """List all products with inventory summary and sorting"""
     sort_type = request.args.get('sort', 'name')
 
-    products = ProductInventoryService.get_product_summary()
+    products = ProductService.get_product_summary()
 
     # Sort products based on the requested sort type
     if sort_type == 'popular':
         # Sort by sales volume (most sales first)
-        sales_data = ProductInventoryService.get_product_sales_volume()
+        sales_data = ProductService.get_product_sales_volume()
         sales_dict = {item['product_id']: item['total_sales'] for item in sales_data}
         products.sort(key=lambda p: sales_dict.get(p.id, 0), reverse=True)
     elif sort_type == 'stock':
@@ -121,7 +120,7 @@ def view_product(product_id):
     """View product details with FIFO inventory"""
     from utils.unit_utils import get_global_unit_list
     product = Product.query.get_or_404(product_id)
-    inventory_groups = ProductInventoryService.get_fifo_inventory_groups(product_id)
+    inventory_groups = ProductService.get_fifo_inventory_groups(product_id)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
@@ -188,7 +187,7 @@ def deduct_product(product_id):
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-    success = ProductInventoryService.deduct_fifo(
+    success = ProductService.deduct_fifo(
         product_id=product_id,
         variant_label=variant,
         unit=unit,
@@ -291,7 +290,7 @@ def add_from_batch():
         return jsonify({'error': 'Batch ID and Product ID are required'}), 400
 
     try:
-        inventory = ProductInventoryService.add_product_from_batch(
+        inventory = ProductService.add_product_from_batch(
             batch_id=batch_id,
             product_id=product_id,
             variant_label=variant_label,
@@ -400,7 +399,6 @@ def edit_product(product_id):
 @login_required
 def add_manual_stock(product_id):
     """Add manual stock with container matching"""
-    from services.product_adjustment_service import ProductAdjustmentService
 
     variant_name = request.form.get('variant_name')
     container_id = request.form.get('container_id')
@@ -413,7 +411,7 @@ def add_manual_stock(product_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     try:
-        inventory = ProductAdjustmentService.add_manual_stock(
+        inventory = ProductService.add_manual_stock(
             product_id=product_id,
             variant_name=variant_name,
             container_id=container_id,
@@ -432,7 +430,6 @@ def add_manual_stock(product_id):
 @login_required
 def adjust_inventory(product_id, inventory_id):
     """Process inventory adjustments with FIFO tracking"""
-    from services.product_adjustment_service import ProductAdjustmentService
 
     adjustment_type = request.form.get('adjustment_type')  # sold, spoil, trash, tester, damaged, recount
     quantity = float(request.form.get('quantity', 0))
@@ -443,7 +440,7 @@ def adjust_inventory(product_id, inventory_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     try:
-        ProductAdjustmentService.process_adjustment(
+        ProductService.process_adjustment(
             inventory_id=inventory_id,
             adjustment_type=adjustment_type,
             quantity=quantity,
@@ -461,7 +458,7 @@ def view_sku(product_id, variant, size_label):
     """View detailed SKU-level inventory with FIFO tracking"""
     from urllib.parse import unquote
     from models import ProductInventoryHistory
-    
+
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
     size_label = unquote(size_label)
@@ -493,124 +490,44 @@ def view_sku(product_id, variant, size_label):
                          total_batches=total_batches,
                          recent_deductions=recent_deductions,
                          moment=datetime)
-@products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
+
+@products_bp.route('/<int:product_id>/record_sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
-    """Handle all product inventory adjustments"""
-    from services.product_adjustment_service import ProductAdjustmentService
-    
-    variant = request.form.get('variant', 'Base')
-    size_label = request.form.get('size_label')
-    quantity = float(request.form.get('quantity', 0))
+    """Record a sale or other inventory adjustment using unified ProductService"""
+    variant = request.form.get('variant')
+    size_label = request.form.get('size_label') 
+    quantity = float(request.form.get('quantity'))
     reason = request.form.get('reason', 'sale')
-    sale_price = request.form.get('sale_price')
-    customer = request.form.get('customer', '')
     notes = request.form.get('notes', '')
-    unit_cost = request.form.get('unit_cost', 0)
-
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.view_sku', 
-                           product_id=product_id, variant=variant, size_label=size_label))
+    sale_price = request.form.get('sale_price')
+    customer = request.form.get('customer')
+    unit_cost = request.form.get('unit_cost')
 
     try:
-        if reason in ['sale', 'spoil', 'trash', 'damaged', 'sample']:
-            # Deduction operations using FIFO
-            success = ProductInventoryService.deduct_fifo(
-                product_id=product_id,
-                variant_label=variant,
-                unit='count',  # Assuming count for now, could be dynamic
-                quantity=quantity,
-                reason=reason,
-                notes=notes
-            )
+        from services.product_service import ProductService
 
-            if not success:
-                flash('Not enough stock available', 'error')
-                return redirect(url_for('products.view_sku', 
-                               product_id=product_id, variant=variant, size_label=size_label))
-
-            # Log detailed information
-            event_note = f"{reason.title()}: {quantity} × {size_label}"
-            if reason == 'sale':
-                if sale_price:
-                    sale_price_float = float(sale_price)
-                    per_unit_price = sale_price_float / quantity
-                    event_note += f" for ${sale_price} (${per_unit_price:.2f}/unit)"
-                if customer:
-                    event_note += f" to {customer}"
-            if notes:
-                event_note += f". Notes: {notes}"
-
-        elif reason == 'recount':
-            # Handle recount - get current total for this SKU combination
-            current_entries = ProductInventory.query.filter_by(
-                product_id=product_id,
-                variant=variant,
-                size_label=size_label
-            ).all()
-            
-            current_total = sum(entry.quantity for entry in current_entries if entry.quantity > 0)
-            quantity_change = quantity - current_total
-            
-            if quantity_change != 0:
-                success = ProductAdjustmentService.process_recount(
-                    product_id=product_id,
-                    variant=variant,
-                    size_label=size_label,
-                    new_total=quantity,
-                    notes=notes
-                )
-                if not success:
-                    flash('Error processing recount', 'error')
-                    return redirect(url_for('products.view_sku', 
-                                   product_id=product_id, variant=variant, size_label=size_label))
-                    
-                event_note = f"Recount: {current_total} → {quantity} ({quantity_change:+.2f})"
-                if notes:
-                    event_note += f". Notes: {notes}"
-            else:
-                flash('No change needed - quantity matches current total', 'info')
-                return redirect(url_for('products.view_sku', 
-                               product_id=product_id, variant=variant, size_label=size_label))
-
-        elif reason == 'manual_add':
-            # Handle manual add
-            success = ProductAdjustmentService.add_manual_stock(
-                product_id=product_id,
-                variant_name=variant,
-                container_id=None,  # For SKU-level adds, no container
-                quantity=quantity,
-                unit_cost=float(unit_cost) if unit_cost else 0,
-                notes=notes,
-                size_label=size_label
-            )
-            if not success:
-                flash('Error adding manual stock', 'error')
-                return redirect(url_for('products.view_sku', 
-                               product_id=product_id, variant=variant, size_label=size_label))
-                
-            event_note = f"Manual Add: {quantity} × {size_label}"
-            if unit_cost:
-                event_note += f" at ${unit_cost}/unit"
-            if notes:
-                event_note += f". Notes: {notes}"
-
-        # Log the event
-        db.session.add(ProductEvent(
+        success = ProductService.process_inventory_adjustment(
             product_id=product_id,
-            event_type=f'inventory_{reason}',
-            note=event_note
-        ))
-        db.session.commit()
+            variant=variant,
+            size_label=size_label,
+            adjustment_type=reason,
+            quantity=quantity,
+            notes=notes,
+            sale_price=float(sale_price) if sale_price else None,
+            customer=customer,
+            unit_cost=float(unit_cost) if unit_cost else None
+        )
 
-        flash(f'Successfully processed {reason}: {quantity} units', 'success')
+        if success:
+            flash(f"✅ {reason.replace('_', ' ').title()} recorded successfully!", "success")
+        else:
+            flash("❌ Insufficient stock for this operation", "error")
 
     except Exception as e:
-        flash(f'Error processing adjustment: {str(e)}', 'error')
+        flash(f"❌ Error: {str(e)}", "error")
 
-    return redirect(url_for('products.view_sku', 
-                           product_id=product_id, variant=variant, size_label=size_label))
+    return redirect(request.referrer or url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
 @login_required
