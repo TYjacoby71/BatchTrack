@@ -104,9 +104,9 @@
                   <td>
                     {% if entry.quantity <= 0 %}
                       <span class="badge bg-secondary">Consumed</span>
-                    {% elif entry.expiration_date and entry.expiration_date < moment.date() %}
+                    {% elif entry.expiration_date and entry.expiration_date < moment.now().date() %}
                       <span class="badge bg-danger">Expired</span>
-                    {% elif entry.expiration_date and (entry.expiration_date - moment.date()).days < 7 %}
+                    {% elif entry.expiration_date and (entry.expiration_date - moment.now().date()).days < 7 %}
                       <span class="badge bg-warning">Expiring Soon</span>
                     {% else %}
                       <span class="badge bg-success">Available</span>
@@ -115,7 +115,7 @@
                   <td>${{ "%.3f"|format(entry.batch_cost_per_unit or 0) }}</td>
                   <td>
                     {% if entry.expiration_date %}
-                      {% set days_until = (entry.expiration_date - moment.date()).days if entry.expiration_date else 0 %}
+                      {% set days_until = (entry.expiration_date - moment.now().date()).days if entry.expiration_date else 0 %}
                       <span class="{% if days_until < 0 %}text-danger{% elif days_until < 7 %}text-warning{% endif %}">
                         {{ entry.expiration_date.strftime('%Y-%m-%d') }}
                         {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
