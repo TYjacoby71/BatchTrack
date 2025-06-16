@@ -188,7 +188,7 @@ function loadVariants() {
   fetch(`/products/api/${productId}/variants`)
     .then(response => response.json())
     .then(data => {
-      variantSelect.innerHTML = '<option value="">Default (no variant)</option>';
+      variantSelect.innerHTML = '';
       data.variants.forEach(variant => {
         variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
       });
