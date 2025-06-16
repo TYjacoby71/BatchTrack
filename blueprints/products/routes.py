@@ -448,47 +448,76 @@ def view_sku(product_id, variant, size_label):
         size_label=size_label
     ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
 
-    # Get transaction history for this SKU
-    history_query = ProductInventoryHistory.query.join(
-        ProductInventory, ProductInventoryHistory.product_inventory_id == ProductInventory.id
-    ).filter(
-        ProductInventory.product_id == product_id,
-        ProductInventory.variant == variant,
-        ProductInventory.size_label == size_label
-    )
+    # Get transaction history for this SKU - using ProductInventory as the main source
+    from models import ProductInventoryHistory
+    
+    # Get all inventory entries for this SKU to build history
+    inventory_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).all()
+    
+    # Build history from inventory entries instead of separate history table
+    history = []
+    for entry in inventory_entries:
+        # Create history record from inventory entry
+        history_record = type('HistoryRecord', (), {
+            'id': entry.id,
+            'timestamp': entry.timestamp,
+            'change_type': 'batch_production' if entry.batch_id else 'manual_addition',
+            'quantity_change': entry.quantity,
+            'remaining_quantity': entry.quantity,
+            'unit_cost': entry.batch_cost_per_unit,
+            'unit': entry.unit,
+            'batch_id': entry.batch_id,
+            'expiration_date': None,  # Product inventory doesn't track expiration currently
+            'notes': entry.notes,
+            'fifo_code': f"PRD-{entry.id:06d}",
+            'is_perishable': False
+        })()
+        history.append(history_record)
+    
+    # Sort by timestamp descending  
+    history.sort(key=lambda x: x.timestamp, reverse=True)
+    
+    # Skip the complex filtering for now - just show all entries
+    history_query = None
 
-    # Apply filters
+    # Apply filters to our history list
+    filtered_history = history
+    
     if change_type:
-        history_query = history_query.filter(ProductInventoryHistory.change_type == change_type)
-
+        filtered_history = [h for h in filtered_history if h.change_type == change_type]
+    
     if date_from:
         try:
             from_date = datetime.strptime(date_from, '%Y-%m-%d')
-            history_query = history_query.filter(ProductInventoryHistory.timestamp >= from_date)
+            filtered_history = [h for h in filtered_history if h.timestamp >= from_date]
         except ValueError:
             pass
-
+    
     if date_to:
         try:
             to_date = datetime.strptime(date_to, '%Y-%m-%d')
-            history_query = history_query.filter(ProductInventoryHistory.timestamp <= to_date)
+            filtered_history = [h for h in filtered_history if h.timestamp <= to_date]
         except ValueError:
             pass
-
+    
     if active_only:
-        history_query = history_query.filter(ProductInventoryHistory.remaining_quantity > 0)
-
+        filtered_history = [h for h in filtered_history if h.remaining_quantity and h.remaining_quantity > 0]
+    
     # Apply sorting
     if sort_by == 'timestamp_asc':
-        history_query = history_query.order_by(ProductInventoryHistory.timestamp.asc())
+        filtered_history.sort(key=lambda x: x.timestamp)
     elif sort_by == 'quantity_desc':
-        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.desc())
+        filtered_history.sort(key=lambda x: x.quantity_change, reverse=True)
     elif sort_by == 'quantity_asc':
-        history_query = history_query.order_by(ProductInventoryHistory.quantity_change.asc())
+        filtered_history.sort(key=lambda x: x.quantity_change)
     else:  # timestamp_desc (default)
-        history_query = history_query.order_by(ProductInventoryHistory.timestamp.desc())
-
-    history = history_query.all()
+        filtered_history.sort(key=lambda x: x.timestamp, reverse=True)
+    
+    history = filtered_history
 
     # Calculate totals
     total_quantity = sum(entry.quantity for entry in fifo_entries)
