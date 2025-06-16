@@ -138,9 +138,15 @@
                               <i class="fas fa-edit"></i> Adjust
                             </a>
                           </li>
+                          <li><hr class="dropdown-divider"></li>
                           <li>
                             <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
-                              <i class="fas fa-eye"></i> View
+                              <i class="fas fa-list"></i> SKU View
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="{{ url_for('products.variant_inventory', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                              <i class="fas fa-boxes"></i> Variant Inventory
                             </a>
                           </li>
                         </ul>
