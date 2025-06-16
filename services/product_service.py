@@ -373,9 +373,9 @@ class ProductService:
                     'size_label': entry.size_label,
                     'unit': entry.unit,
                     'total_quantity': 0,
-                    'entries': []
+                    'batches': []
                 }
             groups[key]['total_quantity'] += entry.quantity
-            groups[key]['entries'].append(entry)
+            groups[key]['batches'].append(entry)
 
-        return list(groups.values())
+        return groups
