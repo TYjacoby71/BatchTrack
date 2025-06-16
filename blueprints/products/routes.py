@@ -496,7 +496,9 @@ def view_sku(product_id, variant, size_label):
 @products_bp.route('/<int:product_id>/record-sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
-    """Record a sale with profit tracking"""
+    """Handle all product inventory adjustments"""
+    from services.product_adjustment_service import ProductAdjustmentService
+    
     variant = request.form.get('variant', 'Base')
     size_label = request.form.get('size_label')
     quantity = float(request.form.get('quantity', 0))
@@ -504,45 +506,108 @@ def record_sale(product_id):
     sale_price = request.form.get('sale_price')
     customer = request.form.get('customer', '')
     notes = request.form.get('notes', '')
+    unit_cost = request.form.get('unit_cost', 0)
 
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
         return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
-    # Deduct using FIFO
-    success = ProductInventoryService.deduct_fifo(
-        product_id=product_id,
-        variant_label=variant,
-        unit='count',  # Assuming count for now, could be dynamic
-        quantity=quantity,
-        reason=reason,
-        notes=notes
-    )
+    try:
+        if reason in ['sale', 'spoil', 'trash', 'damaged', 'sample']:
+            # Deduction operations using FIFO
+            success = ProductInventoryService.deduct_fifo(
+                product_id=product_id,
+                variant_label=variant,
+                unit='count',  # Assuming count for now, could be dynamic
+                quantity=quantity,
+                reason=reason,
+                notes=notes
+            )
 
-    if success:
-        # Log detailed sale information
-        sale_note = f"{reason.title()}: {quantity} × {size_label}"
-        if reason == 'sale':
-            if sale_price:
-                sale_price_float = float(sale_price)
-                per_unit_price = sale_price_float / quantity
-                sale_note += f" for ${sale_price} (${per_unit_price:.2f}/unit)"
-            if customer:
-                sale_note += f" to {customer}"
-        if notes:
-            sale_note += f". Notes: {notes}"
+            if not success:
+                flash('Not enough stock available', 'error')
+                return redirect(url_for('products.view_sku', 
+                               product_id=product_id, variant=variant, size_label=size_label))
 
+            # Log detailed information
+            event_note = f"{reason.title()}: {quantity} × {size_label}"
+            if reason == 'sale':
+                if sale_price:
+                    sale_price_float = float(sale_price)
+                    per_unit_price = sale_price_float / quantity
+                    event_note += f" for ${sale_price} (${per_unit_price:.2f}/unit)"
+                if customer:
+                    event_note += f" to {customer}"
+            if notes:
+                event_note += f". Notes: {notes}"
+
+        elif reason == 'recount':
+            # Handle recount - get current total for this SKU combination
+            current_entries = ProductInventory.query.filter_by(
+                product_id=product_id,
+                variant=variant,
+                size_label=size_label
+            ).all()
+            
+            current_total = sum(entry.quantity for entry in current_entries if entry.quantity > 0)
+            quantity_change = quantity - current_total
+            
+            if quantity_change != 0:
+                success = ProductAdjustmentService.process_recount(
+                    product_id=product_id,
+                    variant=variant,
+                    size_label=size_label,
+                    new_total=quantity,
+                    notes=notes
+                )
+                if not success:
+                    flash('Error processing recount', 'error')
+                    return redirect(url_for('products.view_sku', 
+                                   product_id=product_id, variant=variant, size_label=size_label))
+                    
+                event_note = f"Recount: {current_total} → {quantity} ({quantity_change:+.2f})"
+                if notes:
+                    event_note += f". Notes: {notes}"
+            else:
+                flash('No change needed - quantity matches current total', 'info')
+                return redirect(url_for('products.view_sku', 
+                               product_id=product_id, variant=variant, size_label=size_label))
+
+        elif reason == 'manual_add':
+            # Handle manual add
+            success = ProductAdjustmentService.add_manual_stock(
+                product_id=product_id,
+                variant_name=variant,
+                container_id=None,  # For SKU-level adds, no container
+                quantity=quantity,
+                unit_cost=float(unit_cost) if unit_cost else 0,
+                notes=notes,
+                size_label=size_label
+            )
+            if not success:
+                flash('Error adding manual stock', 'error')
+                return redirect(url_for('products.view_sku', 
+                               product_id=product_id, variant=variant, size_label=size_label))
+                
+            event_note = f"Manual Add: {quantity} × {size_label}"
+            if unit_cost:
+                event_note += f" at ${unit_cost}/unit"
+            if notes:
+                event_note += f". Notes: {notes}"
+
+        # Log the event
         db.session.add(ProductEvent(
             product_id=product_id,
             event_type=f'inventory_{reason}',
-            note=sale_note
+            note=event_note
         ))
         db.session.commit()
 
-        flash(f'Recorded {reason}: {quantity} units', 'success')
-    else:
-        flash('Not enough stock available', 'error')
+        flash(f'Successfully processed {reason}: {quantity} units', 'success')
+
+    except Exception as e:
+        flash(f'Error processing adjustment: {str(e)}', 'error')
 
     return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))

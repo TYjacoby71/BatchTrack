@@ -15,25 +15,28 @@ class ProductAdjustmentService:
         return generate_fifo_code(prefix)
 
     @staticmethod
-    def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes=''):
+    def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes='', size_label=None):
         """Add manual stock with container matching"""
         from models import InventoryItem
 
         product = Product.query.get_or_404(product_id)
         container = InventoryItem.query.get_or_404(container_id) if container_id else None
 
-        # Create size label from container or use product-based labeling
-        if container:
-            size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
+        # Create size label from container, parameter, or use product-based labeling
+        if size_label:
+            # Use provided size_label (for SKU-level adjustments)
+            final_size_label = size_label
+        elif container:
+            final_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
             # For standalone products without containers, always use "Bulk"
-            size_label = "Bulk"
+            final_size_label = "Bulk"
 
         # Create ProductInventory entry
         inventory = ProductInventory(
             product_id=product_id,
             variant=variant_name or 'Base',
-            size_label=size_label,
+            size_label=final_size_label,
             unit='count',
             quantity=quantity,
             container_id=container_id,
@@ -41,6 +44,61 @@ class ProductAdjustmentService:
             timestamp=datetime.utcnow(),
             notes=notes
         )
+
+        db.session.add(inventory)
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def process_recount(product_id, variant, size_label, new_total, notes=''):
+        """Process a recount adjustment for a specific SKU combination"""
+        
+        # Get all current entries for this SKU combination
+        current_entries = ProductInventory.query.filter_by(
+            product_id=product_id,
+            variant=variant,
+            size_label=size_label
+        ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
+        
+        current_total = sum(entry.quantity for entry in current_entries)
+        quantity_change = new_total - current_total
+        
+        if quantity_change == 0:
+            return True  # No change needed
+            
+        if quantity_change < 0:
+            # Need to reduce inventory using FIFO
+            remaining_to_deduct = abs(quantity_change)
+            
+            for entry in current_entries:
+                if remaining_to_deduct <= 0:
+                    break
+                    
+                if entry.quantity <= remaining_to_deduct:
+                    # Use entire entry
+                    remaining_to_deduct -= entry.quantity
+                    entry.quantity = 0
+                else:
+                    # Partial deduction
+                    entry.quantity -= remaining_to_deduct
+                    remaining_to_deduct = 0
+                    
+        else:
+            # Need to add inventory - create new entry
+            inventory = ProductInventory(
+                product_id=product_id,
+                variant=variant,
+                size_label=size_label,
+                unit='count',  # Default to count for recounts
+                quantity=quantity_change,
+                batch_cost_per_unit=0,  # Recounts don't have cost
+                timestamp=datetime.utcnow(),
+                notes=f"Recount adjustment: +{quantity_change}. {notes}"
+            )
+            db.session.add(inventory)
+            
+        db.session.commit()
+        return True
 
         db.session.add(inventory)
         db.session.flush()  # Get ID

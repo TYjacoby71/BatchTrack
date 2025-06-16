@@ -17,7 +17,7 @@
           <h3>{{ product.name }} - {{ variant }} ({{ size_label if size_label else 'bulk' }})</h3>
           <div>
             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal">
-              Record Sale/Deduction
+              Adjust SKU Inventory
             </button>
           </div>
         </div>
@@ -183,7 +183,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Record Sale/Deduction</h5>
+        <h5 class="modal-title">Adjust SKU Inventory</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
@@ -193,18 +193,21 @@
           <input type="hidden" name="size_label" value="{{ size_label }}">
 
           <div class="mb-3">
-            <label class="form-label">Quantity</label>
-            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
+            <label class="form-label" id="quantityLabel">Quantity</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required id="quantityInput">
+            <small class="form-text text-muted" id="quantityHelp" style="display: none;">For recount: enter the new total quantity</small>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Reason</label>
+            <label class="form-label">Change Type</label>
             <select name="reason" class="form-select" required onchange="toggleSaleFields(this.value)">
               <option value="sale">Sale</option>
-              <option value="spoiled">Spoiled</option>
+              <option value="spoil">Spoil</option>
+              <option value="trash">Trash</option>
               <option value="damaged">Damaged</option>
               <option value="sample">Sample/Gift</option>
-              <option value="manual_deduction">Manual Deduction</option>
+              <option value="recount">Recount</option>
+              <option value="manual_add">Manual Add</option>
             </select>
           </div>
 
@@ -219,6 +222,15 @@
             <div class="mb-3">
               <label class="form-label">Customer/Platform</label>
               <input type="text" name="customer" class="form-control" placeholder="e.g., Shopify, Etsy, Local Market">
+            </div>
+          </div>
+
+          <!-- Manual Add fields -->
+          <div id="manualAddFields" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Unit Cost</label>
+              <input type="number" name="unit_cost" class="form-control" step="0.001" min="0" value="0">
+              <small class="form-text text-muted">Cost per unit for this inventory addition</small>
             </div>
           </div>
 
@@ -261,12 +273,40 @@ function toggleView(viewType) {
 
 function toggleSaleFields(reason) {
   const saleFields = document.getElementById('saleFields');
+  const manualAddFields = document.getElementById('manualAddFields');
+  const quantityLabel = document.getElementById('quantityLabel');
+  const quantityInput = document.getElementById('quantityInput');
+  const quantityHelp = document.getElementById('quantityHelp');
+  
+  // Show/hide appropriate fields
   saleFields.style.display = reason === 'sale' ? 'block' : 'none';
+  manualAddFields.style.display = reason === 'manual_add' ? 'block' : 'none';
+  
+  // Update quantity field based on change type
+  if (reason === 'recount') {
+    quantityLabel.textContent = 'New Total Quantity';
+    quantityInput.setAttribute('min', '0');
+    quantityHelp.style.display = 'block';
+  } else if (reason === 'manual_add') {
+    quantityLabel.textContent = 'Quantity to Add';
+    quantityInput.setAttribute('min', '0.01');
+    quantityHelp.style.display = 'none';
+  } else {
+    quantityLabel.textContent = 'Quantity to Deduct';
+    quantityInput.setAttribute('min', '0.01');
+    quantityHelp.style.display = 'none';
+  }
 }
 
-// Initialize with available only
+// Initialize with available only and set initial form state
 document.addEventListener('DOMContentLoaded', function() {
   toggleView('available');
+  
+  // Set initial form state for sale
+  const reasonSelect = document.querySelector('select[name="reason"]');
+  if (reasonSelect) {
+    toggleSaleFields(reasonSelect.value);
+  }
 });
 </script>
 {% endblock %}
