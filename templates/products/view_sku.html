@@ -17,10 +17,7 @@
           <h3>{{ product.name }} - {{ variant }} ({{ size_label if size_label else 'bulk' }})</h3>
           <div>
             <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal">
-              Record Sale/Deduction
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustModal">
-              Manual Adjustment
+              Adjust SKU Inventory
             </button>
           </div>
         </div>
@@ -44,14 +41,19 @@
         </div>
       </div>
 
-      <!-- FIFO Inventory Table -->
+      <!-- SKU Inventory Table -->
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4>FIFO Inventory (Oldest First)</h4>
-          <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="toggleView('all')">Show All</button>
-            <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleView('available')">Available Only</button>
-            <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleView('consumed')">Consumed Only</button>
+          <h4>SKU Inventory by Batch</h4>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="fas fa-filter"></i> Filter View
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" onclick="toggleView('available')">Available Only</a></li>
+              <li><a class="dropdown-item" href="#" onclick="toggleView('consumed')">Consumed Only</a></li>
+              <li><a class="dropdown-item" href="#" onclick="toggleView('all')">Show All</a></li>
+            </ul>
           </div>
         </div>
         <div class="card-body">
@@ -59,8 +61,8 @@
             <table class="table table-sm table-striped" id="fifoTable">
               <thead>
                 <tr>
-                  <th>FIFO Order</th>
-                  <th>Batch</th>
+                  <th>FIFO #</th>
+                  <th>Source</th>
                   <th>Created</th>
                   <th>Quantity</th>
                   <th>Status</th>
@@ -74,11 +76,10 @@
                 <tr class="{% if entry.quantity <= 0 %}table-secondary consumed-row{% else %}available-row{% endif %}">
                   <td>{{ loop.index }}</td>
                   <td>
-                    Batch #{{ entry.batch_id or 'Manual' }}
                     {% if entry.batch_id %}
-                    </a>
+                      {{ entry.batch_id }}
                     {% else %}
-                    </span>
+                      Manual
                     {% endif %}
                   </td>
                   <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
@@ -144,11 +145,15 @@
                 <tr>
                   <th>Date</th>
                   <th>Type</th>
-                  <th>Details</th>
+                  <th>Quantity</th>
+                  <th>Sale Price</th>
+                  <th>Customer</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {% for event in recent_deductions %}
+                {% set parsed_data = event.note | parse_sale_data %}
                 <tr>
                   <td>{{ event.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                   <td>
@@ -156,7 +161,10 @@
                       {{ event.event_type.replace('_', ' ').title() }}
                     </span>
                   </td>
-                  <td>{{ event.note }}</td>
+                  <td>{{ parsed_data.quantity or '-' }}</td>
+                  <td>{{ parsed_data.sale_price or '-' }}</td>
+                  <td>{{ parsed_data.customer or '-' }}</td>
+                  <td>{{ parsed_data.notes or event.note }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -175,7 +183,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Record Sale/Deduction</h5>
+        <h5 class="modal-title">Adjust SKU Inventory</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
@@ -185,18 +193,21 @@
           <input type="hidden" name="size_label" value="{{ size_label }}">
 
           <div class="mb-3">
-            <label class="form-label">Quantity</label>
-            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
+            <label class="form-label" id="quantityLabel">Quantity</label>
+            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required id="quantityInput">
+            <small class="form-text text-muted" id="quantityHelp" style="display: none;">For recount: enter the new total quantity</small>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Reason</label>
+            <label class="form-label">Change Type</label>
             <select name="reason" class="form-select" required onchange="toggleSaleFields(this.value)">
               <option value="sale">Sale</option>
-              <option value="spoiled">Spoiled</option>
+              <option value="spoil">Spoil</option>
+              <option value="trash">Trash</option>
               <option value="damaged">Damaged</option>
               <option value="sample">Sample/Gift</option>
-              <option value="manual_deduction">Manual Deduction</option>
+              <option value="recount">Recount</option>
+              <option value="manual_add">Manual Add</option>
             </select>
           </div>
 
@@ -214,6 +225,15 @@
             </div>
           </div>
 
+          <!-- Manual Add fields -->
+          <div id="manualAddFields" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Unit Cost</label>
+              <input type="number" name="unit_cost" class="form-control" step="0.001" min="0" value="0">
+              <small class="form-text text-muted">Cost per unit for this inventory addition</small>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Notes (Optional)</label>
             <textarea name="notes" class="form-control" rows="2"></textarea>
@@ -228,48 +248,7 @@
   </div>
 </div>
 
-<!-- Manual Adjustment Modal -->
-<div class="modal fade" id="adjustModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Manual Inventory Adjustment</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="POST" action="{{ url_for('products.manual_adjust', product_id=product.id) }}">
-        {{ csrf_token() }}
-        <div class="modal-body">
-          <input type="hidden" name="variant" value="{{ variant }}">
-          <input type="hidden" name="size_label" value="{{ size_label }}">
 
-          <div class="mb-3">
-            <label class="form-label">Adjustment Type</label>
-            <select name="adjustment_type" class="form-select" required>
-              <option value="add_found">Add Found Inventory</option>
-              <option value="recount_all">Recount All (Set Total)</option>
-              <option value="spoil_batch">Mark Specific Batch as Spoiled</option>
-            </select>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Quantity</label>
-            <input type="number" name="quantity" class="form-control" step="0.01" required>
-            <small class="form-text text-muted">For recount, enter total quantity. For add/spoil, enter amount to change.</small>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Notes</label>
-            <textarea name="notes" class="form-control" rows="2" placeholder="Explain the reason for this adjustment"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-warning">Apply Adjustment</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <script>
 function toggleView(viewType) {
@@ -294,12 +273,40 @@ function toggleView(viewType) {
 
 function toggleSaleFields(reason) {
   const saleFields = document.getElementById('saleFields');
+  const manualAddFields = document.getElementById('manualAddFields');
+  const quantityLabel = document.getElementById('quantityLabel');
+  const quantityInput = document.getElementById('quantityInput');
+  const quantityHelp = document.getElementById('quantityHelp');
+  
+  // Show/hide appropriate fields
   saleFields.style.display = reason === 'sale' ? 'block' : 'none';
+  manualAddFields.style.display = reason === 'manual_add' ? 'block' : 'none';
+  
+  // Update quantity field based on change type
+  if (reason === 'recount') {
+    quantityLabel.textContent = 'New Total Quantity';
+    quantityInput.setAttribute('min', '0');
+    quantityHelp.style.display = 'block';
+  } else if (reason === 'manual_add') {
+    quantityLabel.textContent = 'Quantity to Add';
+    quantityInput.setAttribute('min', '0.01');
+    quantityHelp.style.display = 'none';
+  } else {
+    quantityLabel.textContent = 'Quantity to Deduct';
+    quantityInput.setAttribute('min', '0.01');
+    quantityHelp.style.display = 'none';
+  }
 }
 
-// Initialize with available only
+// Initialize with available only and set initial form state
 document.addEventListener('DOMContentLoaded', function() {
   toggleView('available');
+  
+  // Set initial form state for sale
+  const reasonSelect = document.querySelector('select[name="reason"]');
+  if (reasonSelect) {
+    toggleSaleFields(reasonSelect.value);
+  }
 });
 </script>
 {% endblock %}
