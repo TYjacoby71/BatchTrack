@@ -304,7 +304,7 @@
                                         {% endfor %}
                                         {% if remaining_details %}
                                             <a href="#" class="text-success" data-bs-toggle="modal" data-bs-target="#remainingModal" 
-                                               onclick="showRemainingDetails('{{ batch.label_code }}', {{ remaining_details|tojson }})">
+                                               onclick="showRemainingDetails('{{ batch.label_code }}', {{ batch.id }})">
                                                 Yes
                                             </a>
                                         {% else %}
@@ -430,8 +430,8 @@
             </div>
             <div class="modal-body">
                 <p><strong>Batch:</strong> <span id="batchLabelCode"></span></p>
-                <ul id="remainingList">
-                </ul>
+                <div id="remainingList" class="list-group">
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -490,21 +490,46 @@ document.getElementById('columnForm').addEventListener('submit', function(e) {
     collapseFilters();
 });
 
-function showRemainingDetails(labelCode, details) {
+async function showRemainingDetails(labelCode, batchId) {
     document.getElementById('batchLabelCode').innerText = labelCode;
     const remainingList = document.getElementById('remainingList');
-    remainingList.innerHTML = ''; // Clear previous details
+    remainingList.innerHTML = '<div class="list-group-item">Loading...</div>';
 
-    if (details && details.length > 0) {
-        details.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.textContent = `Variant: ${item.variant}, Size: ${item.size_label}, Quantity: ${item.quantity} ${item.unit}`;
-            remainingList.appendChild(listItem);
-        });
-    } else {
-        const listItem = document.createElement('li');
-        listItem.textContent = 'No remaining items found.';
-        remainingList.appendChild(listItem);
+    try {
+        const response = await fetch(`/api/batch-remaining-details/${batchId}`);
+        const data = await response.json();
+        
+        remainingList.innerHTML = ''; // Clear loading message
+        
+        if (response.ok && data.remaining_items && data.remaining_items.length > 0) {
+            data.remaining_items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${item.product_name}</h6>
+                            <p class="mb-1"><strong>Variant:</strong> ${item.variant}</p>
+                            <p class="mb-1"><strong>Size:</strong> ${item.size_label}</p>
+                            <small class="text-muted">Batch Source: #${item.batch_id}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success fs-6">${item.quantity} ${item.unit}</span>
+                            ${item.expiration_date ? `<br><small class="text-muted">Exp: ${item.expiration_date}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+                itemDiv.className = 'list-group-item';
+                remainingList.appendChild(itemDiv);
+            });
+        } else {
+            const noItemsDiv = document.createElement('div');
+            noItemsDiv.textContent = 'No remaining items found for this batch.';
+            noItemsDiv.className = 'list-group-item text-muted';
+            remainingList.appendChild(noItemsDiv);
+        }
+    } catch (error) {
+        console.error('Error fetching remaining details:', error);
+        remainingList.innerHTML = '<div class="list-group-item text-danger">Error loading remaining details</div>';
     }
 }
 </script>
