@@ -185,7 +185,7 @@ function loadVariants() {
     return;
   }
 
-  fetch(`/api/products/${productId}/variants`)
+  fetch(`/products/api/${productId}/variants`)
     .then(response => response.json())
     .then(data => {
       variantSelect.innerHTML = '<option value="">Default (no variant)</option>';
