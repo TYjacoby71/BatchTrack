@@ -51,7 +51,10 @@
       </thead>
       <tbody>
         {% for entry in history %}
-        <tr>
+        {% set is_expired = entry.is_perishable and entry.expiration_date and entry.remaining_quantity and entry.remaining_quantity > 0 and entry.expiration_date.date() < now.date() %}
+        {% set is_expiring_soon = entry.is_perishable and entry.expiration_date and entry.remaining_quantity and entry.remaining_quantity > 0 and entry.expiration_date.date() >= now.date() and (entry.expiration_date.date() - now.date()).days <= 7 %}
+        <tr class="{% if is_expired %}table-danger{% elif is_expiring_soon %}table-warning{% endif %}" 
+            {% if is_expired %}style="background-color: #f8d7da !important; border-color: #f5c6cb !important;"{% elif is_expiring_soon %}style="background-color: #fff3cd !important; border-color: #ffeaa7 !important;"{% endif %}>
           <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>{{ entry.change_type|title }}</td>
           <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
@@ -98,10 +101,17 @@
               {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
             {% endif %}
           </td>
-          <td {% if entry.is_perishable and entry.expiration_date %}
-              class="{% if entry.remaining_quantity > 0 and entry.expiration_date and entry.expiration_date.date() < now.date() %}bg-warning{% endif %}"
-              {% endif %}>
-              {{ entry.expiration_date.strftime('%Y-%m-%d') if entry.expiration_date else '-' }}
+          <td>
+            {% if entry.expiration_date %}
+              {{ entry.expiration_date.strftime('%Y-%m-%d') }}
+              {% if is_expired %}
+                <span class="badge bg-danger ms-1">EXPIRED</span>
+              {% elif is_expiring_soon %}
+                <span class="badge bg-warning ms-1">EXPIRES SOON</span>
+              {% endif %}
+            {% else %}
+              -
+            {% endif %}
           </td>
           <td>{{ entry.quantity_used if entry.quantity_used is not none and entry.quantity_used != 0 else 'NA' }}</td>
           <td>{% if entry.created_by %}{{ User.query.get(entry.created_by).username }}{% else %}-{% endif %}</td>

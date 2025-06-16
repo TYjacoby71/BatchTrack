@@ -26,8 +26,8 @@ class ProductAdjustmentService:
         if container:
             size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
-            # For standalone products without containers (bread loaves, whole items, etc.)
-            size_label = f"Whole {product.name}" if product.product_base_unit in ['each', 'count', 'loaf', 'item'] else f"Bulk {product.name}"
+            # For standalone products without containers, always use "Bulk"
+            size_label = "Bulk"
 
         # Create ProductInventory entry
         inventory = ProductInventory(
