@@ -82,7 +82,7 @@
                 </thead>
                 <tbody>
                   {% for entry in history %}
-                  <tr class="{% if entry.expiration_date and entry.expiration_date.date() < now.date() and entry.remaining_quantity and entry.remaining_quantity > 0 %}bg-warning{% endif %}">
+                  <tr>
                     <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>
                       <span class="badge bg-{% if entry.change_type == 'batch_production' %}success{% elif entry.change_type in ['sold', 'spoil', 'damaged', 'sample'] %}danger{% elif entry.change_type == 'manual_addition' %}primary{% elif entry.change_type == 'recount' %}warning{% else %}secondary{% endif %}">
@@ -94,10 +94,8 @@
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch_id) }}">
                           Batch {{ entry.batch_id }}
                         </a>
-                      {% elif entry.fifo_code %}
-                        {{ entry.fifo_code }}
                       {% else %}
-                        {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) if entry.id else 'N/A' }}
+                        PRD-{{ "%06d"|format(entry.id) }}
                       {% endif %}
                     </td>
                     <td>
