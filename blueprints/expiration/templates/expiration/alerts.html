@@ -8,53 +8,65 @@
         </button>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-danger mb-2">{{ expired.fifo_entries|length + expired.product_inventory|length }}</h3>
-                    <p class="card-text text-muted mb-0">Expired Items</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-warning mb-2">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</h3>
-                    <p class="card-text text-muted mb-0">Expiring Within 7 Days</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-success mb-2">
-                        <i class="fas fa-check-circle"></i>
-                    </h3>
-                    <p class="card-text text-muted mb-0">System Status: Active</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active d-flex align-items-center" id="ingredients-tab" data-bs-toggle="tab" data-bs-target="#ingredients" type="button" role="tab" aria-controls="ingredients" aria-selected="true">
+                Ingredients
+                {% if expired.fifo_entries|length + expiring_soon.fifo_entries|length > 0 %}
+                <span class="badge bg-danger ms-2">{{ expired.fifo_entries|length + expiring_soon.fifo_entries|length }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab" aria-controls="products" aria-selected="false">
+                Products
+                {% if expired.product_inventory|length + expiring_soon.product_inventory|length > 0 %}
+                <span class="badge bg-danger ms-2">{{ expired.product_inventory|length + expiring_soon.product_inventory|length }}</span>
+                {% endif %}
+            </button>
+        </li>
+    </ul>
 
-    <!-- Expired Items -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
-                Expired Items
-            </h5>
-            {% if expired.fifo_entries or expired.product_inventory %}
-                <span class="badge bg-danger">{{ expired.fifo_entries|length + expired.product_inventory|length }}</span>
-            {% endif %}
-        </div>
-        <div class="card-body">
-            {% if expired.fifo_entries or expired.product_inventory %}
-                <div class="row">
+    <div class="tab-content" id="myTabContent">
+        <!-- Ingredients Tab -->
+        <div class="tab-pane fade show active" id="ingredients" role="tabpanel" aria-labelledby="ingredients-tab">
+            <!-- Summary Cards for Ingredients -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-danger mb-2">{{ expired.fifo_entries|length }}</h3>
+                            <p class="card-text text-muted mb-0">Expired Ingredients</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning mb-2">{{ expiring_soon.fifo_entries|length }}</h3>
+                            <p class="card-text text-muted mb-0">Expiring Within 7 Days</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card"></div>
+                </div>
+            </div>
+
+            <!-- Expired Ingredients -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        Expired Ingredients
+                    </h5>
                     {% if expired.fifo_entries %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Ingredient Inventory (FIFO)</h6>
+                        <span class="badge bg-danger">{{ expired.fifo_entries|length }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if expired.fifo_entries %}
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
                                 <thead class="table-light">
@@ -88,74 +100,28 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    {% endif %}
-
-                    {% if expired.product_inventory %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Product Inventory</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Variant/Size</th>
-                                        <th>Quantity</th>
-                                        <th>Expired</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in expired.product_inventory %}
-                                    <tr>
-                                        <td>Product #{{ item.product_id }}</td>
-                                        <td>{{ item.variant }} - {{ item.size_label }}</td>
-                                        <td>{{ item.quantity }} {{ item.unit }}</td>
-                                        <td>
-                                            <small class="text-danger">
-                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsSpoiled('product', {{ item.product_inv_id }})">
-                                                <i class="fas fa-trash"></i> Spoiled
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
+                            <p class="text-muted mb-0">No expired ingredients found!</p>
                         </div>
-                    </div>
                     {% endif %}
                 </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
-                    <p class="text-muted mb-0">No expired items found!</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
+            </div>
 
-    <!-- Expiring Soon -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-clock text-warning me-2"></i>
-                Expiring Within 7 Days
-            </h5>
-            {% if expiring_soon.fifo_entries or expiring_soon.product_inventory %}
-                <span class="badge bg-warning text-dark">{{ expiring_soon.fifo_entries|length + expiring_soon.product_inventory|length }}</span>
-            {% endif %}
-        </div>
-        <div class="card-body">
-            {% if expiring_soon.fifo_entries or expiring_soon.product_inventory %}
-                <div class="row">
+            <!-- Expiring Soon Ingredients -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock text-warning me-2"></i>
+                        Expiring Within 7 Days
+                    </h5>
                     {% if expiring_soon.fifo_entries %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Ingredient Inventory (FIFO)</h6>
+                        <span class="badge bg-warning text-dark">{{ expiring_soon.fifo_entries|length }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if expiring_soon.fifo_entries %}
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
                                 <thead class="table-light">
@@ -185,18 +151,118 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
+                            <p class="text-muted mb-0">No ingredients expiring soon!</p>
+                        </div>
                     {% endif %}
+                </div>
+            </div>
+        </div>
 
-                    {% if expiring_soon.product_inventory %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Product Inventory</h6>
+        <!-- Products Tab -->
+        <div class="tab-pane fade" id="products" role="tabpanel" aria-labelledby="products-tab">
+            <!-- Summary Cards for Products -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-danger mb-2">{{ expired.product_inventory|length }}</h3>
+                            <p class="card-text text-muted mb-0">Expired Products</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning mb-2">{{ expiring_soon.product_inventory|length }}</h3>
+                            <p class="card-text text-muted mb-0">Expiring Within 7 Days</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card"></div>
+                </div>
+            </div>
+
+            <!-- Expired Products -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        Expired Products
+                    </h5>
+                    {% if expired.product_inventory %}
+                        <span class="badge bg-danger">{{ expired.product_inventory|length }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if expired.product_inventory %}
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
-                                        <th>Variant/Size</th>
+                                        <th>Variant</th>
+                                        <th>Size</th>
+                                        <th>Quantity</th>
+                                        <th>Expired</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in expired.product_inventory %}
+                                    <tr>
+                                        <td>Product #{{ item.product_id }}</td>
+                                        <td>{{ item.variant or 'N/A' }}</td>
+                                        <td>{{ item.size_label or 'N/A' }}</td>
+                                        <td>{{ item.quantity }} {{ item.unit }}</td>
+                                        <td>
+                                            <small class="text-danger">
+                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-danger btn-sm" 
+                                                    onclick="markAsSpoiled('product', {{ item.product_inv_id }})">
+                                                <i class="fas fa-trash"></i> Spoiled
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
+                            <p class="text-muted mb-0">No expired products found!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Expiring Soon Products -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock text-warning me-2"></i>
+                        Products Expiring Within 7 Days
+                    </h5>
+                    {% if expiring_soon.product_inventory %}
+                        <span class="badge bg-warning text-dark">{{ expiring_soon.product_inventory|length }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if expiring_soon.product_inventory %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Variant</th>
+                                        <th>Size</th>
                                         <th>Quantity</th>
                                         <th>Expires</th>
                                         <th>Days Left</th>
@@ -207,13 +273,14 @@
                                     {% set days_left = (item.expiration_date.date() - today.date()).days %}
                                     <tr>
                                         <td>Product #{{ item.product_id }}</td>
-                                        <td>{{ item.variant }} - {{ item.size_label }}</td>
+                                        <td>{{ item.variant or 'N/A' }}</td>
+                                        <td>{{ item.size_label or 'N/A' }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
                                         <td>
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
                                         </td>
                                         <td>
-                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            <span class="badge {% if days_left <= 1 %}danger{% elif days_left <= 3 %}warning{% else %}secondary{% endif %}">
                                                 {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>
@@ -222,15 +289,14 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success fa-2x mb-3"></i>
+                            <p class="text-muted mb-0">No products expiring soon!</p>
+                        </div>
                     {% endif %}
                 </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-smile text-success fa-2x mb-3"></i>
-                    <p class="text-muted mb-0">No items expiring soon!</p>
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -262,7 +328,7 @@ async function archiveExpired() {
 const today = new Date('{{ today.strftime("%Y-%m-%d") }}');
 
 async function markAsSpoiled(type, id) {
-    if (!confirm('Mark this item as spoiled? This will remove it from inventory and cannot be undone.')) return;
+    if (!confirm('Only mark this item as spoiled if you have physically removed it from your inventory to maintain proper count.\n\nThis action will remove it from the system and cannot be undone.\n\nProceed?')) return;
 
     try {
         const response = await fetch('/expiration/api/mark-spoiled', {
