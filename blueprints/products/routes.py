@@ -613,6 +613,45 @@ def manual_adjust(product_id):
     return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
+@products_bp.route('/<int:product_id>/variant/<variant>/<size_label>/inventory')
+@login_required  
+def variant_inventory(product_id, variant, size_label):
+    """View variant inventory using the variant_inventory.html template"""
+    from urllib.parse import unquote
+    from models import ProductInventoryHistory
+    
+    product = Product.query.get_or_404(product_id)
+    variant = unquote(variant)
+    size_label = unquote(size_label)
+
+    # Get all FIFO entries for this SKU combination
+    fifo_entries = ProductInventory.query.filter_by(
+        product_id=product_id,
+        variant=variant,
+        size_label=size_label
+    ).order_by(ProductInventory.timestamp.asc()).all()
+
+    # Calculate totals
+    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
+    total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
+
+    # Get recent deductions/sales from product events
+    recent_deductions = ProductEvent.query.filter(
+        ProductEvent.product_id == product_id,
+        ProductEvent.note.like(f'%{variant}%'),
+        ProductEvent.note.like(f'%{size_label}%')
+    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+
+    return render_template('products/variant_inventory.html',
+                         product=product,
+                         variant=variant,
+                         size_label=size_label,
+                         fifo_entries=fifo_entries,
+                         total_quantity=total_quantity,
+                         total_batches=total_batches,
+                         recent_deductions=recent_deductions,
+                         moment=datetime)
+
 @products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
 def view_variant(product_id, variation_id):
