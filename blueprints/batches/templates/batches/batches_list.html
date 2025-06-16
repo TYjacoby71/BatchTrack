@@ -291,22 +291,18 @@
                                     {% if batch.batch_type == 'product' and batch.product %}
                                         {% set has_remaining = false %}
                                         {% set remaining_details = [] %}
-                                        {% set total_remaining = 0 %}
                                         {% for inv in batch.product.inventory %}
-                                            {% if inv.batch_id == batch.id %}
-                                                {% set total_remaining = total_remaining + (inv.quantity or 0) %}
-                                                {% if inv.quantity and inv.quantity > 0 %}
-                                                    {% set has_remaining = true %}
-                                                    {% set _ = remaining_details.append({
-                                                        'variant': inv.variant or 'Base',
-                                                        'size_label': inv.size_label or 'Bulk',
-                                                        'quantity': inv.quantity,
-                                                        'unit': inv.unit
-                                                    }) %}
-                                                {% endif %}
+                                            {% if inv.batch_id == batch.id and inv.quantity and inv.quantity > 0 %}
+                                                {% set has_remaining = true %}
+                                                {% set _ = remaining_details.append({
+                                                    'variant': inv.variant or 'Base',
+                                                    'size_label': inv.size_label or 'Bulk',
+                                                    'quantity': inv.quantity,
+                                                    'unit': inv.unit
+                                                }) %}
                                             {% endif %}
                                         {% endfor %}
-                                        {% if total_remaining > 0 %}
+                                        {% if has_remaining %}
                                             <a href="#" class="text-success" data-bs-toggle="modal" data-bs-target="#remainingModal" 
                                                onclick="showRemainingDetails('{{ batch.label_code }}', {{ remaining_details|tojson }})">
                                                 Yes
