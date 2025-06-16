@@ -2,6 +2,7 @@ from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
+from blueprints.expiration.services import ExpirationService
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
 
@@ -56,7 +57,13 @@ def complete_batch(batch_id):
             if not shelf_life_days or shelf_life_days <= 0:
                 raise ValueError("Shelf life days required for perishable items")
             batch.shelf_life_days = shelf_life_days
-            batch.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d')
+            # Set expiration date if perishable
+            # Set expiration date if perishable
+            batch.expiration_date = None
+            if batch.is_perishable and shelf_life_days:
+                batch.expiration_date = ExpirationService.calculate_expiration_date(
+                    datetime.utcnow(), shelf_life_days
+                )
 
         # Output-type specific logic
         if output_type == 'product':
