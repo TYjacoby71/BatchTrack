@@ -126,3 +126,26 @@ def api_product_status(product_id):
         'expiring_soon_count': len(status['expiring_soon_inventory']),
         'has_expiration_issues': status['has_expiration_issues']
     })
+
+@expiration_bp.route('/api/product-inventory/<int:inventory_id>/expiration')
+@login_required
+def api_product_inventory_expiration(inventory_id):
+    """Get calculated expiration date for specific product inventory"""
+    expiration_date = ExpirationService.get_product_inventory_expiration_date(inventory_id)
+    
+    if not expiration_date:
+        return jsonify({
+            'expiration_date': None,
+            'days_until_expiration': None,
+            'is_expired': False,
+            'is_perishable': False
+        })
+    
+    days_until = ExpirationService.get_days_until_expiration(expiration_date)
+    
+    return jsonify({
+        'expiration_date': expiration_date.isoformat(),
+        'days_until_expiration': days_until,
+        'is_expired': days_until < 0 if days_until is not None else False,
+        'is_perishable': True
+    })

@@ -58,7 +58,7 @@ def complete_batch(batch_id):
                 raise ValueError("Shelf life days required for perishable items")
             batch.shelf_life_days = shelf_life_days
             # Set expiration date if perishable
-            # Set expiration date if perishable
+            # Calculate expiration date if perishable (use completion time as base)
             batch.expiration_date = None
             if batch.is_perishable and shelf_life_days:
                 batch.expiration_date = ExpirationService.calculate_expiration_date(

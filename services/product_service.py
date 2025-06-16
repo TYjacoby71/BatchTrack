@@ -58,7 +58,7 @@ class ProductService:
                     container_id=container.id,
                     batch_cost_per_unit=batch_cost_per_unit,
                     timestamp=datetime.utcnow(),
-                    expiration_date=batch.expiration_date if batch.expiration_date else None,
+                    expiration_date=batch.expiration_date.date() if batch.expiration_date else None,
                     notes=f"From batch #{batch.id} using {container.name} (final count: {final_count})"
                 )
 
@@ -114,7 +114,7 @@ class ProductService:
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
                 timestamp=datetime.utcnow(),
-                expiration_date=batch.expiration_date if batch.expiration_date else None,
+                expiration_date=batch.expiration_date.date() if batch.expiration_date else None,
                 notes=f"From batch #{batch.id} (no containers - bulk output){conversion_note}"
             )
 
