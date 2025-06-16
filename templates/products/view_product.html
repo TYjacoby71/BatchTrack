@@ -305,7 +305,7 @@
                     </div>
                   </td>
                 </tr>
-                
+
                 {% endfor %}
               </tbody>
             </table>
@@ -795,4 +795,9 @@ function toggleSizeFields() {
     }
 }
 </script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
+<script src="{{ url_for('static', filename='js/expiration_product_view.js') }}"></script>
 {% endblock %}

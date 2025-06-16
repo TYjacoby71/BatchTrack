@@ -69,6 +69,40 @@ class ExpirationService:
         db.session.commit()
     
     @staticmethod
+    def get_batch_expiration_date(batch_id: int) -> Optional[datetime]:
+        """Get calculated expiration date for a batch"""
+        from models import Batch
+        
+        batch = Batch.query.get(batch_id)
+        if not batch or not batch.is_perishable or not batch.shelf_life_days:
+            return None
+            
+        # Use completion date if available, otherwise start date
+        base_date = batch.completed_at or batch.started_at
+        if not base_date:
+            return None
+            
+        return ExpirationService.calculate_expiration_date(base_date, batch.shelf_life_days)
+    
+    @staticmethod
+    def get_product_inventory_expiration_date(product_inventory_id: int) -> Optional[datetime]:
+        """Get expiration date for product inventory, preferring batch calculation"""
+        from models import ProductInventory
+        
+        inventory = ProductInventory.query.get(product_inventory_id)
+        if not inventory:
+            return None
+            
+        # First try batch-based calculation
+        if inventory.batch_id:
+            batch_expiration = ExpirationService.get_batch_expiration_date(inventory.batch_id)
+            if batch_expiration:
+                return batch_expiration
+                
+        # Fallback to stored expiration date
+        return inventory.expiration_date
+
+    @staticmethod
     def get_expired_inventory_items() -> List[Dict]:
         """Get all expired inventory items across the system"""
         today = datetime.now().date()
@@ -89,22 +123,24 @@ class ExpirationService:
             )
         ).all()
         
-        # Get expired product inventory
-        expired_products = db.session.query(
-            ProductInventory.product_id,
-            ProductInventory.variant,
-            ProductInventory.size_label,
-            ProductInventory.quantity,
-            ProductInventory.unit,
-            ProductInventory.expiration_date,
-            ProductInventory.id.label('product_inv_id')
-        ).filter(
-            and_(
-                ProductInventory.expiration_date != None,
-                ProductInventory.expiration_date < today,
-                ProductInventory.quantity > 0
-            )
+        # Get expired product inventory with batch-aware calculation
+        product_inventories = db.session.query(ProductInventory).filter(
+            ProductInventory.quantity > 0
         ).all()
+        
+        expired_products = []
+        for inv in product_inventories:
+            expiration_date = ExpirationService.get_product_inventory_expiration_date(inv.id)
+            if expiration_date and expiration_date.date() < today:
+                expired_products.append({
+                    'product_id': inv.product_id,
+                    'variant': inv.variant,
+                    'size_label': inv.size_label,
+                    'quantity': inv.quantity,
+                    'unit': inv.unit,
+                    'expiration_date': expiration_date,
+                    'product_inv_id': inv.id
+                })
         
         return {
             'fifo_entries': expired_fifo,
@@ -133,22 +169,24 @@ class ExpirationService:
             )
         ).all()
         
-        # Product inventory expiring soon
-        expiring_products = db.session.query(
-            ProductInventory.product_id,
-            ProductInventory.variant,
-            ProductInventory.size_label,
-            ProductInventory.quantity,
-            ProductInventory.unit,
-            ProductInventory.expiration_date,
-            ProductInventory.id.label('product_inv_id')
-        ).filter(
-            and_(
-                ProductInventory.expiration_date != None,
-                ProductInventory.expiration_date.between(today, future_date),
-                ProductInventory.quantity > 0
-            )
+        # Product inventory expiring soon with batch-aware calculation
+        product_inventories = db.session.query(ProductInventory).filter(
+            ProductInventory.quantity > 0
         ).all()
+        
+        expiring_products = []
+        for inv in product_inventories:
+            expiration_date = ExpirationService.get_product_inventory_expiration_date(inv.id)
+            if expiration_date and today <= expiration_date.date() <= future_date:
+                expiring_products.append({
+                    'product_id': inv.product_id,
+                    'variant': inv.variant,
+                    'size_label': inv.size_label,
+                    'quantity': inv.quantity,
+                    'unit': inv.unit,
+                    'expiration_date': expiration_date,
+                    'product_inv_id': inv.id
+                })
         
         return {
             'fifo_entries': expiring_fifo,
