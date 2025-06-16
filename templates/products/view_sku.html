@@ -80,7 +80,7 @@
                     {% if entry.batch_id %}
                       {% set batch = entry.batch %}
                       {% if batch %}
-                        <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="text-decoration-none">
+                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.label_code) }}" class="text-decoration-none">
                           {{ batch.label_code }}
                         </a>
                       {% else %}
