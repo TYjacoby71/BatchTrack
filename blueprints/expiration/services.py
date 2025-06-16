@@ -325,26 +325,19 @@ class ExpirationService:
             if not entry or entry.remaining_quantity <= 0:
                 raise ValueError("FIFO entry not found or has no remaining quantity")
             
-            # Create spoilage record
-            spoilage_record = InventoryHistory(
-                inventory_item_id=entry.inventory_item_id,
-                change_type='spoilage',
-                quantity_change=-entry.remaining_quantity,
+            # Use centralized inventory adjustment service
+            from services.inventory_adjustment import process_inventory_adjustment
+            
+            success = process_inventory_adjustment(
+                item_id=entry.inventory_item_id,
+                quantity=entry.remaining_quantity,
+                change_type='spoil',
                 unit=entry.unit,
-                remaining_quantity=0,
-                fifo_reference_id=entry.id,
-                note=f"Marked as spoiled - expired on {entry.expiration_date}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                quantity_used=entry.remaining_quantity,
-                timestamp=datetime.utcnow()
+                notes=f"Marked as spoiled - expired on {entry.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None
             )
             
-            # Zero out the original entry
-            entry.remaining_quantity = 0
-            
-            db.session.add(spoilage_record)
-            db.session.commit()
-            return 1
+            return 1 if success else 0
             
         elif item_type == 'product':
             # Handle product inventory spoilage
@@ -352,25 +345,18 @@ class ExpirationService:
             if not product_item or product_item.quantity <= 0:
                 raise ValueError("Product item not found or has no remaining quantity")
             
-            # Create spoilage record in ProductInventoryHistory
-            from models import ProductInventoryHistory
-            spoilage_record = ProductInventoryHistory(
+            # Use centralized product adjustment service
+            from services.product_adjustment_service import ProductAdjustmentService
+            
+            success = ProductAdjustmentService.adjust_product_inventory(
                 product_inventory_id=product_item.id,
-                product_id=product_item.product_id,
-                change_type='spoilage',
                 quantity_change=-product_item.quantity,
-                unit=product_item.unit,
-                note=f"Marked as spoiled - expired on {product_item.expiration_date}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                timestamp=datetime.utcnow()
+                adjustment_type='spoil',
+                notes=f"Marked as spoiled - expired on {product_item.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None
             )
             
-            # Zero out the product inventory
-            product_item.quantity = 0
-            
-            db.session.add(spoilage_record)
-            db.session.commit()
-            return 1
+            return 1 if success else 0
         
         else:
             raise ValueError("Invalid item type. Must be 'fifo' or 'product'")
