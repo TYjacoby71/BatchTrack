@@ -289,13 +289,33 @@
                             <td>
                                 {% if batch.final_quantity %}
                                     {% if batch.batch_type == 'product' and batch.product %}
+                                        {% set has_remaining = false %}
+                                        {% set remaining_details = [] %}
                                         {% for inv in batch.product.inventory %}
-                                            {% if inv.batch_id == batch.id %}
-                                                {{ inv.quantity|round(2) if inv.quantity >= 0 else 0 }}
+                                            {% if inv.batch_id == batch.id and inv.quantity > 0 %}
+                                                {% set has_remaining = true %}
+                                                {% set _ = remaining_details.append({
+                                                    'variant': inv.variant,
+                                                    'size_label': inv.size_label,
+                                                    'quantity': inv.quantity,
+                                                    'unit': inv.unit
+                                                }) %}
                                             {% endif %}
                                         {% endfor %}
+                                        {% if has_remaining %}
+                                            <a href="#" class="text-success" data-bs-toggle="modal" data-bs-target="#remainingModal" 
+                                               onclick="showRemainingDetails('{{ batch.label_code }}', {{ remaining_details|tojson }})">
+                                                Yes
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">No</span>
+                                        {% endif %}
                                     {% else %}
-                                        {{ batch.final_quantity|round(2) if batch.final_quantity >= 0 else 0 }}
+                                        {% if batch.remaining_quantity and batch.remaining_quantity > 0 %}
+                                            <span class="text-success">Yes</span>
+                                        {% else %}
+                                            <span class="text-muted">No</span>
+                                        {% endif %}
                                     {% endif %}
                                 {% else %}
                                     —
@@ -400,6 +420,26 @@
 </div>
 {% endif %}
 
+<!-- Remaining Details Modal -->
+<div class="modal fade" id="remainingModal" tabindex="-1" aria-labelledby="remainingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="remainingModalLabel">Remaining Quantity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Batch:</strong> <span id="batchLabelCode"></span></p>
+                <ul id="remainingList">
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function showInProgressView(viewId) {
     // Toggle views
@@ -449,6 +489,24 @@ document.getElementById('columnForm').addEventListener('submit', function(e) {
     this.submit();
     collapseFilters();
 });
+
+function showRemainingDetails(labelCode, details) {
+    document.getElementById('batchLabelCode').innerText = labelCode;
+    const remainingList = document.getElementById('remainingList');
+    remainingList.innerHTML = ''; // Clear previous details
+
+    if (details && details.length > 0) {
+        details.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `Variant: ${item.variant}, Size: ${item.size_label}, Quantity: ${item.quantity} ${item.unit}`;
+            remainingList.appendChild(listItem);
+        });
+    } else {
+        const listItem = document.createElement('li');
+        listItem.textContent = 'No remaining items found.';
+        remainingList.appendChild(listItem);
+    }
+}
 </script>
 {% endif %}
 {% endblock %}
