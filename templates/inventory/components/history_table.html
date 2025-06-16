@@ -53,7 +53,8 @@
         {% for entry in history %}
         {% set is_expired = entry.is_perishable and entry.expiration_date and entry.remaining_quantity and entry.remaining_quantity > 0 and entry.expiration_date.date() < now.date() %}
         {% set is_expiring_soon = entry.is_perishable and entry.expiration_date and entry.remaining_quantity and entry.remaining_quantity > 0 and entry.expiration_date.date() >= now.date() and (entry.expiration_date.date() - now.date()).days <= 7 %}
-        <tr class="{% if is_expired %}table-danger{% elif is_expiring_soon %}table-warning{% endif %}">
+        <tr class="{% if is_expired %}table-danger{% elif is_expiring_soon %}table-warning{% endif %}" 
+            {% if is_expired %}style="background-color: #f8d7da !important; border-color: #f5c6cb !important;"{% elif is_expiring_soon %}style="background-color: #fff3cd !important; border-color: #ffeaa7 !important;"{% endif %}>
           <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>{{ entry.change_type|title }}</td>
           <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
