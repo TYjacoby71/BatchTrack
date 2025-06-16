@@ -294,6 +294,7 @@ class ProductInventory(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
+    batch = db.relationship('Batch', foreign_keys=[batch_id])
 
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)

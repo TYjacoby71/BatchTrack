@@ -13,6 +13,40 @@ from services.inventory_adjustment import process_inventory_adjustment
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches', template_folder='templates')
 
+@batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
+@login_required
+def get_batch_remaining_details(batch_id):
+    """Get detailed remaining inventory for a specific batch"""
+    try:
+        batch = Batch.query.get_or_404(batch_id)
+        
+        # Query ProductInventory entries for this batch that have remaining quantity
+        remaining_items = ProductInventory.query.filter_by(batch_id=batch_id).filter(
+            ProductInventory.quantity > 0
+        ).all()
+        
+        # Format the response data
+        remaining_data = []
+        for item in remaining_items:
+            remaining_data.append({
+                'product_name': item.product.name,
+                'variant': item.variant or 'Base',
+                'size_label': item.size_label or 'Bulk',
+                'quantity': item.quantity,
+                'unit': item.unit,
+                'batch_id': batch_id,
+                'expiration_date': item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'batch_label': batch.label_code,
+            'remaining_items': remaining_data
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
 def set_column_visibility():
