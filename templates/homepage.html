@@ -202,8 +202,8 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
-                            <div class="mb-3" style="height: 200px; cursor: pointer;" onclick="showImageModal('{{ url_for('static', filename='images/homepage/Clean Dashboard.png') }}', 'Calm and Clean Dashboard')">
-                                <img src="{{ url_for('static', filename='images/homepage/Clean Dashboard.png') }}" alt="Calm and Clean Dashboard" class="img-fluid" style="max-height: 200px; object-fit: cover; border-radius: 8px;">
+                            <div class="mb-3" style="height: 200px; cursor: pointer;" onclick="showImageModal('{{ url_for('static', filename='images/homepage/Clean Dashboard.jpg') }}', 'Calm and Clean Dashboard')">
+                                <img src="{{ url_for('static', filename='images/homepage/Clean Dashboard.jpg') }}" alt="Calm and Clean Dashboard" class="img-fluid" style="max-height: 200px; object-fit: cover; border-radius: 8px;">
                             </div>
                             <h5 class="card-title">Calm and Clean Dashboard</h5>
                             <p class="card-text">Get insights into your production costs, efficiency, and inventory turnover.</p>
@@ -298,6 +298,8 @@
     <!-- Stats Section -->
     <section class="stats-section">
         <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Goals</h2>
             <div class="row">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
@@ -612,7 +614,6 @@
                 return;
             }
 
-            // Simulate form submission (replace with actual endpoint when ready)
             const formData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
@@ -622,12 +623,30 @@
                 newsletter: document.getElementById('newsletter').checked
             };
 
-            // Hide form and show success message
-            this.style.display = 'none';
-            document.getElementById('successMessage').style.display = 'block';
-
-            // Log signup data (replace with actual API call)
-            console.log('Signup data:', formData);
+            // Submit to backend
+            fetch('/signup-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Hide form and show success message
+                    this.style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('successMessage').innerHTML = 
+                        '<i class="fas fa-check-circle me-2"></i>' + data.message;
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Something went wrong. Please try again.');
+            });
         });
     </script>
 </body>
