@@ -1,0 +1,34 @@
+Found existing installation: bcrypt 4.1.2
+Uninstalling bcrypt-4.1.2:
+ERROR: Exception:
+Traceback (most recent call last):
+  File "/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/lib/python3.11/shutil.py", line 853, in move
+    os.rename(src, real_dst)
+OSError: [Errno 18] Invalid cross-device link: '/nix/store/jvvplixyp8cd1is5plnl0p8df7qfjmp7-python3.11-bcrypt-4.1.2/lib/python3.11/site-packages/bcrypt-4.1.2.dist-info/' -> '/tmp/pip-uninstall-rta5dtfb'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/cli/base_command.py", line 180, in exc_logging_wrapper
+    status = run_func(*args)
+             ^^^^^^^^^^^^^^^
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/commands/uninstall.py", line 105, in run
+    uninstall_pathset = req.uninstall(
+                        ^^^^^^^^^^^^^^
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/req/req_install.py", line 727, in uninstall
+    uninstalled_pathset.remove(auto_confirm, verbose)
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/req/req_uninstall.py", line 380, in remove
+    moved.stash(path)
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/req/req_uninstall.py", line 271, in stash
+    renames(path, new_path)
+  File "/nix/store/dfg63lldbvcj207iyr9z0xw21d8ax02n-python3.11-pip-24.0/lib/python3.11/site-packages/pip/_internal/utils/misc.py", line 358, in renames
+    shutil.move(old, new)
+  File "/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/lib/python3.11/shutil.py", line 871, in move
+    rmtree(src)
+  File "/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/lib/python3.11/shutil.py", line 752, in rmtree
+    _rmtree_safe_fd(fd, path, onerror)
+  File "/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/lib/python3.11/shutil.py", line 703, in _rmtree_safe_fd
+    onerror(os.unlink, fullname, sys.exc_info())
+  File "/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/lib/python3.11/shutil.py", line 701, in _rmtree_safe_fd
+    os.unlink(entry.name, dir_fd=topfd)
+PermissionError: [Errno 13] Permission denied: 'LICENSE'
