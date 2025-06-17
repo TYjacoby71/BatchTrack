@@ -374,6 +374,63 @@ function toggleColumn(columnName, show) {
 </script>
 {% endblock %}
 
+<!-- FIFO Adjustment Modal -->
+<div class="modal fade" id="adjustFifoModal" tabindex="-1" aria-labelledby="adjustFifoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adjustFifoModalLabel">Adjust FIFO Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" id="adjustFifoForm">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="mb-3">
+            <label for="fifoCurrentQty" class="form-label">Current Quantity</label>
+            <input type="text" class="form-control" id="fifoCurrentQty" readonly>
+          </div>
+          
+          <div class="mb-3">
+            <label for="fifoChangeType" class="form-label">Adjustment Type</label>
+            <select class="form-control" name="change_type" id="fifoChangeType" required>
+              <option value="">Select adjustment type...</option>
+              <option value="recount">Recount</option>
+              <option value="sale">Sale</option>
+              <option value="spoil">Spoil</option>
+              <option value="damage">Damage</option>
+              <option value="trash">Trash</option>
+              <option value="gift/tester">Gift/Tester</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="fifoQuantity" class="form-label">Quantity</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="quantity" id="fifoQuantity" step="0.01" min="0" required>
+              <span class="input-group-text" id="fifoUnit"></span>
+            </div>
+            <div class="form-text" id="fifoQuantityHelp"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="fifoNotes" class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" id="fifoNotes" rows="2" placeholder="Optional notes about this adjustment"></textarea>
+          </div>
+          
+          <div class="alert alert-info">
+            <small><strong>Batch:</strong> <span id="fifoBatchInfo"></span></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const adjustFifoModal = document.getElementById('adjustFifoModal');
@@ -454,61 +511,3 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-
-
-<!-- FIFO Adjustment Modal -->
-<div class="modal fade" id="adjustFifoModal" tabindex="-1" aria-labelledby="adjustFifoModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="adjustFifoModalLabel">Adjust FIFO Entry</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form method="POST" id="adjustFifoForm">
-        <div class="modal-body">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          
-          <div class="mb-3">
-            <label for="fifoCurrentQty" class="form-label">Current Quantity</label>
-            <input type="text" class="form-control" id="fifoCurrentQty" readonly>
-          </div>
-          
-          <div class="mb-3">
-            <label for="fifoChangeType" class="form-label">Adjustment Type</label>
-            <select class="form-control" name="change_type" id="fifoChangeType" required>
-              <option value="">Select adjustment type...</option>
-              <option value="recount">Recount</option>
-              <option value="sale">Sale</option>
-              <option value="spoil">Spoil</option>
-              <option value="damage">Damage</option>
-              <option value="trash">Trash</option>
-              <option value="gift/tester">Gift/Tester</option>
-            </select>
-          </div>
-          
-          <div class="mb-3">
-            <label for="fifoQuantity" class="form-label">Quantity</label>
-            <div class="input-group">
-              <input type="number" class="form-control" name="quantity" id="fifoQuantity" step="0.01" min="0" required>
-              <span class="input-group-text" id="fifoUnit"></span>
-            </div>
-            <div class="form-text" id="fifoQuantityHelp"></div>
-          </div>
-          
-          <div class="mb-3">
-            <label for="fifoNotes" class="form-label">Notes</label>
-            <textarea class="form-control" name="notes" id="fifoNotes" rows="2" placeholder="Optional notes about this adjustment"></textarea>
-          </div>
-          
-          <div class="alert alert-info">
-            <small><strong>Batch:</strong> <span id="fifoBatchInfo"></span></small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Apply Adjustment</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
