@@ -8,6 +8,10 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='shared.css') }}" rel="stylesheet">
     <style>
+        body {
+            padding-top: 80px; /* Account for fixed navbar height */
+        }
+        
         .scrolling-banner {
             background: #f8f9fa;
             overflow: hidden;
