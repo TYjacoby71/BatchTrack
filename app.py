@@ -206,10 +206,8 @@ def logout():
 
 @app.route("/")
 def index():
-    print(f"Index route called - User authenticated: {current_user.is_authenticated}")
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
-    print("Rendering homepage.html")
     return render_template("homepage.html")
 
 @app.route('/homepage')
