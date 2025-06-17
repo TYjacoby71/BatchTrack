@@ -1,151 +1,135 @@
-
-<!-- Inventory Adjustment -->
-<div class="card mb-4">
+<div class="card mt-3">
   <div class="card-header">
-    <h5 class="mb-0">Adjust Inventory</h5>
+    <h5><i class="fas fa-edit"></i> Adjust Inventory</h5>
   </div>
   <div class="card-body">
     <form method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <!-- Change Type Selection -->
+      <div class="mb-3">
+        <label for="change_type" class="form-label">Change Type</label>
+        <select class="form-control" id="change_type" name="change_type" required>
+          <option value="">Select change type...</option>
+          <option value="restock">Restock</option>
+          <option value="spoil">Mark as Spoiled</option>
+          <option value="trash">Discard/Trash</option>
+          <option value="recount">Manual Recount</option>
+        </select>
+      </div>
+
+      <!-- Quantity Input -->
       <div class="row">
-        <div class="col-md-4">
-          <div class="form-group">
-            <label>Change Type</label>
-            <select class="form-control" name="change_type" required>
-              <option value="restock">Restock</option>
-              <option value="spoil">Spoil</option>
-              <option value="trash">Trash</option>
-            </select>
-          </div>
+        <div class="col-md-8">
+          <label for="quantity" class="form-label">Quantity</label>
+          <input type="number" step="0.01" class="form-control" id="quantity" name="quantity" required>
         </div>
         <div class="col-md-4">
-          <div class="form-group">
-            <label>Quantity Change</label>
-            <div class="input-group">
-              <input type="number" class="form-control" name="quantity" {% if item.type == 'container' %}step="1" min="1"{% else %}step="0.01" min="0.01"{% endif %} required>
-              {% if item.type != 'container' %}
-              <select class="form-control" name="input_unit" required>
-                {% for unit in get_global_unit_list() %}
-                  <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
-                {% endfor %}
-              </select>
-              {% else %}
-              <input type="hidden" name="input_unit" value="count">
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="form-group">
-            <label>Cost Entry Type</label>
-            <select class="form-control" name="cost_entry_type" id="costEntryType">
-              <option value="no_change">No Change</option>
-              <option value="per_unit">Per Unit Cost</option>
-              <option value="total">Total Cost</option>
-            </select>
-          </div>
-          <div class="form-group mt-2">
-            <label>Cost</label>
-            <input type="number" class="form-control" name="cost_per_unit" step="0.01" id="costPerUnit">
-            <small class="form-text text-muted" id="costHelp"></small>
-          </div>
+          <label for="unit" class="form-label">Unit</label>
+          <select class="form-control" id="unit" name="unit" required>
+            <option value="{{ item.unit }}">{{ item.unit }}</option>
+            {% if item.conversions %}
+              {% for conversion in item.conversions %}
+                <option value="{{ conversion.to_unit }}">{{ conversion.to_unit }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
         </div>
       </div>
-      <!-- Shelf Life Override -->
-      <div class="form-group mt-3" id="expirationOverrideSection" style="display: none;">
-        <div class="form-check mb-2">
+
+      <!-- Cost Override Section -->
+      <div class="mt-3" id="costSection" style="display: none;">
+        <label for="restock_cost" class="form-label">Cost per {{ item.unit }}</label>
+        <input type="number" step="0.01" class="form-control" id="restock_cost" name="restock_cost">
+        <small class="form-text text-muted">Leave empty to use current cost ({{ "${:,.2f}".format(item.cost_per_unit) }})</small>
+      </div>
+
+      <!-- Expiration Override Section -->
+      {% if item.is_perishable %}
+      <div class="mt-3" id="expirationOverrideSection" style="display: none;">
+        <div class="form-check">
           <input class="form-check-input" type="checkbox" id="override_expiration" name="override_expiration">
           <label class="form-check-label" for="override_expiration">
-            Override shelf life for this restock
+            Override shelf life (default: {{ item.shelf_life_days }} days)
           </label>
         </div>
-        <div id="shelfLifeField" style="display: none;">
-          <label for="custom_shelf_life_days">Custom Shelf Life (days)</label>
+        <div id="shelfLifeField" style="display: none;" class="mt-2">
+          <label for="custom_shelf_life_days" class="form-label">Custom Shelf Life (days)</label>
           <input type="number" class="form-control" id="custom_shelf_life_days" name="custom_shelf_life_days" min="1">
-          <small class="form-text text-muted">
-            This will override the ingredient's default shelf life for this specific restock entry. Expiration date will be calculated automatically.
-          </small>
         </div>
       </div>
-      
-      <div class="form-group mt-3">
-        <label>Notes</label>
-        <textarea class="form-control" name="notes" rows="2"></textarea>
+      {% endif %}
+
+      <!-- Notes -->
+      <div class="mt-3">
+        <label for="notes" class="form-label">Notes</label>
+        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
       </div>
-      <button type="submit" class="btn btn-primary mt-3">Submit Adjustment</button>
+
+      <button type="submit" class="btn btn-primary mt-3">
+        <i class="fas fa-save"></i> Apply Adjustment
+      </button>
     </form>
   </div>
 </div>
 
 <script>
-document.getElementById('costEntryType').addEventListener('change', function() {
-  const costInput = document.getElementById('costPerUnit');
-  const helpText = document.getElementById('costHelp');
-  const currentCost = {{ item.cost_per_unit or 0 }};
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  const changeTypeSelect = document.getElementById('change_type');
+  const costSection = document.getElementById('costSection');
+  const costInput = document.getElementById('restock_cost');
 
-  switch(this.value) {
-    case 'no_change':
-      costInput.value = currentCost;
-      costInput.readOnly = true;
-      helpText.textContent = 'Using current cost per unit';
-      break;
-    case 'per_unit':
-      costInput.value = '';
-      costInput.readOnly = false;
-      helpText.textContent = 'Enter cost per individual unit';
-      break;
-    case 'total':
-      costInput.value = '';
-      costInput.readOnly = false;
-      helpText.textContent = 'Enter total cost - will be divided by quantity';
-      break;
+  // Only set up expiration handling if the section exists
+  const expirationOverrideSection = document.getElementById('expirationOverrideSection');
+  const overrideExpirationCheckbox = document.getElementById('override_expiration');
+  const shelfLifeField = document.getElementById('shelfLifeField');
+
+  if (changeTypeSelect) {
+    changeTypeSelect.addEventListener('change', function() {
+      const selectedType = this.value;
+
+      // Handle cost section visibility
+      if (costSection && costInput) {
+        if (selectedType === 'restock') {
+          costSection.style.display = 'block';
+          costInput.disabled = false;
+        } else {
+          costSection.style.display = 'none';
+          costInput.disabled = true;
+          costInput.value = '';
+        }
+      }
+
+      // Handle expiration section visibility (only if it exists)
+      if (expirationOverrideSection) {
+        if (selectedType === 'restock') {
+          expirationOverrideSection.style.display = 'block';
+        } else {
+          expirationOverrideSection.style.display = 'none';
+          if (overrideExpirationCheckbox) {
+            overrideExpirationCheckbox.checked = false;
+          }
+          if (shelfLifeField) {
+            shelfLifeField.style.display = 'none';
+          }
+        }
+      }
+    });
+  }
+
+  // Handle expiration override checkbox (only if it exists)
+  if (overrideExpirationCheckbox && shelfLifeField) {
+    overrideExpirationCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        shelfLifeField.style.display = 'block';
+      } else {
+        shelfLifeField.style.display = 'none';
+        const customShelfLifeInput = document.getElementById('custom_shelf_life_days');
+        if (customShelfLifeInput) {
+          customShelfLifeInput.value = '';
+        }
+      }
+    });
   }
 });
-
-document.querySelector('input[name="quantity"]').addEventListener('input', function() {
-  const costType = document.getElementById('costEntryType');
-  if (costType.value === 'total') {
-    const qty = parseFloat(this.value) || 0;
-    document.getElementById('costHelp').textContent = 
-      `Enter total cost - will be divided by ${qty} units`;
-  }
-});
-
-document.getElementById('costEntryType').dispatchEvent(new Event('change'));
-
-document.querySelector('select[name="change_type"]').addEventListener('change', function() {
-  const costInput = document.getElementById('costPerUnit');
-  const expirationSection = document.getElementById('expirationOverrideSection');
-  
-  costInput.disabled = ['spoil', 'trash'].includes(this.value);
-  if (costInput.disabled) costInput.value = '';
-  
-  // Show expiration override only for restock operations
-  const expirationSection = document.getElementById('expirationOverrideSection');
-  if (this.value === 'restock' && expirationSection) {
-    expirationSection.style.display = 'block';
-  } else if (expirationSection) {
-    expirationSection.style.display = 'none';
-    const overrideCheckbox = document.getElementById('override_expiration');
-    if (overrideCheckbox) overrideCheckbox.checked = false;
-    const shelfLifeField = document.getElementById('shelfLifeField');
-    if (shelfLifeField) shelfLifeField.style.display = 'none';
-  }
-});
-
-// Handle expiration override checkbox
-const overrideExpirationCheckbox = document.getElementById('override_expiration');
-if (overrideExpirationCheckbox) {
-  overrideExpirationCheckbox.addEventListener('change', function() {
-    const shelfLifeField = document.getElementById('shelfLifeField');
-    if (shelfLifeField) {
-      shelfLifeField.style.display = this.checked ? 'block' : 'none';
-    }
-    
-    if (!this.checked) {
-      const customShelfLifeInput = document.getElementById('custom_shelf_life_days');
-      if (customShelfLifeInput) customShelfLifeInput.value = '';
-    }
-  });
-}
 </script>
