@@ -1,0 +1,159 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="text-center mb-4">
+  <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+</div>
+
+<div class="text-center mb-4">
+  <div class="d-inline-flex gap-3">
+    {% if active_batch %}
+      <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
+    {% endif %}
+    <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
+  </div>
+</div>
+
+<!-- Unified Dashboard Alerts -->
+{% include 'components/dashboard_alerts.html' %}
+
+<!-- Recipe Selection Modal -->
+<div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 500px;">
+  <div class="card shadow-lg">
+    <div class="card-header">
+      <h5 class="card-title mb-0 text-center">Start New Batch</h5>
+    </div>
+    <div class="card-body">
+      {% if not recipes %}
+      <!-- Empty State Message -->
+      <div class="text-center py-4">
+        <i class="fas fa-book fa-4x text-muted mb-4"></i>
+        <h4 class="text-muted mb-3">No Recipes Yet</h4>
+        <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
+        <div class="d-flex gap-3 justify-content-center mb-3">
+          <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Recipe
+          </a>
+          <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+            <i class="fas fa-boxes"></i> Add Ingredients
+          </a>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+      {% else %}
+      <form id="recipeForm" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3">
+          <label for="recipe_id" class="form-label">Recipe</label>
+          <select name="recipe_id" id="recipe_id" class="form-select" required>
+            <option value="">Choose Recipe...</option>
+            {% for recipe in recipes %}
+            <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Check if selected recipe has variants -->
+        <div id="variantSection" class="mb-3" style="display: none;">
+          <label for="variant_id" class="form-label">Variant <span class="text-muted">(optional)</span></label>
+          <select name="variant_id" id="variant_id" class="form-select">
+            <option value="">No variant</option>
+          </select>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="submit" class="btn btn-primary">Continue to Production Planning</button>
+          <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal backdrop -->
+<div id="modalBackdrop" class="position-fixed top-0 start-0 w-100 h-100 bg-dark" style="display:none; z-index: 1040; opacity: 0.5;" onclick="document.getElementById('startFlowModal').style.display='none'; this.style.display='none';"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const recipeSelect = document.getElementById('recipe_id');
+  const variantSection = document.getElementById('variantSection');
+  const variantSelect = document.getElementById('variant_id');
+  const recipeForm = document.getElementById('recipeForm');
+  const modal = document.getElementById('startFlowModal');
+  const backdrop = document.getElementById('modalBackdrop');
+
+  // Recipe data with variants (this would be populated from your backend)
+  const recipeVariants = {
+    {% for recipe in recipes %}
+    {% if recipe.variations %}
+    "{{ recipe.id }}": [
+      {% for variant in recipe.variations %}
+      {"id": "{{ variant.id }}", "name": "{{ variant.name }}"}{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endif %}
+    {% endfor %}
+  };
+
+  // Update the Start Batch button to show backdrop
+  const startBatchBtn = document.querySelector('button[onclick*="startFlowModal"]');
+  if (startBatchBtn) {
+    startBatchBtn.onclick = function() {
+      modal.style.display = 'block';
+      backdrop.style.display = 'block';
+    };
+  }
+
+  // Update close functionality
+  window.closeModal = function() {
+    modal.style.display = 'none';
+    backdrop.style.display = 'none';
+  };
+
+  if (recipeSelect) {
+    recipeSelect.addEventListener('change', function() {
+      const selectedRecipeId = this.value;
+
+      if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
+        // Show variant section and populate variants
+        variantSection.style.display = 'block';
+        variantSelect.innerHTML = '<option value="">No variant</option>';
+
+        recipeVariants[selectedRecipeId].forEach(variant => {
+          const option = document.createElement('option');
+          option.value = variant.id;
+          option.textContent = variant.name;
+          variantSelect.appendChild(option);
+        });
+      } else {
+        // Hide variant section
+        variantSection.style.display = 'none';
+        variantSelect.innerHTML = '<option value="">No variant</option>';
+      }
+    });
+
+    // Handle form submission with dynamic action
+    recipeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const selectedRecipeId = recipeSelect.value;
+      if (selectedRecipeId) {
+        // Set the form action to the correct recipe planning URL
+        this.action = `/recipes/${selectedRecipeId}/plan`;
+        this.submit();
+      } else {
+        alert('Please select a recipe');
+      }
+    });
+  }
+});
+</script>
+
+{% if alert %}
+<div class="alert alert-warning mt-3">
+  ⚠️ <strong>{{ alert }}</strong>
+</div>
+{% endif %}
+
+{% endblock %}

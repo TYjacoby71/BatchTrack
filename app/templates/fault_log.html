@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container">
+    <h2>System Fault Log</h2>
+    {% if faults %}
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Batch ID</th>
+            <th>Description</th>
+            <th>Status</th>
+        </tr>
+        {% for fault in faults %}
+        <tr>
+            <td>{{ fault.date }}</td>
+            <td>{{ fault.batch_id }}</td>
+            <td>{{ fault.description }}</td>
+            <td class="status-{{ fault.status|lower }}">{{ fault.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No faults have been logged.</p>
+    {% endif %}
+</div>
+{% endblock %}

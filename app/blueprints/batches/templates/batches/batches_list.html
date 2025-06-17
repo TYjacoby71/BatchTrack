@@ -1,0 +1,537 @@
+{% extends 'layout.html' %}
+{% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<h2>Batches</h2>
+
+{% if not batches %}
+<!-- Empty State Message -->
+<div class="text-center py-5">
+    <div class="card">
+        <div class="card-body">
+            <i class="fas fa-flask fa-4x text-muted mb-4"></i>
+            <h4 class="text-muted mb-3">No Batches Yet</h4>
+            <p class="text-muted mb-4">Get started by creating recipes and adding inventory, then you can start your first batch!</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Recipes
+                </a>
+                <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-boxes"></i> Manage Inventory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+
+<!-- Global Filter Section (Hidden by default) -->
+<div class="collapse mb-4" id="filterSection">
+    <div class="card card-body">
+        <!-- Batch Filters -->
+        <form method="get" class="row g-3 mb-3" id="filterForm">
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="all" {% if not session.get('batch_filter_status') or session.get('batch_filter_status') == 'all' %}selected{% endif %}>Status: All</option>
+                    <option value="in_progress" {% if session.get('batch_filter_status') == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if session.get('batch_filter_status') == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="failed" {% if session.get('batch_filter_status') == 'failed' %}selected{% endif %}>Failed</option>
+                    <option value="cancelled" {% if session.get('batch_filter_status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="recipe_id" class="form-select form-select-sm">
+                    <option value="">Recipe: All</option>
+                    {% for r in all_recipes %}
+                    <option value="{{ r.id }}" {% if session.get('batch_filter_recipe')|string == r.id|string %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="start" class="form-control form-control-sm" placeholder="Start Date" value="{{ session.get('batch_filter_start', '') }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="end" class="form-control form-control-sm" placeholder="End Date" value="{{ session.get('batch_filter_end', '') }}">
+            </div>
+            <div class="col-md-3">
+                <select name="sort_by" class="form-select form-select-sm">
+                    <option value="date_desc" {% if session.get('batch_sort_by') == 'date_desc' or not session.get('batch_sort_by') %}selected{% endif %}>Sort: Newest First</option>
+                    <option value="date_asc" {% if session.get('batch_sort_by') == 'date_asc' %}selected{% endif %}>Sort: Oldest First</option>
+                    <option value="recipe_asc" {% if session.get('batch_sort_by') == 'recipe_asc' %}selected{% endif %}>Sort: Recipe A-Z</option>
+                    <option value="recipe_desc" {% if session.get('batch_sort_by') == 'recipe_desc' %}selected{% endif %}>Sort: Recipe Z-A</option>
+                    <option value="status_asc" {% if session.get('batch_sort_by') == 'status_asc' %}selected{% endif %}>Sort: Status A-Z</option>
+                    <option value="cost_desc" {% if session.get('batch_sort_by') == 'cost_desc' %}selected{% endif %}>Sort: Cost High-Low</option>
+                    <option value="cost_asc" {% if session.get('batch_sort_by') == 'cost_asc' %}selected{% endif %}>Sort: Cost Low-High</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-sm btn-primary" onclick="collapseFilters()">Apply Filters</button>
+                <a href="{{ url_for('batches.list_batches') }}" class="btn btn-sm btn-secondary" onclick="collapseFilters()">Reset</a>
+            </div>
+        </form>
+
+        <!-- Column Visibility -->
+        <form method="post" action="{{ url_for('batches.set_column_visibility') }}" id="columnForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
+            <div class="d-flex gap-3 align-items-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="recipe" {% if 'recipe' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Recipe</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="timestamp" {% if 'timestamp' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Start Date</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="completed_date" {% if 'completed_date' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Completed Date</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="total_cost" {% if 'total_cost' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Cost</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="product_quantity" {% if 'product_quantity' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Quantity</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="columns" value="tags" {% if 'tags' in visible_columns %}checked{% endif %}>
+                    <label class="form-check-label">Tags</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Update Columns</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- In Progress Batches Section -->
+{% set in_progress_batches = batches|selectattr("status", "equalto", "in_progress")|list %}
+{% if in_progress_batches %}
+<div class="mb-5">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Batches In Progress</h3>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+                    <i class="fas fa-filter"></i> Filters
+                </button>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-secondary btn-sm" id="inProgressTableBtn" onclick="showInProgressView('tableView')">Table View</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="inProgressCardBtn" onclick="showInProgressView('cardView')">Card View</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- In Progress Table View -->
+            <div id="inProgressTableView">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            {% if 'recipe' in visible_columns %}
+                            <th>Recipe</th>
+                            {% endif %}
+                            <th>Label Code</th>
+                            <th>Scale</th>
+                            {% if 'timestamp' in visible_columns %}
+                            <th>Start Date</th>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <th>Completed Date</th>
+                            {% endif %}
+                            {% if 'tags' in visible_columns %}
+                            <th>Tags</th>
+                            {% endif %}
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in in_progress_batches %}
+                        <tr>
+                            {% if 'recipe' in visible_columns %}
+                            <td>{{ batch.recipe.name }}</td>
+                            {% endif %}
+                            <td>{{ batch.label_code }}</td>
+                            <td>{{ batch.scale }}</td>
+                            {% if 'timestamp' in visible_columns %}
+                            <td>{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <td>—</td>
+                            {% endif %}
+                            {% if 'tags' in visible_columns %}
+                            <td>{{ batch.tags if batch.tags else '—' }}</td>
+                            {% endif %}
+                            <td>
+                                <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-sm btn-warning">Continue</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- In Progress Card View -->
+            <div id="inProgressCardView" style="display: none;">
+                <div class="row">
+                    {% for batch in in_progress_batches %}
+                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ batch.recipe.name }}</h5>
+                                <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
+                                <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
+                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                                <p class="card-text">
+                                    <strong>Status:</strong> 
+                                    <span class="badge bg-warning">In Progress</span>
+                                </p>
+                                {% if batch.tags %}
+                                <p class="card-text"><small class="text-muted">{{ batch.tags }}</small></p>
+                                {% endif %}
+                                <div class="mt-auto">
+                                    <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=batch.id) }}" class="btn btn-warning w-100">Continue</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Completed Batches Section -->
+{% set completed_batches = batches|rejectattr("status", "equalto", "in_progress")|list %}
+{% if completed_batches %}
+<div class="mb-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Completed Batches</h3>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+                    <i class="fas fa-filter"></i> Filters
+                </button>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-secondary btn-sm" id="completedTableBtn" onclick="showCompletedView('tableView')">Table View</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="completedCardBtn" onclick="showCompletedView('cardView')">Card View</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Completed Table View -->
+            <div id="completedTableView">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            {% if 'recipe' in visible_columns %}
+                            <th>Recipe</th>
+                            {% endif %}
+                            <th>Label Code</th>
+                            <th>Scale</th>
+                            {% if 'timestamp' in visible_columns %}
+                            <th>Start Date</th>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <th>Completed Date</th>
+                            {% endif %}
+                            <th>Status</th>
+                            {% if 'total_cost' in visible_columns %}
+                            <th>Cost</th>
+                            {% endif %}
+                            {% if 'product_quantity' in visible_columns %}
+                            <th>Quantity</th>
+                            {% endif %}
+                            <th>Remaining</th>
+                            {% if 'tags' in visible_columns %}
+                            <th>Tags</th>
+                            {% endif %}
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in completed_batches %}
+                        <tr>
+                            {% if 'recipe' in visible_columns %}
+                            <td>{{ batch.recipe.name }}</td>
+                            {% endif %}
+                            <td>{{ batch.label_code }}</td>
+                            <td>{{ batch.scale }}</td>
+                            {% if 'timestamp' in visible_columns %}
+                            <td>{{ batch.started_at.strftime("%Y-%m-%d") }}</td>
+                            {% endif %}
+                            {% if 'completed_date' in visible_columns %}
+                            <td>
+                                {% if batch.completed_at %}
+                                    {{ batch.completed_at.strftime("%Y-%m-%d") }}
+                                {% elif batch.failed_at %}
+                                    {{ batch.failed_at.strftime("%Y-%m-%d") }}
+                                {% elif batch.cancelled_at %}
+                                    {{ batch.cancelled_at.strftime("%Y-%m-%d") }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td>
+                                <span class="badge {% if batch.status == 'completed' %}bg-success
+                                            {% elif batch.status == 'failed' %}bg-danger
+                                            {% elif batch.status == 'cancelled' %}bg-secondary
+                                            {% else %}bg-warning{% endif %}">
+                                    {{ batch.status|title }}
+                                </span>
+                            </td>
+                            {% if 'total_cost' in visible_columns %}
+                            <td>${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</td>
+                            {% endif %}
+                            {% if 'product_quantity' in visible_columns %}
+                            <td>{{ batch.final_quantity if batch.final_quantity else batch.projected_yield|round(2) if batch.projected_yield else '—' }}</td>
+                            <td>
+                                {% if batch.final_quantity %}
+                                    {% if batch.batch_type == 'product' and batch.product %}
+                                        {% set remaining_details = [] %}
+                                        {% for inv in batch.product.inventory %}
+                                            {% if inv.batch_id == batch.id %}
+                                                {% if inv.quantity is not none and inv.quantity > 0 %}
+                                                    {% set _ = remaining_details.append({
+                                                        'variant': inv.variant or 'Base',
+                                                        'size_label': inv.size_label or 'Bulk',
+                                                        'quantity': inv.quantity,
+                                                        'unit': inv.unit
+                                                    }) %}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if remaining_details %}
+                                            <a href="#" class="text-success" data-bs-toggle="modal" data-bs-target="#remainingModal" 
+                                               onclick="showRemainingDetails('{{ batch.label_code }}', {{ batch.id }})">
+                                                Yes
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">No</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if batch.remaining_quantity and batch.remaining_quantity > 0 %}
+                                            <span class="text-success">Yes</span>
+                                        {% else %}
+                                            <span class="text-muted">No</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            {% if 'tags' in visible_columns %}
+                            <td>{{ batch.tags if batch.tags else '—' }}</td>
+                            {% endif %}
+                            <td>
+                                <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Completed Table Pagination -->
+                {% if completed_pagination.pages > 1 %}
+                <div class="d-flex justify-content-center mt-3">
+                    <nav aria-label="Completed batch navigation">
+                        <ul class="pagination pagination-sm">
+                            {% if completed_pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('batches.list_batches', completed_page=completed_pagination.prev_num, in_progress_page=request.args.get('in_progress_page', 1)) }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            <li class="page-item">
+                                <span class="page-link">Page {{ completed_pagination.page }} of {{ completed_pagination.pages }}</span>
+                            </li>
+                            {% if completed_pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('batches.list_batches', completed_page=completed_pagination.next_num, in_progress_page=request.args.get('in_progress_page', 1)) }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Completed Card View -->
+            <div id="completedCardView" style="display: none;">
+                <div class="row">
+                    {% for batch in completed_batches %}
+                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ batch.recipe.name }}</h5>
+                                <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
+                                <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
+                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d") }}</p>
+                                <p class="card-text">
+                                    <strong>Status:</strong> 
+                                    <span class="badge {% if batch.status == 'completed' %}bg-success
+                                                {% elif batch.status == 'failed' %}bg-danger
+                                                {% elif batch.status == 'cancelled' %}bg-secondary
+                                                {% else %}bg-warning{% endif %}">
+                                        {{ batch.status|title }}
+                                    </span>
+                                </p>
+                                {% if 'total_cost' in visible_columns %}
+                                <p class="card-text"><strong>Cost:</strong> ${{ "%.2f"|format(batch.total_cost) if batch.total_cost else '—' }}</p>
+                                {% endif %}
+                                {% if batch.tags %}
+                                <p class="card-text"><small class="text-muted">{{ batch.tags }}</small></p>
+                                {% endif %}
+                                <div class="mt-auto">
+                                    <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-primary w-100">View</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- In Progress Pagination -->
+{% if in_progress_batches and in_progress_pagination.pages > 1 %}
+<div class="d-flex justify-content-center mt-3">
+    <nav aria-label="In Progress batch navigation">
+        <ul class="pagination pagination-sm">
+            {% if in_progress_pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('batches.list_batches', in_progress_page=in_progress_pagination.prev_num, completed_page=request.args.get('completed_page', 1)) }}">Previous</a>
+            </li>
+            {% endif %}
+            <li class="page-item">
+                <span class="page-link">In Progress: Page {{ in_progress_pagination.page }} of {{ in_progress_pagination.pages }}</span>
+            </li>
+            {% if in_progress_pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('batches.list_batches', in_progress_page=in_progress_pagination.next_num, completed_page=request.args.get('completed_page', 1)) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Remaining Details Modal -->
+<div class="modal fade" id="remainingModal" tabindex="-1" aria-labelledby="remainingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="remainingModalLabel">Remaining Quantity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Batch:</strong> <span id="batchLabelCode"></span></p>
+                <div id="remainingList" class="list-group">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showInProgressView(viewId) {
+    // Toggle views
+    document.getElementById('inProgressTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
+    document.getElementById('inProgressCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
+
+    // Toggle button styles
+    const tableBtn = document.getElementById('inProgressTableBtn');
+    const cardBtn = document.getElementById('inProgressCardBtn');
+
+    if (viewId === 'tableView') {
+        tableBtn.className = 'btn btn-secondary btn-sm';
+        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        tableBtn.className = 'btn btn-outline-secondary btn-sm';
+        cardBtn.className = 'btn btn-secondary btn-sm';
+    }
+}
+
+function showCompletedView(viewId) {
+    // Toggle views
+    document.getElementById('completedTableView').style.display = viewId === 'tableView' ? 'block' : 'none';
+    document.getElementById('completedCardView').style.display = viewId === 'cardView' ? 'block' : 'none';
+
+    // Toggle button styles
+    const tableBtn = document.getElementById('completedTableBtn');
+    const cardBtn = document.getElementById('completedCardBtn');
+
+    if (viewId === 'tableView') {
+        tableBtn.className = 'btn btn-secondary btn-sm';
+        cardBtn.className = 'btn btn-outline-secondary btn-sm';
+    } else {
+        tableBtn.className = 'btn btn-outline-secondary btn-sm';
+        cardBtn.className = 'btn btn-secondary btn-sm';
+    }
+}
+
+function collapseFilters() {
+    const filterSection = document.getElementById('filterSection');
+    const bsCollapse = new bootstrap.Collapse(filterSection);
+    bsCollapse.hide();
+}
+
+// Add event listener for column visibility form
+document.getElementById('columnForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+    collapseFilters();
+});
+
+async function showRemainingDetails(labelCode, batchId) {
+    document.getElementById('batchLabelCode').innerText = labelCode;
+    const remainingList = document.getElementById('remainingList');
+    remainingList.innerHTML = '<div class="list-group-item">Loading...</div>';
+
+    try {
+        const response = await fetch(`/api/batch-remaining-details/${batchId}`);
+        const data = await response.json();
+        
+        remainingList.innerHTML = ''; // Clear loading message
+        
+        if (response.ok && data.remaining_items && data.remaining_items.length > 0) {
+            data.remaining_items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${item.product_name}</h6>
+                            <p class="mb-1"><strong>Variant:</strong> ${item.variant}</p>
+                            <p class="mb-1"><strong>Size:</strong> ${item.size_label}</p>
+                            <small class="text-muted">Batch Source: #${item.batch_id}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success fs-6">${item.quantity} ${item.unit}</span>
+                            ${item.expiration_date ? `<br><small class="text-muted">Exp: ${item.expiration_date}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+                itemDiv.className = 'list-group-item';
+                remainingList.appendChild(itemDiv);
+            });
+        } else {
+            const noItemsDiv = document.createElement('div');
+            noItemsDiv.textContent = 'No remaining items found for this batch.';
+            noItemsDiv.className = 'list-group-item text-muted';
+            remainingList.appendChild(noItemsDiv);
+        }
+    } catch (error) {
+        console.error('Error fetching remaining details:', error);
+        remainingList.innerHTML = '<div class="list-group-item text-danger">Error loading remaining details</div>';
+    }
+}
+</script>
+{% endif %}
+{% endblock %}

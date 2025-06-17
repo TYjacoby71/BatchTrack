@@ -1,0 +1,153 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+          <li class="breadcrumb-item active">{{ item.name }}</li>
+        </ol>
+      </nav>
+
+      <!-- Pending Unit Change Alert -->
+      {% if session.get('pending_unit_change') and session['pending_unit_change'].item_id == item.id %}
+      <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <h5>Unit Change Pending Confirmation</h5>
+        <p>You are changing the unit from <strong>{{ session['pending_unit_change'].old_unit }}</strong> to <strong>{{ session['pending_unit_change'].new_unit }}</strong>.</p>
+        <p>Click "Edit Details" to confirm your choice about inventory conversion.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endif %}
+
+      {% if item.quantity > 0 or history|length > 0 %}
+        {% include "inventory/components/item_summary_card.html" %}
+        {% include "inventory/components/adjustment_form.html" %}
+        
+        <!-- FIFO Filter Toggle -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Transaction History</h5>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="fifoFilter" onchange="toggleFifoFilter()">
+                <label class="form-check-label" for="fifoFilter">
+                  Show Active FIFO Only
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {% include "inventory/components/history_table.html" %}
+      {% else %}
+        <div class="alert alert-warning text-center">
+          <h5>Initial Inventory Setup Required</h5>
+          <p>This item needs an initial inventory entry before you can view its details.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "inventory/components/edit_details_modal.html" %}
+{% include "inventory/components/modals.html" %}
+
+<!-- Initial Inventory Modal for Empty FIFO -->
+{% if item.quantity == 0 and history|length == 0 %}
+<div class="modal fade" id="initialInventoryModal" tabindex="-1" aria-labelledby="initialInventoryModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="initialInventoryModalLabel">Initial Inventory Required</h5>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <h6>This item has no current inventory.</h6>
+          <p>Please make the initial stock entry to begin tracking this item. This will create your first FIFO entry and allow you to manage inventory properly.</p>
+        </div>
+        
+        <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="change_type" value="restock">
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="initial_quantity" class="form-label">Initial Quantity *</label>
+                <input type="number" 
+                       class="form-control" 
+                       id="initial_quantity" 
+                       name="quantity" 
+                       min="0.01" 
+                       step="0.01" 
+                       required>
+              </div>
+            </div>
+            {% if item.type != 'container' %}
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="initial_unit" class="form-label">Unit</label>
+                <select class="form-control" id="initial_unit" name="input_unit">
+                  <option value="{{ item.unit }}">{{ item.unit or 'count' }}</option>
+                  {% for unit in get_global_unit_list() %}
+                    {% if unit != item.unit %}
+                      <option value="{{ unit }}">{{ unit }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            {% else %}
+            <input type="hidden" name="input_unit" value="count">
+            {% endif %}
+          </div>
+          
+          {% if item.type != 'container' %}
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="initial_cost_per_unit" class="form-label">Cost Per Unit</label>
+                <input type="number" 
+                       class="form-control" 
+                       id="initial_cost_per_unit" 
+                       name="cost_per_unit" 
+                       min="0" 
+                       step="0.01" 
+                       value="{{ item.cost_per_unit or 0 }}">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="initial_cost_type" class="form-label">Cost Entry Type</label>
+                <select class="form-control" id="initial_cost_type" name="cost_entry_type">
+                  <option value="per_unit">Per Unit Cost</option>
+                  <option value="total">Total Cost</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          
+          <div class="form-group mb-3">
+            <label for="initial_notes" class="form-label">Notes</label>
+            <textarea class="form-control" 
+                      id="initial_notes" 
+                      name="notes" 
+                      rows="2" 
+                      placeholder="Initial stock entry...">Initial stock entry</textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-secondary">Back to Inventory List</a>
+        <button type="submit" form="initialInventoryForm" class="btn btn-primary">Add Initial Inventory</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
+{% endblock %}
