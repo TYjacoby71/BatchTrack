@@ -1,7 +1,8 @@
 
 from flask import jsonify, request
 from flask_login import login_required
-from ...models import db, Product, ProductInventory
+from ...extensions import db
+from ...models import Product, ProductInventory
 from services.product_service import ProductService
 from . import products_bp
 
