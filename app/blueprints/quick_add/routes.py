@@ -7,7 +7,7 @@ quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 def quick_add_container():
     try:
         from flask_login import current_user
-        from models import InventoryHistory
+        from ...models import InventoryHistory
         
         data = request.get_json()
         if not data:
