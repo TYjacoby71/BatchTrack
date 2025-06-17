@@ -1,6 +1,6 @@
-
 from sqlalchemy import func
-from models import db, ProductInventory, ProductInventoryHistory, Product, ProductVariation, Batch, ProductEvent
+from app.models import Product, ProductInventory, ProductEvent, ProductInventoryHistory, Batch, InventoryItem
+from app.extensions import db
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
 from services.inventory_adjustment import generate_fifo_code
@@ -23,9 +23,9 @@ def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, 
         fifo_entry = ProductInventory.query.get(fifo_entry_id)
         if not fifo_entry:
             raise ValueError("FIFO entry not found")
-        
+
         original_quantity = fifo_entry.quantity
-        
+
         if change_type == 'recount':
             # For recount, quantity is the new total
             quantity_change = quantity - original_quantity
@@ -35,38 +35,38 @@ def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, 
             quantity_change = quantity
             if quantity_change >= 0:
                 raise ValueError("Deduction quantity must be negative")
-            
+
             # Validate quantity doesn't exceed available
             if abs(quantity_change) > original_quantity:
                 raise ValueError("Cannot adjust more than available quantity")
-            
+
             fifo_entry.quantity += quantity_change
-        
+
         # Ensure quantity doesn't go negative
         if fifo_entry.quantity < 0:
             fifo_entry.quantity = 0
-        
+
         # Create adjustment event
         event_note = f"{change_type.title()}: "
         if change_type == 'recount':
             event_note += f"{original_quantity} → {fifo_entry.quantity} ({quantity_change:+.2f}) for {fifo_entry.size_label}"
         else:
             event_note += f"{abs(quantity_change)} × {fifo_entry.size_label}"
-        
+
         if fifo_entry.variant and fifo_entry.variant != 'Base':
             event_note += f" ({fifo_entry.variant})"
         if notes:
             event_note += f". Notes: {notes}"
-        
+
         db.session.add(ProductEvent(
             product_id=fifo_entry.product_id,
             event_type=f'inventory_{change_type}',
             note=event_note
         ))
-        
+
         db.session.commit()
         return True
-        
+
     except Exception as e:
         db.session.rollback()
         raise e
@@ -87,7 +87,7 @@ class ProductService:
                              container_id: Optional[int] = None, 
                              container_overrides: Optional[Dict[int, int]] = None) -> List[ProductInventory]:
         """Add product inventory from a finished batch, creating SKU-level entries that aggregate upward"""
-        from models import BatchContainer, InventoryItem
+        from app.models import BatchContainer, InventoryItem
 
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
@@ -208,7 +208,7 @@ class ProductService:
     def process_inventory_adjustment(product_id, variant, size_label, adjustment_type, quantity, 
                                    notes='', sale_price=None, customer=None, unit_cost=None):
         """Process all types of product inventory adjustments"""
-        
+
         if adjustment_type == 'recount':
             return ProductService.process_recount(product_id, variant, size_label, quantity, notes)
         elif adjustment_type == 'manual_add':
@@ -221,7 +221,7 @@ class ProductService:
     @staticmethod
     def process_deduction(product_id, variant, size_label, reason, quantity, notes='', sale_price=None, customer=None):
         """Process product deductions using FIFO"""
-        
+
         # Get FIFO-ordered inventory for this SKU combination
         inventory_items = ProductInventory.query.filter_by(
             product_id=product_id,
@@ -261,7 +261,7 @@ class ProductService:
             event_note = f"Sample/Gift: {quantity} × {size_label}"
         else:
             event_note = f"{reason.title()}: {quantity} × {size_label}"
-        
+
         if variant and variant != 'Base':
             event_note += f" ({variant})"
         if notes:
@@ -272,35 +272,35 @@ class ProductService:
             event_type=f'inventory_{reason}',
             note=event_note
         ))
-        
+
         db.session.commit()
         return True
 
     @staticmethod
     def process_recount(product_id, variant, size_label, new_total, notes=''):
         """Process a recount adjustment for a specific SKU combination"""
-        
+
         # Get all current entries for this SKU combination
         current_entries = ProductInventory.query.filter_by(
             product_id=product_id,
             variant=variant,
             size_label=size_label
         ).filter(ProductInventory.quantity > 0).order_by(ProductInventory.timestamp.asc()).all()
-        
+
         current_total = sum(entry.quantity for entry in current_entries)
         quantity_change = new_total - current_total
-        
+
         if quantity_change == 0:
             return True  # No change needed
-            
+
         if quantity_change < 0:
             # Need to reduce inventory using FIFO
             remaining_to_deduct = abs(quantity_change)
-            
+
             for entry in current_entries:
                 if remaining_to_deduct <= 0:
                     break
-                    
+
                 if entry.quantity <= remaining_to_deduct:
                     # Use entire entry
                     remaining_to_deduct -= entry.quantity
@@ -308,8 +308,8 @@ class ProductService:
                 else:
                     # Partial deduction
                     entry.quantity -= remaining_to_deduct
-                    remaining_to_deduct = 0
-                    
+                    entry.quantity = 0
+
         else:
             # Need to add inventory - create new entry
             inventory = ProductInventory(
@@ -336,14 +336,14 @@ class ProductService:
             event_type='inventory_recount',
             note=event_note
         ))
-            
+
         db.session.commit()
         return True
 
     @staticmethod
     def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes='', size_label=None):
         """Add manual stock with container matching"""
-        from models import InventoryItem
+        from app.models import InventoryItem
 
         product = Product.query.get_or_404(product_id)
         container = InventoryItem.query.get_or_404(container_id) if container_id else None
