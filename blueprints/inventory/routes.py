@@ -170,19 +170,31 @@ def adjust_inventory(id):
         if item.type == 'container':
             input_unit = 'count'
 
+        input_unit = request.form.get('input_unit', item.unit)
         notes = request.form.get('notes', '')
-
-        # Handle cost input for restocks
-        input_cost = request.form.get('cost_per_unit')
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
+        cost_per_unit_input = request.form.get('cost_per_unit')
 
+        # Handle expiration date override
+        override_expiration = request.form.get('override_expiration') == 'on'
+        custom_expiration_date = None
+        if override_expiration and change_type == 'restock':
+            expiration_date_str = request.form.get('expiration_date')
+            if expiration_date_str:
+                from datetime import datetime
+                try:
+                    custom_expiration_date = datetime.strptime(expiration_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Invalid expiration date format', 'error')
+                    return redirect(url_for('inventory.view_inventory', id=id))
+
+        # Calculate restock cost based on entry type
         restock_cost = None
-        if input_cost and change_type == 'restock':
-            cost_value = float(input_cost)
-            if cost_entry_type == 'total':
-                restock_cost = cost_value / input_quantity if input_quantity > 0 else 0
-            elif cost_entry_type == 'per_unit':
-                restock_cost = cost_value
+        if cost_entry_type == 'per_unit' and cost_per_unit_input:
+            restock_cost = float(cost_per_unit_input)
+        elif cost_entry_type == 'total' and cost_per_unit_input:
+            total_cost = float(cost_per_unit_input)
+            restock_cost = total_cost / input_quantity
 
         # Special case: FIFO initialization for items with no history
         if history_count == 0 and change_type == 'restock' and input_quantity > 0:
@@ -237,7 +249,8 @@ def adjust_inventory(id):
                 unit=input_unit,
                 notes=notes,
                 created_by=current_user.id,
-                cost_override=restock_cost
+                cost_override=restock_cost,
+                custom_expiration_date=custom_expiration_date if change_type == 'restock' else None
             )
 
             if success:

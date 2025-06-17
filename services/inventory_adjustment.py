@@ -36,11 +36,12 @@ def process_inventory_adjustment(
     item_id,
     quantity,
     change_type,
-    unit,
-    notes='',
+    unit=None,
+    notes=None,
     batch_id=None,
     created_by=None,
     cost_override=None,
+    custom_expiration_date=None,
 ):
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
@@ -64,7 +65,10 @@ def process_inventory_adjustment(
 
     # Handle expiration
     expiration_date = None
-    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+    if custom_expiration_date:
+        # Use the custom expiration date provided
+        expiration_date = custom_expiration_date
+    elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
         expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
 
     # Get cost - handle weighted average vs override
