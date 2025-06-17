@@ -186,7 +186,7 @@
         <h5 class="modal-title">Add Manual Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
@@ -235,7 +235,7 @@
         <h5 class="modal-title">Deduct Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" id="deductVariant">
