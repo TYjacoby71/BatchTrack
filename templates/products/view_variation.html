@@ -118,8 +118,8 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li>
-                            <a class="dropdown-item" href="#" onclick="openSizeAdjustModal('{{ size_display }}', {{ group.total_quantity }})">
-                              <i class="fas fa-edit"></i> Adjust
+                            <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                              <i class="fas fa-edit"></i> Manage Stock
                             </a>
                           </li>
                           <li><hr class="dropdown-divider"></li>
@@ -273,8 +273,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  
-
   // Handle deduct modal data - with proper null checks
   const deductModal = document.getElementById('deductModal');
   if (deductModal) {
@@ -292,29 +290,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (deductSizeEl) deductSizeEl.value = size || '';
     });
   }
-
-  // Global functions for modal operations
-  window.openAdjustModal = function(inventoryId, sizeLabel, currentQuantity) {
-    // Only try to access elements if they exist
-    const adjustInventoryIdEl = document.getElementById('adjustInventoryId');
-    const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
-    const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
-
-    if (adjustInventoryIdEl) adjustInventoryIdEl.value = inventoryId;
-    if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
-    if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = currentQuantity;
-  };
-
-  window.openSizeAdjustModal = function(sizeLabel, totalQuantity) {
-    // For size-level adjustments, we'll need to handle this differently
-    // since it affects multiple FIFO entries
-    const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
-    const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
-
-    if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
-    if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = totalQuantity;
-    // TODO: Implement size-level adjustment logic
-  };
 });
 </script>
 {% endblock %}
