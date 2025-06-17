@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" style="overflow-x: hidden;">
   <div class="row">
     <div class="col-12">
       <nav aria-label="breadcrumb">
@@ -77,7 +77,7 @@
         <div class="card-body p-0" style="overflow-x: auto;">
           {% if fifo_entries %}
             <div class="table-responsive">
-              <table class="table table-sm table-striped mb-0 w-100" id="fifoTable">
+              <table class="table table-sm table-striped mb-0" id="fifoTable" style="word-break: break-word;">
                 <thead>
                   <tr>
                     <th data-column="fifo">FIFO #</th>
