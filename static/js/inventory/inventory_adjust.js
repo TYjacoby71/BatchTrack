@@ -16,14 +16,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Show/hide shelf life override section for restocks - only if elements exist
+    // Show/hide shelf life override section for restocks
     const expirationSection = document.getElementById('expirationOverrideSection');
     const expirationCheckbox = document.getElementById('override_expiration');
     const shelfLifeField = document.getElementById('shelfLifeField');
 
     if (expirationSection) {
-        const selectedChangeType = getSelectedChangeType();
-        if (selectedChangeType === 'restock') {
+        if (getSelectedChangeType() === 'restock') {
             expirationSection.style.display = 'block';
         } else {
             expirationSection.style.display = 'none';
@@ -32,10 +31,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Handle shelf life override checkbox - only if it exists
-    if (expirationCheckbox && shelfLifeField) {
+    // Handle shelf life override checkbox
+    if (expirationCheckbox) {
         expirationCheckbox.addEventListener('change', function() {
-            shelfLifeField.style.display = this.checked ? 'block' : 'none';
+            if (shelfLifeField) {
+                shelfLifeField.style.display = this.checked ? 'block' : 'none';
+            }
         });
     }
 });
@@ -59,6 +60,5 @@ function handleQuantityChange() {
 
 // Function to get selected change type
 function getSelectedChangeType() {
-    const checkedElement = document.querySelector('input[name="change_type"]:checked');
-    return checkedElement ? checkedElement.value : 'restock';
+    return document.querySelector('input[name="change_type"]:checked')?.value || 'restock';
 }
