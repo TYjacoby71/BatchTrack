@@ -272,50 +272,53 @@
 </div>
 
 <script>
-// Define missing function to prevent ReferenceError
-function setVariantForDeduct(variantName) {
-  // Function exists to prevent errors when called from other scripts
-  console.log('setVariantForDeduct called with:', variantName);
-}
+document.addEventListener('DOMContentLoaded', function() {
+  // Define missing function to prevent ReferenceError
+  window.setVariantForDeduct = function(variantName) {
+    // Function exists to prevent errors when called from other scripts
+    console.log('setVariantForDeduct called with:', variantName);
+  };
 
-// Handle deduct modal data - with null checks
-const deductModal = document.getElementById('deductModal');
-if (deductModal) {
-  deductModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (!button) return;
+  // Handle deduct modal data - with proper null checks
+  const deductModal = document.getElementById('deductModal');
+  if (deductModal) {
+    deductModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (!button) return;
 
-    const variant = button.getAttribute('data-variant');
-    const size = button.getAttribute('data-size');
+      const variant = button.getAttribute('data-variant');
+      const size = button.getAttribute('data-size');
 
-    const deductVariantEl = document.getElementById('deductVariant');
-    const deductSizeEl = document.getElementById('deductSize');
+      const deductVariantEl = document.getElementById('deductVariant');
+      const deductSizeEl = document.getElementById('deductSize');
 
-    if (deductVariantEl) deductVariantEl.value = variant;
-    if (deductSizeEl) deductSizeEl.value = size;
-  });
-}
+      if (deductVariantEl) deductVariantEl.value = variant || '';
+      if (deductSizeEl) deductSizeEl.value = size || '';
+    });
+  }
 
-function openAdjustModal(inventoryId, sizeLabel, currentQuantity) {
-  // Only try to access elements if they exist
-  const adjustInventoryIdEl = document.getElementById('adjustInventoryId');
-  const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
-  const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
+  // Global functions for modal operations
+  window.openAdjustModal = function(inventoryId, sizeLabel, currentQuantity) {
+    // Only try to access elements if they exist
+    const adjustInventoryIdEl = document.getElementById('adjustInventoryId');
+    const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
+    const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
 
-  if (adjustInventoryIdEl) adjustInventoryIdEl.value = inventoryId;
-  if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
-  if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = currentQuantity;
-}
+    if (adjustInventoryIdEl) adjustInventoryIdEl.value = inventoryId;
+    if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
+    if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = currentQuantity;
+  };
 
-function openSizeAdjustModal(sizeLabel, totalQuantity) {
-  // For size-level adjustments, we'll need to handle this differently
-  // since it affects multiple FIFO entries
-  const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
-  const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
+  window.openSizeAdjustModal = function(sizeLabel, totalQuantity) {
+    // For size-level adjustments, we'll need to handle this differently
+    // since it affects multiple FIFO entries
+    const adjustSizeLabelEl = document.getElementById('adjustSizeLabel');
+    const adjustCurrentQuantityEl = document.getElementById('adjustCurrentQuantity');
 
-  if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
-  if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = totalQuantity;
-  // TODO: Implement size-level adjustment logic
-}
+    if (adjustSizeLabelEl) adjustSizeLabelEl.textContent = sizeLabel;
+    if (adjustCurrentQuantityEl) adjustCurrentQuantityEl.textContent = totalQuantity;
+    // TODO: Implement size-level adjustment logic
+  };
+});
 </script>
 {% endblock %}
