@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import extract
 from services.unit_conversion import ConversionEngine
 from services.inventory_adjustment import process_inventory_adjustment
+from services.inventory_adjustment import InventoryAdjustmentService
 
 start_batch_bp = Blueprint('start_batch', __name__)
 
@@ -99,7 +100,7 @@ def start_batch():
             required_converted = conversion_result['converted_value']
 
             # Use centralized inventory adjustment 
-            result = process_inventory_adjustment(
+            result = InventoryAdjustmentService.process_adjustment(
                 item_id=ingredient.id,
                 quantity=-required_converted,  # Negative for deduction
                 change_type='batch',
