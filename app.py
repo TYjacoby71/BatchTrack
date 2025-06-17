@@ -56,7 +56,11 @@ from routes.bulk_stock_routes import bulk_stock_bp
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
-from blueprints.products.routes import products_bp
+from routes.products import products_bp
+from routes.product_variants import product_variants_bp
+from routes.product_inventory import product_inventory_bp
+from routes.product_api import product_api_bp
+from filters.product_filters import register_product_filters
 from blueprints.fifo import fifo_bp
 from blueprints.expiration.routes import expiration_bp
 from routes.admin_routes import admin_bp
@@ -70,6 +74,9 @@ app.register_blueprint(expiration_bp)
 app.register_blueprint(conversion_bp, url_prefix='/conversion')
 app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
 app.register_blueprint(products_bp)
+app.register_blueprint(product_variants_bp)
+app.register_blueprint(product_inventory_bp)
+app.register_blueprint(product_api_bp)
 app.register_blueprint(settings_bp, url_prefix='/settings')
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp, url_prefix='/batches')
@@ -89,6 +96,8 @@ app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 # Initialize API routes
 init_api(app)
 
+# Register product filters
+register_product_filters(app)
 
 # Add custom Jinja2 filter for cost calculations
 @app.template_filter('attr_multiply')
