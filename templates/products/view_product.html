@@ -27,10 +27,7 @@
           <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
             <i class="fas fa-filter"></i> Filters
           </button>
-          <div class="btn-group" role="group">
-            <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
-            <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
-          </div>
+          
           <div class="btn-group" role="group">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
               Actions
@@ -178,140 +175,7 @@
         {% endfor %}
       </div>
 
-      <!-- Variants Table View -->
-      <div class="card" id="variantsTableContainer" style="display: none;">
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Variant Name</th>
-                  <th>Quantities</th>
-                  <th>Sizes</th>
-                  <th>Financial Summary</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- All Variants (including Base) -->
-                {% for variant_name in all_variants %}
-                {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
-                {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-                {% set unique_size_labels = [] %}
-                {% for group in var_inventory %}
-                  {% if group.batches %}
-                    {% for batch in group.batches %}
-                      {% if batch.quantity > 0 %}
-                        {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
-                        {% if size_label not in unique_size_labels %}
-                          {% set _ = unique_size_labels.append(size_label) %}
-                        {% endif %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                {% endfor %}
-                {% set var_size_count = unique_size_labels|length %}
-                {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
-
-                {% set all_batches = [] %}
-                {% for group in var_inventory %}
-                  {% if group.batches %}
-                    {% set _ = all_batches.extend(group.batches) %}
-                  {% endif %}
-                {% endfor %}
-
-                {% set packaged_items = [] %}
-                {% set bulk_items = [] %}
-                {% for batch in all_batches %}
-                  {% if batch.quantity > 0 %}
-                    {% if batch.size_label and ('Bulk' in batch.size_label or 'bulk' in batch.size_label) %}
-                      {% set _ = bulk_items.append(batch) %}
-                    {% elif batch.size_label and batch.size_label != none %}
-                      {% set _ = packaged_items.append(batch) %}
-                    {% else %}
-                      {% set _ = bulk_items.append(batch) %}
-                    {% endif %}
-                  {% endif %}
-                {% endfor %}
-                {% set total_packaged_qty = packaged_items|sum(attribute='quantity') %}
-                {% set total_bulk_qty = bulk_items|sum(attribute='quantity') %}
-                {% set all_batches = [] %}
-                {% for group in var_inventory %}
-                  {% if group.batches %}
-                    {% set _ = all_batches.extend(group.batches) %}
-                  {% endif %}
-                {% endfor %}
-                {% set total_cost = 0 %}
-                {% for batch in all_batches %}
-                  {% if batch.quantity > 0 and batch.batch_cost_per_unit %}
-                    {% set batch_cost = batch.quantity * batch.batch_cost_per_unit %}
-                    {% set total_cost = total_cost + batch_cost %}
-                  {% endif %}
-                {% endfor %}
-
-                <tr class="variant-row" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
-                  <td>
-                    <strong>{{ variant_name }}</strong>
-                    {% if variation and variation.description %}
-                    <br><small class="text-muted">{{ variation.description[:50] }}{% if variation.description|length > 50 %}...{% endif %}</small>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <div class="d-flex flex-column">
-                      <span><strong>Packaged:</strong> {{ "%.1f"|format(total_packaged_qty) }} items</span>
-                      <span><strong>Bulk:</strong> {{ "%.1f"|format(total_bulk_qty) }} {{ product.product_base_unit }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    {% for group in var_inventory %}
-                      <span class="badge bg-light text-dark me-1 mb-1">{{ group.size_label or 'Bulk' }}</span>
-                    {% endfor %}
-                  </td>
-                  <td>
-                    <div class="d-flex flex-column">
-                      <span><strong>Total Cost:</strong> ${{ "%.2f"|format(total_cost) }}</span>
-                      <span class="text-muted"><strong>Retail Value:</strong> Not Set</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge {% if var_total_qty <= 0 %}bg-danger{% elif var_total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
-                      {% if var_total_qty <= 0 %}Out of Stock{% elif var_total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="btn-group" role="group">
-                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="dropdown" style="border: none; background: transparent;">
-                        <i class="fas fa-ellipsis-v"></i>
-                      </button>
-                      <ul class="dropdown-menu">
-                        {% if variation and variation.id %}
-                        <li><a class="dropdown-item" href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}">
-                          <i class="fas fa-eye"></i> View Details
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        {% endif %}
-                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addManualStockModal" onclick="openAddStockModal('{{ variant_name }}')">
-                          <i class="fas fa-plus"></i> Add Stock
-                        </button></li>
-                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#deductModal" onclick="setVariantForDeduct('{{ variant_name }}')">
-                          <i class="fas fa-minus"></i> Deduct Stock
-                        </button></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="setEditVariation({{ variation.id if variation else 'null' }}, '{{ variant_name }}', '{{ variation.description if variation and variation.description else '' }}')" data-bs-toggle="modal" data-bs-target="#editVariationModal">
-                          <i class="fas fa-edit"></i> Edit Variant
-                        </a></li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- No Results Message -->
       <div id="noResults" class="text-center py-5" style="display: none;">
@@ -576,32 +440,11 @@
     }
 }
 
-.variant-row:hover {
-    background-color: #f8f9fa;
-}
+
 </style>
 
 <script>
-// Global showView function
-function showView(viewType) {
-    const variantsContainer = document.getElementById('variantsContainer');
-    const variantsTableContainer = document.getElementById('variantsTableContainer');
-    const cardViewBtn = document.getElementById('cardViewBtn');
-    const tableViewBtn = document.getElementById('tableViewBtn');
 
-    if (viewType === 'cardView') {
-        variantsContainer.style.display = 'flex';
-        variantsTableContainer.style.display = 'none';
-        cardViewBtn.className = 'btn btn-secondary btn-sm';
-        tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
-    } else {
-        variantsContainer.style.display = 'none';
-        variantsTableContainer.style.display = 'block';
-        cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
-        tableViewBtn.className = 'btn btn-secondary btn-sm';
-    }
-    filterVariants(); // Re-apply filters for current view
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     const variantFilter = document.getElementById('variantFilter');
@@ -616,25 +459,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = variantFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        const isCardView = variantsContainer.style.display !== 'none';
-
-        if (isCardView) {
-            const cards = variantsContainer.querySelectorAll('.variant-card');
-            cards.forEach(card => {
-                const variantName = card.dataset.variantName;
-                const isVisible = variantName.includes(searchTerm);
-                card.style.display = isVisible ? 'block' : 'none';
-                if (isVisible) visibleCount++;
-            });
-        } else {
-            const rows = variantsTableContainer.querySelectorAll('.variant-row');
-            rows.forEach(row => {
-                const variantName = row.dataset.variantName;
-                const isVisible = variantName.includes(searchTerm);
-                row.style.display = isVisible ? '' : 'none';
-                if (isVisible) visibleCount++;
-            });
-        }
+        const cards = variantsContainer.querySelectorAll('.variant-card');
+        cards.forEach(card => {
+            const variantName = card.dataset.variantName;
+            const isVisible = variantName.includes(searchTerm);
+            card.style.display = isVisible ? 'block' : 'none';
+            if (isVisible) visibleCount++;
+        });
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
     };
@@ -643,48 +474,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortVariants() {
         const sortBy = sortFilter.value;
 
-        const isCardView = variantsContainer.style.display !== 'none';
-
-        if (isCardView) {
-            const cards = Array.from(variantsContainer.querySelectorAll('.variant-card'));
-            cards.sort((a, b) => {
-                switch(sortBy) {
-                    case 'name':
-                        return a.dataset.variantName.localeCompare(b.dataset.variantName);
-                    case 'quantity':
-                        const qtyA = parseFloat(a.dataset.quantity) || 0;
-                        const qtyB = parseFloat(b.dataset.quantity) || 0;
-                        return qtyB - qtyA;
-                    case 'status':
-                        const qtyA2 = parseFloat(a.dataset.quantity) || 0;
-                        const qtyB2 = parseFloat(b.dataset.quantity) || 0;
-                        return (qtyA2 > 0 ? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
-                    default:
-                        return 0;
-                }
-            });
-            cards.forEach(card => variantsContainer.appendChild(card));
-        } else {
-            const tbody = variantsTableContainer.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('.variant-row'));
-            rows.sort((a, b) => {
-                switch(sortBy) {
-                    case 'name':
-                        return a.dataset.variantName.localeCompare(b.dataset.variantName);
-                    case 'quantity':
-                        const qtyA = parseFloat(a.dataset.quantity) || 0;
-                        const qtyB = parseFloat(b.dataset.quantity) || 0;
-                        return qtyB - qtyA;
-                    case 'status':
-                        const qtyA2 = parseFloat(a.dataset.quantity) || 0;
-                        const qtyB2 = parseFloat(b.dataset.quantity) || 0;
-                        return (qtyA2 > 0? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
-default:
-                        return 0;
-                }
-            });
-            rows.forEach(row => tbody.appendChild(row));
-        }
+        const cards = Array.from(variantsContainer.querySelectorAll('.variant-card'));
+        cards.sort((a, b) => {
+            switch(sortBy) {
+                case 'name':
+                    return a.dataset.variantName.localeCompare(b.dataset.variantName);
+                case 'quantity':
+                    const qtyA = parseFloat(a.dataset.quantity) || 0;
+                    const qtyB = parseFloat(b.dataset.quantity) || 0;
+                    return qtyB - qtyA;
+                case 'status':
+                    const qtyA2 = parseFloat(a.dataset.quantity) || 0;
+                    const qtyB2 = parseFloat(b.dataset.quantity) || 0;
+                    return (qtyA2 > 0 ? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
+                default:
+                    return 0;
+            }
+        });
+        cards.forEach(card => variantsContainer.appendChild(card));
     }
 
     // Event listeners
