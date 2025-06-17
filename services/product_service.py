@@ -6,6 +6,68 @@ from typing import Optional, Dict, List, Tuple
 from services.inventory_adjustment import generate_fifo_code
 from flask_login import current_user
 
+def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, created_by=None):
+    """
+    Adjust a specific FIFO entry's remaining quantity for product inventory
+    Args:
+        fifo_entry_id: ID of the ProductInventoryHistory FIFO entry
+        quantity: Amount to adjust (positive for additions, negative for deductions)
+        change_type: Type of change (recount, sale, spoil, damage, trash, gift/tester)
+        notes: Optional notes
+        created_by: User ID who created the change
+    Returns:
+        bool: Success status
+    """
+    try:
+        # Get the original FIFO entry
+        fifo_entry = ProductInventoryHistory.query.get(fifo_entry_id)
+        if not fifo_entry:
+            raise ValueError("FIFO entry not found")
+        
+        # Validate quantity doesn't exceed available
+        if quantity < 0 and abs(quantity) > fifo_entry.quantity:
+            raise ValueError("Cannot adjust more than available quantity")
+        
+        # Get the product inventory item
+        product_inventory = ProductInventory.query.get(fifo_entry.product_inventory_id)
+        if not product_inventory:
+            raise ValueError("Product inventory not found")
+        
+        # Create adjustment history entry
+        adjustment_history = ProductInventoryHistory(
+            product_inventory_id=fifo_entry.product_inventory_id,
+            change_type=change_type,
+            quantity_change=quantity,
+            remaining_quantity=0,  # This is an adjustment, not a new FIFO entry
+            unit_cost=fifo_entry.unit_cost,
+            fifo_reference_id=fifo_entry_id,  # Reference the original FIFO entry
+            note=f"{notes or change_type.title()} adjustment (From FIFO #{fifo_entry_id})",
+            created_by=created_by or (current_user.id if current_user.is_authenticated else None),
+            source_batch_id=fifo_entry.source_batch_id,
+            timestamp=datetime.utcnow()
+        )
+        
+        # Update the original FIFO entry's remaining quantity
+        fifo_entry.quantity += quantity
+        
+        # Update the product inventory total
+        product_inventory.quantity += quantity
+        
+        # Ensure quantities don't go negative
+        if fifo_entry.quantity < 0:
+            fifo_entry.quantity = 0
+        if product_inventory.quantity < 0:
+            product_inventory.quantity = 0
+        
+        db.session.add(adjustment_history)
+        db.session.commit()
+        
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
 class ProductService:
     """Unified service for all product inventory operations"""
 

@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariation, ProductInventory, ProductEvent, Batch, InventoryItem
+from models import db, Product, ProductVariation, ProductInventory, ProductInventoryHistory, Batch
+from services.product_service import ProductService, adjust_product_fifo_entry
 from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
 import re
-from services.product_service import ProductService
+from utils.unit_utils import get_global_unit_list
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -109,7 +110,7 @@ def new_product():
         return redirect(url_for('products.view_product', product_id=product.id))
 
     # Get units for dropdown
-    from utils.unit_utils import get_global_unit_list
+
     units = get_global_unit_list()
 
     return render_template('products/new_product.html', units=units)
@@ -118,7 +119,7 @@ def new_product():
 @login_required
 def view_product(product_id):
     """View product details with FIFO inventory"""
-    from utils.unit_utils import get_global_unit_list
+
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductService.get_fifo_inventory_groups(product_id)
 
@@ -426,32 +427,7 @@ def add_manual_stock(product_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 
-@products_bp.route('/<int:product_id>/adjust/<int:inventory_id>', methods=['POST'])
-@login_required
-def adjust_inventory(product_id, inventory_id):
-    """Process inventory adjustments with FIFO tracking"""
 
-    adjustment_type = request.form.get('adjustment_type')  # sold, spoil, trash, tester, damaged, recount
-    quantity = float(request.form.get('quantity', 0))
-    notes = request.form.get('notes', '')
-
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
-
-    try:
-        ProductService.process_adjustment(
-            inventory_id=inventory_id,
-            adjustment_type=adjustment_type,
-            quantity=quantity,
-            notes=notes
-        )
-
-        flash(f'Adjustment processed: {adjustment_type}', 'success')
-    except Exception as e:
-        flash(f'Error processing adjustment: {str(e)}', 'error')
-
-    return redirect(url_for('products.view_product', product_id=product_id))
 @products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
 @login_required  
 def view_sku(product_id, variant, size_label):
@@ -552,7 +528,7 @@ def manual_adjust(product_id):
 @login_required
 def view_variant(product_id, variation_id):
     """View individual product variation details"""
-    from utils.unit_utils import get_global_unit_list
+
 
     product = Product.query.get_or_404(product_id)
     variation = ProductVariation.query.get_or_404(variation_id)
@@ -707,7 +683,7 @@ def delete_product(product_id):
 
         # Delete related records in order
         # Delete product inventory history
-        from models import ProductInventoryHistory
+
         ProductInventoryHistory.query.filter(
             ProductInventoryHistory.product_inventory_id.in_(
                 db.session.query(ProductInventory.id).filter_by(product_id=product_id)
@@ -734,3 +710,31 @@ def delete_product(product_id):
         db.session.rollback()
         flash(f'Error deleting product: {str(e)}', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
+
+@products_bp.route('/adjust_fifo/<int:product_id>/<int:inventory_id>', methods=['POST'])
+@login_required
+def adjust_fifo_inventory(product_id, inventory_id):
+    """Adjust the quantity of a specific FIFO entry."""
+    adjustment_type = request.form.get('adjustment_type')  # recount, sale, spoil, damage, trash, gift/tester
+    quantity = float(request.form.get('quantity', 0))
+    notes = request.form.get('notes', '')
+
+    if quantity <= 0:
+        flash('Quantity must be positive', 'error')
+        return redirect(url_for('products.view_sku', product_id=product_id, variant=request.form.get('variant'), size_label=request.form.get('size_label')))
+
+    try:
+        adjust_product_fifo_entry(
+            inventory_id=inventory_id,
+            adjustment_type=adjustment_type,
+            quantity=quantity,
+            notes=notes
+        )
+
+        flash(f'FIFO entry adjusted: {adjustment_type}', 'success')
+
+    except Exception as e:
+        flash(f'Error adjusting FIFO entry: {str(e)}', 'error')
+
+    # Redirect back to the SKU view. Crucial to pass variant and size_label.
+    return redirect(url_for('products.view_sku', product_id=product_id, variant=request.form.get('variant'), size_label=request.form.get('size_label')))
