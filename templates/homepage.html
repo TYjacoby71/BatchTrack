@@ -135,12 +135,7 @@
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login to App
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-2" href="#signup">Get Started</a>
+                        <a class="btn btn-cta text-white ms-2" href="#signup">Get Early Access</a>
                     </li>
                 </ul>
             </div>
@@ -425,25 +420,83 @@
         </div>
     </section>
 
-    <!-- Final CTA Section -->
-    <section class="py-5">
+    <!-- Signup Section -->
+    <section id="signup" class="py-5 bg-light">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <div class="placeholder-img">
-                        [App Screenshot/Demo Video]
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-xl-6">
+                    <div class="text-center mb-5">
+                        <h2 class="fw-bold mb-4">Get Early Access to BatchTrack</h2>
+                        <p class="lead text-muted">We're putting the finishing touches on BatchTrack. Be the first to know when we launch!</p>
                     </div>
-                </div>
-                <div class="col-lg-6">
-                    <h2 class="fw-bold mb-4">See BatchTrack in Action</h2>
-                    <p class="lead mb-4">Watch how easy it is to track batches, manage inventory, and scale your production with our intuitive interface.</p>
-                    <ul class="list-unstyled mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 5-minute setup</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> No credit card required</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 30-day free trial</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Cancel anytime</li>
-                    </ul>
-                    <a href="#signup" class="btn btn-cta btn-lg text-white">Start Your Free Trial</a>
+                    
+                    <div class="card shadow-lg border-0">
+                        <div class="card-body p-5">
+                            <form id="signupForm" class="needs-validation" novalidate>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="firstName" class="form-label">First Name</label>
+                                        <input type="text" class="form-control form-control-lg" id="firstName" required>
+                                        <div class="invalid-feedback">Please provide your first name.</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="lastName" class="form-label">Last Name</label>
+                                        <input type="text" class="form-control form-control-lg" id="lastName" required>
+                                        <div class="invalid-feedback">Please provide your last name.</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control form-control-lg" id="email" required>
+                                    <div class="invalid-feedback">Please provide a valid email address.</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="company" class="form-label">Company/Business Name (Optional)</label>
+                                    <input type="text" class="form-control form-control-lg" id="company">
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="businessType" class="form-label">What type of production do you manage?</label>
+                                    <select class="form-select form-select-lg" id="businessType">
+                                        <option value="">Select your industry...</option>
+                                        <option value="food">Food & Beverage</option>
+                                        <option value="cosmetics">Cosmetics & Personal Care</option>
+                                        <option value="craft">Arts & Crafts</option>
+                                        <option value="brewing">Brewing & Distilling</option>
+                                        <option value="manufacturing">Small Manufacturing</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="newsletter" checked>
+                                        <label class="form-check-label" for="newsletter">
+                                            I want to receive updates about BatchTrack and production management tips
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-cta btn-lg w-100 text-white">
+                                    <i class="fas fa-rocket me-2"></i>Get Early Access
+                                </button>
+                            </form>
+                            
+                            <div id="successMessage" class="alert alert-success mt-4" style="display: none;">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Thank you! We'll notify you as soon as BatchTrack is ready for launch.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            <i class="fas fa-lock me-1"></i>
+                            We respect your privacy. Your information will never be shared.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -520,6 +573,34 @@
                     });
                 }
             });
+        });
+
+        // Form validation and submission
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!this.checkValidity()) {
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+            
+            // Simulate form submission (replace with actual endpoint when ready)
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                company: document.getElementById('company').value,
+                businessType: document.getElementById('businessType').value,
+                newsletter: document.getElementById('newsletter').checked
+            };
+            
+            // Hide form and show success message
+            this.style.display = 'none';
+            document.getElementById('successMessage').style.display = 'block';
+            
+            // Log signup data (replace with actual API call)
+            console.log('Signup data:', formData);
         });
     </script>
 </body>
