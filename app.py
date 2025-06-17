@@ -192,7 +192,7 @@ def login():
             u = User.query.filter_by(username=username).first()
             if u and u.check_password(password):
                 login_user(u)
-                return redirect(url_for('dashboard.dashboard'))
+                return redirect(url_for('user_dashboard.dashboard'))
             flash('Invalid credentials')
 
     return render_template('login.html', form=form)
@@ -212,7 +212,7 @@ def logout():
 @app.route("/")
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
+        return redirect(url_for('user_dashboard.dashboard'))
     return render_template("homepage.html")
 
 @app.route('/homepage')
