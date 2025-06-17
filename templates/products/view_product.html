@@ -707,6 +707,142 @@ default:
     });
 });
 
+// Wrap all JavaScript in DOMContentLoaded to ensure DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Define global functions after DOM is loaded
+  window.addVariant = function() {
+    const form = document.getElementById('addVariantForm');
+    if (!form) {
+      alert('Form not found');
+      return;
+    }
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+
+    const csrfToken = document.querySelector('input[name=csrf_token]');
+    const csrfValue = csrfToken ? csrfToken.value : '';
+
+    fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfValue
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while adding the variant.');
+    });
+  };
+
+  // Edit variant function
+  window.editVariant = function(productId, variationId, name, description) {
+    const editVariantNameEl = document.getElementById('editVariantName');
+    const editVariantDescriptionEl = document.getElementById('editVariantDescription');    const editVariationFormEl = document.getElementById('editVariationForm');
+    const editVariationModalEl = document.getElementById('editVariationModal');
+
+    if (editVariantNameEl) editVariantNameEl.value = name || '';
+    if (editVariantDescriptionEl) editVariantDescriptionEl.value = description || '';
+
+    if (editVariationFormEl) {
+      editVariationFormEl.action = `/products/${productId}/variant/${variationId}/edit`;
+    }
+
+    if (editVariationModalEl) {
+      const modal = new bootstrap.Modal(editVariationModalEl);
+      modal.show();
+    }
+  };
+
+  // Helper function for setting variant info for deduct operations
+  window.setVariantForDeduct = function(variantName) {
+    const deductVariant = document.getElementById('deductVariant');
+    if (deductVariant) {
+      deductVariant.value = variantName;
+    }
+  };
+
+  // Initialize other DOM-dependent functionality here
+  const variantFilter = document.getElementById('variantFilter');
+  const sortFilter = document.getElementById('sortFilter');
+
+  if (variantFilter && sortFilter) {
+    // Filter and sort functionality
+    function filterVariants() {
+      const filterValue = variantFilter.value.toLowerCase();
+      const tbody = document.querySelector('#variantsTable tbody');
+      if (!tbody) return;
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.forEach(row => {
+        const variantName = row.querySelector('td:first-child')?.textContent.toLowerCase() || '';
+        const shouldShow = variantName.includes(filterValue);
+        row.style.display = shouldShow ? '' : 'none';
+      });
+    }
+
+    function sortVariants() {
+      const sortValue = sortFilter.value;
+      const tbody = document.querySelector('#variantsTable tbody');
+      if (!tbody) return;
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      rows.sort((a, b) => {
+        let aVal, bVal;
+
+        switch(sortValue) {
+          case 'name':
+            aVal = a.querySelector('td:first-child')?.textContent || '';
+            bVal = b.querySelector('td:first-child')?.textContent || '';
+            return aVal.localeCompare(bVal);
+          case 'quantity':
+            aVal = parseFloat(a.querySelector('td:nth-child(3)')?.textContent || '0');
+            bVal = parseFloat(b.querySelector('td:nth-child(3)')?.textContent || '0');
+            return bVal - aVal; // Descending
+          case 'cost':
+            aVal = parseFloat(a.querySelector('td:nth-child(4)')?.textContent.replace('$', '') || '0');
+            bVal = parseFloat(b.querySelector('td:nth-child(4)')?.textContent.replace('$', '') || '0');
+            return bVal - aVal; // Descending
+          default:
+            return 0;
+        }
+      });
+
+      rows.forEach(row => tbody.appendChild(row));
+    }
+
+    // Event listeners
+    variantFilter.addEventListener('input', filterVariants);
+    sortFilter.addEventListener('change', sortVariants);
+  }
+
+  // Variation toggle functionality
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      setTimeout(() => {
+        const target = document.querySelector(this.dataset.bsTarget);
+        if (target && target.classList.contains('show')) {
+          if (icon) icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+        } else {
+          if (icon) icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+        }
+      }, 100);
+    });
+  });
+});
+
 // Add variant via AJAX
 function addVariant(){
   const form = document.getElementById('addVariantForm');
@@ -714,7 +850,7 @@ function addVariant(){
     alert('Form not found');
     return;
   }
-  
+
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
 
@@ -763,7 +899,7 @@ function setEditVariation(variationId, name, description) {
   const nameElement = document.getElementById('editVariantName');
   const descElement = document.getElementById('editVariantDescription');
   const formElement = document.getElementById('editVariationForm');
-  
+
   if (nameElement) nameElement.value = name;
   if (descElement) descElement.value = description || '';
   if (formElement) formElement.action = `/product-variants/{{ product.id }}/variant/${variationId}/edit`;
