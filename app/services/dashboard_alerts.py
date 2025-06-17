@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from app.models import InventoryItem, Batch, ProductInventory
-from services.inventory_alerts import get_low_stock_ingredients
+from .inventory_alerts import get_low_stock_ingredients
 from app.blueprints.expiration.services import ExpirationService
 import json
 import os

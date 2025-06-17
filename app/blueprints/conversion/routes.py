@@ -4,7 +4,7 @@ from wtforms.validators import ValidationError
 from ...extensions import db
 from ...models import Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
-from services.unit_conversion import ConversionEngine
+from ...services.unit_conversion import ConversionEngine
 import logging
 
 logger = logging.getLogger(__name__)

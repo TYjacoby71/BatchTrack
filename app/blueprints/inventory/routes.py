@@ -239,14 +239,8 @@ def adjust_inventory(id):
 
         else:
             # Pre-validation check for existing items
-            from services.inventory_adjustment import validate_inventory_fifo_sync
-            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
-            if not is_valid:
-                flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-                return redirect(url_for('inventory.view_inventory', id=id))
-
             # Use centralized adjustment service for regular adjustments
-            from services.inventory_adjustment import process_inventory_adjustment
+            from ...services.inventory_adjustment import InventoryAdjustmentService
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit

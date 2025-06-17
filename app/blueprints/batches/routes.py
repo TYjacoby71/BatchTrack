@@ -9,7 +9,7 @@ from ...services.unit_conversion import ConversionEngine
 from ..inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
-from services.inventory_adjustment import process_inventory_adjustment
+from ...services.inventory_adjustment import InventoryAdjustmentService
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches', template_folder='templates')
 
