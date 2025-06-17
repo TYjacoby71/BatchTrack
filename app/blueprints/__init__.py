@@ -1,4 +1,3 @@
-
 def register_blueprints(app):
     """Register all application blueprints"""
     # Auth blueprint
@@ -49,7 +48,7 @@ def register_blueprints(app):
 
     # Initialize API routes
     from .api import init_api
-    init_api(app)
+    from ..auth import init_auth
 
     # Register product filters
     from filters.product_filters import register_product_filters
