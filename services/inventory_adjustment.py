@@ -3,7 +3,7 @@ from flask_login import current_user
 from models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
-from blueprints.fifo.services import deduct_fifo, get_fifo_entries
+from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
 import base64
 
 def validate_inventory_fifo_sync(item_id):
@@ -65,7 +65,7 @@ def process_inventory_adjustment(
         qty_change = quantity
 
     # Handle expiration using ExpirationService
-    from blueprints.expiration.services import ExpirationService
+    from app.blueprints.expiration.services import ExpirationService
 
     expiration_date = None
     shelf_life_to_use = None
