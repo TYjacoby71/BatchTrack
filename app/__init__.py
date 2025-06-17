@@ -17,7 +17,7 @@ def create_app(config_name='default'):
     init_extensions(app)
 
     # Import models after db initialization to avoid circular imports
-    from .models import *
+    from .models import user, inventory, recipe, batch, product, tag, conversion
 
     # Setup logging
     from .utils.template_helpers import setup_logging
