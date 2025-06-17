@@ -1,6 +1,7 @@
 from flask import current_app
 from flask_login import current_user
-from models import db, InventoryItem, InventoryHistory
+from app.models import InventoryItem, InventoryHistory
+from app.extensions import db
 from datetime import datetime, timedelta
 from services.conversion_wrapper import safe_convert
 from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
