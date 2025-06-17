@@ -3,20 +3,20 @@
   <div class="card-header">
     <h5 class="mb-0">History</h5>
   </div>
-  <div class="card-body p-0" style="overflow-x: auto;">
-    <div style="min-width: 1200px;">
-      <table class="table table-hover table-sm mb-0" style="table-layout: fixed; width: 100%;">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table">
       <thead>
         <tr>
-          <th style="width: 12%;">Date</th>
-          <th style="width: 8%;">Change Type</th>
-          <th style="width: 8%;">Quantity Change</th>
-          <th style="width: 8%;">Remaining</th>
-          <th style="width: 8%;">Cost per Unit</th>
-          <th style="width: 8%;">Total Cost</th>
-          <th style="width: 12%;">Used For</th>
-          <th style="width: 12%;">Credited/Debited To</th>
-          <th style="width: 8%;">FIFO ID
+          <th>Date</th>
+          <th>Change Type</th>
+          <th>Quantity Change</th>
+          <th>Remaining</th>
+          <th>Cost per Unit</th>
+          <th>Total Cost</th>
+          <th>Used For</th>
+          <th>Credited/Debited To</th>
+          <th>FIFO ID 
             <i class="fas fa-info-circle text-muted ms-1" 
                data-bs-toggle="popover" 
                data-bs-placement="top"
@@ -44,9 +44,9 @@
                style="cursor: pointer;">
             </i>
           </th>
-          <th style="width: 8%;">Exp Date</th>
-          <th style="width: 8%;">Quantity Used</th>
-          <th style="width: 8%;">Created By</th>
+          <th>Exp Date</th>
+          <th>Quantity Used</th>
+          <th>Created By</th>
         </tr>
       </thead>
       <tbody>
@@ -61,28 +61,28 @@
           <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type in ['restock', 'finished_batch'] else 'NA' }}</td>
           <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
           <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
-          <td style="word-wrap: break-word; overflow-wrap: break-word;">
+          <td>
             {% if entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
-              <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}" class="text-decoration-none" style="word-break: break-all;">{{ entry.batch.label_code }}</a>
+              <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
             {% else %}
               NA
             {% endif %}
           </td>
-          <td style="word-wrap: break-word; overflow-wrap: break-word;">
+          <td>
             {% if entry.fifo_reference_id %}
               {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
               {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                 {% if ref_entry.batch.status == 'in_progress' %}
-                  <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}" class="text-decoration-none" style="word-break: break-all;">{{ ref_entry.batch.label_code }}</a>
+                  <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
                 {% else %}
-                  <a href="{{ url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}" class="text-decoration-none" style="word-break: break-all;">{{ ref_entry.batch.label_code }}</a>
+                  <a href="{{ url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
                 {% endif %}
               {% elif ref_entry %}
-                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}" class="text-decoration-none" style="word-break: break-all;">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                   {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                 </a>
               {% else %}
-                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}" class="text-decoration-none" style="word-break: break-all;">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                   {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                 </a>
               {% endif %}
@@ -120,8 +120,7 @@
       </tbody>
       </table>
     </div>
-  </div>
-  <div class="card-body">
+
     {% if pagination.pages > 1 %}
     <nav aria-label="History navigation">
       <ul class="pagination">
