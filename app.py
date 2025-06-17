@@ -1,12 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
+from database import db
 import os
-
-# Create the db object first
-db = SQLAlchemy()
 
 # Create app and attach config
 app = Flask(__name__, static_folder='static', static_url_path='/static')
@@ -49,7 +46,6 @@ from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
-# Inventory adjustments now handled in blueprints/inventory/routes.py
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
@@ -64,6 +60,7 @@ from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
+from routes.email_signup_routes import email_signup_bp
 
 # Register blueprints
 from routes.app_routes import app_routes_bp
@@ -80,6 +77,10 @@ from routes.email_signup_routes import email_signup_bp
 
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp)
+app.register_blueprint(start_batch_bp)
+app.register_blueprint(finish_batch_bp)
+app.register_blueprint(cancel_batch_bp)
+app.register_blueprint(add_extra_bp)
 app.register_blueprint(inventory_bp)
 app.register_blueprint(recipes_bp)
 app.register_blueprint(conversion_bp)
@@ -203,14 +204,25 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route("/")
+@app.route("/", methods=['GET'])
 def index():
+    print(f"=== INDEX ROUTE CALLED ===")
+    print(f"User authenticated: {current_user.is_authenticated}")
+    print(f"Anonymous user: {current_user.is_anonymous}")
+    print(f"Current user: {current_user}")
     if current_user.is_authenticated:
+        print("Redirecting authenticated user to dashboard")
         return redirect(url_for('dashboard.dashboard'))
+    print("Rendering homepage.html for unauthenticated user")
     return render_template("homepage.html")
 
 @app.route('/homepage')
 def homepage():
+    return render_template('homepage.html')
+
+@app.route('/test-homepage')
+def test_homepage():
+    print("=== TEST HOMEPAGE ROUTE CALLED ===")
     return render_template('homepage.html')
 
 if __name__ == '__main__':
