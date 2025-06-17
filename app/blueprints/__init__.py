@@ -1,9 +1,8 @@
-
 def register_blueprints(app):
     """Register all application blueprints"""
     # Auth blueprint
-    from ..auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    from ..auth import init_auth
+    init_auth(app)
 
     # Import and register other blueprints
     from .batches.start_batch import start_batch_bp

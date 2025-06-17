@@ -1,6 +1,5 @@
 
-from flask import Blueprint
+from .routes import auth
 
-auth_bp = Blueprint('auth', __name__)
-
-from . import routes
+def init_auth(app):
+    app.register_blueprint(auth, url_prefix='/auth')
