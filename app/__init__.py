@@ -5,7 +5,7 @@ import os
 
 def create_app(config_name='default'):
     """Application factory pattern"""
-    app = Flask(__name__, static_folder='../static', static_url_path='/static')
+    app = Flask(__name__, static_folder='../static', static_url_path='/static', template_folder='../templates')
 
     # Load configuration
     from .config import config
