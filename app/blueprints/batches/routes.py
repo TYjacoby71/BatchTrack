@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
-from utils import get_setting
+from ...utils import get_setting
 from sqlalchemy import extract
 from services.unit_conversion import ConversionEngine
 from blueprints.inventory.routes import adjust_inventory
