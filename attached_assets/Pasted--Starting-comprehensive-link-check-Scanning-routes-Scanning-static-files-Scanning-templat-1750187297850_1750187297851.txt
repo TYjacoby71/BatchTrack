@@ -1,0 +1,121 @@
+🔍 Starting comprehensive link check...
+Scanning routes...
+Scanning static files...
+Scanning templates...
+Checking template links...
+Checking JavaScript files...
+
+============================================================
+BROKEN LINK CHECKER REPORT
+============================================================
+Total issues found: 33
+
+
+SUSPICIOUS ENDPOINT (13 issues):
+----------------------------------------
+📁 templates/plan_production.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/layout.html
+   ❌ Endpoint 'static' might not exist
+
+📁 templates/inventory/view.html
+   ❌ Endpoint 'static' might not exist
+
+📁 app/blueprints/batches/templates/batches/view_batch.html
+   ❌ Endpoint 'static' might not exist
+
+📁 app/blueprints/batches/templates/batches/batch_in_progress.html
+   ❌ Endpoint 'static' might not exist
+
+📁 app/blueprints/batches/templates/batches/batch_in_progress.html
+   ❌ Endpoint 'static' might not exist
+
+📁 app/blueprints/batches/templates/batches/batch_in_progress.html
+   ❌ Endpoint 'static' might not exist
+
+📁 app/blueprints/recipes/templates/recipes/plan_production.html
+   ❌ Endpoint 'static' might not exist
+
+
+MISSING BLUEPRINT (18 issues):
+----------------------------------------
+📁 templates/layout.html
+   ❌ Blueprint 'dashboard' not found for endpoint 'dashboard.dashboard'
+
+📁 templates/layout.html
+   ❌ Blueprint 'dashboard' not found for endpoint 'dashboard.dashboard'
+
+📁 templates/layout.html
+   ❌ Blueprint 'tags' not found for endpoint 'tags.manage_tags'
+
+📁 templates/settings/index.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.manage_units'
+
+📁 templates/settings/index.html
+   ❌ Blueprint 'tags' not found for endpoint 'tags.manage_tags'
+
+📁 templates/conversion/units.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.delete_unit'
+
+📁 templates/conversion/units.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.manage_units'
+
+📁 templates/conversion/units.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.manage_units'
+
+📁 templates/conversion/units.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.delete_mapping'
+
+📁 templates/components/modals/unit_converter_modal.html
+   ❌ Blueprint 'conversion_bp' not found for endpoint 'conversion_bp.manage_units'
+
+📁 templates/components/batch/finish_batch_modal.html
+   ❌ Blueprint 'finish_batch' not found for endpoint 'finish_batch.complete_batch'
+
+📁 templates/products/list_products.html
+   ❌ Blueprint 'product_variants' not found for endpoint 'product_variants.view_variant'
+
+📁 templates/products/view_variation.html
+   ❌ Blueprint 'product_variants' not found for endpoint 'product_variants.edit_variant'
+
+📁 templates/products/view_variation.html
+   ❌ Blueprint 'product_inventory' not found for endpoint 'product_inventory.add_manual_stock'
+
+📁 templates/products/view_variation.html
+   ❌ Blueprint 'product_inventory' not found for endpoint 'product_inventory.record_sale'
+
+📁 templates/products/view_product.html
+   ❌ Blueprint 'product_variants' not found for endpoint 'product_variants.view_variant'
+
+📁 templates/products/view_product.html
+   ❌ Blueprint 'product_variants' not found for endpoint 'product_variants.add_variant'
+
+📁 app/blueprints/batches/templates/batches/batch_in_progress.html
+   ❌ Blueprint 'finish_batch' not found for endpoint 'finish_batch.complete_batch'
+
+
+MISSING STATIC FILE (2 issues):
+----------------------------------------
+📁 app/blueprints/batches/templates/batches/view_batch.html
+   ❌ Static file 'css/print.css' not found
+
+📁 app/blueprints/batches/templates/batches/batch_in_progress.html
+   ❌ Static file 'css/batches.css' not found
+
+📋 Detailed report saved to: link_check_report.json
