@@ -69,29 +69,29 @@ from blueprints.api import init_api
 from blueprints.timers import timers_bp
 
 # Register blueprints
-app.register_blueprint(fifo_bp)
-app.register_blueprint(expiration_bp)
-app.register_blueprint(conversion_bp, url_prefix='/conversion')
-app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-app.register_blueprint(products_bp)
-app.register_blueprint(product_variants_bp)
-app.register_blueprint(product_inventory_bp)
-app.register_blueprint(product_api_bp)
-app.register_blueprint(settings_bp, url_prefix='/settings')
+from routes.app_routes import app_routes_bp
+from routes.admin_routes import admin_bp
+from routes.products import products_bp
+from routes.product_api import product_api_bp
+from routes.product_inventory import product_inventory_bp
+from routes.product_log_routes import product_log_bp
+from routes.fault_log_routes import faults_bp
+from routes.tag_manager_routes import tag_bp
+from routes.bulk_stock_routes import bulk_stock_bp
+from routes.product_variants import product_variants_bp
+from routes.email_signup_routes import email_signup_bp
+
 app.register_blueprint(app_routes_bp)
-app.register_blueprint(batches_bp, url_prefix='/batches')
-app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(inventory_bp, url_prefix='/inventory')
-app.register_blueprint(recipes_bp, url_prefix='/recipes')
-app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
-app.register_blueprint(faults_bp, url_prefix='/logs')
-app.register_blueprint(product_log_bp, url_prefix='/product-logs')
-app.register_blueprint(tag_bp, url_prefix='/tags')
-app.register_blueprint(timers_bp, url_prefix='/timers')
-app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
-app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
-app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+app.register_blueprint(admin_bp)
+app.register_blueprint(products_bp)
+app.register_blueprint(product_api_bp)
+app.register_blueprint(product_inventory_bp)
+app.register_blueprint(product_log_bp)
+app.register_blueprint(faults_bp)
+app.register_blueprint(tag_bp)
+app.register_blueprint(bulk_stock_bp)
+app.register_blueprint(product_variants_bp)
+app.register_blueprint(email_signup_bp)
 
 # Initialize API routes
 init_api(app)

@@ -612,7 +612,6 @@
                 return;
             }
 
-            // Simulate form submission (replace with actual endpoint when ready)
             const formData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
@@ -622,12 +621,30 @@
                 newsletter: document.getElementById('newsletter').checked
             };
 
-            // Hide form and show success message
-            this.style.display = 'none';
-            document.getElementById('successMessage').style.display = 'block';
-
-            // Log signup data (replace with actual API call)
-            console.log('Signup data:', formData);
+            // Submit to backend
+            fetch('/signup-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Hide form and show success message
+                    this.style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('successMessage').innerHTML = 
+                        '<i class="fas fa-check-circle me-2"></i>' + data.message;
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Something went wrong. Please try again.');
+            });
         });
     </script>
 </body>
