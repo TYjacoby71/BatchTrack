@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariation, ProductInventory, ProductInventoryHistory, Batch
+from models import db, Product, ProductVariation, ProductInventory, ProductInventoryHistory, Batch, InventoryItem, ProductEvent
 from services.product_service import ProductService, adjust_product_fifo_entry
 from datetime import datetime
 from services.inventory_adjustment import process_inventory_adjustment
