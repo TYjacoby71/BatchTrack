@@ -87,15 +87,12 @@ body {
 
 /* History table specific styles */
 .table td {
-  word-wrap: break-word;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  max-width: 0; /* This forces the table to respect min-width settings */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table td a {
-  word-break: break-all;
   display: inline-block;
   max-width: 100%;
 }
