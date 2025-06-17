@@ -95,7 +95,7 @@
                     <span class="badge bg-secondary ms-1 small">{{ variation.sku }}</span>
                     {% endif %}
                   </div>
-                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                  <a href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                 </div>
                 {% endfor %}
               </div>

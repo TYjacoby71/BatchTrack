@@ -300,7 +300,6 @@ class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     name = db.Column(db.String(128), nullable=False)
-    sku = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

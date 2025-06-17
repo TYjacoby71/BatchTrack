@@ -152,7 +152,7 @@
                     </td>
                     <td data-column="actions" style="text-align: center;">
                       {% if entry.quantity > 0 %}
-                        <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
+                        <button type="button" class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
                                 data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
                                 data-batch-id="{{ entry.batch_id or 'N/A' }}">
                           Adjust
@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (fifoCurrentQtyEl) {
         const currentQtyText = fifoCurrentQtyEl.value || '';
         const currentQty = parseFloat(currentQtyText.split(' ')[0]) || 0;
-        
+
         // For deductions, validate we don't exceed available quantity
         if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
           if (enteredQty > currentQty) {
@@ -535,5 +535,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
 </script>
 {% endblock %}
