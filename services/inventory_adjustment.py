@@ -1,5 +1,9 @@
 from flask import current_app
 from flask_login import current_user
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.models import InventoryItem, InventoryHistory
 from app.extensions import db
 from datetime import datetime, timedelta
