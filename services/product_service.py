@@ -86,7 +86,7 @@ class ProductService:
                              size_label: Optional[str] = None, quantity: float = None, 
                              container_id: Optional[int] = None, 
                              container_overrides: Optional[Dict[int, int]] = None) -> List[ProductInventory]:
-        """Add product inventory from a finished batch, handling containers as size variants"""
+        """Add product inventory from a finished batch, creating SKU-level entries that aggregate upward"""
         from models import BatchContainer, InventoryItem
 
         batch = Batch.query.get_or_404(batch_id)
@@ -98,10 +98,11 @@ class ProductService:
         batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
 
         if batch_containers:
-            # Create separate inventory entries for each container type
+            # Create separate SKU-level inventory entries for each container type
             for container_usage in batch_containers:
                 container = container_usage.container
-                size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
+                # SKU-level size_label: This is the atomic unit that everything aggregates from
+                sku_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
 
                 # Use override count if provided, otherwise use calculated amount
                 final_count = container_usage.quantity_used
@@ -113,25 +114,27 @@ class ProductService:
                 if batch.total_cost and batch.final_quantity:
                     batch_cost_per_unit = batch.total_cost / batch.final_quantity
 
+                # Create SKU-level entry - this is the source of truth
                 inventory = ProductInventory(
                     product_id=product_id,
                     batch_id=batch_id,
                     variant=variant_label or 'Base',
-                    size_label=size_label,
+                    size_label=sku_size_label,
+                    sku=None,  # SKU can be assigned later at the SKU view level
                     unit='count',  # Container units are typically counted
                     quantity=final_count,
                     container_id=container.id,
                     batch_cost_per_unit=batch_cost_per_unit,
                     timestamp=datetime.utcnow(),
                     expiration_date=batch.expiration_date.date() if batch.expiration_date else None,
-                    notes=f"From batch #{batch.id} using {container.name} (final count: {final_count})"
+                    notes=f"SKU entry from batch #{batch.id} - {container.name} (final count: {final_count})"
                 )
 
                 db.session.add(inventory)
                 inventory_entries.append(inventory)
 
-                # Log product event
-                event_note = f"Added {final_count} × {size_label}"
+                # Log product event with SKU context
+                event_note = f"Added {final_count} × {sku_size_label} SKU"
                 if variant_label:
                     event_note += f" ({variant_label})"
                 event_note += f" from batch #{batch.id}"
@@ -142,7 +145,7 @@ class ProductService:
                     note=event_note
                 ))
         else:
-            # Fallback to product base unit if no containers
+            # Fallback to bulk SKU for non-containerized batches
             batch_unit = batch.output_unit or batch.projected_yield_unit or 'oz'
             quantity_used = quantity or batch.final_quantity or batch.projected_yield
 
@@ -167,27 +170,28 @@ class ProductService:
             if batch.total_cost and batch.final_quantity:
                 batch_cost_per_unit = batch.total_cost / batch.final_quantity
 
-            # Use simple "Bulk" label for non-containerized inventory
-            size_label = "Bulk"
+            # Create bulk SKU entry - still the atomic source of truth
+            sku_size_label = "Bulk"
 
             inventory = ProductInventory(
                 product_id=product_id,
                 batch_id=batch_id,
                 variant=variant_label or 'Base',
-                size_label=size_label,
+                size_label=sku_size_label,
+                sku=None,  # SKU can be assigned later
                 unit=unit,
                 quantity=quantity_used,
                 batch_cost_per_unit=batch_cost_per_unit,
                 timestamp=datetime.utcnow(),
                 expiration_date=batch.expiration_date.date() if batch.expiration_date else None,
-                notes=f"From batch #{batch.id} (no containers - bulk output){conversion_note}"
+                notes=f"Bulk SKU entry from batch #{batch.id}{conversion_note}"
             )
 
             db.session.add(inventory)
             inventory_entries.append(inventory)
 
-            # Log product event
-            event_note = f"Added {quantity_used} {unit} bulk"
+            # Log product event with SKU context
+            event_note = f"Added {quantity_used} {unit} bulk SKU"
             if variant_label:
                 event_note += f" ({variant_label})"
             event_note += f" from batch #{batch.id}{conversion_note}"
