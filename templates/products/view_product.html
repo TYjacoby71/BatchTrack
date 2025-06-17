@@ -164,7 +164,7 @@
               <!-- Action Buttons -->
               <div class="mt-auto">
                 {% if variation %}
-                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" 
+                <a href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" 
                    class="btn btn-outline-primary btn-sm w-100">
                   View Details
                 </a>
@@ -286,7 +286,7 @@
                       </button>
                       <ul class="dropdown-menu">
                         {% if variation and variation.id %}
-                        <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
+                        <li><a class="dropdown-item" href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}">
                           <i class="fas fa-eye"></i> View Details
                         </a></li>
                         <li><hr class="dropdown-divider"></li>
