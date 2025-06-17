@@ -97,7 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Container form logic
-  if (document.getElementById('recipeForm')) {
+  const recipeForm = document.getElementById('recipeForm');
+  if (recipeForm) {
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
     const allowedContainersSection = document.getElementById('allowedContainersSection');
     if (requiresContainersCheckbox && allowedContainersSection) {
@@ -111,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
-      setTimeout(initQuickAddUnit, 100);
+      // Element doesn't exist on this page, skip initialization
       return;
     }
 
