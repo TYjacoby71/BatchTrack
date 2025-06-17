@@ -1,7 +1,6 @@
-
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from models import db, InventoryItem, Batch, ProductInventory
+from app.models import db, InventoryItem, Batch, ProductInventory
 from services.inventory_alerts import get_low_stock_ingredients
 from blueprints.expiration.services import ExpirationService
 import json
@@ -9,22 +8,22 @@ import os
 
 class DashboardAlertService:
     """Unified alert management for neurodivergent-friendly dashboard"""
-    
+
     PRIORITY_LEVELS = {
         'CRITICAL': 1,    # Requires immediate action
         'HIGH': 2,        # Should be addressed today
         'MEDIUM': 3,      # Should be addressed this week
         'LOW': 4          # Informational
     }
-    
+
     @staticmethod
     def get_dashboard_alerts(max_alerts: int = 3) -> Dict:
         """Get prioritized alerts for dashboard with cognitive load management"""
         alerts = []
-        
+
         # Get expiration summary once
         expiration_summary = ExpirationService.get_expiration_summary()
-        
+
         # CRITICAL: Expired items with remaining quantity
         if expiration_summary['expired_total'] > 0:
             alerts.append({
@@ -36,7 +35,7 @@ class DashboardAlertService:
                 'action_text': 'Review Expired Items',
                 'dismissible': False
             })
-        
+
         # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in settings
         if DashboardAlertService._is_alert_enabled('show_batch_alerts'):
             stuck_batches = DashboardAlertService._get_stuck_batches()
@@ -50,7 +49,7 @@ class DashboardAlertService:
                     'action_text': 'Review Batches',
                     'dismissible': False
                 })
-        
+
         # CRITICAL: Recent fault log errors - only if enabled
         if DashboardAlertService._is_alert_enabled('show_fault_alerts'):
             recent_faults = DashboardAlertService._get_recent_faults()
@@ -64,7 +63,7 @@ class DashboardAlertService:
                     'action_text': 'View Faults',
                     'dismissible': False
                 })
-        
+
         # HIGH: Items expiring soon (within 3 days) - only if enabled
         if DashboardAlertService._is_alert_enabled('show_expiration_alerts') and expiration_summary['expiring_soon_total'] > 0:
             alerts.append({
@@ -76,7 +75,7 @@ class DashboardAlertService:
                 'action_text': 'Plan Usage',
                 'dismissible': True
             })
-        
+
         # HIGH: Low stock items - only if enabled
         if DashboardAlertService._is_alert_enabled('show_low_stock_alerts'):
             low_stock = get_low_stock_ingredients()
@@ -90,7 +89,7 @@ class DashboardAlertService:
                     'action_text': 'View Inventory',
                     'dismissible': True
                 })
-        
+
         # HIGH: Expired timers - only if enabled
         if DashboardAlertService._is_alert_enabled('show_timer_alerts'):
             timer_alerts = DashboardAlertService._get_timer_alerts()
@@ -101,7 +100,7 @@ class DashboardAlertService:
                     first_timer = timer_alerts['expired_timers'][0]
                     if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
                         batch_url = f'/batches/in-progress/{first_timer.batch_id}'
-                
+
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'expired_timers',
@@ -111,7 +110,7 @@ class DashboardAlertService:
                     'action_text': 'View Batch',
                     'dismissible': True
                 })
-        
+
         # MEDIUM: Active batches needing attention
         active_batches = Batch.query.filter_by(status='in_progress').count()
         if active_batches > 0:
@@ -124,7 +123,7 @@ class DashboardAlertService:
                 'action_text': 'View Batches',
                 'dismissible': True
             })
-        
+
         # MEDIUM: Incomplete batches
         incomplete_batches = DashboardAlertService._get_incomplete_batches()
         if incomplete_batches:
@@ -137,7 +136,7 @@ class DashboardAlertService:
                 'action_text': 'Complete Batches',
                 'dismissible': True
             })
-        
+
         # Sort by priority and limit
         alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
         return {
@@ -145,7 +144,7 @@ class DashboardAlertService:
             'total_alerts': len(alerts),
             'hidden_count': max(0, len(alerts) - max_alerts)
         }
-    
+
     @staticmethod
     def get_alert_summary() -> Dict:
         """Get summary counts for navigation badge"""
@@ -154,18 +153,18 @@ class DashboardAlertService:
         stuck_batches = len(DashboardAlertService._get_stuck_batches())
         recent_faults = DashboardAlertService._get_recent_faults()
         timer_alerts = DashboardAlertService._get_timer_alerts()
-        
+
         critical_count = (summary['expired_total'] + stuck_batches + 
                          (1 if recent_faults > 0 else 0))
         high_count = (summary['expiring_soon_total'] + low_stock_count + 
                      timer_alerts['expired_count'])
-        
+
         return {
             'critical_count': critical_count,
             'high_count': high_count,
             'total_count': critical_count + high_count
         }
-    
+
     @staticmethod
     def _get_stuck_batches() -> List:
         """Get batches that have been in progress for more than 24 hours"""
@@ -174,46 +173,46 @@ class DashboardAlertService:
             Batch.status == 'in_progress',
             Batch.started_at < cutoff_time
         ).all()
-    
+
     @staticmethod
     def _get_recent_faults() -> int:
         """Get count of recent critical faults"""
         fault_file = 'faults.json'
         if not os.path.exists(fault_file):
             return 0
-        
+
         try:
             with open(fault_file, 'r') as f:
                 faults = json.load(f)
-            
+
             cutoff_time = datetime.utcnow() - timedelta(hours=24)
             recent_critical = 0
-            
+
             for fault in faults:
                 fault_time = datetime.fromisoformat(fault.get('timestamp', ''))
                 if (fault_time > cutoff_time and 
                     fault.get('severity', '').lower() in ['critical', 'error']):
                     recent_critical += 1
-            
+
             return recent_critical
         except (json.JSONDecodeError, KeyError, ValueError):
             return 0
-    
+
     @staticmethod
     def _get_timer_alerts() -> Dict:
         """Get timer-related alerts"""
         try:
             # Use BatchTimer model which exists in your system
-            from models import BatchTimer
+            from app.models import BatchTimer
             active_timers = BatchTimer.query.filter_by(status='active').all()
             expired_timers = []
-            
+
             for timer in active_timers:
                 if timer.start_time and timer.duration_seconds:
                     end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
                     if datetime.utcnow() > end_time:
                         expired_timers.append(timer)
-            
+
             return {
                 'expired_count': len(expired_timers),
                 'expired_timers': expired_timers,
@@ -222,7 +221,7 @@ class DashboardAlertService:
         except (ImportError, AttributeError):
             # Fallback if BatchTimer doesn't exist
             return {'expired_count': 0, 'expired_timers': [], 'active_count': 0}
-    
+
     @staticmethod
     def _get_product_inventory_issues() -> int:
         """Get count of products with inventory issues"""
@@ -234,7 +233,7 @@ class DashboardAlertService:
             return issues
         except:
             return 0
-    
+
     @staticmethod
     def _is_alert_enabled(alert_type: str) -> bool:
         """Check if a specific alert type is enabled in settings"""
@@ -244,7 +243,7 @@ class DashboardAlertService:
                 return settings.get('alerts', {}).get(alert_type, True)  # Default to True if not set
         except (FileNotFoundError, json.JSONDecodeError):
             return True  # Default to enabled if settings can't be read
-    
+
     @staticmethod
     def _get_incomplete_batches() -> int:
         """Get count of batches missing required data"""
