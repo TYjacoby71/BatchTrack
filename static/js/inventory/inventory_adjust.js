@@ -20,8 +20,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const expirationSection = document.getElementById('expirationOverrideSection');
     const expirationCheckbox = document.getElementById('override_expiration');
     const shelfLifeField = document.getElementById('shelfLifeField');
+    const changeTypeSelect = document.querySelector('select[name="change_type"]');
 
-    if (expirationSection) {
+    if (expirationSection && changeTypeSelect) {
+        const changeType = changeTypeSelect.value;
         if (changeType === 'restock') {
             expirationSection.style.display = 'block';
         } else {
