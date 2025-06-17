@@ -10,8 +10,8 @@ def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, 
     """
     Adjust a specific FIFO entry's remaining quantity for product inventory
     Args:
-        fifo_entry_id: ID of the ProductInventoryHistory FIFO entry
-        quantity: Amount to adjust (positive for additions, negative for deductions)
+        fifo_entry_id: ID of the ProductInventory FIFO entry
+        quantity: Amount to adjust (for recount: new total, for deductions: negative amount)
         change_type: Type of change (recount, sale, spoil, damage, trash, gift/tester)
         notes: Optional notes
         created_by: User ID who created the change
@@ -19,49 +19,52 @@ def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, 
         bool: Success status
     """
     try:
-        # Get the original FIFO entry
-        fifo_entry = ProductInventoryHistory.query.get(fifo_entry_id)
+        # Get the original FIFO entry (ProductInventory, not ProductInventoryHistory)
+        fifo_entry = ProductInventory.query.get(fifo_entry_id)
         if not fifo_entry:
             raise ValueError("FIFO entry not found")
         
-        # Validate quantity doesn't exceed available
-        if quantity < 0 and abs(quantity) > fifo_entry.quantity:
-            raise ValueError("Cannot adjust more than available quantity")
+        original_quantity = fifo_entry.quantity
         
-        # Get the product inventory item
-        product_inventory = ProductInventory.query.get(fifo_entry.product_inventory_id)
-        if not product_inventory:
-            raise ValueError("Product inventory not found")
+        if change_type == 'recount':
+            # For recount, quantity is the new total
+            quantity_change = quantity - original_quantity
+            fifo_entry.quantity = quantity
+        else:
+            # For deductions, quantity should be negative
+            quantity_change = quantity
+            if quantity_change >= 0:
+                raise ValueError("Deduction quantity must be negative")
+            
+            # Validate quantity doesn't exceed available
+            if abs(quantity_change) > original_quantity:
+                raise ValueError("Cannot adjust more than available quantity")
+            
+            fifo_entry.quantity += quantity_change
         
-        # Create adjustment history entry
-        adjustment_history = ProductInventoryHistory(
-            product_inventory_id=fifo_entry.product_inventory_id,
-            change_type=change_type,
-            quantity_change=quantity,
-            remaining_quantity=0,  # This is an adjustment, not a new FIFO entry
-            unit_cost=fifo_entry.unit_cost,
-            fifo_reference_id=fifo_entry_id,  # Reference the original FIFO entry
-            note=f"{notes or change_type.title()} adjustment (From FIFO #{fifo_entry_id})",
-            created_by=created_by or (current_user.id if current_user.is_authenticated else None),
-            source_batch_id=fifo_entry.source_batch_id,
-            timestamp=datetime.utcnow()
-        )
-        
-        # Update the original FIFO entry's remaining quantity
-        fifo_entry.quantity += quantity
-        
-        # Update the product inventory total
-        product_inventory.quantity += quantity
-        
-        # Ensure quantities don't go negative
+        # Ensure quantity doesn't go negative
         if fifo_entry.quantity < 0:
             fifo_entry.quantity = 0
-        if product_inventory.quantity < 0:
-            product_inventory.quantity = 0
         
-        db.session.add(adjustment_history)
+        # Create adjustment event
+        event_note = f"{change_type.title()}: "
+        if change_type == 'recount':
+            event_note += f"{original_quantity} → {fifo_entry.quantity} ({quantity_change:+.2f}) for {fifo_entry.size_label}"
+        else:
+            event_note += f"{abs(quantity_change)} × {fifo_entry.size_label}"
+        
+        if fifo_entry.variant and fifo_entry.variant != 'Base':
+            event_note += f" ({fifo_entry.variant})"
+        if notes:
+            event_note += f". Notes: {notes}"
+        
+        db.session.add(ProductEvent(
+            product_id=fifo_entry.product_id,
+            event_type=f'inventory_{change_type}',
+            note=event_note
+        ))
+        
         db.session.commit()
-        
         return True
         
     except Exception as e:

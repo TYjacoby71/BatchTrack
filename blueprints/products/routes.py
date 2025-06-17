@@ -711,30 +711,43 @@ def delete_product(product_id):
         flash(f'Error deleting product: {str(e)}', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-@products_bp.route('/adjust_fifo/<int:product_id>/<int:inventory_id>', methods=['POST'])
+@products_bp.route('/adjust_fifo/<int:inventory_id>', methods=['POST'])
 @login_required
-def adjust_fifo_inventory(product_id, inventory_id):
+def adjust_fifo_inventory(inventory_id):
     """Adjust the quantity of a specific FIFO entry."""
-    adjustment_type = request.form.get('adjustment_type')  # recount, sale, spoil, damage, trash, gift/tester
+    adjustment_type = request.form.get('change_type')  # recount, sale, spoil, damage, trash, gift/tester
     quantity = float(request.form.get('quantity', 0))
     notes = request.form.get('notes', '')
 
     if quantity <= 0:
         flash('Quantity must be positive', 'error')
-        return redirect(url_for('products.view_sku', product_id=product_id, variant=request.form.get('variant'), size_label=request.form.get('size_label')))
+        return redirect(request.referrer)
 
     try:
-        adjust_product_fifo_entry(
-            inventory_id=inventory_id,
-            adjustment_type=adjustment_type,
-            quantity=quantity,
-            notes=notes
+        # Get the inventory entry to determine product and SKU details for redirect
+        inventory_entry = ProductInventory.query.get_or_404(inventory_id)
+        
+        # For recount, pass the new total quantity
+        # For deductions, pass the negative quantity to deduct
+        if adjustment_type == 'recount':
+            quantity_change = quantity  # This is the new total
+        else:
+            quantity_change = -quantity  # Negative for deductions
+        
+        success = adjust_product_fifo_entry(
+            fifo_entry_id=inventory_id,
+            quantity=quantity_change,
+            change_type=adjustment_type,
+            notes=notes,
+            created_by=current_user.id if current_user.is_authenticated else None
         )
 
-        flash(f'FIFO entry adjusted: {adjustment_type}', 'success')
+        if success:
+            flash(f'FIFO entry adjusted: {adjustment_type}', 'success')
+        else:
+            flash('Failed to adjust FIFO entry', 'error')
 
     except Exception as e:
         flash(f'Error adjusting FIFO entry: {str(e)}', 'error')
 
-    # Redirect back to the SKU view. Crucial to pass variant and size_label.
-    return redirect(url_for('products.view_sku', product_id=product_id, variant=request.form.get('variant'), size_label=request.form.get('size_label')))
+    return redirect(request.referrer or url_for('products.view_product', product_id=inventory_entry.product_id))

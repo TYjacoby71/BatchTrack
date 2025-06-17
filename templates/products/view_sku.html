@@ -459,7 +459,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (fifoCurrentQtyEl) fifoCurrentQtyEl.value = `${currentQty} ${unit}`;
       if (fifoUnitEl) fifoUnitEl.textContent = unit;
-      if (fifoBatchInfoEl) fifoBatchInfoEl.textContent = batchId !== 'N/A' ? `Batch #${batchId}` : 'No batch reference';
+      if (fifoBatchInfoEl) {
+        fifoBatchInfoEl.textContent = (batchId && batchId !== 'N/A') ? `Batch #${batchId}` : 'No batch reference';
+      }
 
       // Reset form
       changeTypeSelect.value = '';
@@ -474,7 +476,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
       if (!fifoCurrentQtyEl) return;
 
-      const currentQty = parseFloat(fifoCurrentQtyEl.value);
+      // Parse current quantity from the input value (format: "10.0 count")
+      const currentQtyText = fifoCurrentQtyEl.value || '';
+      const currentQty = parseFloat(currentQtyText.split(' ')[0]) || 0;
       const changeType = this.value;
 
       if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
@@ -500,9 +504,31 @@ document.addEventListener('DOMContentLoaded', function() {
       const enteredQty = parseFloat(quantityInput.value);
       const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
 
-      if (changeType === 'recount' && fifoCurrentQtyEl) {
-        const currentQty = parseFloat(fifoCurrentQtyEl.value);
-        // For recount, calculate the difference and update the quantity input
+      if (!changeType) {
+        e.preventDefault();
+        alert('Please select an adjustment type');
+        return;
+      }
+
+      if (!enteredQty || enteredQty <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid quantity');
+        return;
+      }
+
+      if (fifoCurrentQtyEl) {
+        const currentQtyText = fifoCurrentQtyEl.value || '';
+        const currentQty = parseFloat(currentQtyText.split(' ')[0]) || 0;
+        
+        // For deductions, validate we don't exceed available quantity
+        if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
+          if (enteredQty > currentQty) {
+            e.preventDefault();
+            alert(`Cannot deduct ${enteredQty} - only ${currentQty} available`);
+            return;
+          }
+        }
+      } quantity input
         const difference = enteredQty - currentQty;
         quantityInput.value = difference;
       }
