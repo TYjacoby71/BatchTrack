@@ -606,13 +606,22 @@ function showView(viewType) {
 document.addEventListener('DOMContentLoaded', function() {
     const variantFilter = document.getElementById('variantFilter');
     const sortFilter = document.getElementById('sortFilter');
-    const showSizes = document.getElementById('showSizes');
     const variantsContainer = document.getElementById('variantsContainer');
     const variantsTableContainer = document.getElementById('variantsTableContainer');
     const noResults = document.getElementById('noResults');
 
+    // Check if required elements exist
+    if (!variantFilter || !sortFilter || !variantsContainer || !variantsTableContainer || !noResults) {
+        console.warn('Some required elements are missing from the DOM');
+        return;
+    }
+
     // Make filterVariants globally accessible
     window.filterVariants = function() {
+        if (!variantFilter || !variantsContainer || !variantsTableContainer || !noResults) {
+            return;
+        }
+        
         const searchTerm = variantFilter.value.toLowerCase();
         let visibleCount = 0;
 
@@ -621,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isCardView) {
             const cards = variantsContainer.querySelectorAll('.variant-card');
             cards.forEach(card => {
-                const variantName = card.dataset.variantName;
+                const variantName = card.dataset.variantName || '';
                 const isVisible = variantName.includes(searchTerm);
                 card.style.display = isVisible ? 'block' : 'none';
                 if (isVisible) visibleCount++;
@@ -629,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             const rows = variantsTableContainer.querySelectorAll('.variant-row');
             rows.forEach(row => {
-                const variantName = row.dataset.variantName;
+                const variantName = row.dataset.variantName || '';
                 const isVisible = variantName.includes(searchTerm);
                 row.style.display = isVisible ? '' : 'none';
                 if (isVisible) visibleCount++;
@@ -641,8 +650,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sort functionality
     function sortVariants() {
+        if (!sortFilter || !variantsContainer || !variantsTableContainer) {
+            return;
+        }
+        
         const sortBy = sortFilter.value;
-
         const isCardView = variantsContainer.style.display !== 'none';
 
         if (isCardView) {
@@ -650,7 +662,9 @@ document.addEventListener('DOMContentLoaded', function() {
             cards.sort((a, b) => {
                 switch(sortBy) {
                     case 'name':
-                        return a.dataset.variantName.localeCompare(b.dataset.variantName);
+                        const nameA = a.dataset.variantName || '';
+                        const nameB = b.dataset.variantName || '';
+                        return nameA.localeCompare(nameB);
                     case 'quantity':
                         const qtyA = parseFloat(a.dataset.quantity) || 0;
                         const qtyB = parseFloat(b.dataset.quantity) || 0;
@@ -666,11 +680,15 @@ document.addEventListener('DOMContentLoaded', function() {
             cards.forEach(card => variantsContainer.appendChild(card));
         } else {
             const tbody = variantsTableContainer.querySelector('tbody');
+            if (!tbody) return;
+            
             const rows = Array.from(tbody.querySelectorAll('.variant-row'));
             rows.sort((a, b) => {
                 switch(sortBy) {
                     case 'name':
-                        return a.dataset.variantName.localeCompare(b.dataset.variantName);
+                        const nameA = a.dataset.variantName || '';
+                        const nameB = b.dataset.variantName || '';
+                        return nameA.localeCompare(nameB);
                     case 'quantity':
                         const qtyA = parseFloat(a.dataset.quantity) || 0;
                         const qtyB = parseFloat(b.dataset.quantity) || 0;
@@ -678,8 +696,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'status':
                         const qtyA2 = parseFloat(a.dataset.quantity) || 0;
                         const qtyB2 = parseFloat(b.dataset.quantity) || 0;
-                        return (qtyA2 > 0? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
-default:
+                        return (qtyA2 > 0 ? 1 : 0) - (qtyB2 > 0 ? 1 : 0);
+                    default:
                         return 0;
                 }
             });
@@ -687,9 +705,13 @@ default:
         }
     }
 
-    // Event listeners
-    variantFilter.addEventListener('input', filterVariants);
-    sortFilter.addEventListener('change', sortVariants);
+    // Event listeners with safety checks
+    if (variantFilter) {
+        variantFilter.addEventListener('input', filterVariants);
+    }
+    if (sortFilter) {
+        sortFilter.addEventListener('change', sortVariants);
+    }
 
     // Variation toggle functionality
     document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
@@ -757,7 +779,10 @@ function openAddStockModal(variantName) {
 }
 
 // Confirm product deletion
-function confirmDeleteProduct(productId, productName) {
+function confirmDeleteProduct() {
+  const productId = {{ product.id }};
+  const productName = "{{ product.name }}";
+  
   if (confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone and will delete all associated data.`)) {
     // Create a form and submit it
     const form = document.createElement('form');
