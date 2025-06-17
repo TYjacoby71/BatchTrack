@@ -24,6 +24,35 @@ class ExpirationService:
         return entry_date + timedelta(days=shelf_life_days)
 
     @staticmethod
+    def handle_expiration_override(
+        inventory_item, 
+        change_type: str, 
+        override_expiration: bool = False, 
+        custom_shelf_life_days: Optional[int] = None
+    ) -> Tuple[Optional[datetime], Optional[int]]:
+        """
+        Handle expiration date overrides for inventory adjustments
+        Returns: (expiration_date, shelf_life_used)
+        """
+        if change_type != 'restock' or not inventory_item.is_perishable:
+            return None, None
+            
+        if override_expiration and custom_shelf_life_days:
+            # Use custom shelf life override
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), custom_shelf_life_days
+            )
+            return expiration_date, custom_shelf_life_days
+        elif inventory_item.shelf_life_days:
+            # Use ingredient's default shelf life
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), inventory_item.shelf_life_days
+            )
+            return expiration_date, inventory_item.shelf_life_days
+            
+        return None, None
+
+    @staticmethod
     def get_days_until_expiration(expiration_date: datetime) -> int:
         """Get days until expiration (negative if expired)"""
         if not expiration_date:

@@ -121,22 +121,31 @@ document.querySelector('select[name="change_type"]').addEventListener('change', 
   if (costInput.disabled) costInput.value = '';
   
   // Show expiration override only for restock operations
-  if (this.value === 'restock') {
+  const expirationSection = document.getElementById('expirationOverrideSection');
+  if (this.value === 'restock' && expirationSection) {
     expirationSection.style.display = 'block';
-  } else {
+  } else if (expirationSection) {
     expirationSection.style.display = 'none';
-    document.getElementById('override_expiration').checked = false;
-    document.getElementById('expirationDateField').style.display = 'none';
+    const overrideCheckbox = document.getElementById('override_expiration');
+    if (overrideCheckbox) overrideCheckbox.checked = false;
+    const shelfLifeField = document.getElementById('shelfLifeField');
+    if (shelfLifeField) shelfLifeField.style.display = 'none';
   }
 });
 
 // Handle expiration override checkbox
-document.getElementById('override_expiration').addEventListener('change', function() {
-  const dateField = document.getElementById('expirationDateField');
-  dateField.style.display = this.checked ? 'block' : 'none';
-  
-  if (!this.checked) {
-    document.getElementById('expiration_date').value = '';
-  }
-});
+const overrideExpirationCheckbox = document.getElementById('override_expiration');
+if (overrideExpirationCheckbox) {
+  overrideExpirationCheckbox.addEventListener('change', function() {
+    const shelfLifeField = document.getElementById('shelfLifeField');
+    if (shelfLifeField) {
+      shelfLifeField.style.display = this.checked ? 'block' : 'none';
+    }
+    
+    if (!this.checked) {
+      const customShelfLifeInput = document.getElementById('custom_shelf_life_days');
+      if (customShelfLifeInput) customShelfLifeInput.value = '';
+    }
+  });
+}
 </script>
