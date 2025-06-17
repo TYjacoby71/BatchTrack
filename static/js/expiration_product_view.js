@@ -3,8 +3,14 @@
  */
 
 function loadExpirationData(inventoryId, containerId) {
+    // Use centralized expiration service endpoint
     fetch(`/expiration/api/product-inventory/${inventoryId}/expiration`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const container = document.getElementById(containerId);
             if (!container) return;
