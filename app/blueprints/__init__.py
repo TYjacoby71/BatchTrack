@@ -52,5 +52,5 @@ def register_blueprints(app):
     init_api(app)
 
     # Register product filters
-    from ..filters.product_filters import register_product_filters
+    from filters.product_filters import register_product_filters
     register_product_filters(app)
