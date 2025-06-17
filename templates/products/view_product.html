@@ -710,14 +710,22 @@ default:
 // Add variant via AJAX
 function addVariant(){
   const form = document.getElementById('addVariantForm');
+  if (!form) {
+    alert('Form not found');
+    return;
+  }
+  
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
+
+  const csrfToken = document.querySelector('input[name=csrf_token]');
+  const csrfValue = csrfToken ? csrfToken.value : '';
 
   fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('input[name=csrf_token]').value
+      'X-CSRFToken': csrfValue
     },
     body: JSON.stringify(data)
   })
@@ -736,19 +744,29 @@ function addVariant(){
 
 // Open Add Stock modal for specific variant
 function openAddStockModal(variantName) {
-  document.getElementById('manualStockVariant').value = variantName;
+  const element = document.getElementById('manualStockVariant');
+  if (element) {
+    element.value = variantName;
+  }
 }
 
 // Clear variant selection when opening modal from actions menu
 function clearVariantSelection() {
-  document.getElementById('manualStockVariant').value = '';
+  const element = document.getElementById('manualStockVariant');
+  if (element) {
+    element.value = '';
+  }
 }
 
 // Set edit variation modal data
 function setEditVariation(variationId, name, description) {
-  document.getElementById('editVariantName').value = name;
-  document.getElementById('editVariantDescription').value = description || '';
-  document.getElementById('editVariationForm').action = `/product-variants/{{ product.id }}/variant/${variationId}/edit`;
+  const nameElement = document.getElementById('editVariantName');
+  const descElement = document.getElementById('editVariantDescription');
+  const formElement = document.getElementById('editVariationForm');
+  
+  if (nameElement) nameElement.value = name;
+  if (descElement) descElement.value = description || '';
+  if (formElement) formElement.action = `/product-variants/{{ product.id }}/variant/${variationId}/edit`;
 }
 
 // Open Add Stock modal for specific variant
@@ -781,17 +799,22 @@ function confirmDeleteProduct(productId, productName) {
 }
 
 function setSizeVariant(variantName) {
-    document.getElementById('sizeVariantName').value = variantName;
+    const element = document.getElementById('sizeVariantName');
+    if (element) {
+        element.value = variantName;
+    }
 }
 
 function toggleSizeFields() {
-    var sizeType = document.getElementById('sizeType').value;
-    var packagedFields = document.getElementById('packagedFields');
+    const sizeType = document.getElementById('sizeType');
+    const packagedFields = document.getElementById('packagedFields');
 
-    if (sizeType === 'packaged') {
-        packagedFields.style.display = 'block';
-    } else {
-        packagedFields.style.display = 'none';
+    if (sizeType && packagedFields) {
+        if (sizeType.value === 'packaged') {
+            packagedFields.style.display = 'block';
+        } else {
+            packagedFields.style.display = 'none';
+        }
     }
 }
 </script>
