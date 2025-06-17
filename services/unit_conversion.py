@@ -1,7 +1,8 @@
 
 from datetime import datetime
 from flask_login import current_user
-from models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
+from app.models import Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
+from app.extensions import db
 
 class ConversionEngine:
     @staticmethod
