@@ -1,8 +1,8 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Product, ProductVariation
-from utils.unit_utils import get_global_unit_list
+from ...models import db, Product, ProductVariation
+from ...utils.template_helpers import get_global_unit_list
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -76,7 +76,7 @@ def new_product():
 def view_product(product_id):
     """View product details with FIFO inventory"""
     from services.product_service import ProductService
-    from models import InventoryItem
+    from ...models import InventoryItem
 
     product = Product.query.get_or_404(product_id)
     inventory_groups = ProductService.get_fifo_inventory_groups(product_id)
@@ -125,7 +125,7 @@ def edit_product(product_id):
 @login_required
 def delete_product(product_id):
     """Delete a product and all its related data"""
-    from models import ProductInventoryHistory, ProductInventory, ProductEvent
+    from ...models import ProductInventoryHistory, ProductInventory, ProductEvent
 
     product = Product.query.get_or_404(product_id)
 

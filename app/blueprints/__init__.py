@@ -20,10 +20,7 @@ def register_blueprints(app):
     from ..routes.fault_log_routes import faults_bp
     from ..routes.product_log_routes import product_log_bp
     from ..routes.tag_manager_routes import tag_bp
-    from ..routes.products import products_bp
-    from ..routes.product_variants import product_variants_bp
-    from ..routes.product_inventory import product_inventory_bp
-    from ..routes.product_api import product_api_bp
+    from .products import products_bp
     from .fifo import fifo_bp
     from .expiration.routes import expiration_bp
     from ..routes.admin_routes import admin_bp
@@ -36,9 +33,6 @@ def register_blueprints(app):
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
     app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
     app.register_blueprint(products_bp)
-    app.register_blueprint(product_variants_bp)
-    app.register_blueprint(product_inventory_bp)
-    app.register_blueprint(product_api_bp)
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(app_routes_bp)
     app.register_blueprint(batches_bp, url_prefix='/batches')

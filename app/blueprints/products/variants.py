@@ -1,12 +1,11 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
-from models import db, Product, ProductVariation, ProductInventory, ProductEvent, InventoryItem
-from utils.unit_utils import get_global_unit_list
+from ...models import db, Product, ProductVariation, ProductInventory, ProductEvent, InventoryItem
+from ...utils.template_helpers import get_global_unit_list
+from . import products_bp
 
-product_variants_bp = Blueprint('product_variants', __name__, url_prefix='/products')
-
-@product_variants_bp.route('/<int:product_id>/variants/new', methods=['POST'])
+@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
@@ -43,7 +42,7 @@ def add_variant(product_id):
 
     return jsonify({'error': 'Invalid request'}), 400
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>')
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
 def view_variant(product_id, variation_id):
     """View individual product variation details"""
@@ -96,7 +95,7 @@ def view_variant(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
 @login_required
 def edit_variant(product_id, variation_id):
     """Edit product variation details"""
@@ -113,7 +112,7 @@ def edit_variant(product_id, variation_id):
 
     if not name:
         flash('Variation name is required', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
@@ -123,11 +122,11 @@ def edit_variant(product_id, variation_id):
     ).first()
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
     variation.description = description if description else None
 
     db.session.commit()
     flash('Variation updated successfully', 'success')
-    return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))

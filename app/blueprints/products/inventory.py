@@ -1,18 +1,17 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Product, ProductInventory, ProductEvent
+from ...models import db, Product, ProductInventory, ProductEvent
 from services.product_service import ProductService, adjust_product_fifo_entry
 from datetime import datetime
 from urllib.parse import unquote
+from . import products_bp
 
-product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products')
-
-@product_inventory_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
 @login_required  
 def view_sku(product_id, variant, size_label):
     """View detailed SKU-level inventory with FIFO tracking"""
-    from models import ProductInventoryHistory
+    from ...models import ProductInventoryHistory
 
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
@@ -46,7 +45,7 @@ def view_sku(product_id, variant, size_label):
                          recent_deductions=recent_deductions,
                          moment=datetime)
 
-@product_inventory_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])
 @login_required
 def edit_sku(product_id, variant, size_label):
     """Edit SKU for a specific product variant and size"""
@@ -65,7 +64,7 @@ def edit_sku(product_id, variant, size_label):
 
     if not inventory_entries:
         flash('No inventory entries found for this variant/size combination', 'error')
-        return redirect(url_for('product_inventory.view_sku', 
+        return redirect(url_for('products.view_sku', 
                                product_id=product_id, variant=variant, size_label=size_label))
 
     # Check if SKU already exists for another product/variant/size combination
@@ -81,7 +80,7 @@ def edit_sku(product_id, variant, size_label):
 
         if existing_sku:
             flash(f'SKU "{sku}" is already in use for another product/variant/size', 'error')
-            return redirect(url_for('product_inventory.view_sku', 
+            return redirect(url_for('products.view_sku', 
                                    product_id=product_id, variant=variant, size_label=size_label))
 
     # Update all entries
@@ -95,10 +94,10 @@ def edit_sku(product_id, variant, size_label):
     else:
         flash(f'SKU removed for {variant} - {size_label}', 'success')
 
-    return redirect(url_for('product_inventory.view_sku', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
 
-@product_inventory_bp.route('/adjust_fifo/<int:inventory_id>', methods=['POST'])
+@products_bp.route('/adjust_fifo/<int:inventory_id>', methods=['POST'])
 @login_required
 def adjust_fifo_inventory(inventory_id):
     """Adjust the quantity of a specific FIFO entry."""
@@ -139,7 +138,7 @@ def adjust_fifo_inventory(inventory_id):
 
     return redirect(request.referrer or url_for('products.view_product', product_id=inventory_entry.product_id))
 
-@product_inventory_bp.route('/<int:product_id>/deduct', methods=['POST'])
+@products_bp.route('/<int:product_id>/deduct', methods=['POST'])
 @login_required
 def deduct_product(product_id):
     """Deduct product inventory using FIFO"""
@@ -169,7 +168,7 @@ def deduct_product(product_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 
-@product_inventory_bp.route('/<int:product_id>/add-manual-stock', methods=['POST'])
+@products_bp.route('/<int:product_id>/add-manual-stock', methods=['POST'])
 @login_required
 def add_manual_stock(product_id):
     """Add manual stock with container matching"""
@@ -199,7 +198,7 @@ def add_manual_stock(product_id):
 
     return redirect(url_for('products.view_product', product_id=product_id))
 
-@product_inventory_bp.route('/<int:product_id>/record_sale', methods=['POST'])
+@products_bp.route('/<int:product_id>/record_sale', methods=['POST'])
 @login_required
 def record_sale(product_id):
     """Record a sale or other inventory adjustment using unified ProductService"""
@@ -235,7 +234,7 @@ def record_sale(product_id):
 
     return redirect(request.referrer or url_for('products.view_product', product_id=product_id))
 
-@product_inventory_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
+@products_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
 @login_required
 def manual_adjust(product_id):
     """Manual inventory adjustments for variant/size"""
@@ -249,5 +248,5 @@ def manual_adjust(product_id):
     # This is a placeholder for the manual adjustment logic
 
     flash(f'Manual adjustment applied: {adjustment_type}', 'success')
-    return redirect(url_for('product_inventory.view_sku', 
+    return redirect(url_for('products.view_sku', 
                            product_id=product_id, variant=variant, size_label=size_label))
