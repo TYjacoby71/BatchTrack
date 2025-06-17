@@ -1,0 +1,51 @@
+ <!-- Update Inventory Form -->
+    <form method="post" action="{{ url_for('inventory.update_inventory') }}" class="mb-4" id="updateInventoryForm" style="display: none;" 
+      x-data="{ 
+        rows: [{unit: '{{ get_global_unit_list()[0].name }}', showShelfLife: false}],
+        resetRows() {
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', showShelfLife: false}];
+        },
+        toggleRowShelfLife(event, index) {
+          this.rows[index].showShelfLife = event.target.checked;
+        }
+      }">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <template x-for="(row, index) in rows" :key="index">
+        <div class="row g-3 align-items-end mb-2">
+          <div class="col">
+            <label class="form-label">Item</label>
+            <select :name="'items[' + index + '][id]'" class="form-select" required>
+              <option value="">Select Item</option>
+              {% for item in items if item.type != 'container' %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label class="form-label">Quantity</label>
+            <input :name="'items[' + index + '][quantity]'" type="number" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Unit</label>
+            <select :name="'items[' + index + '][unit]'" class="form-select" required x-model="row.unit">
+              {% for unit in get_global_unit_list() %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label">Perishable</label>
+            <div class="form-check mt-2">
+              <input :id="'is_perishable_' + index" type="checkbox" :name="'items[' + index + '][is_perishable]'" class="form-check-input" @change="toggleRowShelfLife($event, index)">
+              <label :for="'is_perishable_' + index" class="form-check-label">Is Perishable</label>
+            </div>
+          </div>
+          <div class="col" x-show="row.showShelfLife">
+            <label class="form-label">Shelf Life (days)</label>
+            <input :name="'items[' + index + '][shelf_life_days]'" type="number" class="form-control" min="1" :required="row.showShelfLife">
+          </div>
+          <div class="col-auto d-flex align-items-end">
+            <button type="button" class="btn btn-danger mb-3" @click="rows = rows.filter((_, i) => i !== index)" x-show="rows.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
