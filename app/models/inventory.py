@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from ..extensions import db
 
@@ -7,7 +6,7 @@ class IngredientCategory(db.Model):
     name = db.Column(db.String(64), nullable=False, unique=True)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
 class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False)
@@ -42,7 +41,7 @@ class InventoryItem(db.Model):
     storage_unit = db.Column(db.String(32), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     category = db.relationship('IngredientCategory', backref='items')
 
 class InventoryHistory(db.Model):
@@ -57,6 +56,6 @@ class InventoryHistory(db.Model):
     quantity_used = db.Column(db.Float, default=0.0)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     inventory_item = db.relationship('InventoryItem', backref='history')
     creator = db.relationship('User', backref='inventory_changes')
