@@ -143,7 +143,7 @@ def load_user(user_id):
 @login_manager.unauthorized_handler
 def unauthorized():
     # Allow access to homepage and login routes without authentication
-    if request.endpoint in ['homepage', 'index', 'login', 'dev_login']:
+    if request.endpoint in ['homepage', 'index', 'login', 'dev_login'] or request.path in ['/', '/homepage', '/login']:
         return None  # Let the route handle it normally
     return redirect(url_for('login', next=request.url))
 
