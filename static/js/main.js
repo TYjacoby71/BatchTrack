@@ -206,7 +206,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Unit filtering function (kept separate as it's called from HTML)
 window.filterUnits = function() {
-  const filter = document.getElementById('unitFilter').value;
+  const filter = document.getElementById('unitFilter');
+  if (!filter) return;
   const unitCards = document.querySelectorAll('.card.mb-3');
 
   unitCards.forEach(card => {

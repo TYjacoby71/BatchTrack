@@ -273,11 +273,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Define missing function to prevent ReferenceError
-  window.setVariantForDeduct = function(variantName) {
-    // Function exists to prevent errors when called from other scripts
-    console.log('setVariantForDeduct called with:', variantName);
-  };
+  
 
   // Handle deduct modal data - with proper null checks
   const deductModal = document.getElementById('deductModal');
