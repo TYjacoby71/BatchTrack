@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from app.models import Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
-from app.extensions import db
+from ...models import Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
+from ...extensions import db
 from datetime import datetime
-from utils import get_setting
+from ....utils import get_setting
 from sqlalchemy import extract
 from services.unit_conversion import ConversionEngine
 from app.blueprints.inventory.routes import adjust_inventory
