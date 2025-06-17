@@ -175,17 +175,19 @@ def adjust_inventory(id):
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
         cost_per_unit_input = request.form.get('cost_per_unit')
 
-        # Handle expiration date override
+        # Handle shelf life override
         override_expiration = request.form.get('override_expiration') == 'on'
-        custom_expiration_date = None
+        custom_shelf_life_days = None
         if override_expiration and change_type == 'restock':
-            expiration_date_str = request.form.get('expiration_date')
-            if expiration_date_str:
-                from datetime import datetime
+            shelf_life_str = request.form.get('custom_shelf_life_days')
+            if shelf_life_str:
                 try:
-                    custom_expiration_date = datetime.strptime(expiration_date_str, '%Y-%m-%d').date()
+                    custom_shelf_life_days = int(shelf_life_str)
+                    if custom_shelf_life_days < 1:
+                        flash('Shelf life must be at least 1 day', 'error')
+                        return redirect(url_for('inventory.view_inventory', id=id))
                 except ValueError:
-                    flash('Invalid expiration date format', 'error')
+                    flash('Invalid shelf life value', 'error')
                     return redirect(url_for('inventory.view_inventory', id=id))
 
         # Calculate restock cost based on entry type
@@ -250,7 +252,7 @@ def adjust_inventory(id):
                 notes=notes,
                 created_by=current_user.id,
                 cost_override=restock_cost,
-                custom_expiration_date=custom_expiration_date if change_type == 'restock' else None
+                custom_shelf_life_days=custom_shelf_life_days if change_type == 'restock' else None
             )
 
             if success:

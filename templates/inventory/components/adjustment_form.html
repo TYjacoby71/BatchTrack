@@ -51,19 +51,19 @@
           </div>
         </div>
       </div>
-      <!-- Expiration Date Override -->
+      <!-- Shelf Life Override -->
       <div class="form-group mt-3" id="expirationOverrideSection" style="display: none;">
         <div class="form-check mb-2">
           <input class="form-check-input" type="checkbox" id="override_expiration" name="override_expiration">
           <label class="form-check-label" for="override_expiration">
-            Override expiration date for this restock
+            Override shelf life for this restock
           </label>
         </div>
-        <div id="expirationDateField" style="display: none;">
-          <label for="expiration_date">Custom Expiration Date</label>
-          <input type="date" class="form-control" id="expiration_date" name="expiration_date">
+        <div id="shelfLifeField" style="display: none;">
+          <label for="custom_shelf_life_days">Custom Shelf Life (days)</label>
+          <input type="number" class="form-control" id="custom_shelf_life_days" name="custom_shelf_life_days" min="1">
           <small class="form-text text-muted">
-            This will override the ingredient's default shelf life calculation for this specific restock entry.
+            This will override the ingredient's default shelf life for this specific restock entry. Expiration date will be calculated automatically.
           </small>
         </div>
       </div>

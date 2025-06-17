@@ -65,11 +65,18 @@ def process_inventory_adjustment(
 
     # Handle expiration
     expiration_date = None
+    shelf_life_to_use = None
+
     if custom_expiration_date:
         # Use the custom expiration date provided
         expiration_date = custom_expiration_date
+        shelf_life_to_use = None  # Custom date provided, shelf life not applicable
+
     elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
         expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+        shelf_life_to_use = item.shelf_life_days
+    else:
+        shelf_life_to_use = None
 
     # Get cost - handle weighted average vs override
     if change_type in ['spoil', 'trash']:
@@ -206,6 +213,8 @@ def process_inventory_adjustment(
                 quantity_used=0.0,  # Additions don't consume inventory - always 0
                 created_by=created_by,
                 expiration_date=expiration_date,
+                shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
+                is_perishable=item.is_perishable if expiration_date else False,
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
             )
             db.session.add(history)
