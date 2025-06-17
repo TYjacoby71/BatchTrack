@@ -45,117 +45,112 @@
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h4>SKU Inventory by Batch</h4>
-          <div class="btn-group">
-            <div class="dropdown">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-filter"></i> Filter View
-              </button>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="toggleView('available')">Available Only</a></li>
-                <li><a class="dropdown-item" href="#" onclick="toggleView('consumed')">Consumed Only</a></li>
-                <li><a class="dropdown-item" href="#" onclick="toggleView('all')">Show All</a></li>
-              </ul>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-columns"></i> Columns
-              </button>
-              <ul class="dropdown-menu p-2">
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="fifo"> FIFO #</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="source"> Source</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="created"> Created</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="original"> Original Qty</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="remaining"> Remaining Qty</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="status"> Status</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="expiration"> Expiration</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="actions"> Actions</label></li>
-              </ul>
-            </div>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="fas fa-filter"></i> Filter View
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" onclick="toggleView('available')">Available Only</a></li>
+              <li><a class="dropdown-item" href="#" onclick="toggleView('consumed')">Consumed Only</a></li>
+              <li><a class="dropdown-item" href="#" onclick="toggleView('all')">Show All</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><h6 class="dropdown-header">Column Select</h6></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 0)"> FIFO #</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 1)"> Source</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 2)"> Created</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 3)"> Original Qty</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 4)"> Remaining Qty</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 5)"> Status</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 6)"> Cost/Unit</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 7)"> Expiration</label></li>
+              <li><label class="dropdown-item"><input type="checkbox" checked onchange="toggleColumn(this, 8)"> Actions</label></li>
+            </ul>
           </div>
         </div>
         <div class="card-body">
           {% if fifo_entries %}
-            <table class="table table-sm table-striped" id="fifoTable">
-              <thead>
-                <tr>
-                  <th data-column="fifo">FIFO #</th>
-                  <th data-column="source">Source</th>
-                  <th data-column="created">Created</th>
-                  <th data-column="original">Original Qty</th>
-                  <th data-column="remaining">Remaining Qty</th>
-                  <th data-column="status">Status</th>
-                  <th data-column="cost">Cost/Unit</th>
-                  <th data-column="expiration">Expiration</th>
-                  <th data-column="actions">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for entry in fifo_entries %}
-                <tr class="{% if entry.quantity <= 0 %}table-secondary consumed-row{% else %}available-row{% endif %}">
-                  <td data-column="fifo">{{ loop.index }}</td>
-                  <td data-column="source">
-                    {% if entry.batch_id %}
-                      {% set batch = entry.batch %}
-                      {% if batch %}
-                        <a href="{{ url_for('batches.view_batch', batch_identifier=batch.label_code) }}" class="text-decoration-none">
-                          {{ batch.label_code }}
-                        </a>
+            <div class="table-responsive">
+              <table class="table table-sm table-striped" id="fifoTable">
+                <thead>
+                  <tr>
+                    <th>FIFO #</th>
+                    <th>Source</th>
+                    <th>Created</th>
+                    <th>Original Qty</th>
+                    <th>Remaining Qty</th>
+                    <th>Status</th>
+                    <th>Cost/Unit</th>
+                    <th>Expiration</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in fifo_entries %}
+                  <tr class="{% if entry.quantity <= 0 %}table-secondary consumed-row{% else %}available-row{% endif %}">
+                    <td>{{ loop.index }}</td>
+                    <td>
+                      {% if entry.batch_id %}
+                        {% set batch = entry.batch %}
+                        {% if batch %}
+                          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.label_code) }}" class="text-decoration-none">
+                            {{ batch.label_code }}
+                          </a>
+                        {% else %}
+                          Batch #{{ entry.batch_id }}
+                        {% endif %}
                       {% else %}
-                        Batch #{{ entry.batch_id }}
+                        <span class="text-muted">Manual</span>
                       {% endif %}
-                    {% else %}
-                      <span class="text-muted">Manual</span>
-                    {% endif %}
-                  </td>
-                  <td data-column="created">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                  <td data-column="original">
-                    <span class="text-muted">
-                      {{ "%.2f"|format(entry.quantity + (entry.quantity_used or 0)) }} {{ entry.unit }}
-                    </span>
-                  </td>
-                  <td data-column="remaining">
-                    <span class="{% if entry.quantity <= 0 %}text-muted{% elif entry.quantity < 1 %}text-warning{% else %}text-success{% endif %}">
-                      {{ "%.2f"|format(entry.quantity) }} {{ entry.unit }}
-                    </span>
-                  </td>
-                  <td data-column="status">
-                    {% if entry.quantity <= 0 %}
-                      <span class="badge bg-secondary">Consumed</span>
-                    {% elif entry.expiration_date and entry.expiration_date < moment.now().date() %}
-                      <span class="badge bg-danger">Expired</span>
-                    {% elif entry.expiration_date and (entry.expiration_date - moment.now().date()).days < 7 %}
-                      <span class="badge bg-warning">Expiring Soon</span>
-                    {% else %}
-                      <span class="badge bg-success">Available</span>
-                    {% endif %}
-                  </td>
-                  <td data-column="cost">${{ "%.3f"|format(entry.batch_cost_per_unit or 0) }}</td>
-                  <td data-column="expiration">
-                    {% if entry.expiration_date %}
-                      {% set days_until = (entry.expiration_date - moment.now().date()).days if entry.expiration_date else 0 %}
-                      <span class="{% if days_until < 0 %}text-danger{% elif days_until < 7 %}text-warning{% endif %}">
-                        {{ entry.expiration_date.strftime('%Y-%m-%d') }}
-                        {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
+                    </td>
+                    <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                      <span class="text-muted">
+                        {{ "%.2f"|format(entry.quantity + (entry.quantity_used or 0)) }} {{ entry.unit }}
                       </span>
-                    {% else %}
-                      <span class="text-muted">No expiration</span>
-                    {% endif %}
-                  </td>
-                  <td data-column="actions">
-                    {% if entry.quantity > 0 %}
-                      <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustBatchModal"
-                              data-inventory-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}">
-                        Adjust
-                      </button>
-                    {% else %}
-                      <span class="text-muted">-</span>
-                    {% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+                    </td>
+                    <td>
+                      <span class="{% if entry.quantity <= 0 %}text-muted{% elif entry.quantity < 1 %}text-warning{% else %}text-success{% endif %}">
+                        {{ "%.2f"|format(entry.quantity) }} {{ entry.unit }}
+                      </span>
+                    </td>
+                    <td>
+                      {% if entry.quantity <= 0 %}
+                        <span class="badge bg-secondary">Consumed</span>
+                      {% elif entry.expiration_date and entry.expiration_date < moment.now().date() %}
+                        <span class="badge bg-danger">Expired</span>
+                      {% elif entry.expiration_date and (entry.expiration_date - moment.now().date()).days < 7 %}
+                        <span class="badge bg-warning">Expiring Soon</span>
+                      {% else %}
+                        <span class="badge bg-success">Available</span>
+                      {% endif %}
+                    </td>
+                    <td>${{ "%.3f"|format(entry.batch_cost_per_unit or 0) }}</td>
+                    <td>
+                      {% if entry.expiration_date %}
+                        {% set days_until = (entry.expiration_date - moment.now().date()).days if entry.expiration_date else 0 %}
+                        <span class="{% if days_until < 0 %}text-danger{% elif days_until < 7 %}text-warning{% endif %}">
+                          {{ entry.expiration_date.strftime('%Y-%m-%d') }}
+                          {% if days_until < 0 %}(EXPIRED){% elif days_until < 30 %}({{ days_until }} days){% endif %}
+                        </span>
+                      {% else %}
+                        <span class="text-muted">No expiration</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if entry.quantity > 0 %}
+                        <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustBatchModal"
+                                data-inventory-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}">
+                          Adjust
+                        </button>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           {% else %}
             <div class="alert alert-info">
               No inventory found for this variant and size.
@@ -307,11 +302,11 @@ function toggleSaleFields(reason) {
   const quantityLabel = document.getElementById('quantityLabel');
   const quantityInput = document.getElementById('quantityInput');
   const quantityHelp = document.getElementById('quantityHelp');
-  
+
   // Show/hide appropriate fields
   saleFields.style.display = reason === 'sale' ? 'block' : 'none';
   manualAddFields.style.display = reason === 'manual_add' ? 'block' : 'none';
-  
+
   // Update quantity field based on change type
   if (reason === 'recount') {
     quantityLabel.textContent = 'New Total Quantity';
@@ -331,7 +326,7 @@ function toggleSaleFields(reason) {
 // Initialize with available only and set initial form state
 document.addEventListener('DOMContentLoaded', function() {
   toggleView('available');
-  
+
   // Set initial form state for sale
   const reasonSelect = document.querySelector('select[name="reason"]');
   if (reasonSelect) {
@@ -352,11 +347,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleColumn(columnName, show) {
   const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
   const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
-  
+
   headers.forEach(header => {
     header.style.display = show ? '' : 'none';
   });
-  
+
   cells.forEach(cell => {
     cell.style.display = show ? '' : 'none';
   });
