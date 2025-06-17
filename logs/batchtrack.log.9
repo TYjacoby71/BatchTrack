@@ -1,4 +1,4 @@
-2025-06-17 17:50:30,474 ERROR: Exception on /homepage [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-16 19:29:00,891 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -12,9 +12,12 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app.py", line 140, in homepage
-    return render_template('homepage.html')
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/products/routes.py", line 131, in view_product
+    return render_template('products/view_product.html',
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -25,42 +28,40 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/templates/homepage.html", line 138, in top-level template code
-    <a class="nav-link" href="{{ url_for('login') }}">
+  File "/home/runner/workspace/templates/products/view_product.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'login'. Did you mean 'auth.login' instead?
-2025-06-17 18:02:32,921 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:02:53,597 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:04:12,033 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:09:19,734 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:19:32,056 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:22:38,021 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:26:17,345 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:27:04,185 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:53:14,856 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:53:59,365 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:54:34,436 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:55:11,406 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:55:43,896 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:56:01,004 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:56:31,571 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:56:43,823 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 18:59:44,583 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:04:34,332 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:04:35,641 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:06:31,552 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:06:35,143 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:10:58,271 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:13:19,604 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
-2025-06-17 19:13:20,760 ERROR: Exception on /homepage [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+  File "/home/runner/workspace/templates/layout.html", line 135, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/products/view_product.html", line 109, in block 'content'
+    {% set var_avg_cost = (var_inventory|sum(attribute='avg_cost')|default(0) / var_inventory|length) if var_inventory|length > 0 else 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/async_utils.py", line 48, in wrapper
+    return normal_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1336, in sync_do_sum
+    return sum(iterable, start)  # type: ignore[no-any-return, call-overload]
+           ^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'avg_cost'
+2025-06-16 19:30:57,771 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 19:42:22,871 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 19:42:35,929 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 19:46:36,277 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 19:58:33,158 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:03:41,995 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:09:15,973 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:17:04,881 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:19:17,381 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:20:12,954 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:20:27,683 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:42:33,109 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:45:05,264 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:47:30,174 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 20:51:17,770 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 21:05:33,006 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 21:08:19,165 INFO: BatchTrack startup [in /home/runner/workspace/utils/unit_utils.py:17]
+2025-06-16 21:09:52,189 ERROR: Exception on /products/1/sku/Base/1.0%20count%20Small%20Plate [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -74,28 +75,37 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/__init__.py", line 49, in homepage
-    return render_template('homepage.html')
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
-    template = app.jinja_env.get_or_select_template(template_name_or_list)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
-    return self.get_template(template_name_or_list, parent, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
-    return self._load_template(name, globals)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
-    template = self.loader.load(self, name, self.make_globals(globals))
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
-    source, filename, uptodate = self.get_source(environment, name)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
-    return self._get_source_fast(environment, template)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
-    raise TemplateNotFound(template)
-jinja2.exceptions.TemplateNotFound: homepage.html
-2025-06-17 19:14:02,640 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:18]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/blueprints/products/routes.py", line 484, in view_sku
+    return render_template('products/view_sku.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/products/view_sku.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/layout.html", line 135, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/templates/products/view_sku.html", line 83, in block 'content'
+    <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="text-decoration-none">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'batches.view_batch' with values ['batch_id']. Did you forget to specify values ['batch_identifier']?

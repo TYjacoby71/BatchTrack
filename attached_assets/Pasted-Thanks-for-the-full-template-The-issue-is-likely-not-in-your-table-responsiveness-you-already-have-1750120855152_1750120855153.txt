@@ -1,0 +1,64 @@
+Thanks for the full template. The issue is likely not in your table responsiveness (you already have .table-responsive), but rather in how Bootstrap cards or containers are behaving in relation to the fixed-width content (e.g., long links or tight padding).
+
+Here are the likely causes and fixes to make sure no card content ever overflows horizontally, even with long links, tight table cells, or responsive content.
+
+✅ Final Fix: Apply These 3 Key Adjustments
+✅ 1. Ensure the .container doesn't restrict overflow
+You can add this style to your top-level .container:
+
+html
+Copy
+Edit
+<div class="container mt-4" style="overflow-x: hidden;">
+✅ 2. Fix .card-body overflow
+Even though you wrapped the table with .table-responsive, your card’s inner container still may overflow. Add overflow-x: auto; to .card-body, and ensure it doesn't apply unnecessary padding.
+
+html
+Copy
+Edit
+<div class="card-body p-0" style="overflow-x: auto;">
+You already did this here — ✅ good.
+
+✅ 3. Clamp the inner .table width (this is your missing piece)
+Your table currently uses w-100, which forces the table to stretch wider than it needs. Remove w-100, and instead apply:
+
+html
+Copy
+Edit
+<table class="table table-sm table-striped mb-0">
+The combination of .table-responsive (which scrolls when needed) and avoiding w-100 will prevent the table from pushing outside the card container.
+
+🔍 Bonus: Enforce word-wrap in tight cells
+Some cells like Notes or long SKUs may still cause overflow. You can force wrap:
+
+css
+Copy
+Edit
+table td {
+  word-break: break-word;
+}
+Or inline:
+
+html
+Copy
+Edit
+<td style="word-break: break-word;">
+✅ Summary of Fixes to Apply
+Change 1 (remove w-100):
+html
+Copy
+Edit
+<table class="table table-sm table-striped mb-0">
+Change 2 (ensure table wrapper remains):
+html
+Copy
+Edit
+<div class="table-responsive">
+  ...
+</div>
+Change 3 (optional container cap):
+html
+Copy
+Edit
+<div class="container mt-4" style="overflow-x: hidden;">
+Let me know if you want me to auto-rewrite your HTML with the corrections included.

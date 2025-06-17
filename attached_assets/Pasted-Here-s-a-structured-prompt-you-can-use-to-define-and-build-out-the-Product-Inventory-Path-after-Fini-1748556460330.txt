@@ -1,0 +1,82 @@
+Here’s a structured prompt you can use to define and build out the Product Inventory Path after Finish Batch, especially for integrating with container logic, Shopify sync, and FIFO tracking:
+
+🔧 Prompt: Finish Batch → Product Inventory Logic & UI
+1. 🧭 Product Type Path Decision (after batch completion)
+✅ If Batch Output Type = "product", continue to product inventory logic
+
+❌ If "intermediate", skip this flow entirely (handled via ingredient stock logic)
+
+2. 📦 Product Selection (from Finish Batch Modal)
+Required: Select Product (Parent)
+
+Required: Select Variant (e.g. scent, type, color)
+
+Quick Add:
+Allow quick-add modal for creating:
+
+New Product Parent
+
+New Variant (auto-bond to parent)
+
+3. 🧴 Container-Based Yield Mapping
+✅ If Containers Were Selected During Start Batch:
+Each container instance (e.g. “4 oz jar”) becomes a size variant
+
+Quantities (2x 4 oz, 1x 8 oz) are logged as:
+
+Product Parent: e.g. Royal Tallow
+
+Variant: Lavender
+
+Size: 4 oz, 8 oz → auto-generated as sub-variant or size field
+
+❌ If No Containers Used:
+Yield is passed directly based on unit type selected in recipe (e.g., grams, mL, oz)
+
+These become the sellable unit for the product
+
+Used for Shopify sync and price/unit logic
+
+4. 📊 Product Inventory Page Structure
+Should mirror Inventory Page for raw ingredients:
+
+Header Fields:
+Product Name (parent)
+
+Variant (scent/type)
+
+Container Size (or Unit of Measure)
+
+Current Stock
+
+AWC (Average Weighted Cost)
+
+Expiration Flags (optional)
+
+Details Modal:
+Edit product info
+
+Set container equivalencies if not auto-linked
+
+Toggle Shopify Sync On/Off (future feature)
+
+History Table (with FIFO):
+Same logic as ingredient FIFO:
+
+Track restocks (via finished batches)
+
+Track deductions (manual spoil/trash/sale)
+
+Show unit cost, quantity, expiration
+
+Link back to batch that created the product
+
+5. 🧾 Product Inventory Logic Summary
+Feature	Product Inventory	Ingredient Inventory
+Source of Stock	Finish Batch	Manual + Purchase
+Container Tracking	Yes (optional)	Rare
+FIFO Tracking	✅	✅
+Manual Adjustments	✅ (same types)	✅
+Expiration Date	From Finish Batch	From restock form
+Shopify Sync Fields	Future (SKU, size)	N/A
+Quick Add Function	Product + Variant	Ingredient + Unit
