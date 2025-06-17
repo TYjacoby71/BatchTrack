@@ -4,32 +4,14 @@
  */
 
 function loadExpirationData(inventoryId, containerId) {
-    if (!inventoryId || !containerId) {
-        console.warn('Missing inventoryId or containerId for expiration data');
-        return;
-    }
-    
     fetch(`/expiration/api/product-inventory/${inventoryId}/expiration`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             const container = document.getElementById(containerId);
-            if (!container) {
-                console.warn(`Container element ${containerId} not found`);
-                return;
-            }
+            if (!container) return;
             
-            if (!data || !data.is_perishable) {
+            if (!data.is_perishable) {
                 container.innerHTML = '<span class="text-muted">Non-perishable</span>';
-                return;
-            }
-            
-            if (!data.expiration_date) {
-                container.innerHTML = '<span class="text-muted">No expiration date</span>';
                 return;
             }
             
@@ -59,7 +41,7 @@ function loadExpirationData(inventoryId, containerId) {
             console.error('Error loading expiration data:', error);
             const container = document.getElementById(containerId);
             if (container) {
-                container.innerHTML = '<span class="text-muted">Expiration unavailable</span>';
+                container.innerHTML = '<span class="text-muted">Error loading expiration</span>';
             }
         });
 }
