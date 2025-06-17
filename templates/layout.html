@@ -66,7 +66,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
-                    <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard') }}">User Dashboard</a></li></old_str>
+                    <li><a class="dropdown-item" href="{{ url_for('dashboard.dashboard') }}">User Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
                     <li><hr class="dropdown-divider"></li>
 
@@ -150,9 +150,9 @@
     <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block scripts %}{% endblock %}
-    {% if current_user.is_authenticated %}
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
     <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
+    {% if current_user.is_authenticated %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     {% endif %}
     </body>

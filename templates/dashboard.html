@@ -1,9 +1,11 @@
 {% extends 'layout.html' %}
 {% block content %}
 
-<div class="text-center" style="margin-top: 8vh; margin-bottom: 8vh;">
-  <h2 class="mb-4">Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
-  
+<div class="text-center mb-4">
+  <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+</div>
+
+<div class="text-center mb-4">
   <div class="d-inline-flex gap-3">
     {% if active_batch %}
       <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
