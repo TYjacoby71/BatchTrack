@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const shelfLifeField = document.getElementById('shelfLifeField');
 
     if (expirationSection) {
-        if (changeType === 'restock') {
+        if (changeType() === 'restock') {
             expirationSection.style.display = 'block';
         } else {
             expirationSection.style.display = 'none';
@@ -47,5 +47,18 @@ function changeType(selectElement) {
 }
 
 function updateChangeType(selectElement) {
-    
+
+}
+
+// Function to handle quantity input changes
+function handleQuantityChange() {
+    const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+    const changeType = document.querySelector('input[name="change_type"]:checked')?.value;
+
+    updateQuantityDisplay(quantity, changeType);
+}
+
+// Function to get selected change type
+function changeType() {
+    return document.querySelector('input[name="change_type"]:checked')?.value || 'restock';
 }
