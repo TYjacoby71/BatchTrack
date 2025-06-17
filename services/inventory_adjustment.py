@@ -67,20 +67,24 @@ def process_inventory_adjustment(
     # Handle expiration using ExpirationService
     from blueprints.expiration.services import ExpirationService
     
-    # Use centralized expiration override handling
+    expiration_date = None
+    shelf_life_to_use = None
+
     if custom_expiration_date:
-        # Direct expiration date override (if provided)
+        # Use the custom expiration date provided
         expiration_date = custom_expiration_date
-        shelf_life_to_use = custom_shelf_life_days
+        shelf_life_to_use = custom_shelf_life_days  # Track custom shelf life used
+
+    elif change_type == 'restock' and item.is_perishable:
+        # Use custom shelf life if provided, otherwise use ingredient default
+        shelf_life = custom_shelf_life_days or item.shelf_life_days
+        if shelf_life:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), shelf_life
+            )
+            shelf_life_to_use = shelf_life
     else:
-        # Use ExpirationService to handle override logic
-        override_expiration = custom_shelf_life_days is not None
-        expiration_date, shelf_life_to_use = ExpirationService.handle_expiration_override(
-            inventory_item=item,
-            change_type=change_type,
-            override_expiration=override_expiration,
-            custom_shelf_life_days=custom_shelf_life_days
-        )
+        shelf_life_to_use = None
 
     # Get cost - handle weighted average vs override
     if change_type in ['spoil', 'trash']:
