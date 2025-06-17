@@ -42,10 +42,10 @@
       </div>
 
       <!-- SKU Inventory Table -->
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card mb-4" style="overflow-x: auto;">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
           <h4>SKU Inventory by Batch</h4>
-          <div class="btn-group">
+          <div class="btn-group flex-wrap">
             <div class="dropdown">
               <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="fas fa-filter"></i> Filter View
@@ -74,10 +74,10 @@
             </div>
           </div>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body p-0" style="overflow-x: auto;">
           {% if fifo_entries %}
             <div class="table-responsive">
-              <table class="table table-sm table-striped mb-0" id="fifoTable">
+              <table class="table table-sm table-striped mb-0 w-100" id="fifoTable">
                 <thead>
                   <tr>
                     <th data-column="fifo">FIFO #</th>
