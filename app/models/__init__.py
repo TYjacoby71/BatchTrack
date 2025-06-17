@@ -4,7 +4,7 @@ from .recipe import Recipe, RecipeIngredient
 from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient, BatchInventoryLog
 from .product import Product, ProductVariation, ProductInventory, ProductEvent, ProductInventoryHistory
 from .conversion import ConversionLog
-from .tag import Tag, RecipeTag, InventoryTag, ProductTag
+from .tag import Tag
 
 __all__ = [
     'User', 'Organization', 'Role', 'Permission', 'RolePermission', 'UserRole',
@@ -13,5 +13,5 @@ __all__ = [
     'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient', 'BatchInventoryLog',
     'Product', 'ProductVariation', 'ProductInventory', 'ProductEvent', 'ProductInventoryHistory',
     'ConversionLog',
-    'Tag', 'RecipeTag', 'InventoryTag', 'ProductTag'
+    'Tag'
 ]
