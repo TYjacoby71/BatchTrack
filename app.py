@@ -204,11 +204,12 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route("/")
+@app.route("/", methods=['GET'])
 def index():
     print(f"=== INDEX ROUTE CALLED ===")
     print(f"User authenticated: {current_user.is_authenticated}")
     print(f"Anonymous user: {current_user.is_anonymous}")
+    print(f"Current user: {current_user}")
     if current_user.is_authenticated:
         print("Redirecting authenticated user to dashboard")
         return redirect(url_for('dashboard.dashboard'))
