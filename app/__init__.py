@@ -20,7 +20,7 @@ def create_app(config_name='default'):
     from . import models
 
     # Setup logging
-    from .utils.unit_utils import setup_logging
+    from .utils.template_helpers import setup_logging
     setup_logging(app)
 
     # Register blueprints

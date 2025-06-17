@@ -1,28 +1,62 @@
+from flask import current_app
+from models import Unit
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+
+def setup_logging(app):
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+
+    file_handler = RotatingFileHandler('logs/batchtrack.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('BatchTrack startup')
+
+def get_global_unit_list():
+    try:
+        units = Unit.query.filter_by(is_custom=False).order_by(Unit.type, Unit.name).all()
+        custom_units = Unit.query.filter_by(is_custom=True).order_by(Unit.name).all()
+        return units + custom_units
+    except Exception as e:
+        return []
+
+def validate_density_requirements(from_unit, to_unit, ingredient=None):
+    """
+    Validates density requirements for unit conversions
+    Returns (needs_density: bool, message: str)
+    """
+    if from_unit.type == to_unit.type:
+        return False, None
+
+    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+        if not ingredient:
+            return True, "Ingredient context required for volume ↔ weight conversion"
+
+        if ingredient.density:
+            return False, None
+
+        if ingredient.category and ingredient.category.default_density:
+            return False, None
+
+        return True, f"Density required for {ingredient.name}. Set ingredient density or category."
+
+    return False, None
 
 def register_template_helpers(app):
-    """Register template context processors and filters"""
-    from ..models import Unit, IngredientCategory
+    """Register template helper functions"""
 
-    @app.template_filter('attr_multiply')
-    def attr_multiply_filter(item, attr1, attr2):
-        """Multiply two attributes of a single item"""
-        if item is None:
-            return 0
-        val1 = getattr(item, attr1, 0)
-        val2 = getattr(item, attr2, 0)
-        if val1 is None:
-            val1 = 0
-        if val2 is None:
-            val2 = 0
-        return float(val1) * float(val2)
-
-    @app.context_processor
-    def inject_units():
-        units = Unit.query.order_by(Unit.type, Unit.name).all()
-        categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-        return dict(units=units, categories=categories)
-
-    @app.context_processor
-    def inject_permissions():
-        from ..utils.permissions import has_permission, has_role
-        return dict(has_permission=has_permission, has_role=has_role)
+    @app.template_global()
+    def get_global_unit_list_template():
+        """Get list of all units for templates"""
+        try:
+            units = Unit.query.filter_by(is_custom=False).order_by(Unit.type, Unit.name).all()
+            custom_units = Unit.query.filter_by(is_custom=True).order_by(Unit.name).all()
+            return units + custom_units
+        except Exception as e:
+            current_app.logger.error(f"Error loading units: {e}")
+            return []
