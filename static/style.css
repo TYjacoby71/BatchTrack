@@ -88,8 +88,6 @@ body {
 /* History table specific styles */
 .table td {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .table td a {
