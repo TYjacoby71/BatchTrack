@@ -4,7 +4,9 @@ from flask_login import login_required
 import json
 import os
 from datetime import datetime
-from ...fault_log_utils import log_fault, FAULT_LOG_PATH
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+from fault_log_utils import log_fault, FAULT_LOG_PATH
 
 fault_log_bp = Blueprint('faults', __name__)
 
@@ -12,7 +14,7 @@ fault_log_bp = Blueprint('faults', __name__)
 @login_required
 def view_fault_log():
     try:
-        from utils import get_setting
+        from ..utils import get_setting
         page = request.args.get('page', 1, type=int)
         per_page = get_setting("per_page", 20)
         faults = []
