@@ -3,7 +3,7 @@ from .inventory import InventoryItem, InventoryHistory, Unit, CustomUnitMapping,
 from .recipe import Recipe, RecipeIngredient
 from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient, BatchInventoryLog
 from .product import Product, ProductVariation, ProductInventory, ProductEvent, ProductInventoryHistory
-from .conversion import ConversionLog, Unit
+from .conversion import ConversionLog
 from .tag import Tag, RecipeTag, InventoryTag, ProductTag
 
 __all__ = [
