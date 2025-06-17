@@ -37,7 +37,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "FLASK_ENV=development PYTHONPATH=. python run.py"
+args = "python run.py"
 
 [[workflows.workflow]]
 name = "Run Tests"
