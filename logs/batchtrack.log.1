@@ -1,4 +1,8 @@
-2025-06-17 22:03:00,674 ERROR: Exception on /auth/login [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-17 22:05:35,612 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:05:37,905 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:05:52,181 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:06:25,938 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:06:40,079 ERROR: Exception on /auth/login [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -66,71 +70,13 @@ WHERE user.username = ?
  LIMIT ? OFFSET ?]
 [parameters: ('admin', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-06-17 22:03:20,930 ERROR: Exception on /auth/login [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: user.is_active
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/auth/routes.py", line 19, in login
-    user = User.query.filter_by(username=username).first()
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2759, in first
-    return self.limit(1)._iter().first()  # type: ignore
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
-    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
-                                                  ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
-    return self._execute_internal(
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
-    result: Result[Any] = compile_state_cls.orm_execute_statement(
-                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
-    result = conn.execute(
-             ^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
-    return meth(
-           ^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: user.is_active
-[SQL: SELECT user.id AS user_id, user.username AS user_username, user.password_hash AS user_password_hash, user.role AS user_role, user.first_name AS user_first_name, user.last_name AS user_last_name, user.email AS user_email, user.phone AS user_phone, user.subscription_class AS user_subscription_class, user.organization_id AS user_organization_id, user.created_at AS user_created_at, user.last_login AS user_last_login, user.is_active AS user_is_active 
-FROM user 
-WHERE user.username = ?
- LIMIT ? OFFSET ?]
-[parameters: ('admin', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-06-17 22:07:26,265 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:07:28,660 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:08:42,490 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:08:44,784 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:09:02,282 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:09:02,292 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:09:35,250 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:11:08,012 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:11:10,425 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
+2025-06-17 22:11:26,772 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/template_helpers.py:17]
