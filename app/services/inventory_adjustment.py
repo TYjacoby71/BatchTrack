@@ -3,7 +3,7 @@ from flask_login import current_user
 from ..models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from ..services.conversion_wrapper import safe_convert
-from ..fifo.services import deduct_fifo, get_fifo_entries
+from ..blueprints.fifo.services import deduct_fifo, get_fifo_entries
 import base64
 
 def validate_inventory_fifo_sync(item_id):
