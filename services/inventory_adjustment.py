@@ -36,11 +36,13 @@ def process_inventory_adjustment(
     item_id,
     quantity,
     change_type,
-    unit,
-    notes='',
+    unit=None,
+    notes=None,
     batch_id=None,
     created_by=None,
     cost_override=None,
+    custom_expiration_date=None,
+    custom_shelf_life_days=None,
 ):
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
@@ -62,10 +64,27 @@ def process_inventory_adjustment(
     else:
         qty_change = quantity
 
-    # Handle expiration
+    # Handle expiration using ExpirationService
+    from blueprints.expiration.services import ExpirationService
+    
     expiration_date = None
-    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
-        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+    shelf_life_to_use = None
+
+    if custom_expiration_date:
+        # Use the custom expiration date provided
+        expiration_date = custom_expiration_date
+        shelf_life_to_use = custom_shelf_life_days  # Track custom shelf life used
+
+    elif change_type == 'restock' and item.is_perishable:
+        # Use custom shelf life if provided, otherwise use ingredient default
+        shelf_life = custom_shelf_life_days or item.shelf_life_days
+        if shelf_life:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), shelf_life
+            )
+            shelf_life_to_use = shelf_life
+    else:
+        shelf_life_to_use = None
 
     # Get cost - handle weighted average vs override
     if change_type in ['spoil', 'trash']:
@@ -202,6 +221,8 @@ def process_inventory_adjustment(
                 quantity_used=0.0,  # Additions don't consume inventory - always 0
                 created_by=created_by,
                 expiration_date=expiration_date,
+                shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
+                is_perishable=item.is_perishable if expiration_date else False,
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None  # Track batch for finished_batch
             )
             db.session.add(history)

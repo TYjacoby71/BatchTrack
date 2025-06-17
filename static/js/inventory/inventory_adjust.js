@@ -15,4 +15,28 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Adjustment form submitted');
         });
     });
+
+    // Show/hide shelf life override section for restocks
+    const expirationSection = document.getElementById('expirationOverrideSection');
+    const expirationCheckbox = document.getElementById('override_expiration');
+    const shelfLifeField = document.getElementById('shelfLifeField');
+
+    if (expirationSection) {
+        if (changeType === 'restock') {
+            expirationSection.style.display = 'block';
+        } else {
+            expirationSection.style.display = 'none';
+            if (expirationCheckbox) expirationCheckbox.checked = false;
+            if (shelfLifeField) shelfLifeField.style.display = 'none';
+        }
+    }
+
+    // Handle shelf life override checkbox
+    if (expirationCheckbox) {
+        expirationCheckbox.addEventListener('change', function() {
+            if (shelfLifeField) {
+                shelfLifeField.style.display = this.checked ? 'block' : 'none';
+            }
+        });
+    }
 });
