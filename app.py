@@ -46,7 +46,6 @@ from blueprints.conversion.routes import conversion_bp
 from blueprints.settings.routes import settings_bp
 from blueprints.quick_add.routes import quick_add_bp
 from routes.bulk_stock_routes import bulk_stock_bp
-# Inventory adjustments now handled in blueprints/inventory/routes.py
 from routes.fault_log_routes import faults_bp
 from routes.product_log_routes import product_log_bp
 from routes.tag_manager_routes import tag_bp
@@ -61,6 +60,7 @@ from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
+from routes.email_signup_routes import email_signup_bp
 
 # Register blueprints
 from routes.app_routes import app_routes_bp
@@ -77,6 +77,10 @@ from routes.email_signup_routes import email_signup_bp
 
 app.register_blueprint(app_routes_bp)
 app.register_blueprint(batches_bp)
+app.register_blueprint(start_batch_bp)
+app.register_blueprint(finish_batch_bp)
+app.register_blueprint(cancel_batch_bp)
+app.register_blueprint(add_extra_bp)
 app.register_blueprint(inventory_bp)
 app.register_blueprint(recipes_bp)
 app.register_blueprint(conversion_bp)
