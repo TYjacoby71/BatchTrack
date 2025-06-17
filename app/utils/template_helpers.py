@@ -1,5 +1,5 @@
 from flask import current_app
-from models import Unit
+from app.models import Unit
 import logging
 from logging.handlers import RotatingFileHandler
 import os

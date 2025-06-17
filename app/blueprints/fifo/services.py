@@ -1,4 +1,5 @@
-from models import InventoryHistory, db
+from app.models import InventoryHistory
+from extensions import db
 from sqlalchemy import and_, desc
 from datetime import datetime
 
@@ -53,7 +54,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     Handles recounts with proper FIFO integrity and expiration tracking
     Aligned with inventory_adjustment service standards
     """
-    from models import InventoryItem
+    from app.models import InventoryItem
     from datetime import datetime, timedelta
 
     item = InventoryItem.query.get(inventory_item_id)
