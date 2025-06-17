@@ -175,18 +175,20 @@ def adjust_inventory(id):
         cost_entry_type = request.form.get('cost_entry_type', 'no_change')
         cost_per_unit_input = request.form.get('cost_per_unit')
 
-        # Handle shelf life override
+        # Handle custom shelf life override
         override_expiration = request.form.get('override_expiration') == 'on'
-        custom_shelf_life_days = None
+        custom_expiration_date = None
         if override_expiration and change_type == 'restock':
-            shelf_life_str = request.form.get('custom_shelf_life_days')
-            if shelf_life_str:
+            custom_shelf_life_str = request.form.get('custom_shelf_life_days')
+            if custom_shelf_life_str:
                 try:
-                    custom_shelf_life_days = int(shelf_life_str)
-                    if custom_shelf_life_days < 1:
-                        flash('Shelf life must be at least 1 day', 'error')
-                        return redirect(url_for('inventory.view_inventory', id=id))
-                except ValueError:
+                    custom_shelf_life = int(custom_shelf_life_str)
+                    if custom_shelf_life > 0:
+                        from blueprints.expiration.services import ExpirationService
+                        custom_expiration_date = ExpirationService.calculate_expiration_date(
+                            datetime.utcnow(), custom_shelf_life
+                        )
+                except (ValueError, TypeError):
                     flash('Invalid shelf life value', 'error')
                     return redirect(url_for('inventory.view_inventory', id=id))
 
@@ -244,15 +246,30 @@ def adjust_inventory(id):
 
             # Use centralized adjustment service for regular adjustments
             from services.inventory_adjustment import process_inventory_adjustment
+            # Get custom shelf life for tracking
+            quantity = input_quantity
+            unit = input_unit
+            cost_override = restock_cost
+
+            custom_shelf_life = None
+            if override_expiration:
+                custom_shelf_life_str = request.form.get('custom_shelf_life_days')
+                if custom_shelf_life_str:
+                    try:
+                        custom_shelf_life = int(custom_shelf_life_str)
+                    except (ValueError, TypeError):
+                        pass
+
             success = process_inventory_adjustment(
                 item_id=id,
-                quantity=input_quantity,
+                quantity=quantity,
                 change_type=change_type,
-                unit=input_unit,
+                unit=unit,
                 notes=notes,
                 created_by=current_user.id,
-                cost_override=restock_cost,
-                custom_shelf_life_days=custom_shelf_life_days if change_type == 'restock' else None
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life
             )
 
             if success:

@@ -42,6 +42,7 @@ def process_inventory_adjustment(
     created_by=None,
     cost_override=None,
     custom_expiration_date=None,
+    custom_shelf_life_days=None,
 ):
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
@@ -63,18 +64,25 @@ def process_inventory_adjustment(
     else:
         qty_change = quantity
 
-    # Handle expiration
+    # Handle expiration using ExpirationService
+    from blueprints.expiration.services import ExpirationService
+    
     expiration_date = None
     shelf_life_to_use = None
 
     if custom_expiration_date:
         # Use the custom expiration date provided
         expiration_date = custom_expiration_date
-        shelf_life_to_use = None  # Custom date provided, shelf life not applicable
+        shelf_life_to_use = custom_shelf_life_days  # Track custom shelf life used
 
-    elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
-        expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
-        shelf_life_to_use = item.shelf_life_days
+    elif change_type == 'restock' and item.is_perishable:
+        # Use custom shelf life if provided, otherwise use ingredient default
+        shelf_life = custom_shelf_life_days or item.shelf_life_days
+        if shelf_life:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), shelf_life
+            )
+            shelf_life_to_use = shelf_life
     else:
         shelf_life_to_use = None
 
