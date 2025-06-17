@@ -108,7 +108,6 @@ body {
 
 .table-responsive .table {
   margin-bottom: 0;
-  min-width: 800px; /* Minimum width to trigger horizontal scroll */
 }
 
 .table th,

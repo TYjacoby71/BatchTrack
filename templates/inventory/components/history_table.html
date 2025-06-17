@@ -1,10 +1,11 @@
 <!-- History Table -->
-<div class="card" style="overflow-x: hidden;">
+<div class="card">
   <div class="card-header">
     <h5 class="mb-0">History</h5>
   </div>
-  <div class="card-body p-0" style="overflow-x: auto;">
-    <table class="table table-hover table-sm mb-0" style="table-layout: auto;">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0">
       <thead>
         <tr>
           <th style="white-space: nowrap;">Date</th>
@@ -118,10 +119,13 @@
         {% endfor %}
       </tbody>
       </table>
+    </div>
 
-    {% if pagination.pages > 1 %}
+    </div>
+  {% if pagination.pages > 1 %}
+  <div class="card-footer">
     <nav aria-label="History navigation">
-      <ul class="pagination">
+      <ul class="pagination justify-content-center mb-0">
         {% if pagination.has_prev %}
         <li class="page-item">
           <a class="page-link" href="{{ url_for('inventory.view_inventory', id=item.id, page=pagination.prev_num) }}">&laquo;</a>
@@ -145,6 +149,6 @@
         {% endif %}
       </ul>
     </nav>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
