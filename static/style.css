@@ -85,6 +85,16 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+/* History table specific styles */
+.table td {
+  white-space: nowrap;
+}
+
+.table td a {
+  display: inline-block;
+  max-width: 100%;
+}
+
 /* Table responsive wrapper for horizontal scrolling */
 .table-responsive {
   overflow-x: auto;
@@ -96,7 +106,6 @@ body {
 
 .table-responsive .table {
   margin-bottom: 0;
-  min-width: 800px; /* Minimum width to trigger horizontal scroll */
 }
 
 .table th,
@@ -649,7 +658,7 @@ input:checked + .toggle-label:before {
   border: 1px solid #dee2e6;
   border-radius: 0.375rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  overflow: visible;
+  overflow-x: hidden;
 }
 
 .card .card-body {

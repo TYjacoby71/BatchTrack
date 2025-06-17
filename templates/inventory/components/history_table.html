@@ -3,20 +3,23 @@
   <div class="card-header">
     <h5 class="mb-0">History</h5>
   </div>
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table">
+  <div class="card-body p-0">
+    <div style="overflow-x: auto;">
+      <table class="table table-hover table-sm mb-0" style="min-width: 1200px;">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Change Type</th>
-          <th>Quantity Change</th>
-          <th>Remaining</th>
-          <th>Cost per Unit</th>
-          <th>Total Cost</th>
-          <th>Used For</th>
-          <th>Credited/Debited To</th>
-          <th>FIFO ID 
+          <th style="white-space: nowrap;">Date</th>
+          <th style="white-space: nowrap;">Change Type</th>
+          <th style="white-space: nowrap;">Quantity Change</th>
+          <th style="white-space: nowrap;">Remaining</th>
+          <th style="white-space: nowrap;">Cost per Unit</th>
+          <th style="white-space: nowrap;">Total Cost</th>
+          <th style="white-space: nowrap;">Used For</th>
+          <th style="white-space: nowrap;">Credited/Debited To</th>
+          <th style="white-space: nowrap;">FIFO ID</th>
+          <th style="white-space: nowrap;">Exp Date</th>
+          <th style="white-space: nowrap;">Quantity Used</th>
+          <th style="white-space: nowrap;">Created By</th> 
             <i class="fas fa-info-circle text-muted ms-1" 
                data-bs-toggle="popover" 
                data-bs-placement="top"
@@ -44,9 +47,6 @@
                style="cursor: pointer;">
             </i>
           </th>
-          <th>Exp Date</th>
-          <th>Quantity Used</th>
-          <th>Created By</th>
         </tr>
       </thead>
       <tbody>
@@ -121,9 +121,11 @@
       </table>
     </div>
 
-    {% if pagination.pages > 1 %}
+    </div>
+  {% if pagination.pages > 1 %}
+  <div class="card-footer">
     <nav aria-label="History navigation">
-      <ul class="pagination">
+      <ul class="pagination justify-content-center mb-0">
         {% if pagination.has_prev %}
         <li class="page-item">
           <a class="page-link" href="{{ url_for('inventory.view_inventory', id=item.id, page=pagination.prev_num) }}">&laquo;</a>
@@ -147,6 +149,6 @@
         {% endif %}
       </ul>
     </nav>
-    {% endif %}
   </div>
+  {% endif %}
 </div>

@@ -1,4 +1,3 @@
-
 <!-- Inventory Adjustment -->
 <div class="card mb-4">
   <div class="card-header">
@@ -13,7 +12,7 @@
             <label>Change Type</label>
             <select class="form-control" name="change_type" required>
               <option value="restock">Restock</option>
-              <option value="spoil">Spoilage</option>
+              <option value="spoil">Spoil</option>
               <option value="trash">Trash</option>
             </select>
           </div>
@@ -51,23 +50,8 @@
           </div>
         </div>
       </div>
-      <!-- Shelf Life Override -->
-      <div class="form-group mt-3" id="expirationOverrideSection" style="display: none;">
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="override_expiration" name="override_expiration">
-          <label class="form-check-label" for="override_expiration">
-            Override shelf life for this restock
-          </label>
-        </div>
-        <div id="shelfLifeField" style="display: none;">
-          <label for="custom_shelf_life_days">Custom Shelf Life (days)</label>
-          <input type="number" class="form-control" id="custom_shelf_life_days" name="custom_shelf_life_days" min="1">
-          <small class="form-text text-muted">
-            This will override the ingredient's default shelf life for this specific restock entry. Expiration date will be calculated automatically.
-          </small>
-        </div>
-      </div>
-      
+
+
       <div class="form-group mt-3">
         <label>Notes</label>
         <textarea class="form-control" name="notes" rows="2"></textarea>
@@ -115,28 +99,9 @@ document.getElementById('costEntryType').dispatchEvent(new Event('change'));
 
 document.querySelector('select[name="change_type"]').addEventListener('change', function() {
   const costInput = document.getElementById('costPerUnit');
-  const expirationSection = document.getElementById('expirationOverrideSection');
-  
+
   costInput.disabled = ['spoil', 'trash'].includes(this.value);
   if (costInput.disabled) costInput.value = '';
-  
-  // Show expiration override only for restock operations
-  if (this.value === 'restock') {
-    expirationSection.style.display = 'block';
-  } else {
-    expirationSection.style.display = 'none';
-    document.getElementById('override_expiration').checked = false;
-    document.getElementById('expirationDateField').style.display = 'none';
-  }
-});
 
-// Handle expiration override checkbox
-document.getElementById('override_expiration').addEventListener('change', function() {
-  const dateField = document.getElementById('expirationDateField');
-  dateField.style.display = this.checked ? 'block' : 'none';
-  
-  if (!this.checked) {
-    document.getElementById('expiration_date').value = '';
-  }
 });
 </script>

@@ -123,18 +123,25 @@
                     <td data-column="status">
                       {% if entry.quantity <= 0 %}
                         <span class="badge bg-secondary">Consumed</span>
-                      {% elif entry.expiration_date and entry.expiration_date < moment.now().date() %}
-                        <span class="badge bg-danger">Expired</span>
-                      {% elif entry.expiration_date and (entry.expiration_date - moment.now().date()).days < 7 %}
-                        <span class="badge bg-warning">Expiring</span>
+                      {% elif entry.expiration_date %}
+                        {% set today = moment.utcnow().date() %}
+                        {% set days_until = (entry.expiration_date - today).days %}
+                        {% if days_until < 0 %}
+                          <span class="badge bg-danger">Expired</span>
+                        {% elif days_until < 7 %}
+                          <span class="badge bg-warning">Expiring</span>
+                        {% else %}
+                          <span class="badge bg-success">Available</span>
+                        {% endif %}
                       {% else %}
-                        <span class="badge bg-success">Available</span>
+                        <span class="badge bg-info">Non-Perishable</span>
                       {% endif %}
                     </td>
                     <td data-column="cost" style="text-align: right; font-size: 0.9em;">${{ "%.3f"|format(entry.batch_cost_per_unit or 0) }}</td>
                     <td data-column="expiration" style="font-size: 0.85em;">
                       {% if entry.expiration_date %}
-                        {% set days_until = (entry.expiration_date - moment.now().date()).days if entry.expiration_date else 0 %}
+                        {% set today = moment.utcnow().date() %}
+                        {% set days_until = (entry.expiration_date - today).days %}
                         <span class="{% if days_until < 0 %}text-danger{% elif days_until < 7 %}text-warning{% endif %}">
                           {{ entry.expiration_date.strftime('%m/%d/%y') }}
                           {% if days_until < 0 %}<br><small>(EXPIRED)</small>{% elif days_until < 30 %}<br><small>({{ days_until }}d)</small>{% endif %}
@@ -145,8 +152,9 @@
                     </td>
                     <td data-column="actions" style="text-align: center;">
                       {% if entry.quantity > 0 %}
-                        <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustBatchModal"
-                                data-inventory-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}">
+                        <button class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
+                                data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
+                                data-batch-id="{{ entry.batch_id or 'N/A' }}">
                           Adjust
                         </button>
                       {% else %}
@@ -208,7 +216,6 @@
       </div>
     </div>
   </div>
-</div>
 
 <!-- Sale/Deduction Modal -->
 <div class="modal fade" id="deductModal" tabindex="-1">
@@ -280,8 +287,66 @@
   </div>
 </div>
 
+<!-- FIFO Adjustment Modal -->
+<div class="modal fade" id="adjustFifoModal" tabindex="-1" aria-labelledby="adjustFifoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adjustFifoModalLabel">Adjust FIFO Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" id="adjustFifoForm">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+          <div class="mb-3">
+            <label for="fifoCurrentQty" class="form-label">Current Quantity</label>
+            <input type="text" class="form-control" id="fifoCurrentQty" readonly>
+          </div>
 
+          <div class="mb-3">
+            <label for="fifoChangeType" class="form-label">Adjustment Type</label>
+            <select class="form-control" name="change_type" id="fifoChangeType" required>
+              <option value="">Select adjustment type...</option>
+              <option value="recount">Recount</option>
+              <option value="sale">Sale</option>
+              <option value="spoil">Spoil</option>
+              <option value="damage">Damage</option>
+              <option value="trash">Trash</option>
+              <option value="gift/tester">Gift/Tester</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="fifoQuantity" class="form-label">Quantity</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="quantity" id="fifoQuantity" step="0.01" min="0" required>
+              <span class="input-group-text" id="fifoUnit"></span>
+            </div>
+            <div class="form-text" id="fifoQuantityHelp"></div>
+          </div>
+
+          <div class="mb-3">
+            <label for="fifoNotes" class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" id="fifoNotes" rows="2" placeholder="Optional notes about this adjustment"></textarea>
+          </div>
+
+          <div class="alert alert-info">
+            <small><strong>Batch:</strong> <span id="fifoBatchInfo"></span></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
 <script>
 function toggleView(viewType) {
   const availableRows = document.querySelectorAll('.available-row');
@@ -310,6 +375,8 @@ function toggleSaleFields(reason) {
   const quantityInput = document.getElementById('quantityInput');
   const quantityHelp = document.getElementById('quantityHelp');
 
+  if (!saleFields || !manualAddFields || !quantityLabel || !quantityInput || !quantityHelp) return;
+
   // Show/hide appropriate fields
   saleFields.style.display = reason === 'sale' ? 'block' : 'none';
   manualAddFields.style.display = reason === 'manual_add' ? 'block' : 'none';
@@ -330,11 +397,24 @@ function toggleSaleFields(reason) {
   }
 }
 
-// Initialize with available only and set initial form state
+function toggleColumn(columnName, show) {
+  const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
+  const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
+
+  headers.forEach(header => {
+    header.style.display = show ? '' : 'none';
+  });
+
+  cells.forEach(cell => {
+    cell.style.display = show ? '' : 'none';
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize view with available only
   toggleView('available');
 
-  // Set initial form state for sale
+  // Set initial form state for sale modal
   const reasonSelect = document.querySelector('select[name="reason"]');
   if (reasonSelect) {
     toggleSaleFields(reasonSelect.value);
@@ -349,19 +429,111 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
+
+  // FIFO Modal Setup
+  const adjustFifoModal = document.getElementById('adjustFifoModal');
+  const adjustFifoForm = document.getElementById('adjustFifoForm');
+  const changeTypeSelect = document.getElementById('fifoChangeType');
+  const quantityInput = document.getElementById('fifoQuantity');
+  const quantityHelp = document.getElementById('fifoQuantityHelp');
+
+  if (adjustFifoModal && adjustFifoForm && changeTypeSelect && quantityInput && quantityHelp) {
+    // Modal show event
+    adjustFifoModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      if (!button) return;
+
+      const fifoId = button.getAttribute('data-fifo-id');
+      const currentQty = button.getAttribute('data-current-qty');
+      const unit = button.getAttribute('data-unit');
+      const batchId = button.getAttribute('data-batch-id');
+
+      // Update form action
+      adjustFifoForm.action = `/products/adjust_fifo/${fifoId}`;
+
+      // Update modal content
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
+      const fifoUnitEl = document.getElementById('fifoUnit');
+      const fifoBatchInfoEl = document.getElementById('fifoBatchInfo');
+      const fifoNotesEl = document.getElementById('fifoNotes');
+
+      if (fifoCurrentQtyEl) fifoCurrentQtyEl.value = `${currentQty} ${unit}`;
+      if (fifoUnitEl) fifoUnitEl.textContent = unit;
+      if (fifoBatchInfoEl) {
+        fifoBatchInfoEl.textContent = (batchId && batchId !== 'N/A') ? `Batch #${batchId}` : 'No batch reference';
+      }
+
+      // Reset form
+      changeTypeSelect.value = '';
+      quantityInput.value = '';
+      if (fifoNotesEl) fifoNotesEl.value = '';
+      quantityHelp.textContent = '';
+      quantityInput.removeAttribute('max');
+    });
+
+    // Change type event
+    changeTypeSelect.addEventListener('change', function() {
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
+      if (!fifoCurrentQtyEl) return;
+
+      // Parse current quantity from the input value (format: "10.0 count")
+      const currentQtyText = fifoCurrentQtyEl.value || '';
+      const currentQty = parseFloat(currentQtyText.split(' ')[0]) || 0;
+      const changeType = this.value;
+
+      if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
+        // For deductions, limit to available quantity
+        quantityInput.setAttribute('max', currentQty);
+        quantityHelp.textContent = `Maximum: ${currentQty} (will be deducted)`;
+        quantityInput.placeholder = 'Amount to deduct';
+      } else if (changeType === 'recount') {
+        // For recount, allow any positive value
+        quantityInput.removeAttribute('max');
+        quantityHelp.textContent = 'Enter the correct total quantity for this FIFO entry';
+        quantityInput.placeholder = 'New total quantity';
+      } else {
+        quantityInput.removeAttribute('max');
+        quantityHelp.textContent = '';
+        quantityInput.placeholder = 'Enter quantity';
+      }
+    });
+
+    // Form submit event
+    adjustFifoForm.addEventListener('submit', function(e) {
+      const changeType = changeTypeSelect.value;
+      const enteredQty = parseFloat(quantityInput.value);
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
+
+      if (!changeType) {
+        e.preventDefault();
+        alert('Please select an adjustment type');
+        return;
+      }
+
+      if (!enteredQty || enteredQty <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid quantity');
+        return;
+      }
+
+      if (fifoCurrentQtyEl) {
+        const currentQtyText = fifoCurrentQtyEl.value || '';
+        const currentQty = parseFloat(currentQtyText.split(' ')[0]) || 0;
+        
+        // For deductions, validate we don't exceed available quantity
+        if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
+          if (enteredQty > currentQty) {
+            e.preventDefault();
+            alert(`Cannot deduct ${enteredQty} - only ${currentQty} available`);
+            return;
+          }
+        }
+      } quantity input
+        const difference = enteredQty - currentQty;
+        quantityInput.value = difference;
+      }
+    });
+  }
 });
-
-function toggleColumn(columnName, show) {
-  const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
-  const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
-
-  headers.forEach(header => {
-    header.style.display = show ? '' : 'none';
-  });
-
-  cells.forEach(cell => {
-    cell.style.display = show ? '' : 'none';
-  });
-}
 </script>
 {% endblock %}
