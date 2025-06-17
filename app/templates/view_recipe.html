@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+{% from 'macros/forms.html' import csrf_form %}
+{% block content %}
+<h2>{{ recipe.name }}</h2>
+
+{% if recipe.is_locked %}
+  <span class="badge bg-secondary">Locked</span>
+{% endif %}
+{% if recipe.parent_id %}
+  <p class="text-muted">Variation of: 
+    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">
+      {{ recipe.parent.name }}
+    </a>
+  </p>
+{% endif %}
+
+<div class="action-buttons mb-3">
+  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">{% if recipe.parent_id %}Make New Parent{% else %}Duplicate{% endif %}</a>
+  {% if not recipe.parent_id %}
+  <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
+  {% endif %}
+  {% if recipe.is_locked %}
+    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
+      {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
+    </button>
+  {% else %}
+    <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-warning">
+        {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+<!-- Unlock Modal -->
+<div class="modal fade" id="unlockModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enter Password to Unlock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('recipes.unlock_recipe', recipe_id=recipe.id) }}">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="unlock_password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="unlock_password" name="unlock_password" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Unlock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="recipe-details">
+    <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
+
+    <h3>Ingredients</h3>
+    <ul>
+        {% for assoc in recipe.recipe_ingredients %}
+        <li>{{ assoc.inventory_item.name }}: {{ assoc.amount }} {{ assoc.unit }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if recipe.instructions %}
+    <h3>Instructions</h3>
+    <p>{{ recipe.instructions }}</p>
+    {% endif %}
+</div>
+
+<div class="actions">
+    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
+        <button type="submit" 
+                class="btn btn-primary" 
+                >Edit Recipe</button>
+
+    </form>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
+</div>
+{% endblock %}

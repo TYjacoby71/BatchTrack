@@ -1,0 +1,397 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Products</h2>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">+ New Product</a>
+      <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
+        <i class="fas fa-filter"></i> Filters
+      </button>
+      <div class="btn-group" role="group">
+        <button class="btn btn-secondary btn-sm" id="cardViewBtn" onclick="showView('cardView')">Card View</button>
+        <button class="btn btn-outline-secondary btn-sm" id="tableViewBtn" onclick="showView('tableView')">Table View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="collapse mb-4" id="filterSection">
+    <div class="card card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Sort By:</label>
+          <div class="btn-group w-100" role="group">
+            <button class="btn {% if current_sort == 'popular' %}btn-info{% else %}btn-outline-info{% endif %} btn-sm" onclick="sortProducts('popular')">Most Popular</button>
+            <button class="btn {% if current_sort == 'name' or not current_sort %}btn-secondary{% else %}btn-outline-secondary{% endif %} btn-sm" onclick="sortProducts('name')">A-Z</button>
+            <button class="btn {% if current_sort == 'stock' %}btn-warning{% else %}btn-outline-warning{% endif %} btn-sm" onclick="sortProducts('stock')">Low Stock</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Search Products:</label>
+          <input type="text" id="productFilter" class="form-control" placeholder="Search products...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if products %}
+    <!-- Products Card View -->
+    <div class="row" id="productsContainer">
+      {% for product in products %}
+      <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <h6 class="mb-0 me-2">{{ product.name }}</h6>
+              {% if product.variations|length > 0 %}
+              <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ product.id }}">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if product.total_inventory < product.low_stock_threshold %}
+              <span class="badge bg-warning">Low Stock</span>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="border-end">
+                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                  {% if bulk_inventory %}
+                  <h5 class="mb-0">{{ bulk_inventory|sum(attribute='quantity')|round(1) }}</h5>
+                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  {% else %}
+                  <h5 class="mb-0">0</h5>
+                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="border-end">
+                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                  <h5 class="mb-0">{{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}</h5>
+                  <small class="text-muted">Packaged</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <h5 class="mb-0">{{ product.variant_count }}</h5>
+                <small class="text-muted">Variants</small>
+              </div>
+            </div>
+
+            {% if product.variations|length > 0 %}
+            <div class="collapse mt-3" id="card-variations-{{ product.id }}">
+              <div class="border-top pt-2">
+                <strong class="small">Variations:</strong>
+
+                <!-- All Variations (including Base) -->
+                {% for variation in product.variations %}
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <div>
+                    <span class="fw-bold small">{{ variation.name }}</span>
+                    {% if variation.sku %}
+                    <span class="badge bg-secondary ms-1 small">{{ variation.sku }}</span>
+                    {% endif %}
+                  </div>
+                  <a href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-3">
+              <small class="text-muted">
+                Default Unit: {{ product.product_base_unit }}<br>
+                {% if not product.variations %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
+              </small>
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
+               class="btn btn-outline-primary btn-sm w-100">
+              View Details
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Products Table View -->
+    <div class="card" id="productsTableContainer" style="display: none; min-height: 200px;">
+      <div class="card-body" style="padding-bottom: 3rem;">
+        <div class="table-responsive" style="min-height: 120px; padding-bottom: 1.5rem;">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Default Unit</th>
+                <th>Bulk Inventory</th>
+                <th>Packaged Items</th>
+                <th>Variants</th>
+                <th>Stock Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr class="product-row">
+                <td>
+                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
+                    <strong>{{ product.name }}</strong>
+                  </a>
+                </td>
+                <td>{{ product.product_base_unit }}</td>
+                <td>
+                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }}
+                </td>
+                <td>
+                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}
+                </td>
+                <td>
+                  {{ product.variant_count }}
+                  {% if product.variations|length > 0 %}
+                  <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ product.id }}">
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if product.total_inventory < product.low_stock_threshold %}
+                    <span class="badge bg-warning">Low Stock</span>
+                  {% else %}
+                    <span class="badge bg-success">In Stock</span>
+                  {% endif %}
+                </td>
+                <td>{{ product.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                        <i class="fas fa-eye"></i> View Details
+                      </a></li>
+                      <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
+                        <i class="fas fa-edit"></i> Edit Product
+                      </a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              {% if product.variations|length > 0 %}
+              <tr class="collapse" id="table-variations-{{ product.id }}">
+                <td colspan="8">
+                  <div class="ps-4">
+                    <strong>Variations:</strong>
+                    <div class="table-responsive mt-2">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Variation</th>
+                            <th>SKU</th>
+                            <th>Total Units</th>
+                            <th>Sizes</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- All Variations (including Base) -->
+                          {% for variation in product.variations %}
+                          {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
+                          <tr>
+                            <td>
+                              {% if variation.name == 'Base' %}
+                                <strong>{{ variation.name }}</strong>
+                                <br><small class="text-muted">Default variant</small>
+                              {% else %}
+                                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
+                                  <strong>{{ variation.name }}</strong>
+                                </a>
+                              {% endif %}
+                            </td>
+                            <td>
+                              {% if variation.sku %}
+                              <span class="badge bg-secondary">{{ variation.sku }}</span>
+                              {% else %}
+                              <span class="text-muted">-</span>
+                              {% endif %}
+                            </td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
+                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
+                            <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                              <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">
+                                  Actions
+                                </button>
+                                <ul class="dropdown-menu">
+                                  {% if variation.name == 'Base' %}
+                                  <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                                    <i class="fas fa-eye"></i> View Details
+                                  </a></li>
+                                  {% else %}
+                                  <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
+                                    <i class="fas fa-eye"></i> View Details
+                                  </a></li>
+                                  <li><a class="dropdown-item" href="#" onclick="editVariation({{ product.id }}, {{ variation.id }})">
+                                    <i class="fas fa-edit"></i> Edit Variation
+                                  </a></li>
+                                  {% endif %}
+                                </ul>
+                              </div>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center">
+      <h4>No Products Found</h4>
+      <p>Create your first product to start tracking finished goods inventory.</p>
+      <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">Create First Product</a>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.product-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* Ensure table container has enough space for dropdowns */
+#productsTableContainer .card-body {
+  min-height: 200px;
+  overflow: visible;
+}
+
+#productsTableContainer .table-responsive {
+  overflow: visible;
+}
+
+/* Add spacing after table rows */
+#productsTableContainer tbody tr:last-child td {
+  padding-bottom: 2rem;
+}
+
+/* Ensure dropdown menus appear above other content */
+.dropdown-menu {
+  z-index: 1050;
+}
+</style>
+
+<script>
+// Global showView function
+function showView(viewType) {
+  const productsContainer = document.getElementById('productsContainer');
+  const productsTableContainer = document.getElementById('productsTableContainer');
+  const cardViewBtn = document.getElementById('cardViewBtn');
+  const tableViewBtn = document.getElementById('tableViewBtn');
+
+  if (viewType === 'cardView') {
+    productsContainer.style.display = 'flex';
+    productsContainer.style.flexWrap = 'wrap';
+    productsTableContainer.style.display = 'none';
+    cardViewBtn.className = 'btn btn-secondary btn-sm';
+    tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
+  } else {
+    productsContainer.style.display = 'none';
+    productsTableContainer.style.display = 'block';
+    cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
+    tableViewBtn.className = 'btn btn-secondary btn-sm';
+  }
+}
+
+// Sort products function
+function sortProducts(sortType) {
+  // Update active button state
+  document.querySelectorAll('.btn-group button').forEach(btn => {
+    if (btn.onclick && btn.onclick.toString().includes('sortProducts')) {
+      btn.className = 'btn btn-outline-secondary btn-sm';
+    }
+  });
+  event.target.className = 'btn btn-secondary btn-sm';
+
+  // Redirect to products page with sort parameter
+  const currentUrl = new URL(window.location);
+  currentUrl.searchParams.set('sort', sortType);
+  window.location.href = currentUrl.toString();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Product search functionality
+  const productFilter = document.getElementById('productFilter');
+  if (productFilter) {
+    productFilter.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const isCardView = document.getElementById('productsContainer').style.display !== 'none';
+
+      if (isCardView) {
+        const cards = document.querySelectorAll('#productsContainer .col-md-6');
+        cards.forEach(card => {
+          const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
+          card.style.display = productName.includes(searchTerm) ? 'block' : 'none';
+        });
+      } else {
+        const rows = document.querySelectorAll('#productsTableContainer tbody .product-row');
+        rows.forEach(row => {
+          const productName = row.querySelector('td a strong').textContent.toLowerCase();
+          row.style.display = productName.includes(searchTerm) ? '' : 'none';
+        });
+      }
+    });
+  }
+
+  // Variation toggle functionality
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      setTimeout(() => {
+        const target = document.querySelector(this.dataset.bsTarget);
+        if (target.classList.contains('show')) {
+          icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+          icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+      }, 100);
+    });
+  });
+});
+
+// Edit product function
+function editProduct(productId) {
+  // Navigate to edit product page or open modal
+  window.location.href = `/products/${productId}#edit`;
+}
+
+// Edit variation function
+function editVariation(productId, variationId) {
+  // Navigate to edit variation page or open modal
+  window.location.href = `/products/${productId}/variant/${variationId}#edit`;
+}
+</script>
+{% endblock %}
