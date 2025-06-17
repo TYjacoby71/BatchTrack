@@ -184,7 +184,7 @@ def adjust_inventory(id):
                 try:
                     custom_shelf_life = int(custom_shelf_life_str)
                     if custom_shelf_life > 0:
-                        from blueprints.expiration.services import ExpirationService
+                        from app.blueprints.expiration.services import ExpirationService
                         custom_expiration_date = ExpirationService.calculate_expiration_date(
                             datetime.utcnow(), custom_shelf_life
                         )
@@ -358,12 +358,12 @@ def edit_inventory(id):
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
             # If item wasn't perishable before, update existing FIFO entries
             if not was_perishable:
-                from blueprints.fifo.services import update_fifo_perishable_status
+                from app.blueprints.fifo.services import update_fifo_perishable_status
                 update_fifo_perishable_status(item.id, shelf_life_days)
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        from blueprints.fifo.services import recount_fifo
+        from app.blueprints.fifo.services import recount_fifo
         notes = "Manual quantity update via inventory edit"
         success = recount_fifo(item.id, new_quantity, notes, current_user.id)
         if not success:

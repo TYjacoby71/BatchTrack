@@ -6,7 +6,7 @@ from datetime import datetime
 from utils import get_setting
 from sqlalchemy import extract
 from services.unit_conversion import ConversionEngine
-from blueprints.inventory.routes import adjust_inventory
+from app.blueprints.inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
 from services.inventory_adjustment import process_inventory_adjustment
