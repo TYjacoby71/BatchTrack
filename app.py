@@ -64,6 +64,7 @@ from routes.admin_routes import admin_bp
 from routes.app_routes import app_routes_bp
 from blueprints.api import init_api
 from blueprints.timers import timers_bp
+from blueprints.dashboard.routes import dashboard_bp
 
 # Register blueprints
 from routes.app_routes import app_routes_bp
@@ -89,6 +90,20 @@ app.register_blueprint(tag_bp)
 app.register_blueprint(bulk_stock_bp)
 app.register_blueprint(product_variants_bp)
 app.register_blueprint(email_signup_bp)
+app.register_blueprint(start_batch_bp)
+app.register_blueprint(finish_batch_bp)
+app.register_blueprint(cancel_batch_bp)
+app.register_blueprint(add_extra_bp)
+app.register_blueprint(batches_bp)
+app.register_blueprint(inventory_bp)
+app.register_blueprint(recipes_bp)
+app.register_blueprint(conversion_bp)
+app.register_blueprint(settings_bp)
+app.register_blueprint(quick_add_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(fifo_bp)
+app.register_blueprint(expiration_bp)
+app.register_blueprint(timers_bp)
 
 # Initialize API routes
 init_api(app)
@@ -177,7 +192,7 @@ def login():
             u = User.query.filter_by(username=username).first()
             if u and u.check_password(password):
                 login_user(u)
-                return redirect(url_for('dashboard.dashboard'))
+                return redirect(url_for('user_dashboard.dashboard'))
             flash('Invalid credentials')
 
     return render_template('login.html', form=form)
@@ -197,7 +212,7 @@ def logout():
 @app.route("/")
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
+        return redirect(url_for('user_dashboard.dashboard'))
     return render_template("homepage.html")
 
 @app.route('/homepage')
