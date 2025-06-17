@@ -6,11 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.inventoryAdjustmentLoaded = true;
 
-    // Only proceed if we're on a page with adjustment forms
+    // Initialize any inventory adjustment specific functionality here
     const adjustmentForms = document.querySelectorAll('.adjustment-form');
-    if (adjustmentForms.length === 0) {
-        return; // Exit early if no adjustment forms found
-    }
 
     adjustmentForms.forEach(form => {
         form.addEventListener('submit', function(e) {
@@ -24,18 +21,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const expirationCheckbox = document.getElementById('override_expiration');
     const shelfLifeField = document.getElementById('shelfLifeField');
 
-    // Only proceed with expiration logic if the section exists
-    if (expirationSection && expirationCheckbox && shelfLifeField) {
+    if (expirationSection) {
         const selectedChangeType = getSelectedChangeType();
         if (selectedChangeType === 'restock') {
             expirationSection.style.display = 'block';
         } else {
             expirationSection.style.display = 'none';
-            expirationCheckbox.checked = false;
-            shelfLifeField.style.display = 'none';
+            if (expirationCheckbox) expirationCheckbox.checked = false;
+            if (shelfLifeField) shelfLifeField.style.display = 'none';
         }
+    }
 
-        // Handle shelf life override checkbox
+    // Handle shelf life override checkbox - only if it exists
+    if (expirationCheckbox && shelfLifeField) {
         expirationCheckbox.addEventListener('change', function() {
             shelfLifeField.style.display = this.checked ? 'block' : 'none';
         });
@@ -48,8 +46,7 @@ function updateChangeTypeHandler(selectElement) {
 }
 
 function updateChangeType(selectElement) {
-    // Handle change type updates if needed
-    console.log('Change type updated:', selectElement.value);
+
 }
 
 // Function to handle quantity input changes
@@ -62,18 +59,6 @@ function handleQuantityChange() {
 
 // Function to get selected change type
 function getSelectedChangeType() {
-    // First try radio buttons (if they exist)
-    const radioElement = document.querySelector('input[name="change_type"]:checked');
-    if (radioElement) {
-        return radioElement.value;
-    }
-    
-    // Then try select dropdown (if it exists)
-    const selectElement = document.querySelector('select[name="change_type"]');
-    if (selectElement) {
-        return selectElement.value;
-    }
-    
-    // Default fallback
-    return 'restock';
+    const checkedElement = document.querySelector('input[name="change_type"]:checked');
+    return checkedElement ? checkedElement.value : 'restock';
 }
