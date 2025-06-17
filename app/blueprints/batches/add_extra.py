@@ -1,8 +1,7 @@
-
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from models import db, Batch, InventoryItem, ExtraBatchContainer, ExtraBatchIngredient
-from services.unit_conversion import ConversionEngine
+from app.services.unit_conversion import ConversionEngine
 from services.inventory_adjustment import process_inventory_adjustment
 
 add_extra_bp = Blueprint('add_extra', __name__)
