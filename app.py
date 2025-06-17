@@ -29,9 +29,6 @@ migrate = Migrate(app, db)
 csrf = CSRFProtect()
 csrf.init_app(app)
 
-# Import models after db initialization
-from models import User, Recipe, InventoryItem, Unit, IngredientCategory
-
 # Setup logging
 from utils.unit_utils import setup_logging
 setup_logging(app)
@@ -118,6 +115,7 @@ def attr_multiply_filter(item, attr1, attr2):
 
 @app.context_processor
 def inject_units():
+    from models import Unit, IngredientCategory
     units = Unit.query.order_by(Unit.type, Unit.name).all()
     categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
     return dict(units=units, categories=categories)
@@ -129,12 +127,14 @@ def inject_permissions():
 
 @login_manager.user_loader
 def load_user(user_id):
+    from models import User
     return db.session.get(User, int(user_id))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     from flask_wtf import FlaskForm
     from werkzeug.security import generate_password_hash
+    from models import User
 
     form = FlaskForm()
     if request.method == 'POST' and form.validate_on_submit():
