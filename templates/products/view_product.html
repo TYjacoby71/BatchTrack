@@ -43,7 +43,7 @@
                 <i class="fas fa-plus"></i> Add Manual Stock
               </a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct()">
+              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name }}')">
                 <i class="fas fa-trash"></i> Delete Product
               </a></li>
             </ul>
@@ -435,7 +435,7 @@
         <h5 class="modal-title">Add Size Variant</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
         <div class="modal-body">
           <input type="hidden" id="sizeVariantName" name="variant_name">
 
@@ -491,7 +491,7 @@
         <h5 class="modal-title">Add Manual Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="modal-body">
           <div class="mb-3">
@@ -713,7 +713,7 @@ function addVariant(){
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
 
-  fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
+  fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -748,7 +748,7 @@ function clearVariantSelection() {
 function setEditVariation(variationId, name, description) {
   document.getElementById('editVariantName').value = name;
   document.getElementById('editVariantDescription').value = description || '';
-  document.getElementById('editVariationForm').action = `/products/{{ product.id }}/variant/${variationId}/edit`;
+  document.getElementById('editVariationForm').action = `/product-variants/{{ product.id }}/variant/${variationId}/edit`;
 }
 
 // Open Add Stock modal for specific variant
