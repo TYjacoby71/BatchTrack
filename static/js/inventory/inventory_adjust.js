@@ -40,3 +40,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Global function for change type updates  
+function changeType(selectElement) {
+    updateChangeType(selectElement);
+}
+
+function updateChangeType(selectElement) {
+    
+}
