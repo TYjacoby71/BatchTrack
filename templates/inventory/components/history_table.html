@@ -3,9 +3,9 @@
   <div class="card-header">
     <h5 class="mb-0">History</h5>
   </div>
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table table-hover" style="table-layout: fixed; min-width: 1200px;">
+  <div class="card-body p-0" style="overflow-x: auto;">
+    <div style="min-width: 1200px;">
+      <table class="table table-hover table-sm mb-0" style="table-layout: fixed; width: 100%;">
       <thead>
         <tr>
           <th style="width: 12%;">Date</th>
@@ -120,7 +120,8 @@
       </tbody>
       </table>
     </div>
-
+  </div>
+  <div class="card-body">
     {% if pagination.pages > 1 %}
     <nav aria-label="History navigation">
       <ul class="pagination">
