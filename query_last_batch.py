@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import Batch, BatchIngredient, BatchContainer, ProductInventory
+from app.models import Batch, BatchIngredient, BatchContainer, ProductInventory
 from datetime import datetime
 
 with app.app_context():

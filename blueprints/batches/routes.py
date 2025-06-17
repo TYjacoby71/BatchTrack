@@ -1,15 +1,15 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
+from app.models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
-from utils import get_setting
+from app.utils import get_setting
 from sqlalchemy import extract
-from services.unit_conversion import ConversionEngine
+from app.services.unit_conversion import ConversionEngine
 from blueprints.inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
-from services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 batches_bp = Blueprint('batches', __name__, url_prefix='/batches', template_folder='templates')
 

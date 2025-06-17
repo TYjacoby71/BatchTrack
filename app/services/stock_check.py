@@ -1,5 +1,5 @@
-from models import db, Recipe, InventoryItem
-from services.unit_conversion import ConversionEngine
+from ..models import db, Recipe, InventoryItem
+from ..services.unit_conversion import ConversionEngine
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""

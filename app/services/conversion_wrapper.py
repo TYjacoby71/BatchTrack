@@ -1,5 +1,5 @@
 
-from services.unit_conversion import ConversionEngine
+from ..services.unit_conversion import ConversionEngine
 
 def safe_convert(amount, from_unit, to_unit, ingredient_id=None, density=None):
     try:

@@ -1,9 +1,9 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient
+from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient
 from datetime import datetime, date
-from utils.fifo_generator import int_to_base36
+from ...utils.fifo_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 

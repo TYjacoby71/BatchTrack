@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
-from models import Recipe
-from services.stock_check import universal_stock_check
+from ...models import Recipe
+from ...services.stock_check import universal_stock_check
 
 stock_api_bp = Blueprint('stock_api', __name__)
 

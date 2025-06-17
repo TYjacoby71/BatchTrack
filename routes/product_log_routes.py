@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Product, ProductEvent
+from app.models import db, Product, ProductEvent
 from datetime import datetime
 
 product_log_bp = Blueprint('product_log', __name__)

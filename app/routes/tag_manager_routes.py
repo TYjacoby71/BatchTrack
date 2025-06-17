@@ -1,7 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Tag, Recipe
+from ..models import db, Tag, Recipe
 
 tag_bp = Blueprint('tags', __name__)
 

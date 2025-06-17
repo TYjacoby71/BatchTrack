@@ -1,5 +1,5 @@
 
-from services.test_runner import TestRunner
+from app.services.test_runner import TestRunner
 import sys
 
 if __name__ == '__main__':

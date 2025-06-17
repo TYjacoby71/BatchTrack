@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import BatchContainer
+from app.models import BatchContainer
 
 def backfill_containers():
     with app.app_context():

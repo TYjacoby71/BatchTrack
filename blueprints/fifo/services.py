@@ -1,4 +1,4 @@
-from models import InventoryHistory, db
+from app.models import InventoryHistory, db
 from sqlalchemy import and_, desc
 from datetime import datetime
 

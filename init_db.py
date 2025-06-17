@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import User, Organization, Unit, IngredientCategory
+from app.models import User, Organization, Unit, IngredientCategory
 from werkzeug.security import generate_password_hash
 
 from seeders.unit_seeder import seed_units

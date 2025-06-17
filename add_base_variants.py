@@ -1,6 +1,6 @@
 
 from app import db
-from models import Product, ProductVariation
+from app.models import Product, ProductVariation
 
 def add_base_variants():
     """Add Base variant to products that don't have one"""

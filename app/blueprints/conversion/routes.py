@@ -1,9 +1,9 @@
 from flask import Blueprint, request, render_template, redirect, flash, url_for, jsonify
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
-from models import db, Unit, CustomUnitMapping, InventoryItem
+from ...models import db, Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
-from services.unit_conversion import ConversionEngine
+from ...services.unit_conversion import ConversionEngine
 import logging
 
 logger = logging.getLogger(__name__)

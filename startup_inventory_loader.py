@@ -3,8 +3,8 @@ import json
 import os
 from datetime import datetime
 from app import app, db
-from models import InventoryItem, InventoryHistory, IngredientCategory
-from services.inventory_adjustment import generate_fifo_code
+from app.models import InventoryItem, InventoryHistory, IngredientCategory
+from app.services.inventory_adjustment import generate_fifo_code
 
 def load_inventory_from_json(json_file_path=None):
     """Load inventory items from JSON export file and create FIFO entries"""

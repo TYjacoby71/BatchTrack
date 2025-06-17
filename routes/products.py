@@ -1,8 +1,8 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from models import db, Product, ProductVariation
-from utils.unit_utils import get_global_unit_list
+from app.models import db, Product, ProductVariation
+from app.utils.unit_utils import get_global_unit_list
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
