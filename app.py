@@ -206,12 +206,22 @@ def logout():
 
 @app.route("/")
 def index():
+    print(f"=== INDEX ROUTE CALLED ===")
+    print(f"User authenticated: {current_user.is_authenticated}")
+    print(f"Anonymous user: {current_user.is_anonymous}")
     if current_user.is_authenticated:
+        print("Redirecting authenticated user to dashboard")
         return redirect(url_for('dashboard.dashboard'))
+    print("Rendering homepage.html for unauthenticated user")
     return render_template("homepage.html")
 
 @app.route('/homepage')
 def homepage():
+    return render_template('homepage.html')
+
+@app.route('/test-homepage')
+def test_homepage():
+    print("=== TEST HOMEPAGE ROUTE CALLED ===")
     return render_template('homepage.html')
 
 if __name__ == '__main__':
