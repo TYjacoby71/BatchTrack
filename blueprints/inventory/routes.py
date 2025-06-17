@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_login import login_required, current_user
-from models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
+from app.models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from utils.unit_utils import get_global_unit_list
 from utils.fifo_generator import get_change_type_prefix, int_to_base36
 from utils.unit_utils import get_global_unit_list

@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import InventoryItem, IngredientCategory
+from app.models import InventoryItem, IngredientCategory
 import json
 
 def update_ingredient_densities():

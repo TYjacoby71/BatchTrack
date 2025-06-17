@@ -1,9 +1,9 @@
 
 from sqlalchemy import func
-from models import db, ProductInventory, ProductInventoryHistory, Product, ProductVariation, Batch, ProductEvent
+from app.models import db, ProductInventory, ProductInventoryHistory, Product, ProductVariation, Batch, ProductEvent
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
-from services.inventory_adjustment import generate_fifo_code
+from app.services.inventory_adjustment import generate_fifo_code
 from flask_login import current_user
 
 def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, created_by=None):

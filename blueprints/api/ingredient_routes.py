@@ -1,6 +1,6 @@
 
 from flask import Blueprint, jsonify
-from models import IngredientCategory, InventoryItem
+from app.models import IngredientCategory, InventoryItem
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 

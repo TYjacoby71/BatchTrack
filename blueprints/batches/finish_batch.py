@@ -1,6 +1,6 @@
 from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, BatchTimer, InventoryItem, ProductInventory, Batch
+from app.models import db, BatchTimer, InventoryItem, ProductInventory, Batch
 from datetime import datetime
 from blueprints.expiration.services import ExpirationService
 

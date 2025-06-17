@@ -6,7 +6,7 @@ Startup Recipe Loader - Load recipes from JSON export file
 import json
 import os
 from app import app, db
-from models import Recipe, RecipeIngredient, InventoryItem
+from app.models import Recipe, RecipeIngredient, InventoryItem
 from flask import current_app
 
 def load_recipes_from_json(json_file_path=None):

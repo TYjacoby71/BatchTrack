@@ -1,4 +1,4 @@
-from models import Unit
+from ..models import Unit
 import logging
 from logging.handlers import RotatingFileHandler
 import os

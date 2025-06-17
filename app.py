@@ -30,10 +30,10 @@ csrf = CSRFProtect()
 csrf.init_app(app)
 
 # Import models after db initialization
-from models import User, Recipe, InventoryItem, Unit, IngredientCategory
+from app.models import User, Recipe, InventoryItem, Unit, IngredientCategory
 
 # Setup logging
-from utils.unit_utils import setup_logging
+from app.utils.unit_utils import setup_logging
 setup_logging(app)
 
 # Setup LoginManager

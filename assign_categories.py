@@ -1,6 +1,6 @@
 
 from app import app, db
-from models import InventoryItem, IngredientCategory
+from app.models import InventoryItem, IngredientCategory
 
 def get_category_keywords():
     return {

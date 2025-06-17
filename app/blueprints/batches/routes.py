@@ -1,9 +1,8 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
+from ...models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
-from utils import get_setting
+from ...utils import get_setting
 from sqlalchemy import extract
 from services.unit_conversion import ConversionEngine
 from blueprints.inventory.routes import adjust_inventory
@@ -19,12 +18,12 @@ def get_batch_remaining_details(batch_id):
     """Get detailed remaining inventory for a specific batch"""
     try:
         batch = Batch.query.get_or_404(batch_id)
-        
+
         # Query ProductInventory entries for this batch that have remaining quantity
         remaining_items = ProductInventory.query.filter_by(batch_id=batch_id).filter(
             ProductInventory.quantity > 0
         ).all()
-        
+
         # Format the response data
         remaining_data = []
         for item in remaining_items:
@@ -37,13 +36,13 @@ def get_batch_remaining_details(batch_id):
                 'batch_id': batch_id,
                 'expiration_date': item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else None
             })
-        
+
         return jsonify({
             'success': True,
             'batch_label': batch.label_code,
             'remaining_items': remaining_data
         })
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -61,7 +60,7 @@ def list_batches():
     page = request.args.get('page', 1, type=int)
     in_progress_page = request.args.get('in_progress_page', 1, type=int)
     completed_page = request.args.get('completed_page', 1, type=int)
-    
+
     # Set different pagination limits for tables vs cards
     table_per_page = 10
     card_per_page = 8  # 2 rows x 4 columns
@@ -150,7 +149,7 @@ def list_batches():
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     from models import InventoryItem
-    
+
     return render_template('batches/batches_list.html',
         InventoryItem=InventoryItem, 
         batches=all_batches,
@@ -172,18 +171,18 @@ def view_batch(batch_identifier):
 
         if batch.status == 'in_progress':
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
-        
+
         # Find previous and next batches of the same status
         prev_batch = Batch.query.filter(
             Batch.status == batch.status,
             Batch.id < batch.id
         ).order_by(Batch.id.desc()).first()
-        
+
         next_batch = Batch.query.filter(
             Batch.status == batch.status,
             Batch.id > batch.id
         ).order_by(Batch.id.asc()).first()
-        
+
         return render_template('batches/view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
         flash('Error viewing batch. Please try again.')
@@ -217,7 +216,7 @@ def view_batch_in_progress(batch_identifier):
         Batch.status == 'in_progress',
         Batch.id < batch.id
     ).order_by(Batch.id.desc()).first()
-    
+
     next_batch = Batch.query.filter(
         Batch.status == 'in_progress',
         Batch.id > batch.id

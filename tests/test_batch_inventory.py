@@ -1,8 +1,8 @@
 
 import pytest
 from app import app, db
-from models import InventoryItem, IngredientCategory, Unit, Batch, BatchIngredient
-from services.unit_conversion import UnitConversionService
+from app.models import InventoryItem, IngredientCategory, Unit, Batch, BatchIngredient
+from app.services.unit_conversion import UnitConversionService
 from routes.batches import adjust_inventory_deltas
 from datetime import datetime
 

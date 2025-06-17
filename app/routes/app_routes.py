@@ -1,14 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
-from models import Recipe, InventoryItem, Batch
-from services.stock_check import universal_stock_check
+from ..models import Recipe, InventoryItem, Batch
+from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
-from utils.permissions import require_permission, user_scoped_query
+from ..utils.permissions import require_permission, user_scoped_query
 
 app_routes_bp = Blueprint('dashboard', __name__)
 
-from services.inventory_alerts import get_low_stock_ingredients
-from blueprints.expiration.services import ExpirationService
-from services.dashboard_alerts import DashboardAlertService
+from ..services.inventory_alerts import get_low_stock_ingredients
+from ..expiration.services import ExpirationService
+from ..services.dashboard_alerts import DashboardAlertService
 
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required

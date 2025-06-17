@@ -1,7 +1,7 @@
 
 import re
 from flask import current_app
-from services.product_service import ProductService
+from ..services.product_service import ProductService
 
 def register_product_filters(app):
     """Register product-related template filters"""

@@ -1,4 +1,4 @@
-from models import IngredientCategory, db, InventoryItem # Added import for InventoryItem
+from app.models import IngredientCategory, db, InventoryItem # Added import for InventoryItem
 
 def seed_categories():
     categories = [
