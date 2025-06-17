@@ -140,6 +140,13 @@ def load_user(user_id):
     from models import User
     return db.session.get(User, int(user_id))
 
+@login_manager.unauthorized_handler
+def unauthorized():
+    # Allow access to homepage and login routes without authentication
+    if request.endpoint in ['homepage', 'index', 'login', 'dev_login']:
+        return None  # Let the route handle it normally
+    return redirect(url_for('login', next=request.url))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     from flask_wtf import FlaskForm
@@ -208,7 +215,8 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
-    return redirect(url_for('homepage'))
+    else:
+        return redirect(url_for('homepage'))
 
 @app.route('/homepage')
 def homepage():
