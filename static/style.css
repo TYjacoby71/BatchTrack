@@ -85,6 +85,21 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+/* History table specific styles */
+.table td {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 0; /* This forces the table to respect min-width settings */
+}
+
+.table td a {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+}
+
 /* Table responsive wrapper for horizontal scrolling */
 .table-responsive {
   overflow-x: auto;
