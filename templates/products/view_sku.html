@@ -344,6 +344,9 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
 function toggleView(viewType) {
   const availableRows = document.querySelectorAll('.available-row');
@@ -372,6 +375,8 @@ function toggleSaleFields(reason) {
   const quantityInput = document.getElementById('quantityInput');
   const quantityHelp = document.getElementById('quantityHelp');
 
+  if (!saleFields || !manualAddFields || !quantityLabel || !quantityInput || !quantityHelp) return;
+
   // Show/hide appropriate fields
   saleFields.style.display = reason === 'sale' ? 'block' : 'none';
   manualAddFields.style.display = reason === 'manual_add' ? 'block' : 'none';
@@ -392,11 +397,24 @@ function toggleSaleFields(reason) {
   }
 }
 
-// Initialize with available only and set initial form state
+function toggleColumn(columnName, show) {
+  const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
+  const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
+
+  headers.forEach(header => {
+    header.style.display = show ? '' : 'none';
+  });
+
+  cells.forEach(cell => {
+    cell.style.display = show ? '' : 'none';
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize view with available only
   toggleView('available');
 
-  // Set initial form state for sale
+  // Set initial form state for sale modal
   const reasonSelect = document.querySelector('select[name="reason"]');
   if (reasonSelect) {
     toggleSaleFields(reasonSelect.value);
@@ -411,105 +429,85 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
-});
 
-function toggleColumn(columnName, show) {
-  const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
-  const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
+  // FIFO Modal Setup
+  const adjustFifoModal = document.getElementById('adjustFifoModal');
+  const adjustFifoForm = document.getElementById('adjustFifoForm');
+  const changeTypeSelect = document.getElementById('fifoChangeType');
+  const quantityInput = document.getElementById('fifoQuantity');
+  const quantityHelp = document.getElementById('fifoQuantityHelp');
 
-  headers.forEach(header => {
-    header.style.display = show ? '' : 'none';
-  });
+  if (adjustFifoModal && adjustFifoForm && changeTypeSelect && quantityInput && quantityHelp) {
+    // Modal show event
+    adjustFifoModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      if (!button) return;
 
-  cells.forEach(cell => {
-    cell.style.display = show ? '' : 'none';
-  });
-}
-</script>
+      const fifoId = button.getAttribute('data-fifo-id');
+      const currentQty = button.getAttribute('data-current-qty');
+      const unit = button.getAttribute('data-unit');
+      const batchId = button.getAttribute('data-batch-id');
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Wait for DOM to be fully loaded before accessing elements
-  setTimeout(function() {
-    const adjustFifoModal = document.getElementById('adjustFifoModal');
-    const adjustFifoForm = document.getElementById('adjustFifoForm');
-    const changeTypeSelect = document.getElementById('fifoChangeType');
-    const quantityInput = document.getElementById('fifoQuantity');
-    const quantityHelp = document.getElementById('fifoQuantityHelp');
+      // Update form action
+      adjustFifoForm.action = `/products/adjust_fifo/${fifoId}`;
 
-    // Only add event listeners if all required elements exist
-    if (adjustFifoModal && adjustFifoForm && changeTypeSelect && quantityInput && quantityHelp) {
-      adjustFifoModal.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        if (!button) return;
+      // Update modal content
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
+      const fifoUnitEl = document.getElementById('fifoUnit');
+      const fifoBatchInfoEl = document.getElementById('fifoBatchInfo');
+      const fifoNotesEl = document.getElementById('fifoNotes');
 
-        const fifoId = button.getAttribute('data-fifo-id');
-        const currentQty = button.getAttribute('data-current-qty');
-        const unit = button.getAttribute('data-unit');
-        const batchId = button.getAttribute('data-batch-id');
+      if (fifoCurrentQtyEl) fifoCurrentQtyEl.value = `${currentQty} ${unit}`;
+      if (fifoUnitEl) fifoUnitEl.textContent = unit;
+      if (fifoBatchInfoEl) fifoBatchInfoEl.textContent = batchId !== 'N/A' ? `Batch #${batchId}` : 'No batch reference';
 
-        // Update form action
-        adjustFifoForm.action = `/products/adjust_fifo/${fifoId}`;
+      // Reset form
+      changeTypeSelect.value = '';
+      quantityInput.value = '';
+      if (fifoNotesEl) fifoNotesEl.value = '';
+      quantityHelp.textContent = '';
+      quantityInput.removeAttribute('max');
+    });
 
-        // Update modal content
-        const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
-        const fifoUnitEl = document.getElementById('fifoUnit');
-        const fifoBatchInfoEl = document.getElementById('fifoBatchInfo');
-        const fifoNotesEl = document.getElementById('fifoNotes');
+    // Change type event
+    changeTypeSelect.addEventListener('change', function() {
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
+      if (!fifoCurrentQtyEl) return;
 
-        if (fifoCurrentQtyEl) fifoCurrentQtyEl.value = `${currentQty} ${unit}`;
-        if (fifoUnitEl) fifoUnitEl.textContent = unit;
-        if (fifoBatchInfoEl) fifoBatchInfoEl.textContent = batchId !== 'N/A' ? `Batch #${batchId}` : 'No batch reference';
+      const currentQty = parseFloat(fifoCurrentQtyEl.value);
+      const changeType = this.value;
 
-        // Reset form
-        changeTypeSelect.value = '';
-        quantityInput.value = '';
-        if (fifoNotesEl) fifoNotesEl.value = '';
-        quantityHelp.textContent = '';
+      if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
+        // For deductions, limit to available quantity
+        quantityInput.setAttribute('max', currentQty);
+        quantityHelp.textContent = `Maximum: ${currentQty} (will be deducted)`;
+        quantityInput.placeholder = 'Amount to deduct';
+      } else if (changeType === 'recount') {
+        // For recount, allow any positive value
         quantityInput.removeAttribute('max');
-      });
+        quantityHelp.textContent = 'Enter the correct total quantity for this FIFO entry';
+        quantityInput.placeholder = 'New total quantity';
+      } else {
+        quantityInput.removeAttribute('max');
+        quantityHelp.textContent = '';
+        quantityInput.placeholder = 'Enter quantity';
+      }
+    });
 
-      changeTypeSelect.addEventListener('change', function() {
-        const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
-        if (!fifoCurrentQtyEl) return;
+    // Form submit event
+    adjustFifoForm.addEventListener('submit', function(e) {
+      const changeType = changeTypeSelect.value;
+      const enteredQty = parseFloat(quantityInput.value);
+      const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
 
+      if (changeType === 'recount' && fifoCurrentQtyEl) {
         const currentQty = parseFloat(fifoCurrentQtyEl.value);
-        const changeType = this.value;
-
-        if (['sale', 'spoil', 'damage', 'trash', 'gift/tester'].includes(changeType)) {
-          // For deductions, limit to available quantity
-          quantityInput.setAttribute('max', currentQty);
-          quantityHelp.textContent = `Maximum: ${currentQty} (will be deducted)`;
-          quantityInput.placeholder = 'Amount to deduct';
-        } else if (changeType === 'recount') {
-          // For recount, allow any positive value
-          quantityInput.removeAttribute('max');
-          quantityHelp.textContent = 'Enter the correct total quantity for this FIFO entry';
-          quantityInput.placeholder = 'New total quantity';
-        } else {
-          quantityInput.removeAttribute('max');
-          quantityHelp.textContent = '';
-          quantityInput.placeholder = 'Enter quantity';
-        }
-      });
-
-      // Handle recount differently - calculate the difference
-      adjustFifoForm.addEventListener('submit', function(e) {
-        const changeType = changeTypeSelect.value;
-        const enteredQty = parseFloat(quantityInput.value);
-        const fifoCurrentQtyEl = document.getElementById('fifoCurrentQty');
-
-        if (changeType === 'recount' && fifoCurrentQtyEl) {
-          const currentQty = parseFloat(fifoCurrentQtyEl.value);
-          // For recount, calculate the difference and update the quantity input
-          const difference = enteredQty - currentQty;
-          quantityInput.value = difference;
-        }
-      });
-    } else {
-      console.warn('FIFO modal elements not found');
-    }
-  }, 100);
+        // For recount, calculate the difference and update the quantity input
+        const difference = enteredQty - currentQty;
+        quantityInput.value = difference;
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
