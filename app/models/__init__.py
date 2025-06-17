@@ -1,3 +1,4 @@
+from ..extensions import db
 from .user import User, Organization, Role, Permission, RolePermission, UserRole
 from .inventory import InventoryItem, InventoryHistory, Unit, CustomUnitMapping, IngredientCategory
 from .recipe import Recipe, RecipeIngredient
@@ -7,6 +8,7 @@ from .conversion import ConversionLog
 from .tag import Tag
 
 __all__ = [
+    'db',
     'User', 'Organization', 'Role', 'Permission', 'RolePermission', 'UserRole',
     'InventoryItem', 'InventoryHistory', 'Unit', 'CustomUnitMapping', 'IngredientCategory',
     'Recipe', 'RecipeIngredient',
