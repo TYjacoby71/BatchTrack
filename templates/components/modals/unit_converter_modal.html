@@ -5,7 +5,12 @@
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 id="unitConverterLabel">Unit Converter</h5>
-        <a href="{{ url_for('conversion_bp.manage_units') }}" class="btn btn-sm btn-outline-secondary">Unit Manager</a>
+        {% if url_for('conversion.manage_units', _external=False) %}
+    <!-- <a href="{{ url_for('conversion.manage_units') }}" class="btn btn-sm btn-outline-secondary">Unit Manager</a> -->
+    <span class="btn btn-sm btn-outline-secondary disabled">Unit Manager (Coming Soon)</span>
+    {% else %}
+    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary">Unit Manager</a>
+    {% endif %}
       </div>
       <form id="converterForm" method="post" action="/convert">
         {{ csrf_token() }}
