@@ -1,4 +1,3 @@
-
 // Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;
@@ -25,7 +24,7 @@ function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
   updateForm.style.display = 'none';
-  
+
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
@@ -38,7 +37,7 @@ function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
   addForm.style.display = 'none';
-  
+
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
@@ -187,6 +186,22 @@ document.addEventListener('DOMContentLoaded', function() {
       // Your existing form submission logic here
     });
   }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips only if bootstrap is available
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Initialize any modals that need JS
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            new bootstrap.Modal(modal);
+        });
+    }
 });
 
 // Unit filtering function (kept separate as it's called from HTML)

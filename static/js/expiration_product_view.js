@@ -48,7 +48,12 @@ function loadExpirationData(inventoryId, containerId) {
 
 // Auto-load expiration data for elements with data-inventory-id
 document.addEventListener('DOMContentLoaded', function() {
+    // Only run if we're on a page that actually has expiration elements
     const expirationElements = document.querySelectorAll('[data-inventory-id]');
+    if (expirationElements.length === 0) {
+        return; // Exit early if no expiration elements found
+    }
+    
     expirationElements.forEach(element => {
         const inventoryId = element.getAttribute('data-inventory-id');
         const containerId = element.id;
