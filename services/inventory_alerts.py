@@ -1,5 +1,4 @@
-
-from models import InventoryItem
+from app.models import InventoryItem
 from sqlalchemy import and_
 
 def get_low_stock_ingredients():

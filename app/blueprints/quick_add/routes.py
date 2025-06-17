@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models import db, InventoryItem, Unit
+from ...extensions import db
+from ...models import InventoryItem, Unit
 
 quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
 

@@ -1,7 +1,8 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient
+from ...extensions import db
+from ...models import InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient
 from datetime import datetime, date
 from utils.fifo_generator import int_to_base36
 

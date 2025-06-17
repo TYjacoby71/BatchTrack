@@ -1,4 +1,4 @@
-
+from app.models import InventoryItem
 from services.unit_conversion import ConversionEngine
 
 def safe_convert(amount, from_unit, to_unit, ingredient_id=None, density=None):

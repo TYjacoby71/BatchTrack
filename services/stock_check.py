@@ -1,4 +1,4 @@
-from models import db, Recipe, InventoryItem
+from app.models import InventoryItem, Recipe, BatchIngredient, ExtraBatchIngredient, Batch
 from services.unit_conversion import ConversionEngine
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):

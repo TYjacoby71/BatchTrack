@@ -1,6 +1,6 @@
 
 from flask import Blueprint, jsonify, request
-from models import Recipe, InventoryItem
+from ...models import Recipe, InventoryItem
 from services.unit_conversion import ConversionEngine
 
 container_api_bp = Blueprint('container_api', __name__)
