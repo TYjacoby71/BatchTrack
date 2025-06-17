@@ -16,15 +16,14 @@ def register_blueprints(app):
     from .conversion.routes import conversion_bp
     from .settings.routes import settings_bp
     from .quick_add.routes import quick_add_bp
-    from ..routes.bulk_stock_routes import bulk_stock_bp
-    from ..routes.fault_log_routes import faults_bp
-    from ..routes.product_log_routes import product_log_bp
-    from ..routes.tag_manager_routes import tag_bp
+    from .bulk_stock import bulk_stock_bp
+    from .faults import faults_bp
+    from .tag_manager import tag_bp
     from .products import products_bp
     from .fifo import fifo_bp
     from .expiration.routes import expiration_bp
-    from ..routes.admin_routes import admin_bp
-    from ..routes.app_routes import app_routes_bp
+    from .admin import admin_bp
+    from .app_routes import app_routes_bp
     from .timers import timers_bp
 
     # Register all blueprints
@@ -41,7 +40,6 @@ def register_blueprints(app):
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(bulk_stock_bp, url_prefix='/stock')
     app.register_blueprint(faults_bp, url_prefix='/logs')
-    app.register_blueprint(product_log_bp, url_prefix='/product-logs')
     app.register_blueprint(tag_bp, url_prefix='/tags')
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
