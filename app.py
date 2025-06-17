@@ -79,6 +79,8 @@ from routes.product_variants import product_variants_bp
 from routes.email_signup_routes import email_signup_bp
 
 app.register_blueprint(app_routes_bp)
+app.register_blueprint(batches_bp)
+app.register_blueprint(inventory_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(product_api_bp)
