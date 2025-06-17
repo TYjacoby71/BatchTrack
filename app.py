@@ -1,12 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
+from database import db
 import os
-
-# Create the db object first
-db = SQLAlchemy()
 
 # Create app and attach config
 app = Flask(__name__, static_folder='static', static_url_path='/static')
