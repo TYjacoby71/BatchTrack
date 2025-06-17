@@ -5,11 +5,7 @@ from ...extensions import db
 from datetime import datetime
 from ....utils import get_setting
 from sqlalchemy import extract
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-
-from services.unit_conversion import ConversionEngine
+from ...services.unit_conversion import ConversionEngine
 from ..inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
