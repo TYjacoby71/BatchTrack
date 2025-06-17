@@ -50,25 +50,30 @@ def edit_product(product_id):
 @product_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
 @login_required
 def deduct_product(product_id):
-    variant = request.form.get("variant")
+    from services.product_service import ProductService
+    
+    variant = request.form.get("variant", "Base")
+    size_label = request.form.get("size_label", "Bulk")
     unit = request.form.get("unit")
+    reason = request.form.get("reason", "manual_deduction")
+    notes = request.form.get("notes", "")
+    
     try:
         quantity = float(request.form.get("quantity", 0))
         if quantity <= 0:
             raise ValueError("Quantity must be positive")
 
-        used = deduct_fifo(product_id, quantity)
+        success = ProductService.process_inventory_adjustment(
+            product_id=product_id,
+            variant=variant,
+            size_label=size_label,
+            adjustment_type=reason,
+            quantity=quantity,
+            notes=notes
+        )
 
-        if used:
-            flash(f"Deducted {quantity} {unit} from inventory using FIFO", "success")
-            # Log the deduction as a product event
-            product = Product.query.get_or_404(product_id)
-            db.session.add(ProductEvent(
-                product_id=product_id,
-                event_type="inventory_deduction",
-                note=f"FIFO deduction of {quantity} {unit}"
-            ))
-            db.session.commit()
+        if success:
+            flash(f"Deducted {quantity} {unit} from {variant} - {size_label} using FIFO", "success")
         else:
             flash("Not enough stock to fulfill request", "danger")
 

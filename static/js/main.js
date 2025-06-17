@@ -1,4 +1,3 @@
-
 // Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;
@@ -25,7 +24,7 @@ function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
   updateForm.style.display = 'none';
-  
+
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
@@ -38,7 +37,7 @@ function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
   addForm.style.display = 'none';
-  
+
   if (form.style.display === 'none') {
     form.style.display = 'block';
     form.reset();
@@ -97,7 +96,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Container form logic
-  if (document.getElementById('recipeForm')) {
+  const recipeForm = document.getElementById('recipeForm');
+  if (recipeForm) {
     const requiresContainersCheckbox = document.getElementById('requiresContainers');
     const allowedContainersSection = document.getElementById('allowedContainersSection');
     if (requiresContainersCheckbox && allowedContainersSection) {
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function initQuickAddUnit() {
     const saveButton = document.getElementById('saveQuickUnit');
     if (!saveButton) {
-      setTimeout(initQuickAddUnit, 100);
+      // Element doesn't exist on this page, skip initialization
       return;
     }
 
@@ -188,9 +188,26 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips only if bootstrap is available
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Initialize any modals that need JS
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            new bootstrap.Modal(modal);
+        });
+    }
+});
+
 // Unit filtering function (kept separate as it's called from HTML)
 window.filterUnits = function() {
-  const filter = document.getElementById('unitFilter').value;
+  const filter = document.getElementById('unitFilter');
+  if (!filter) return;
   const unitCards = document.querySelectorAll('.card.mb-3');
 
   unitCards.forEach(card => {

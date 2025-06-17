@@ -75,7 +75,7 @@
           <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
             <i class="fas fa-plus"></i> Add Manual Stock
           </button>
-        </div></div>
+        </div>
         <div class="card-body">
           {% if size_groups %}
             <div class="table-responsive">
@@ -118,8 +118,8 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li>
-                            <a class="dropdown-item" href="#" onclick="openSizeAdjustModal('{{ size_display }}', {{ group.total_quantity }})">
-                              <i class="fas fa-edit"></i> Adjust
+                            <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                              <i class="fas fa-edit"></i> Manage Stock
                             </a>
                           </li>
                           <li><hr class="dropdown-divider"></li>
@@ -186,7 +186,7 @@
         <h5 class="modal-title">Add Manual Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
@@ -235,7 +235,7 @@
         <h5 class="modal-title">Deduct Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" id="deductVariant">
@@ -272,28 +272,24 @@
 </div>
 
 <script>
-// Handle deduct modal data
-document.getElementById('deductModal').addEventListener('show.bs.modal', function (event) {
-  var button = event.relatedTarget;
-  var variant = button.getAttribute('data-variant');
-  var size = button.getAttribute('data-size');
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle deduct modal data - with proper null checks
+  const deductModal = document.getElementById('deductModal');
+  if (deductModal) {
+    deductModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (!button) return;
 
-  document.getElementById('deductVariant').value = variant;
-  document.getElementById('deductSize').value = size;
+      const variant = button.getAttribute('data-variant');
+      const size = button.getAttribute('data-size');
+
+      const deductVariantEl = document.getElementById('deductVariant');
+      const deductSizeEl = document.getElementById('deductSize');
+
+      if (deductVariantEl) deductVariantEl.value = variant || '';
+      if (deductSizeEl) deductSizeEl.value = size || '';
+    });
+  }
 });
-
-function openAdjustModal(inventoryId, sizeLabel, currentQuantity) {
-  document.getElementById('adjustInventoryId').value = inventoryId;
-  document.getElementById('adjustSizeLabel').textContent = sizeLabel;
-  document.getElementById('adjustCurrentQuantity').textContent = currentQuantity;
-}
-
-function openSizeAdjustModal(sizeLabel, totalQuantity) {
-  // For size-level adjustments, we'll need to handle this differently
-  // since it affects multiple FIFO entries
-  document.getElementById('adjustSizeLabel').textContent = sizeLabel;
-  document.getElementById('adjustCurrentQuantity').textContent = totalQuantity;
-  // TODO: Implement size-level adjustment logic
-}
 </script>
 {% endblock %}
