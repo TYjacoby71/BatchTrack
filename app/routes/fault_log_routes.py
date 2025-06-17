@@ -4,11 +4,11 @@ from flask_login import login_required
 import json
 import os
 from datetime import datetime
-from fault_log_utils import log_fault, FAULT_LOG_PATH
+from ...fault_log_utils import log_fault, FAULT_LOG_PATH
 
-faults_bp = Blueprint('faults', __name__)
+fault_log_bp = Blueprint('faults', __name__)
 
-@faults_bp.route('/logs/faults')
+@fault_log_bp.route('/logs/faults')
 @login_required
 def view_fault_log():
     try:

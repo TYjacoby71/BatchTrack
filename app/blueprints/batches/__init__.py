@@ -1,6 +1,5 @@
-
 from flask import Blueprint
 
-batches_bp = Blueprint('batches', __name__, url_prefix='/batches', template_folder='templates')
+batches_bp = Blueprint('batches', __name__, template_folder='templates')
 
-from . import routes
+from . import routes, start_batch, finish_batch, cancel_batch, add_extra

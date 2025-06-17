@@ -1,11 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from ...utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
-
-
-recipes_bp = Blueprint('recipes', __name__, template_folder='templates')
+from . import recipes_bp
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -20,7 +18,7 @@ def new_recipe():
                                      recipe=None, 
                                      all_ingredients=InventoryItem.query.all(), 
                                      inventory_units=get_global_unit_list())
-            
+
             # Check for duplicate label prefixes
             existing_recipe = Recipe.query.filter_by(label_prefix=label_prefix).first()
             if existing_recipe:
@@ -170,7 +168,7 @@ def create_variation(recipe_id):
                                      inventory_units=inventory_units,
                                      is_variation=True,
                                      parent_recipe=parent)
-            
+
             # Check for duplicate label prefixes (excluding current variation)
             existing_recipe = Recipe.query.filter(
                 Recipe.label_prefix == label_prefix,
@@ -383,7 +381,7 @@ def edit_recipe(recipe_id):
                                      inventory_units=inventory_units, 
                                      edit_mode=True,
                                      existing_batches=existing_batches)
-            
+
             # Check for duplicate label prefixes (excluding current recipe)
             existing_recipe = Recipe.query.filter(
                 Recipe.label_prefix == label_prefix,
