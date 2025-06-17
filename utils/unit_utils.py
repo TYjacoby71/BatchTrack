@@ -1,3 +1,4 @@
+from models import Unit
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -17,7 +18,6 @@ def setup_logging(app):
 
 def get_global_unit_list():
     try:
-        from models import Unit
         units = Unit.query.filter_by(is_custom=False).order_by(Unit.type, Unit.name).all()
         custom_units = Unit.query.filter_by(is_custom=True).order_by(Unit.name).all()
         return units + custom_units

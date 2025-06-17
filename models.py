@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_login import current_user, UserMixin
 from datetime import date
-from database import db
+from extensions import db
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)

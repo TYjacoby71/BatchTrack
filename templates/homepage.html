@@ -135,7 +135,12 @@
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-2" href="#signup">Get Early Access</a>
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login to App
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-cta text-white ms-2" href="#signup">Get Started</a>
                     </li>
                 </ul>
             </div>
@@ -143,7 +148,7 @@
     </nav>
 
     <!-- Hero Banner -->
-    <section class="hero-section bg-light py-5 border-bottom" style="padding-top: 140px; background-image: url('{{ url_for('static', filename='images/homepage/hero-bg.jpg') }}'); background-size: cover; background-position: center;">
+    <section class="hero-section bg-light py-5 border-bottom">
         <div class="container">
             <h1 class="display-4 fw-bold mb-4 text-dark">Production & Inventory Management Made Simple</h1>
             <p class="lead mb-4 text-muted">Track batches, manage inventory, and scale your production with BatchTrack's powerful FIFO system and real-time insights.</p>
@@ -178,8 +183,8 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
-                            <div class="mb-3" style="height: 200px; cursor: pointer;" onclick="showImageModal('{{ url_for('static', filename='images/homepage/Batch Tracking.jpg') }}', 'Batch Tracking')">
-                                <img src="{{ url_for('static', filename='images/homepage/Batch Tracking.jpg') }}" alt="Batch Tracking" class="img-fluid" style="max-height: 200px; object-fit: cover; border-radius: 8px;">
+                            <div class="placeholder-img mb-3">
+                                <i class="fas fa-flask fa-3x"></i>
                             </div>
                             <h5 class="card-title">Batch Tracking</h5>
                             <p class="card-text">Track every batch from start to finish with detailed logs and real-time status updates.</p>
@@ -190,8 +195,8 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
-                            <div class="mb-3" style="height: 200px; cursor: pointer;" onclick="showImageModal('{{ url_for('static', filename='images/homepage/FIFO Inventory.jpg') }}', 'FIFO Inventory')">
-                                <img src="{{ url_for('static', filename='images/homepage/FIFO Inventory.jpg') }}" alt="FIFO Inventory" class="img-fluid" style="max-height: 200px; object-fit: cover; border-radius: 8px;">
+                            <div class="placeholder-img mb-3">
+                                <i class="fas fa-boxes fa-3x"></i>
                             </div>
                             <h5 class="card-title">FIFO Inventory</h5>
                             <p class="card-text">First-in, first-out inventory management with expiration tracking and automated alerts.</p>
@@ -202,10 +207,10 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card feature-card h-100">
                         <div class="card-body text-center">
-                            <div class="mb-3" style="height: 200px; cursor: pointer;" onclick="showImageModal('{{ url_for('static', filename='images/homepage/Clean Dashboard.jpg') }}', 'Calm and Clean Dashboard')">
-                                <img src="{{ url_for('static', filename='images/homepage/Clean Dashboard.jpg') }}" alt="Calm and Clean Dashboard" class="img-fluid" style="max-height: 200px; object-fit: cover; border-radius: 8px;">
+                            <div class="placeholder-img mb-3">
+                                <i class="fas fa-chart-line fa-3x"></i>
                             </div>
-                            <h5 class="card-title">Calm and Clean Dashboard</h5>
+                            <h5 class="card-title">Analytics Dashboard</h5>
                             <p class="card-text">Get insights into your production costs, efficiency, and inventory turnover.</p>
                         </div>
                     </div>
@@ -240,8 +245,8 @@
             <div class="row">
                 <div class="col-lg-4">
                     <div class="testimonial-card">
-                        <div class="mb-3" style="height: 80px;">
-                            <img src="{{ url_for('static', filename='images/homepage/customer-logo-1.png') }}" alt="Customer Logo" class="img-fluid" style="max-height: 80px;">
+                        <div class="placeholder-img mb-3" style="height: 80px;">
+                            [Customer Logo]
                         </div>
                         <p class="fst-italic">"BatchTrack has revolutionized our production process. We've reduced waste by 30% and improved our batch tracking accuracy."</p>
                         <div class="d-flex align-items-center">
@@ -258,8 +263,8 @@
 
                 <div class="col-lg-4">
                     <div class="testimonial-card">
-                        <div class="mb-3" style="height: 80px;">
-                            <img src="{{ url_for('static', filename='images/homepage/customer-logo-1.png') }}" alt="Customer Logo" class="img-fluid" style="max-height: 80px;">
+                        <div class="placeholder-img mb-3" style="height: 80px;">
+                            [Customer Logo]
                         </div>
                         <p class="fst-italic">"The FIFO system is exactly what we needed. No more expired ingredients and our cost tracking is spot on."</p>
                         <div class="d-flex align-items-center">
@@ -298,8 +303,6 @@
     <!-- Stats Section -->
     <section class="stats-section">
         <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="fw-bold">Goals</h2>
             <div class="row">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
@@ -422,83 +425,25 @@
         </div>
     </section>
 
-    <!-- Signup Section -->
-    <section id="signup" class="py-5 bg-light">
+    <!-- Final CTA Section -->
+    <section class="py-5">
         <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8 col-xl-6">
-                    <div class="text-center mb-5">
-                        <h2 class="fw-bold mb-4">Get Early Access to BatchTrack</h2>
-                        <p class="lead text-muted">We're putting the finishing touches on BatchTrack. Be the first to know when we launch!</p>
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="placeholder-img">
+                        [App Screenshot/Demo Video]
                     </div>
-
-                    <div class="card shadow-lg border-0">
-                        <div class="card-body p-5">
-                            <form id="signupForm" class="needs-validation" novalidate>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="firstName" class="form-label">First Name</label>
-                                        <input type="text" class="form-control form-control-lg" id="firstName" required>
-                                        <div class="invalid-feedback">Please provide your first name.</div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="lastName" class="form-label">Last Name</label>
-                                        <input type="text" class="form-control form-control-lg" id="lastName" required>
-                                        <div class="invalid-feedback">Please provide your last name.</div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email Address</label>
-                                    <input type="email" class="form-control form-control-lg" id="email" required>
-                                    <div class="invalid-feedback">Please provide a valid email address.</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="company" class="form-label">Company/Business Name (Optional)</label>
-                                    <input type="text" class="form-control form-control-lg" id="company">
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="businessType" class="form-label">What type of production do you manage?</label>
-                                    <select class="form-select form-select-lg" id="businessType">
-                                        <option value="">Select your industry...</option>
-                                        <option value="food">Food & Beverage</option>
-                                        <option value="cosmetics">Cosmetics & Personal Care</option>
-                                        <option value="craft">Arts & Crafts</option>
-                                        <option value="brewing">Brewing & Distilling</option>
-                                        <option value="manufacturing">Small Manufacturing</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="newsletter" checked>
-                                        <label class="form-check-label" for="newsletter">
-                                            I want to receive updates about BatchTrack and production management tips
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-cta btn-lg w-100 text-white">
-                                    <i class="fas fa-rocket me-2"></i>Get Early Access
-                                </button>
-                            </form>
-
-                            <div id="successMessage" class="alert alert-success mt-4" style="display: none;">
-                                <i class="fas fa-check-circle me-2"></i>
-                                Thank you! We'll notify you as soon as BatchTrack is ready for launch.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="text-center mt-4">
-                        <p class="text-muted">
-                            <i class="fas fa-lock me-1"></i>
-                            We respect your privacy. Your information will never be shared.
-                        </p>
-                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <h2 class="fw-bold mb-4">See BatchTrack in Action</h2>
+                    <p class="lead mb-4">Watch how easy it is to track batches, manage inventory, and scale your production with our intuitive interface.</p>
+                    <ul class="list-unstyled mb-4">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 5-minute setup</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> No credit card required</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 30-day free trial</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Cancel anytime</li>
+                    </ul>
+                    <a href="#signup" class="btn btn-cta btn-lg text-white">Start Your Free Trial</a>
                 </div>
             </div>
         </div>
@@ -559,35 +504,8 @@
         </div>
     </footer>
 
-    <!-- Image Modal -->
-    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="imageModalLabel">Image</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <img id="modalImage" src="" alt="" class="img-fluid" style="max-width: 100%; height: auto;">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Image modal functionality -->
-    <script>
-        function showImageModal(imageSrc, imageTitle) {
-            document.getElementById('modalImage').src = imageSrc;
-            document.getElementById('modalImage').alt = imageTitle;
-            document.getElementById('imageModalLabel').textContent = imageTitle;
-            
-            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-            imageModal.show();
-        }
-    </script>
 
     <!-- Smooth scrolling for anchor links -->
     <script>
@@ -601,51 +519,6 @@
                         block: 'start'
                     });
                 }
-            });
-        });
-
-        // Form validation and submission
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            if (!this.checkValidity()) {
-                e.stopPropagation();
-                this.classList.add('was-validated');
-                return;
-            }
-
-            const formData = {
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email').value,
-                company: document.getElementById('company').value,
-                businessType: document.getElementById('businessType').value,
-                newsletter: document.getElementById('newsletter').checked
-            };
-
-            // Submit to backend
-            fetch('/signup-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Hide form and show success message
-                    this.style.display = 'none';
-                    document.getElementById('successMessage').style.display = 'block';
-                    document.getElementById('successMessage').innerHTML = 
-                        '<i class="fas fa-check-circle me-2"></i>' + data.message;
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Something went wrong. Please try again.');
             });
         });
     </script>

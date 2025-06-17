@@ -1,11 +1,14 @@
-ef load_user(user_id):
-    return db.session.get(User, int(user_id))
 
-@app.route('/login', methods=['GET', 'POST'])
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from flask_wtf import FlaskForm
+from werkzeug.security import generate_password_hash
+from extensions import db
+from models import User
+from . import auth_bp
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    from flask_wtf import FlaskForm
-    from werkzeug.security import generate_password_hash
-
     form = FlaskForm()
     if request.method == 'POST' and form.validate_on_submit():
         form_type = request.form.get('form_type')
@@ -52,22 +55,13 @@ def login():
 
     return render_template('login.html', form=form)
 
-@app.route('/dev-login')
+@auth_bp.route('/dev-login')
 def dev_login():
-    # Placeholder for future dev login page
     flash('Developer login coming soon!')
-    return redirect(url_for('login'))
+    return redirect(url_for('auth.login'))
 
-@app.route('/logout')
+@auth_bp.route('/logout')
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
-
-@app.route('/')
-def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
-    return redirect(url_for('homepage'))
-
-@app.route('/homepage')
+    return redirect(url_for('auth.login'))
