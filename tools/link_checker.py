@@ -20,13 +20,26 @@ class LinkChecker:
         route_files = [
             'app/auth/routes.py',
             'app/blueprints/*/routes.py',
-            'app/blueprints/*/api.py',
-            'app/blueprints/*/*.py'
+            'app/blueprints/*/api.py'
         ]
         
+        # Handle each pattern separately and add individual .py files from blueprints
         for pattern in route_files:
-            for file_path in self.app_root.glob(pattern):
-                self._extract_routes_from_file(file_path)
+            try:
+                for file_path in self.app_root.glob(pattern):
+                    self._extract_routes_from_file(file_path)
+            except ValueError:
+                # Skip invalid patterns
+                continue
+                
+        # Also scan individual Python files in blueprint directories
+        try:
+            for blueprint_dir in self.app_root.glob('app/blueprints/*'):
+                if blueprint_dir.is_dir():
+                    for py_file in blueprint_dir.glob('*.py'):
+                        self._extract_routes_from_file(py_file)
+        except ValueError:
+            pass
     
     def _extract_routes_from_file(self, file_path):
         """Extract route patterns from Python files"""
@@ -70,7 +83,8 @@ class LinkChecker:
             for template_dir in self.app_root.glob(pattern):
                 if template_dir.is_dir():
                     for file_path in template_dir.rglob('*.html'):
-                        rel_path = file_path.relative_to(self.app_root / 'templates' if (self.app_root / 'templates').exists() else template_dir)
+                        # Use the file path relative to the app root for consistency
+                        rel_path = file_path.relative_to(self.app_root)
                         self.templates.add(str(rel_path))
     
     def check_template_links(self):
