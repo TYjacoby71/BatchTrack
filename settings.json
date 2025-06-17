@@ -3,14 +3,14 @@
   "per_page": 20,
   "enable_csv_export": true,
   "alerts": {
-    "max_dashboard_alerts": 1,
-    "show_expiration_alerts": false,
+    "max_dashboard_alerts": 2,
+    "show_expiration_alerts": true,
     "show_timer_alerts": true,
     "show_low_stock_alerts": true,
-    "show_batch_alerts": false,
+    "show_batch_alerts": true,
     "show_fault_alerts": true,
     "low_stock_threshold": 5,
-    "expiration_warning_days": 12,
+    "expiration_warning_days": "20",
     "show_inventory_refund": true,
     "show_alert_badges": true
   },
