@@ -74,10 +74,10 @@
             </div>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
           {% if fifo_entries %}
             <div class="table-responsive">
-              <table class="table table-sm table-striped" id="fifoTable">
+              <table class="table table-sm table-striped mb-0" id="fifoTable">
                 <thead>
                   <tr>
                     <th data-column="fifo">FIFO #</th>
@@ -159,7 +159,7 @@
               </table>
             </div>
           {% else %}
-            <div class="alert alert-info">
+            <div class="alert alert-info m-3">
               No inventory found for this variant and size.
             </div>
           {% endif %}
