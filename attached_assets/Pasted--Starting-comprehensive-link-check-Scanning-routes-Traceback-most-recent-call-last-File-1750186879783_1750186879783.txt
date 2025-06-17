@@ -1,0 +1,41 @@
+🔍 Starting comprehensive link check...
+Scanning routes...
+Traceback (most recent call last):
+  File "/home/runner/workspace/tools/link_checker.py", line 264, in <module>
+    main()
+  File "/home/runner/workspace/tools/link_checker.py", line 261, in main
+    checker.run_full_check()
+  File "/home/runner/workspace/tools/link_checker.py", line 250, in run_full_check
+    self.scan_routes()
+  File "/home/runner/workspace/tools/link_checker.py", line 28, in scan_routes
+    for file_path in self.app_root.glob(pattern):
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 952, in glob
+    selector = _make_selector(tuple(pattern_parts), self._flavour)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 294, in _make_selector
+    return cls(pat, child_parts, flavour)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 335, in __init__
+    _Selector.__init__(self, child_parts, flavour)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 307, in __init__
+    self.successor = _make_selector(child_parts, flavour)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 294, in _make_selector
+    return cls(pat, child_parts, flavour)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 335, in __init__
+    _Selector.__init__(self, child_parts, flavour)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 307, in __init__
+    self.successor = _make_selector(child_parts, flavour)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 294, in _make_selector
+    return cls(pat, child_parts, flavour)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 351, in __init__
+    _Selector.__init__(self, child_parts, flavour)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 307, in __init__
+    self.successor = _make_selector(child_parts, flavour)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/pathlib.py", line 289, in _make_selector
+    raise ValueError("Invalid pattern: '**' can only be an entire path component")
+ValueError: Invalid pattern: '**' can only be an entire path component

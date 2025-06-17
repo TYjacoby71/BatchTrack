@@ -1,7 +1,8 @@
 
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import db, Product, ProductInventory, ProductEvent
+from ...extensions import db
+from ...models import Product, ProductInventory, ProductEvent
 from services.product_service import ProductService, adjust_product_fifo_entry
 from datetime import datetime
 from urllib.parse import unquote

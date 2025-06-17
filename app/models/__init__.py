@@ -1,5 +1,4 @@
-
-from .user import User, Organization
+from .user import User, Organization, Role, Permission, RolePermission, UserRole
 from .inventory import InventoryItem, InventoryHistory, Unit, CustomUnitMapping, IngredientCategory
 from .recipe import Recipe, RecipeIngredient
 from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient, BatchInventoryLog
@@ -8,7 +7,7 @@ from .conversion import ConversionLog
 from .tag import Tag
 
 __all__ = [
-    'User', 'Organization',
+    'User', 'Organization', 'Role', 'Permission', 'RolePermission', 'UserRole',
     'InventoryItem', 'InventoryHistory', 'Unit', 'CustomUnitMapping', 'IngredientCategory',
     'Recipe', 'RecipeIngredient',
     'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient', 'BatchInventoryLog',

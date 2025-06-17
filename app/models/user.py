@@ -3,6 +3,37 @@ from datetime import datetime
 from flask_login import UserMixin
 from ..extensions import db
 
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Permission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    resource = db.Column(db.String(64))  # e.g., 'inventory', 'batches'
+    action = db.Column(db.String(64))    # e.g., 'view', 'edit', 'delete'
+
+class RolePermission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'), nullable=False)
+    role = db.relationship('Role', backref='role_permissions')
+    permission = db.relationship('Permission', backref='role_permissions')
+
+class UserRole(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', foreign_keys=[user_id], backref='user_roles')
+    role = db.relationship('Role', backref='user_roles')
+    assigner = db.relationship('User', foreign_keys=[assigned_by])
+
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
@@ -42,6 +73,7 @@ class User(UserMixin, db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
 
     def check_password(self, password):
         from werkzeug.security import check_password_hash
