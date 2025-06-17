@@ -1,7 +1,8 @@
 
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
-from ...models import db, Product, ProductVariation, ProductInventory, ProductEvent, InventoryItem
+from ...extensions import db
+from ...models import Product, ProductVariation, ProductInventory, ProductEvent, InventoryItem
 from ...utils.template_helpers import get_global_unit_list
 from . import products_bp
 
