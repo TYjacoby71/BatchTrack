@@ -21,7 +21,7 @@ class LinkChecker:
             'app/auth/routes.py',
             'app/blueprints/*/routes.py',
             'app/blueprints/*/api.py',
-            'app/blueprints/*/**.py'
+            'app/blueprints/*/*.py'
         ]
         
         for pattern in route_files:

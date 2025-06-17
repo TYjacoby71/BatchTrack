@@ -91,7 +91,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('products.log') }}">Production Log</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
