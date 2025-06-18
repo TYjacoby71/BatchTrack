@@ -33,7 +33,7 @@ def create_app(config_filename=None):
     from .blueprints.conversion import conversion_bp
     from .blueprints.expiration import expiration_bp
     from .blueprints.inventory import inventory_bp
-    from .blueprints.products import products_bp
+    from .blueprints.products import products_bp, register_product_blueprints
     from .blueprints.quick_add import quick_add_bp
     from .blueprints.recipes import recipes_bp
     from .blueprints.settings import settings_bp
@@ -46,6 +46,7 @@ def create_app(config_filename=None):
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(products_bp, url_prefix='/products')
+    register_product_blueprints(app)
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(settings_bp, url_prefix='/settings')
