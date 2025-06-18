@@ -20,10 +20,11 @@ class TemplateRegistry:
             'products.view_product': 'legacy_products_main.view_product',
             'products.edit_product': 'legacy_products_main.edit_product',
             
-            # Batches endpoints
+            # Batches endpoints - map to the actual route function names
             'batches.batches_list': 'batches.list_batches',
             'batches.list_batches': 'batches.list_batches',
             'batches.view_batch_in_progress': 'batches.view_batch_in_progress',
+            'batches.view_batch': 'batches.view_batch',
             
             # Other common endpoint mappings can be added here
             'inventory.list_inventory': 'inventory.list_inventory',
@@ -37,6 +38,11 @@ class TemplateRegistry:
             # API endpoints
             'api.get_recipe_ingredients': 'api.get_recipe_ingredients',
             'api.check_stock': 'api.check_stock',
+            
+            # Missing common endpoints
+            'settings.index': 'settings.index',
+            'logout': 'auth.logout',
+            'login': 'auth.login',
         }
         
         # Cache for verified endpoints
