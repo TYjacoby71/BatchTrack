@@ -64,7 +64,7 @@
     <!-- Multi-Adjust Inventory Form -->
     <form id="updateInventoryForm" style="display: none;" 
       x-data="{ 
-        rows: [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        rows: [{unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
         submitForm(e) {
           e.preventDefault();
           const promises = this.rows.map(row => {
@@ -93,7 +93,7 @@
             .catch(err => alert('Error updating inventory'));
         },
         resetRows() {
-          this.rows = [{unit: '{{ get_global_unit_list()[0].name }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+          this.rows = [{unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
         },
         updateCostHelp(event, index) {
           const costType = event.target.value;
@@ -153,7 +153,7 @@
       </template>
 
       <div class="mt-3">
-        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: rows[0].unit, change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
         <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
         <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
       </div>
