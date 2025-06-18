@@ -8,6 +8,7 @@ Create Date: 2025-06-18 01:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -18,17 +19,27 @@ depends_on = None
 
 
 def upgrade():
-    # Add columns without foreign key first
-    with op.batch_alter_table('inventory_history', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('fifo_code', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('batch_id', sa.Integer(), nullable=True))
+    # Get connection and inspector
+    conn = op.get_bind()
+    inspector = inspect(conn)
     
-    # Add foreign key constraint separately to avoid circular dependency
-    try:
-        op.create_foreign_key('fk_inventory_history_batch_id', 'inventory_history', 'batch', ['batch_id'], ['id'])
-    except Exception:
-        # If foreign key creation fails, continue without it
-        pass
+    # Check existing columns in inventory_history table
+    existing_columns = [col['name'] for col in inspector.get_columns('inventory_history')]
+    
+    # Add columns to inventory_history if they don't exist
+    with op.batch_alter_table('inventory_history', schema=None) as batch_op:
+        if 'fifo_code' not in existing_columns:
+            batch_op.add_column(sa.Column('fifo_code', sa.String(length=32), nullable=True))
+        if 'batch_id' not in existing_columns:
+            batch_op.add_column(sa.Column('batch_id', sa.Integer(), nullable=True))
+    
+    # Add foreign key constraint if batch_id column was added
+    if 'batch_id' not in existing_columns:
+        try:
+            op.create_foreign_key('fk_inventory_history_batch_id', 'inventory_history', 'batch', ['batch_id'], ['id'])
+        except Exception:
+            # If foreign key creation fails, continue without it
+            pass
 
 
 def downgrade():
