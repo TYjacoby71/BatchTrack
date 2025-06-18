@@ -78,7 +78,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('batches.batches_list') }}">Batches</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
