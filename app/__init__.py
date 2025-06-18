@@ -81,6 +81,10 @@ def create_app(config_filename=None):
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
+    
+    # Register template registry for safe URL generation
+    from .template_registry import template_registry
+    template_registry.register_template_functions(app)
 
     # Add custom template filters
     @app.template_filter('attr_multiply')
