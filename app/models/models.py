@@ -334,7 +334,7 @@ class InventoryItem(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    category = db.relationship('InventoryItem', backref='inventory_items')
+    category = db.relationship('IngredientCategory', backref='inventory_items')
 
 class BatchInventoryLog(db.Model):
     """Log batch impacts on inventory for debugging"""
