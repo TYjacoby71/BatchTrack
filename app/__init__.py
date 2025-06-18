@@ -86,18 +86,7 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-    # Register remaining routes
-    from .routes.app_routes import app_routes_bp
-    from .blueprints.admin.admin_routes import admin_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
+    
 
     # Register legacy blueprints that still exist
     try:
