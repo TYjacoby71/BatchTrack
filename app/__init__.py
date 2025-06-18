@@ -85,13 +85,12 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-
+    # Register conversion blueprint
+    from .blueprints.conversion import conversion_bp
+    app.register_blueprint(conversion_bp)
 
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
-        ('.blueprints.batches.start_batch', 'start_batch_bp', '/start-batch'),
-        ('.blueprints.batches.finish_batch', 'finish_batch_bp', '/finish-batch'),
-        ('.blueprints.batches.cancel_batch', 'cancel_batch_bp', '/cancel'),
         ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
         ('.blueprints.fifo', 'fifo_bp', None),
     ]
