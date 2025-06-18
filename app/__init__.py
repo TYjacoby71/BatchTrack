@@ -33,7 +33,7 @@ def create_app(config_filename=None):
     from .blueprints.conversion import conversion_bp
     from .blueprints.expiration import expiration_bp
     from .blueprints.inventory import inventory_bp
-    from .blueprints.products import products_bp
+    from .blueprints.products import products_bp, register_product_blueprints
     from .blueprints.quick_add import quick_add_bp
     from .blueprints.recipes import recipes_bp
     from .blueprints.settings import settings_bp
@@ -46,6 +46,7 @@ def create_app(config_filename=None):
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(products_bp, url_prefix='/products')
+    register_product_blueprints(app)
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(settings_bp, url_prefix='/settings')
@@ -57,14 +58,14 @@ def create_app(config_filename=None):
     from .routes.admin_routes import admin_bp
     from .routes.bulk_stock_routes import bulk_stock_bp
     from .routes.fault_log_routes import fault_log_bp
-    from .routes.product_routes import product_routes_bp
+    from .routes.product_routes import product_bp
     from .routes.tag_manager_routes import tag_manager_bp
 
     app.register_blueprint(app_routes_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
     app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(products_bp, url_prefix='/product_routes')
+    app.register_blueprint(product_bp, url_prefix='/product_routes')
     app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
 
     # Register filters
