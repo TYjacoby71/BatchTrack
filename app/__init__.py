@@ -88,18 +88,13 @@ def create_app(config_filename=None):
 
     
 
-    # Register legacy blueprints that still exist
+    # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
         ('.blueprints.batches.start_batch', 'start_batch_bp', '/start-batch'),
         ('.blueprints.batches.finish_batch', 'finish_batch_bp', '/finish-batch'),
         ('.blueprints.batches.cancel_batch', 'cancel_batch_bp', '/cancel'),
         ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
         ('.blueprints.fifo', 'fifo_bp', None),
-        ('.blueprints.products.products', 'products_bp', None),
-        ('.blueprints.products.product_variants', 'product_variants_bp', None),
-        ('.blueprints.products.product_inventory', 'product_inventory_bp', None),
-        ('.blueprints.products.product_api', 'product_api_bp', None),
-        ('.blueprints.products.product_log_routes', 'product_log_bp', '/product-logs'),
     ]
     
     for module_path, bp_name, url_prefix in legacy_blueprints:
