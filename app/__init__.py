@@ -85,6 +85,10 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
+    # Register inventory blueprint
+    from .blueprints.inventory import inventory_bp
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
         ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
