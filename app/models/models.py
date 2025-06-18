@@ -221,6 +221,10 @@ class InventoryHistory(db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # Expiration tracking fields
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
@@ -285,8 +289,14 @@ class ProductInventory(db.Model):
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
     quantity = db.Column(db.Float, nullable=False, default=0.0)
     unit = db.Column(db.String(32), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    # Expiration tracking fields
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
     
     variant = db.relationship('ProductVariation', backref='inventory')
+    batch = db.relationship('Batch')
 
 class ProductVariation(db.Model):
     """Product variations (SKUs) - handles packaging, sizes, etc."""
@@ -364,6 +374,10 @@ class ProductInventoryHistory(db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # Expiration tracking fields
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     product_inventory = db.relationship('ProductInventory', backref='history')
