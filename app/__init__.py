@@ -70,7 +70,7 @@ def create_app(config_filename=None):
 
     # Register remaining legacy routes
     from .routes.app_routes import app_routes_bp
-    from .routes.admin_routes import admin_bp
+    from .blueprints.admin.admin_routes import admin_bp
     from .routes.bulk_stock_routes import bulk_stock_bp
     from .routes.fault_log_routes import fault_log_bp
     from .routes.tag_manager_routes import tag_manager_bp
