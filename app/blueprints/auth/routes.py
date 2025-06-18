@@ -1,38 +1,87 @@
-from flask import Flask, render_template, Blueprint
+
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
+from werkzeug.security import generate_password_hash
+from . import auth_bp
+from ...extensions import db
+from ...models import User, Organization
 
-# Create a Flask application
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with a real secret key
-
-# Define a simple login form
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
-# Create an authentication blueprint
-auth_bp = Blueprint('auth', __name__)
-
-# Define a route for the login page
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('app_routes.dashboard'))
+        
     form = LoginForm()
-    if form.validate_on_submit():
-        # Replace with actual authentication logic
-        return "Login Successful"
-    return render_template('login.html', form=form)
+    if request.method == 'POST' and form.validate_on_submit():
+        form_type = request.form.get('form_type')
+        username = request.form.get('username')
+        password = request.form.get('password')
 
-# Register the authentication blueprint with the application
-app.register_blueprint(auth_bp)
+        if not username or not password:
+            flash('Please provide both username and password')
+            return render_template('auth/login.html', form=form)
 
-# Define a route for the home page
-@app.route('/')
-def home():
-    return "Welcome to the Home Page!"
+        if form_type == 'register':
+            # Handle registration
+            confirm_password = request.form.get('confirm_password')
 
-# Run the application
-if __name__ == '__main__':
-    app.run(debug=True)
+            if password != confirm_password:
+                flash('Passwords do not match')
+                return render_template('auth/login.html', form=form)
+
+            # Check if username already exists
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                flash('Username already exists')
+                return render_template('auth/login.html', form=form)
+
+            # Create organization for new user
+            new_org = Organization(name=f"{username}'s Organization")
+            db.session.add(new_org)
+            db.session.flush()  # Get the ID
+
+            # Create new user
+            new_user = User(
+                username=username,
+                organization_id=new_org.id,
+                role='user'
+            )
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+
+            flash('Account created successfully! Please log in.')
+            return render_template('auth/login.html', form=form)
+
+        else:
+            # Handle login
+            user = User.query.filter_by(username=username).first()
+            
+            if user and user.check_password(password):
+                login_user(user)
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('app_routes.dashboard'))
+            else:
+                flash('Invalid username or password')
+                return render_template('auth/login.html', form=form)
+
+    return render_template('auth/login.html', form=form)
+
+@auth_bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('homepage'))
+
+@auth_bp.route('/dev_login')
+def dev_login():
+    # Placeholder for future dev login page
+    flash('Developer login coming soon!')
+    return redirect(url_for('auth.login'))
