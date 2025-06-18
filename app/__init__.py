@@ -3,7 +3,7 @@ from flask_migrate import Migrate
 
 def create_app(config_filename=None):
     app = Flask(__name__)
-    
+
     # Set default configuration
     app.config.update(
         SECRET_KEY='dev-key-change-in-production',
@@ -11,7 +11,7 @@ def create_app(config_filename=None):
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         WTF_CSRF_ENABLED=True
     )
-    
+
     # Load additional config if provided
     if config_filename:
         app.config.from_pyfile(config_filename)
@@ -39,7 +39,7 @@ def create_app(config_filename=None):
     from .blueprints.settings import settings_bp
     from .blueprints.timers import timers_bp
     from .blueprints.api import api_bp
-    
+
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(batches_bp, url_prefix='/batches')
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
@@ -59,12 +59,12 @@ def create_app(config_filename=None):
     from .routes.fault_log_routes import fault_log_bp
     from .routes.product_routes import product_routes_bp
     from .routes.tag_manager_routes import tag_manager_bp
-    
+
     app.register_blueprint(app_routes_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
     app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(product_routes_bp, url_prefix='/product_routes')
+    app.register_blueprint(products_bp, url_prefix='/product_routes')
     app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
 
     # Register filters
