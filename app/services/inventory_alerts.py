@@ -1,4 +1,3 @@
-
 from ..models import InventoryItem
 from sqlalchemy import and_
 
