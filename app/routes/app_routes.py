@@ -4,7 +4,7 @@ from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, user_scoped_query
 
-app_routes_bp = Blueprint('dashboard', __name__)
+app_routes_bp = Blueprint('app_routes', __name__)
 
 from ..services.inventory_alerts import get_low_stock_ingredients
 from ..blueprints.expiration.services import ExpirationService
