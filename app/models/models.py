@@ -326,7 +326,7 @@ class InventoryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'))
-    current_stock = db.Column(db.Float, default=0.0)
+    quantity = db.Column(db.Float, default=0.0)
     stock_unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
@@ -334,7 +334,7 @@ class InventoryItem(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    category = db.relationship('IngredientCategory', backref='inventory_items')
+    category = db.relationship('InventoryItem', backref='inventory_items')
 
 class BatchInventoryLog(db.Model):
     """Log batch impacts on inventory for debugging"""
