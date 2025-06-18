@@ -1,8 +1,8 @@
-"""Initial migration with organization support
+"""Initial migration with complete schema
 
-Revision ID: b6f0301314ec
+Revision ID: 8284570146d9
 Revises: 
-Create Date: 2025-06-13 21:02:51.504178
+Create Date: 2025-06-18 01:25:55.681050
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b6f0301314ec'
+revision = '8284570146d9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,7 +21,9 @@ def upgrade():
     op.create_table('ingredient_category',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
-    sa.Column('default_density', sa.Float(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('color', sa.String(length=7), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -45,28 +47,35 @@ def upgrade():
     )
     op.create_table('tag',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=32), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('color', sa.String(length=7), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
+    )
+    op.create_table('unit',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('symbol', sa.String(length=16), nullable=False),
+    sa.Column('type', sa.String(length=32), nullable=False),
+    sa.Column('base_unit', sa.String(length=64), nullable=True),
+    sa.Column('conversion_factor', sa.Float(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
     op.create_table('inventory_item',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=64), nullable=True),
-    sa.Column('is_archived', sa.Boolean(), nullable=True),
-    sa.Column('quantity', sa.Float(), nullable=True),
-    sa.Column('unit', sa.String(length=32), nullable=True),
-    sa.Column('type', sa.String(length=32), nullable=True),
-    sa.Column('cost_per_unit', sa.Float(), nullable=True),
-    sa.Column('intermediate', sa.Boolean(), nullable=True),
-    sa.Column('expiration_date', sa.Date(), nullable=True),
-    sa.Column('low_stock_threshold', sa.Float(), nullable=True),
-    sa.Column('is_perishable', sa.Boolean(), nullable=True),
-    sa.Column('storage_amount', sa.Float(), nullable=True),
-    sa.Column('storage_unit', sa.String(length=50), nullable=True),
-    sa.Column('density', sa.Float(), nullable=True),
-    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=128), nullable=False),
     sa.Column('category_id', sa.Integer(), nullable=True),
+    sa.Column('quantity', sa.Float(), nullable=True),
+    sa.Column('unit', sa.String(length=32), nullable=False),
+    sa.Column('cost_per_unit', sa.Float(), nullable=True),
+    sa.Column('low_stock_threshold', sa.Float(), nullable=True),
+    sa.Column('density', sa.Float(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['ingredient_category.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
@@ -75,12 +84,12 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=128), nullable=False),
-    sa.Column('sku', sa.String(length=64), nullable=True),
     sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('sku')
+    sa.UniqueConstraint('product_id', 'name', name='unique_product_variation')
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -107,26 +116,27 @@ def upgrade():
     sa.Column('from_unit', sa.String(length=64), nullable=False),
     sa.Column('to_unit', sa.String(length=64), nullable=False),
     sa.Column('result', sa.Float(), nullable=False),
-    sa.Column('ingredient_id', sa.Integer(), nullable=True),
-    sa.Column('density_used', sa.Float(), nullable=True),
-    sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], ),
+    sa.Column('conversion_type', sa.String(length=32), nullable=True),
+    sa.Column('ingredient_name', sa.String(length=128), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('custom_unit_mapping',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('from_unit', sa.String(length=64), nullable=False),
-    sa.Column('to_unit', sa.String(length=64), nullable=False),
-    sa.Column('multiplier', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.Column('ingredient_item_id', sa.Integer(), nullable=False),
+    sa.Column('unit_name', sa.String(length=64), nullable=False),
+    sa.Column('conversion_factor', sa.Float(), nullable=False),
+    sa.Column('base_unit', sa.String(length=64), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['ingredient_item_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('product_event',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=True),
-    sa.Column('event_type', sa.String(length=64), nullable=True),
-    sa.Column('note', sa.Text(), nullable=True),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('event_type', sa.String(length=32), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
@@ -151,19 +161,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['parent_id'], ['recipe.id'], ),
     sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('unit',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=64), nullable=False),
-    sa.Column('type', sa.String(length=32), nullable=False),
-    sa.Column('base_unit', sa.String(length=64), nullable=False),
-    sa.Column('multiplier_to_base', sa.Float(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('is_custom', sa.Boolean(), nullable=True),
-    sa.Column('is_mapped', sa.Boolean(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
     )
     op.create_table('batch',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -191,63 +188,65 @@ def upgrade():
     sa.Column('shelf_life_days', sa.Integer(), nullable=True),
     sa.Column('expiration_date', sa.DateTime(), nullable=True),
     sa.Column('remaining_quantity', sa.Float(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
     sa.ForeignKeyConstraint(['variant_id'], ['product_variation.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('label_code')
     )
-    op.create_table('recipe_ingredients',
+    op.create_table('recipe_ingredient',
+    sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('recipe_id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
     sa.Column('unit', sa.String(length=32), nullable=False),
-    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('recipe_id', 'inventory_item_id')
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('order_position', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('batch_container',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('container_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_used', sa.Integer(), nullable=False),
-    sa.Column('cost_each', sa.Float(), nullable=True),
+    sa.Column('container_size', sa.String(length=32), nullable=False),
+    sa.Column('container_quantity', sa.Integer(), nullable=False),
+    sa.Column('fill_quantity', sa.Float(), nullable=True),
+    sa.Column('fill_unit', sa.String(length=32), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('batch_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('ingredient_id', sa.Integer(), nullable=False),
-    sa.Column('amount_used', sa.Float(), nullable=False),
+    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_used', sa.Float(), nullable=False),
     sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('cost_per_unit', sa.Float(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
-    sa.ForeignKeyConstraint(['ingredient_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('batch_inventory_log',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+    sa.Column('action', sa.String(length=32), nullable=False),
     sa.Column('quantity_change', sa.Float(), nullable=False),
-    sa.Column('reason', sa.String(length=32), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('unit', sa.String(length=32), nullable=False),
+    sa.Column('old_stock', sa.Float(), nullable=False),
+    sa.Column('new_stock', sa.Float(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('batch_timer',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=64), nullable=True),
-    sa.Column('duration_seconds', sa.Integer(), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('duration_seconds', sa.Integer(), nullable=False),
     sa.Column('start_time', sa.DateTime(), nullable=True),
     sa.Column('end_time', sa.DateTime(), nullable=True),
     sa.Column('status', sa.String(length=32), nullable=True),
@@ -257,20 +256,21 @@ def upgrade():
     op.create_table('extra_batch_container',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('container_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_used', sa.Integer(), nullable=False),
-    sa.Column('cost_each', sa.Float(), nullable=True),
+    sa.Column('container_size', sa.String(length=32), nullable=False),
+    sa.Column('container_quantity', sa.Integer(), nullable=False),
+    sa.Column('fill_quantity', sa.Float(), nullable=True),
+    sa.Column('fill_unit', sa.String(length=32), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('extra_batch_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('quantity_used', sa.Float(), nullable=False),
     sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('cost_per_unit', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -285,38 +285,32 @@ def upgrade():
     sa.Column('remaining_quantity', sa.Float(), nullable=True),
     sa.Column('unit_cost', sa.Float(), nullable=True),
     sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
-    sa.Column('is_perishable', sa.Boolean(), nullable=True),
-    sa.Column('expiration_date', sa.DateTime(), nullable=True),
-    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
-    sa.Column('used_for_batch_id', sa.Integer(), nullable=True),
+    sa.Column('fifo_code', sa.String(length=32), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
     sa.Column('note', sa.Text(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('quantity_used', sa.Float(), nullable=True),
+    sa.Column('is_perishable', sa.Boolean(), nullable=True),
+    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('expiration_date', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['fifo_reference_id'], ['inventory_history.id'], ),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('product_inventory',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=True),
-    sa.Column('variant', sa.String(length=100), nullable=True),
-    sa.Column('size_label', sa.String(length=100), nullable=True),
-    sa.Column('sku', sa.String(length=100), nullable=True),
-    sa.Column('unit', sa.String(length=50), nullable=True),
-    sa.Column('quantity', sa.Float(), nullable=True),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('variant_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('container_id', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('timestamp', sa.DateTime(), nullable=True),
-    sa.Column('expiration_date', sa.Date(), nullable=True),
-    sa.Column('batch_cost_per_unit', sa.Float(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('is_perishable', sa.Boolean(), nullable=True),
+    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('expiration_date', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
+    sa.ForeignKeyConstraint(['variant_id'], ['product_variation.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('product_inventory_history',
@@ -333,6 +327,9 @@ def upgrade():
     sa.Column('batch_id', sa.Integer(), nullable=True),
     sa.Column('note', sa.Text(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('is_perishable', sa.Boolean(), nullable=True),
+    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('expiration_date', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_inventory_history.id'], ),
@@ -353,9 +350,8 @@ def downgrade():
     op.drop_table('batch_inventory_log')
     op.drop_table('batch_ingredient')
     op.drop_table('batch_container')
-    op.drop_table('recipe_ingredients')
+    op.drop_table('recipe_ingredient')
     op.drop_table('batch')
-    op.drop_table('unit')
     op.drop_table('recipe')
     op.drop_table('product_event')
     op.drop_table('custom_unit_mapping')
@@ -363,6 +359,7 @@ def downgrade():
     op.drop_table('user')
     op.drop_table('product_variation')
     op.drop_table('inventory_item')
+    op.drop_table('unit')
     op.drop_table('tag')
     op.drop_table('product')
     op.drop_table('organization')
