@@ -46,7 +46,7 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('dashboard.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">BatchTrack </a>
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('app_routes.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">BatchTrack </a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>
