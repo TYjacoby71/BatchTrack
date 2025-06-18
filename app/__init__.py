@@ -52,7 +52,8 @@ def create_app(config_filename=None):
 
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
-        ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
+        # add_extra_bp is now handled by blueprint_registry
+        # ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
         ('.blueprints.fifo', 'fifo_bp', None),
     ]
 
