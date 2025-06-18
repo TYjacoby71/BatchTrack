@@ -89,30 +89,29 @@ def create_app(config_filename=None):
     
 
     # Register legacy blueprints that still exist
-    try:
-        from .blueprints.batches.start_batch import start_batch_bp
-        from .blueprints.batches.finish_batch import finish_batch_bp
-        from .blueprints.batches.cancel_batch import cancel_batch_bp
-        from .blueprints.batches.add_extra import add_extra_bp
-        from .blueprints.fifo import fifo_bp
-        from .blueprints.products.products import products_bp as legacy_products_bp
-        from .blueprints.products.product_variants import product_variants_bp
-        from .blueprints.products.product_inventory import product_inventory_bp
-        from .blueprints.products.product_api import product_api_bp
-        from .blueprints.products.product_log_routes import product_log_bp
-
-        app.register_blueprint(fifo_bp)
-        app.register_blueprint(legacy_products_bp, name='legacy_products')
-        app.register_blueprint(product_variants_bp)
-        app.register_blueprint(product_inventory_bp)
-        app.register_blueprint(product_api_bp)
-        app.register_blueprint(product_log_bp, url_prefix='/product-logs')
-        app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-        app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
-        app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
-        app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    except ImportError as e:
-        print(f"Warning: Could not import legacy blueprint: {e}")
+    legacy_blueprints = [
+        ('.blueprints.batches.start_batch', 'start_batch_bp', '/start-batch'),
+        ('.blueprints.batches.finish_batch', 'finish_batch_bp', '/finish-batch'),
+        ('.blueprints.batches.cancel_batch', 'cancel_batch_bp', '/cancel'),
+        ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
+        ('.blueprints.fifo', 'fifo_bp', None),
+        ('.blueprints.products.products', 'products_bp', None),
+        ('.blueprints.products.product_variants', 'product_variants_bp', None),
+        ('.blueprints.products.product_inventory', 'product_inventory_bp', None),
+        ('.blueprints.products.product_api', 'product_api_bp', None),
+        ('.blueprints.products.product_log_routes', 'product_log_bp', '/product-logs'),
+    ]
+    
+    for module_path, bp_name, url_prefix in legacy_blueprints:
+        try:
+            module = __import__(f'app{module_path}', fromlist=[bp_name])
+            blueprint = getattr(module, bp_name)
+            if url_prefix:
+                app.register_blueprint(blueprint, url_prefix=url_prefix)
+            else:
+                app.register_blueprint(blueprint)
+        except (ImportError, AttributeError) as e:
+            print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:
@@ -164,7 +163,7 @@ def create_app(config_filename=None):
     def index():
         from flask_login import current_user
         if current_user.is_authenticated:
-            return redirect(url_for('app_routes_bp.dashboard'))
+            return redirect(url_for('app_routes.dashboard'))
         return redirect(url_for('homepage'))
 
     @app.route('/homepage')
