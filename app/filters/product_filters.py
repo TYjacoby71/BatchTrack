@@ -36,6 +36,15 @@ def register_product_filters(app):
 
         return data
 
+def register_filters(app):
+    """Register all template filters"""
+    register_product_filters(app)
+    
+    @app.template_filter('get_fifo_summary')
+    def get_fifo_summary_filter(inventory_id):
+        """Template filter to get FIFO summary"""
+        return get_fifo_summary_helper(inventory_id)
+
 def get_fifo_summary_helper(inventory_id):
     """Helper function to get FIFO summary for template"""
     try:

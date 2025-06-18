@@ -90,16 +90,16 @@ def create_app(config_filename=None):
 
     # Register legacy blueprints that still exist
     try:
-        from blueprints.batches.start_batch import start_batch_bp
-        from blueprints.batches.finish_batch import finish_batch_bp
-        from blueprints.batches.cancel_batch import cancel_batch_bp
-        from blueprints.batches.add_extra import add_extra_bp
-        from blueprints.fifo import fifo_bp
-        from routes.products import products_bp as legacy_products_bp
-        from routes.product_variants import product_variants_bp
-        from routes.product_inventory import product_inventory_bp
-        from routes.product_api import product_api_bp
-        from routes.product_log_routes import product_log_bp
+        from .blueprints.batches.start_batch import start_batch_bp
+        from .blueprints.batches.finish_batch import finish_batch_bp
+        from .blueprints.batches.cancel_batch import cancel_batch_bp
+        from .blueprints.batches.add_extra import add_extra_bp
+        from .blueprints.fifo import fifo_bp
+        from .blueprints.products.products import products_bp as legacy_products_bp
+        from .blueprints.products.product_variants import product_variants_bp
+        from .blueprints.products.product_inventory import product_inventory_bp
+        from .blueprints.products.product_api import product_api_bp
+        from .blueprints.products.product_log_routes import product_log_bp
 
         app.register_blueprint(fifo_bp)
         app.register_blueprint(legacy_products_bp, name='legacy_products')
@@ -116,7 +116,7 @@ def create_app(config_filename=None):
 
     # Initialize API routes
     try:
-        from blueprints.api import init_api
+        from .blueprints.api import init_api
         init_api(app)
     except ImportError:
         pass
@@ -124,12 +124,6 @@ def create_app(config_filename=None):
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
-    
-    try:
-        from filters.product_filters import register_product_filters
-        register_product_filters(app)
-    except ImportError:
-        pass
 
     # Add custom template filters
     @app.template_filter('attr_multiply')
@@ -158,11 +152,7 @@ def create_app(config_filename=None):
             from .utils.permissions import has_permission, has_role
             return dict(has_permission=has_permission, has_role=has_role)
         except ImportError:
-            try:
-                from utils.permissions import has_permission, has_role
-                return dict(has_permission=has_permission, has_role=has_role)
-            except ImportError:
-                return dict(has_permission=lambda x: True, has_role=lambda x: True)
+            return dict(has_permission=lambda x: True, has_role=lambda x: True)
 
     # User loader
     @login_manager.user_loader
