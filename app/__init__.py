@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_migrate import Migrate
 import os
@@ -45,19 +44,19 @@ def register_blueprints(app):
 
 def create_app(config_filename=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
-    
+
     # Add custom URL rule for data files
     app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
-    
+
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-    
+
     # Ensure directories exist with proper permissions
     instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
     os.makedirs(instance_path, exist_ok=True)
     os.makedirs('static/product_images', exist_ok=True)
     os.chmod(instance_path, 0o777)
-    
+
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
@@ -86,7 +85,7 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-    
+
 
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
@@ -96,7 +95,7 @@ def create_app(config_filename=None):
         ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
         ('.blueprints.fifo', 'fifo_bp', None),
     ]
-    
+
     for module_path, bp_name, url_prefix in legacy_blueprints:
         try:
             module = __import__(f'app{module_path}', fromlist=[bp_name])
