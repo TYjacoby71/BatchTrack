@@ -1,5 +1,6 @@
 
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models import User, Organization, Unit, IngredientCategory
 from werkzeug.security import generate_password_hash
 
@@ -7,6 +8,7 @@ from seeders.unit_seeder import seed_units
 from seeders.ingredient_category_seeder import seed_categories
 
 def init_db():
+    app = create_app()
     with app.app_context():
         db.create_all()
         seed_units()
