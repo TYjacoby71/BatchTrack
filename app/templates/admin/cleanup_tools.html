@@ -29,7 +29,7 @@
     <div class="card-body">
       <h5 class="card-title">Reset Database</h5>
       <p class="card-text">Warning: This will delete ALL data and restore a fresh database with only default units and categories.</p>
-      <form method="POST" action="{{ url_for('admin.reset_database') }}" onsubmit="return confirm('Are you sure? This will permanently delete all data.')">
+      <form method="POST" action="{{ safe_url_for('admin.reset_database') }}" onsubmit="return confirm('Are you sure? This will permanently delete all data.')">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <button type="submit" class="btn btn-danger">Reset Database</button>
       </form>
@@ -38,7 +38,7 @@
     <div class="card-body">
       <h5 class="card-title">Archive Zeroed Inventory</h5>
       <p class="card-text">Remove all product inventory entries with zero quantity. This helps keep your FIFO views clean.</p>
-      <form method="POST" action="{{ url_for('admin.archive_zeroed_inventory') }}" onsubmit="return confirm('Are you sure? This will permanently remove zeroed inventory entries.')">
+      <form method="POST" action="{{ safe_url_for('admin.archive_zeroed_inventory') }}" onsubmit="return confirm('Are you sure? This will permanently remove zeroed inventory entries.')">
         {{ csrf_token() }}
         <button type="submit" class="btn btn-warning">Archive Zeroed Entries</button>
       </form>

@@ -99,7 +99,7 @@
             </td>
             <td>
               {% if timer.status != 'completed' %}
-              <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
+              <form method="POST" action="{{ safe_url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-success">Complete</button>
               </form>

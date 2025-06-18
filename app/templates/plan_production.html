@@ -78,7 +78,7 @@
   <div class="mb-4">
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">Check Stock</button>
-      <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+      <a href="{{ safe_url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
     </div>
     {% include 'partials/plan_production_stock_check.html' %}
   </div>
@@ -394,5 +394,5 @@ function planProduction() {
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+<script src="{{ safe_url_for('static', filename='js/recipes/plan_production.js') }}"></script>
 {% endblock %}

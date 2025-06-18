@@ -8,7 +8,7 @@
 <div class="text-center mb-4">
   <div class="d-inline-flex gap-3">
     {% if active_batch %}
-      <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
+      <a href="{{ safe_url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
     {% endif %}
     <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
   </div>
@@ -31,10 +31,10 @@
         <h4 class="text-muted mb-3">No Recipes Yet</h4>
         <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
         <div class="d-flex gap-3 justify-content-center mb-3">
-          <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
+          <a href="{{ safe_url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Create Your First Recipe
           </a>
-          <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+          <a href="{{ safe_url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
             <i class="fas fa-boxes"></i> Add Ingredients
           </a>
         </div>
