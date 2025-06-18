@@ -326,7 +326,7 @@ class InventoryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'))
-    quantity = db.Column(db.Float, default=0.0)
+    current_stock = db.Column(db.Float, default=0.0)
     stock_unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
