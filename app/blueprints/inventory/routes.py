@@ -3,9 +3,9 @@ from flask_login import login_required, current_user
 from ...models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
-from ...utils.unit_utils import get_global_unit_list
 
-inventory_bp = Blueprint('inventory', __name__)
+# Import the blueprint from __init__.py instead of creating a new one
+from . import inventory_bp
 
 @inventory_bp.route('/')
 @login_required
