@@ -5,7 +5,7 @@ from datetime import datetime
 from ...utils import get_setting
 from sqlalchemy import extract
 from ...services.unit_conversion import ConversionEngine
-from blueprints.inventory.routes import adjust_inventory
+from ..inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
 from ...services.inventory_adjustment import process_inventory_adjustment
@@ -148,7 +148,7 @@ def list_batches():
         completed_batches.sort(key=lambda x: x.total_cost or 0, reverse=False)
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
-    from models import InventoryItem
+    from ...models import InventoryItem
 
     return render_template('batches/batches_list.html',
         InventoryItem=InventoryItem, 
@@ -252,7 +252,7 @@ def view_batch_in_progress(batch_identifier):
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
     # Get products for finish batch modal
-    from models import Product
+    from ...models import Product
     products = Product.query.filter_by(is_active=True).all()
 
     # Calculate container breakdown for finish modal
