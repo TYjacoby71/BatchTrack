@@ -4,7 +4,7 @@ from ..models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-from ..fifo.services import deduct_fifo
+from ..blueprints.fifo.services import deduct_fifo
 
 product_bp = Blueprint('product', __name__)
 
@@ -50,7 +50,7 @@ def edit_product(product_id):
 @product_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
 @login_required
 def deduct_product(product_id):
-    from services.product_service import ProductService
+    from ..services.product_service import ProductService
     
     variant = request.form.get("variant", "Base")
     size_label = request.form.get("size_label", "Bulk")
