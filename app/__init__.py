@@ -85,10 +85,6 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-    # Register conversion blueprint
-    from .blueprints.conversion import conversion_bp
-    app.register_blueprint(conversion_bp)
-
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
         ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
