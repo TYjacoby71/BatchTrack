@@ -54,19 +54,22 @@ def create_app(config_filename=None):
     legacy_blueprints = [
         # add_extra_bp is now handled by blueprint_registry
         # ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
-        ('.blueprints.fifo', 'fifo_bp', None),
+        # fifo_bp is now handled by blueprint_registry
+        # ('.blueprints.fifo', 'fifo_bp', None),
     ]
 
-    for module_path, bp_name, url_prefix in legacy_blueprints:
-        try:
-            module = __import__(f'app{module_path}', fromlist=[bp_name])
-            blueprint = getattr(module, bp_name)
-            if url_prefix:
-                app.register_blueprint(blueprint, url_prefix=url_prefix)
-            else:
-                app.register_blueprint(blueprint)
-        except (ImportError, AttributeError) as e:
-            print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
+    # Legacy blueprints are now all handled by blueprint_registry
+    if legacy_blueprints:  # Only run if there are actually legacy blueprints to register
+        for module_path, bp_name, url_prefix in legacy_blueprints:
+            try:
+                module = __import__(f'app{module_path}', fromlist=[bp_name])
+                blueprint = getattr(module, bp_name)
+                if url_prefix:
+                    app.register_blueprint(blueprint, url_prefix=url_prefix)
+                else:
+                    app.register_blueprint(blueprint)
+            except (ImportError, AttributeError) as e:
+                print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:
