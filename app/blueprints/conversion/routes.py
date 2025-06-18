@@ -1,14 +1,13 @@
-from flask import Blueprint, request, render_template, redirect, flash, url_for, jsonify
+from flask import request, render_template, redirect, flash, url_for, jsonify
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 from ...models import db, Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
 from ...services.unit_conversion import ConversionEngine
 import logging
+from . import conversion_bp
 
 logger = logging.getLogger(__name__)
-
-conversion_bp = Blueprint('conversion_bp', __name__, url_prefix='/conversion')
 
 @conversion_bp.route('/convert/<float:amount>/<from_unit>/<to_unit>', methods=['GET'])
 def convert(amount, from_unit, to_unit):
