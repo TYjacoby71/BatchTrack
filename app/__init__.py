@@ -3,6 +3,46 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_migrate import Migrate
 import os
 
+def register_blueprints(app):
+    """Register all application blueprints"""
+    # Core blueprints
+    from .blueprints.auth import auth_bp
+    from .blueprints.batches import batches_bp
+    from .blueprints.conversion import conversion_bp
+    from .blueprints.expiration import expiration_bp
+    from .blueprints.inventory import inventory_bp
+    from .blueprints.products import products_bp, register_product_blueprints
+    from .blueprints.quick_add import quick_add_bp
+    from .blueprints.recipes import recipes_bp
+    from .blueprints.settings import settings_bp
+    from .blueprints.timers import timers_bp
+    from .blueprints.api import api_bp
+
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(batches_bp, url_prefix='/batches')
+    app.register_blueprint(conversion_bp, url_prefix='/conversion')
+    app.register_blueprint(expiration_bp, url_prefix='/expiration')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    register_product_blueprints(app)
+    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
+    app.register_blueprint(recipes_bp, url_prefix='/recipes')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
+    app.register_blueprint(timers_bp, url_prefix='/timers')
+    app.register_blueprint(api_bp, url_prefix='/api')
+
+    # Legacy routes (to be migrated)
+    from .routes.app_routes import app_routes_bp
+    from .blueprints.admin.admin_routes import admin_bp
+    from .routes.bulk_stock_routes import bulk_stock_bp
+    from .routes.fault_log_routes import fault_log_bp
+    from .routes.tag_manager_routes import tag_manager_bp
+
+    app.register_blueprint(app_routes_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
+    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
+    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
+
 def create_app(config_filename=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
     
@@ -43,74 +83,34 @@ def create_app(config_filename=None):
     from .utils.unit_utils import setup_logging
     setup_logging(app)
 
-    # Register blueprints - New modular blueprints
-    from .blueprints.auth import auth_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.conversion import conversion_bp
-    from .blueprints.expiration import expiration_bp
-    from .blueprints.inventory import inventory_bp
-    from .blueprints.products import products_bp, register_product_blueprints
-    from .blueprints.quick_add import quick_add_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.settings import settings_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.api import api_bp
+    # Register blueprints
+    register_blueprints(app)
 
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    app.register_blueprint(products_bp, url_prefix='/products')
-    register_product_blueprints(app)
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(api_bp, url_prefix='/api')
+    
 
-    # Register remaining legacy routes
-    from .routes.app_routes import app_routes_bp
-    from .routes.admin_routes import admin_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
-
-    # Register legacy blueprints that still exist
-    try:
-        from blueprints.batches.start_batch import start_batch_bp
-        from blueprints.batches.finish_batch import finish_batch_bp
-        from blueprints.batches.cancel_batch import cancel_batch_bp
-        from blueprints.batches.add_extra import add_extra_bp
-        from blueprints.fifo import fifo_bp
-        from routes.products import products_bp as legacy_products_bp
-        from routes.product_variants import product_variants_bp
-        from routes.product_inventory import product_inventory_bp
-        from routes.product_api import product_api_bp
-        from routes.product_log_routes import product_log_bp
-
-        app.register_blueprint(fifo_bp)
-        app.register_blueprint(legacy_products_bp, name='legacy_products')
-        app.register_blueprint(product_variants_bp)
-        app.register_blueprint(product_inventory_bp)
-        app.register_blueprint(product_api_bp)
-        app.register_blueprint(product_log_bp, url_prefix='/product-logs')
-        app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-        app.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
-        app.register_blueprint(cancel_batch_bp, url_prefix='/cancel')
-        app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    except ImportError as e:
-        print(f"Warning: Could not import legacy blueprint: {e}")
+    # Register legacy blueprints that still exist (excluding products which are handled above)
+    legacy_blueprints = [
+        ('.blueprints.batches.start_batch', 'start_batch_bp', '/start-batch'),
+        ('.blueprints.batches.finish_batch', 'finish_batch_bp', '/finish-batch'),
+        ('.blueprints.batches.cancel_batch', 'cancel_batch_bp', '/cancel'),
+        ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
+        ('.blueprints.fifo', 'fifo_bp', None),
+    ]
+    
+    for module_path, bp_name, url_prefix in legacy_blueprints:
+        try:
+            module = __import__(f'app{module_path}', fromlist=[bp_name])
+            blueprint = getattr(module, bp_name)
+            if url_prefix:
+                app.register_blueprint(blueprint, url_prefix=url_prefix)
+            else:
+                app.register_blueprint(blueprint)
+        except (ImportError, AttributeError) as e:
+            print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:
-        from blueprints.api import init_api
+        from .blueprints.api import init_api
         init_api(app)
     except ImportError:
         pass
@@ -118,12 +118,6 @@ def create_app(config_filename=None):
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
-    
-    try:
-        from filters.product_filters import register_product_filters
-        register_product_filters(app)
-    except ImportError:
-        pass
 
     # Add custom template filters
     @app.template_filter('attr_multiply')
@@ -152,11 +146,7 @@ def create_app(config_filename=None):
             from .utils.permissions import has_permission, has_role
             return dict(has_permission=has_permission, has_role=has_role)
         except ImportError:
-            try:
-                from utils.permissions import has_permission, has_role
-                return dict(has_permission=has_permission, has_role=has_role)
-            except ImportError:
-                return dict(has_permission=lambda x: True, has_role=lambda x: True)
+            return dict(has_permission=lambda x: True, has_role=lambda x: True)
 
     # User loader
     @login_manager.user_loader
@@ -168,7 +158,7 @@ def create_app(config_filename=None):
     def index():
         from flask_login import current_user
         if current_user.is_authenticated:
-            return redirect(url_for('app_routes_bp.dashboard'))
+            return redirect(url_for('app_routes.dashboard'))
         return redirect(url_for('homepage'))
 
     @app.route('/homepage')

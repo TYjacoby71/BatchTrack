@@ -1,14 +1,28 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, user_scoped_query
 
-app_routes_bp = Blueprint('dashboard', __name__)
+app_routes_bp = Blueprint('app_routes', __name__)
 
 from ..services.inventory_alerts import get_low_stock_ingredients
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
+
+# Helper functions for stock checking
+def check_stock_for_recipe(recipe, scale=1):
+    """Check stock availability for a recipe"""
+    try:
+        result = universal_stock_check(recipe, scale)
+        return result['stock_check'], result['all_ok']
+    except Exception as e:
+        return [], False
+
+def check_container_availability(container_ids, scale=1):
+    """Check container availability - placeholder implementation"""
+    # This function needs to be implemented based on your container model
+    return [], True
 
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
@@ -109,12 +123,7 @@ def check_stock():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-from flask import Blueprint, render_template, redirect, url_for
-from flask_login import login_required
-
-app_bp = Blueprint('app', __name__)
-
-@app_bp.route('/unit-manager')
+@app_routes_bp.route('/unit-manager')
 @login_required
 def unit_manager():
     return redirect(url_for('conversion.manage_units'))

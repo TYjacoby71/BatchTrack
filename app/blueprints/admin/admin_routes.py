@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, url_for, request, flash, render_template
 from flask_login import login_required
-from ..models import ProductInventory, db, User
+from ...models import ProductInventory, db, User
 
 admin_bp = Blueprint('admin', __name__)
 
