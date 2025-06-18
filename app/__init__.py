@@ -61,7 +61,6 @@ def create_app(config_filename=None):
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    app.register_blueprint(products_bp, url_prefix='/products')
     register_product_blueprints(app)
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(recipes_bp, url_prefix='/recipes')

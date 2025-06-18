@@ -1,6 +1,7 @@
 from flask import Blueprint
 
-products_bp = Blueprint('products', __name__, template_folder='templates')
+# Main products blueprint - this will be the container
+products_bp = Blueprint('products_main', __name__, template_folder='templates')
 
 # Import all product-related routes
 from .products import products_bp as main_products_bp
