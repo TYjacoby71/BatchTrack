@@ -1,3 +1,4 @@
+
 """Add missing FIFO and expiration fields
 
 Revision ID: 8f193ade2856
@@ -21,14 +22,13 @@ def upgrade():
     with op.batch_alter_table('inventory_history', schema=None) as batch_op:
         batch_op.add_column(sa.Column('fifo_code', sa.String(length=32), nullable=True))
         batch_op.add_column(sa.Column('batch_id', sa.Integer(), nullable=True))
-
-    # Add foreign key constraint for batch_id
-    op.create_foreign_key(None, 'inventory_history', 'batch', ['batch_id'], ['id'])
+        # Add foreign key constraint in batch mode for SQLite compatibility
+        batch_op.create_foreign_key('fk_inventory_history_batch_id', 'batch', ['batch_id'], ['id'])
 
 
 def downgrade():
     # Remove the added columns
     with op.batch_alter_table('inventory_history', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_inventory_history_batch_id', type_='foreignkey')
         batch_op.drop_column('batch_id')
         batch_op.drop_column('fifo_code')
