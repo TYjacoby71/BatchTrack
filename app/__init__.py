@@ -3,44 +3,9 @@ from flask_migrate import Migrate
 import os
 
 def register_blueprints(app):
-    """Register all application blueprints"""
-    # Core blueprints
-    from .blueprints.auth import auth_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.conversion import conversion_bp
-    from .blueprints.expiration import expiration_bp
-    from .blueprints.inventory import inventory_bp
-    from .blueprints.products import products_bp, register_product_blueprints
-    from .blueprints.quick_add import quick_add_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.settings import settings_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.api import api_bp
-
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    register_product_blueprints(app)
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(api_bp, url_prefix='/api')
-
-    # Legacy routes (to be migrated)
-    from .routes.app_routes import app_routes_bp
-    from .blueprints.admin.admin_routes import admin_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
+    """Register all application blueprints using centralized registry"""
+    from .blueprint_registry import blueprint_registry
+    blueprint_registry.register_all_blueprints(app)
 
 def create_app(config_filename=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
@@ -84,10 +49,6 @@ def create_app(config_filename=None):
 
     # Register blueprints
     register_blueprints(app)
-
-    # Register inventory blueprint
-    from .blueprints.inventory import inventory_bp
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
 
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
