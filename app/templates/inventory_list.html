@@ -160,7 +160,7 @@
     </form>
 
     <!-- Add New Ingredient Form -->
-    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
+    <form method="post" action="{{ safe_url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="ingredient">
       <div class="row g-3 align-items-end">
@@ -238,13 +238,13 @@
                   <div class="action-dropdown">
                     <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
                     <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      <a href="{{ safe_url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
                       {% if not item.is_archived %}
-                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                        <a href="{{ safe_url_for('inventory.archive_inventory', id=item.id) }}" 
                            class="dropdown-item text-warning" 
                            onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
                       {% else %}
-                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                        <a href="{{ safe_url_for('inventory.restore_inventory', id=item.id) }}" 
                            class="dropdown-item text-success">Restore</a>
                       {% endif %}
                     </div>
@@ -325,7 +325,7 @@
     </div>
 
     <!-- Add New Container Form -->
-    <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
+    <form method="post" action="{{ safe_url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="container">
       <div class="row g-3 align-items-end">
@@ -476,13 +476,13 @@
                   <div class="action-dropdown">
                     <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
                     <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      <a href="{{ safe_url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
                       {% if not item.is_archived %}
-                        <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
+                        <a href="{{ safe_url_for('inventory.archive_inventory', id=item.id) }}" 
                            class="dropdown-item text-warning" 
                            onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
                       {% else %}
-                        <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                        <a href="{{ safe_url_for('inventory.restore_inventory', id=item.id) }}" 
                            class="dropdown-item text-success">Restore</a>
                       {% endif %}
                     </div>

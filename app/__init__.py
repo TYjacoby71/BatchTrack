@@ -1,63 +1,27 @@
-
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_migrate import Migrate
 import os
 
 def register_blueprints(app):
-    """Register all application blueprints"""
-    # Core blueprints
-    from .blueprints.auth import auth_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.conversion import conversion_bp
-    from .blueprints.expiration import expiration_bp
-    from .blueprints.inventory import inventory_bp
-    from .blueprints.products import products_bp, register_product_blueprints
-    from .blueprints.quick_add import quick_add_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.settings import settings_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.api import api_bp
-
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    register_product_blueprints(app)
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(api_bp, url_prefix='/api')
-
-    # Legacy routes (to be migrated)
-    from .routes.app_routes import app_routes_bp
-    from .blueprints.admin.admin_routes import admin_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
+    """Register all application blueprints using centralized registry"""
+    from .blueprint_registry import blueprint_registry
+    blueprint_registry.register_all_blueprints(app)
 
 def create_app(config_filename=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
-    
+
     # Add custom URL rule for data files
     app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
-    
+
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-    
+
     # Ensure directories exist with proper permissions
     instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
     os.makedirs(instance_path, exist_ok=True)
     os.makedirs('static/product_images', exist_ok=True)
     os.chmod(instance_path, 0o777)
-    
+
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
@@ -86,27 +50,26 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-    
-
     # Register legacy blueprints that still exist (excluding products which are handled above)
     legacy_blueprints = [
-        ('.blueprints.batches.start_batch', 'start_batch_bp', '/start-batch'),
-        ('.blueprints.batches.finish_batch', 'finish_batch_bp', '/finish-batch'),
-        ('.blueprints.batches.cancel_batch', 'cancel_batch_bp', '/cancel'),
-        ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
-        ('.blueprints.fifo', 'fifo_bp', None),
+        # add_extra_bp is now handled by blueprint_registry
+        # ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
+        # fifo_bp is now handled by blueprint_registry
+        # ('.blueprints.fifo', 'fifo_bp', None),
     ]
-    
-    for module_path, bp_name, url_prefix in legacy_blueprints:
-        try:
-            module = __import__(f'app{module_path}', fromlist=[bp_name])
-            blueprint = getattr(module, bp_name)
-            if url_prefix:
-                app.register_blueprint(blueprint, url_prefix=url_prefix)
-            else:
-                app.register_blueprint(blueprint)
-        except (ImportError, AttributeError) as e:
-            print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
+
+    # Legacy blueprints are now all handled by blueprint_registry
+    if legacy_blueprints:  # Only run if there are actually legacy blueprints to register
+        for module_path, bp_name, url_prefix in legacy_blueprints:
+            try:
+                module = __import__(f'app{module_path}', fromlist=[bp_name])
+                blueprint = getattr(module, bp_name)
+                if url_prefix:
+                    app.register_blueprint(blueprint, url_prefix=url_prefix)
+                else:
+                    app.register_blueprint(blueprint)
+            except (ImportError, AttributeError) as e:
+                print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:
@@ -118,6 +81,10 @@ def create_app(config_filename=None):
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
+    
+    # Register template registry for safe URL generation
+    from .template_registry import template_registry
+    template_registry.register_template_functions(app)
 
     # Add custom template filters
     @app.template_filter('attr_multiply')

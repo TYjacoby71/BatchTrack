@@ -5,8 +5,8 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
-          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
+          <li class="breadcrumb-item"><a href="{{ safe_url_for('products.product_list') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ safe_url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
           <li class="breadcrumb-item active">{{ variation.name }}</li>
         </ol>
       </nav>
@@ -103,7 +103,7 @@
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
                   <tr>
                     <td>
-                      <a href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
+                      <a href="{{ safe_url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
                         {{ size_display }}
                       </a>
                     </td>
@@ -118,13 +118,13 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li>
-                            <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                            <a class="dropdown-item" href="{{ safe_url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
                               <i class="fas fa-edit"></i> Manage Stock
                             </a>
                           </li>
                           <li><hr class="dropdown-divider"></li>
                           <li>
-                            <a class="dropdown-item" href="{{ url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                            <a class="dropdown-item" href="{{ safe_url_for('products.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
                               <i class="fas fa-eye"></i> View SKU
                             </a>
                           </li>
@@ -157,7 +157,7 @@
         <h5 class="modal-title">Edit Variation</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_variants.edit_variant', product_id=product.id, variation_id=variation.id) }}">
+      <form method="POST" action="{{ safe_url_for('product_variants.edit_variant', product_id=product.id, variation_id=variation.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <div class="mb-3">
@@ -186,7 +186,7 @@
         <h5 class="modal-title">Add Manual Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ safe_url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
@@ -235,7 +235,7 @@
         <h5 class="modal-title">Deduct Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ safe_url_for('product_inventory.record_sale', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" id="deductVariant">

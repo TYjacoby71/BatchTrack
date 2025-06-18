@@ -441,10 +441,10 @@
                         <div class="col-md-6">
                             <h6 class="text-muted">Data Management</h6>
                             <div class="list-group mb-3">
-                                <a href="{{ url_for('conversion_bp.manage_units') }}" class="list-group-item list-group-item-action">
+                                <a href="{{ safe_url_for('conversion_bp.manage_units') }}" class="list-group-item list-group-item-action">
                                     <i class="fas fa-ruler text-info"></i> Unit Management
                                 </a>
-                                <a href="{{ url_for('tags.manage_tags') }}" class="list-group-item list-group-item-action">
+                                <a href="{{ safe_url_for('tags.manage_tags') }}" class="list-group-item list-group-item-action">
                                     <i class="fas fa-tags text-success"></i> Tag Management
                                 </a>
                             </div>

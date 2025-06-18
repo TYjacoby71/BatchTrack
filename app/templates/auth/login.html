@@ -24,7 +24,7 @@
 
                     <!-- Login Form -->
                     <div id="loginForm">
-                        <form method="post" action="{{ url_for('login') }}">
+                        <form method="post" action="{{ safe_url_for('auth.login') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="form_type" value="login">
                             
@@ -50,7 +50,7 @@
 
                     <!-- Register Form -->
                     <div id="registerForm" style="display: none;">
-                        <form method="post" action="{{ url_for('login') }}">
+                        <form method="post" action="{{ safe_url_for('auth.login') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="form_type" value="register">
                             

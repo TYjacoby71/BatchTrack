@@ -5,7 +5,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ safe_url_for('products.product_list') }}">Products</a></li>
           <li class="breadcrumb-item active">{{ product.name }}</li>
         </ol>
       </nav>
@@ -153,7 +153,7 @@
 
               <div class="mt-auto">
                 {% if variation %}
-                <a href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" 
+                <a href="{{ safe_url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" 
                    class="btn btn-outline-primary btn-sm w-100">
                   View Details
                 </a>
@@ -187,7 +187,7 @@
         <h5 class="modal-title">Edit Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_product', product_id=product.id) }}">
+      <form method="POST" action="{{ safe_url_for('products.edit_product', product_id=product.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="main_csrf_token">
         <div class="modal-body">
           <div class="mb-3">
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = Object.fromEntries(formData);
         const csrfToken = document.querySelector('input[name="csrf_token"]');
 
-        fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
+        fetch("{{ safe_url_for('product_variants.add_variant', product_id=product.id) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
