@@ -21,7 +21,7 @@ def seed_users():
         developer_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role='developer',
+            role='organization_owner',  # Use organization_owner instead of developer
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',

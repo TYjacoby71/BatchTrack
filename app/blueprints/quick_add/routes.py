@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from ...models import db, InventoryItem, Unit
 
 quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
@@ -8,7 +8,7 @@ def quick_add_container():
     try:
         from flask_login import current_user
         from ...models import InventoryHistory
-        
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
@@ -103,41 +103,48 @@ def quick_add_unit():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@quick_add_bp.route('/ingredient', methods=['POST'])
+@quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():
-    data = request.get_json()
-    name = data.get('name', '').strip()
-    unit = data.get('unit', '').strip()
+    # If GET request, return the modal with units
+    if request.method == 'GET':
+        from ...models import Unit
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+        return render_template('quick_add_ingredient_modal.html', units=units)
 
-    if not name or not unit:
-        return jsonify({"error": "Missing name or unit"}), 400
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        unit = data.get('unit')
 
-    # Check for existing
-    existing = InventoryItem.query.filter_by(name=name).first()
-    if existing:
-        return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
+        if not name or not unit:
+            return jsonify({"error": "Missing name or unit"}), 400
 
-    # Check if unit requires density
-    from_unit = Unit.query.filter_by(name=unit).first()
-    if from_unit and from_unit.type in ['volume']:
-        # Set default water density for volume ingredients
-        new_item = InventoryItem(
-            name=name, 
-            unit=unit, 
-            quantity=0.0, 
-            cost_per_unit=0.0,
-            density=1.0  # Default water density
-        )
-        message = "Added with default water density (1.0 g/mL). Update if needed."
-    else:
-        new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
-        message = "Added successfully."
-        
-    db.session.add(new_item)
-    db.session.commit()
+        # Check for existing
+        existing = InventoryItem.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
 
-    return jsonify({
-        "id": new_item.id,
-        "name": new_item.name,
-        "unit": new_item.unit
-    }), 200
+        # Check if unit requires density
+        from_unit = Unit.query.filter_by(name=unit).first()
+        if from_unit and from_unit.type in ['volume']:
+            # Set default water density for volume ingredients
+            new_item = InventoryItem(
+                name=name, 
+                unit=unit, 
+                quantity=0.0, 
+                cost_per_unit=0.0,
+                density=1.0  # Default water density
+            )
+            message = "Added with default water density (1.0 g/mL). Update if needed."
+        else:
+            new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+            message = "Added successfully."
+
+        db.session.add(new_item)
+        db.session.commit()
+
+        return jsonify({
+            "id": new_item.id,
+            "name": new_item.name,
+            "unit": new_item.unit
+        }), 200

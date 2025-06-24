@@ -14,19 +14,25 @@ def new_recipe():
             label_prefix = request.form.get('label_prefix', '').strip()
             if not label_prefix:
                 flash('Label prefix is required and cannot be empty.', 'error')
+                # Get all units for dropdowns
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
                 return render_template('recipe_form.html', 
-                                     recipe=None, 
-                                     all_ingredients=InventoryItem.query.all(), 
-                                     inventory_units=get_global_unit_list())
+                                     recipe=None,
+                                     all_ingredients=InventoryItem.query.all(),
+                                     inventory_units=get_global_unit_list(),
+                                     units=units)
 
             # Check for duplicate label prefixes
             existing_recipe = Recipe.query.filter_by(label_prefix=label_prefix).first()
             if existing_recipe:
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                # Get all units for dropdowns
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
                 return render_template('recipe_form.html', 
-                                     recipe=None, 
-                                     all_ingredients=InventoryItem.query.all(), 
-                                     inventory_units=get_global_unit_list())
+                                     recipe=None,
+                                     all_ingredients=InventoryItem.query.all(),
+                                     inventory_units=get_global_unit_list(),
+                                     units=units)
 
             # Create recipe first
             recipe = Recipe(
@@ -76,9 +82,10 @@ def new_recipe():
             flash('An unexpected error occurred', 'error')
             db.session.rollback()
 
-
+    # Get all units for dropdowns
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
     inventory_units = get_global_unit_list()
-    return render_template('recipe_form.html', recipe=None, all_ingredients=InventoryItem.query.all(), inventory_units=inventory_units)
+    return render_template('recipe_form.html', recipe=None, all_ingredients=InventoryItem.query.all(), inventory_units=inventory_units, units=units)
 
 @recipes_bp.route('/')
 @login_required
@@ -162,10 +169,15 @@ def create_variation(recipe_id):
             label_prefix = request.form.get('label_prefix', '').strip()
             if not label_prefix:
                 flash('Label prefix is required and cannot be empty.', 'error')
+                # Get all units for dropdowns
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+                inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
                                      all_ingredients=all_ingredients,
                                      inventory_units=inventory_units,
+                                     units=units,
                                      is_variation=True,
                                      parent_recipe=parent)
 
@@ -176,10 +188,15 @@ def create_variation(recipe_id):
             ).first()
             if existing_recipe:
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                # Get all units for dropdowns
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+                inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
                                      all_ingredients=all_ingredients,
                                      inventory_units=inventory_units,
+                                     units=units,
                                      is_variation=True,
                                      parent_recipe=parent)
 
@@ -225,11 +242,14 @@ def create_variation(recipe_id):
 
 
         all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+        # Get all units for dropdowns
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
         inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
             recipe=new_variation,
             all_ingredients=all_ingredients,
             inventory_units=inventory_units,
+            units=units,
             is_variation=True,
             parent_recipe=parent)
     except Exception as e:
@@ -301,12 +321,16 @@ def clone_recipe(recipe_id):
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
 
+        # Get all units for dropdowns
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+
         return render_template('recipe_form.html',
                             recipe=new_recipe,
                             all_ingredients=InventoryItem.query.all(),
                             is_clone=True,
                             ingredient_prefill=ingredients,
-                            inventory_units=get_global_unit_list())
+                            inventory_units=get_global_unit_list(),
+                            units=units)
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error cloning recipe: {str(e)}")
@@ -363,11 +387,13 @@ def edit_recipe(recipe_id):
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
     # Check if there are existing batches for this recipe
-    from models import Batch
+    from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
     all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
     inventory_units = get_global_unit_list()
+    # Get all units for dropdowns
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
 
     if request.method == 'POST':
         try:
@@ -378,7 +404,8 @@ def edit_recipe(recipe_id):
                 return render_template('recipe_form.html', 
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,
-                                     inventory_units=inventory_units, 
+                                     inventory_units=inventory_units,
+                                     units=units,
                                      edit_mode=True,
                                      existing_batches=existing_batches)
 
@@ -392,7 +419,8 @@ def edit_recipe(recipe_id):
                 return render_template('recipe_form.html', 
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,
-                                     inventory_units=inventory_units, 
+                                     inventory_units=inventory_units,
+                                     units=units,
                                      edit_mode=True,
                                      existing_batches=existing_batches)
 
@@ -410,9 +438,9 @@ def edit_recipe(recipe_id):
             # Re-add ingredients
             ingredient_ids = request.form.getlist('ingredient_ids[]')
             amounts = request.form.getlist('amounts[]')
-            units = request.form.getlist('units[]')
+            units_list = request.form.getlist('units[]')
 
-            for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
+            for ing_id, amt, unit in zip(ingredient_ids, amounts, units_list):
                 if ing_id and amt and unit:
                     try:
                         assoc = RecipeIngredient(
@@ -444,6 +472,7 @@ def edit_recipe(recipe_id):
     return render_template('recipe_form.html', 
                          recipe=recipe,
                          all_ingredients=all_ingredients,
-                         inventory_units=inventory_units, 
+                         inventory_units=inventory_units,
+                         units=units,
                          edit_mode=True,
                          existing_batches=existing_batches)

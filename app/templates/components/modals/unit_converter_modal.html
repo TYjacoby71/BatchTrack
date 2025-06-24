@@ -14,14 +14,14 @@
         </div>
         <div class="mb-2">
           <select name="from_unit" class="form-select" required>
-            {% for unit in units %}
+            {% for unit in global_units %}
               <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="mb-2">
           <select name="to_unit" class="form-select" required>
-            {% for unit in units %}
+            {% for unit in global_units %}
               <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
           </select>
