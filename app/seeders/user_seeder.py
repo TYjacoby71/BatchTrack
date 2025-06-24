@@ -27,12 +27,30 @@ def seed_users():
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
             organization_id=org.id,
-            is_owner=True  # Set as organization owner
+            is_owner=True  # Boolean value for organization owner
         )
         db.session.add(developer_user)
         print("✅ Created developer user: admin/admin")
     else:
         print("ℹ️  Developer user already exists")
+    
+    # Create a sample organization_owner (maker) user if it doesn't exist
+    if not User.query.filter_by(username='maker').first():
+        maker_user = User(
+            username='maker',
+            password_hash=generate_password_hash('maker123'),
+            role='organization_owner',
+            first_name='Sample',
+            last_name='Maker',
+            email='maker@example.com',
+            phone='555-0123',
+            organization_id=org.id,
+            is_owner=False  # Boolean value - not the primary owner
+        )
+        db.session.add(maker_user)
+        print("✅ Created sample maker user: maker/maker123")
+    else:
+        print("ℹ️  Sample maker user already exists")
     
     db.session.commit()
     print("✅ User seeding completed")
