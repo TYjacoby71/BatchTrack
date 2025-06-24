@@ -15,17 +15,17 @@ def register_blueprints(app):
     from .blueprints.settings.routes import settings_bp
     from .blueprints.timers import timers_bp
     from .blueprints.fifo import fifo_bp
-    
+
     # Route blueprints
     from .routes.app_routes import app_routes_bp
     from .blueprints.admin.admin_routes import admin_bp
     from .routes.bulk_stock_routes import bulk_stock_bp
     from .routes.fault_log_routes import fault_log_bp
     from .routes.tag_manager_routes import tag_manager_bp
-    
+
     # Special blueprints
     from .blueprints.batches.add_extra import add_extra_bp
-    
+
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
@@ -43,11 +43,11 @@ def register_blueprints(app):
     app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    
+
     # Register product blueprints
     from .blueprints.products import register_product_blueprints
     register_product_blueprints(app)
-    
+
     # Register API blueprints
     from .blueprints.api.routes import register_api_routes
     register_api_routes(app)
@@ -178,13 +178,14 @@ def create_app(config_filename=None):
     # Seeders are available via CLI commands: flask seed-all, flask init-db
     # No automatic seeding on startup to improve performance
 
-    # Register template functions for permissions
-    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner
+    # Register permission template functions
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
     app.jinja_env.globals.update(
         has_permission=has_permission,
         has_role=has_role,
         has_subscription_feature=has_subscription_feature,
-        is_organization_owner=is_organization_owner
+        is_organization_owner=is_organization_owner,
+        is_developer=is_developer
     )
 
     # Add units to global context for dropdowns

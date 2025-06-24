@@ -17,11 +17,29 @@ def seed_users():
         db.session.flush()  # Get the ID
     
     # Create developer user if it doesn't exist
-    if not User.query.filter_by(username='admin').first():
+    if not User.query.filter_by(username='dev').first():
         developer_user = User(
+            username='dev',
+            password_hash=generate_password_hash('dev123'),
+            role='developer',  # Use developer role
+            first_name='System',
+            last_name='Developer',
+            email='dev@batchtrack.com',
+            phone='000-000-0000',
+            organization_id=org.id,
+            is_owner=False  # Developers are not org owners
+        )
+        db.session.add(developer_user)
+        print("✅ Created developer user: dev/dev123")
+    else:
+        print("ℹ️  Developer user already exists")
+    
+    # Create organization owner (admin) user if it doesn't exist
+    if not User.query.filter_by(username='admin').first():
+        admin_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role='organization_owner',  # Use organization_owner instead of developer
+            role='organization_owner',  # Use organization_owner role
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',
@@ -29,10 +47,10 @@ def seed_users():
             organization_id=org.id,
             is_owner=True  # Boolean value for organization owner
         )
-        db.session.add(developer_user)
-        print("✅ Created developer user: admin/admin")
+        db.session.add(admin_user)
+        print("✅ Created organization owner user: admin/admin")
     else:
-        print("ℹ️  Developer user already exists")
+        print("ℹ️  Admin user already exists")
     
     # Create a sample organization_owner (maker) user if it doesn't exist
     if not User.query.filter_by(username='maker').first():
