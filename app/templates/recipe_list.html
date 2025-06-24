@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Recipes</h2>
     <div class="d-flex gap-2">
-        <a href="{{ safe_url_for('recipes.new_recipe') }}" class="btn btn-primary">
+        <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Recipe
         </a>
         {% if recipes %}
@@ -29,10 +29,10 @@
             <h4 class="text-muted mb-3">No Recipes Yet</h4>
             <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
             <div class="d-flex gap-3 justify-content-center">
-                <a href="{{ safe_url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
+                <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
                     <i class="fas fa-plus"></i> Create Your First Recipe
                 </a>
-                <a href="{{ safe_url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
+                <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
                     <i class="fas fa-boxes"></i> Add Ingredients
                 </a>
             </div>
@@ -118,21 +118,21 @@
                 <!-- Action Buttons -->
                 <div class="mt-auto">
                     <div class="btn-group w-100 mb-2" role="group">
-                        <a href="{{ safe_url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-eye"></i> View
                         </a>
-                        <a href="{{ safe_url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <a href="{{ safe_url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-play"></i> Plan
                         </a>
                     </div>
                     <div class="btn-group w-100" role="group">
-                        <a href="{{ safe_url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
+                        <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info btn-sm">
                             <i class="fas fa-copy"></i> Clone
                         </a>
-                        <a href="{{ safe_url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
+                        <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-code-branch"></i> Variation
                         </a>
                     </div>
@@ -154,9 +154,9 @@
                                 <br><small class="text-muted">{{ variation.label_prefix or 'BTH' }}</small>
                             </div>
                             <div class="btn-group" role="group">
-                                <a href="{{ safe_url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                <a href="{{ safe_url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                <a href="{{ safe_url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                             </div>
                         </div>
                         {% endfor %}
@@ -222,7 +222,7 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ safe_url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-play"></i> Plan
                                 </a>
                                 <div class="btn-group" role="group">
@@ -230,17 +230,17 @@
                                         <i class="fas fa-ellipsis-h"></i>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="{{ safe_url_for('recipes.view_recipe', recipe_id=recipe.id) }}">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-eye"></i> View
                                         </a></li>
-                                        <li><a class="dropdown-item" href="{{ safe_url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-edit"></i> Edit
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="{{ safe_url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}">
                                             <i class="fas fa-copy"></i> Clone
                                         </a></li>
-                                        <li><a class="dropdown-item" href="{{ safe_url_for('recipes.create_variation', recipe_id=recipe.id) }}">
+                                        <li><a class="dropdown-item" href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}">
                                             <i class="fas fa-code-branch"></i> Create Variation
                                         </a></li>
                                     </ul>
@@ -261,9 +261,9 @@
                                             <span class="badge bg-secondary ms-2">{{ variation.label_prefix or 'BTH' }}</span>
                                         </div>
                                         <div class="btn-group" role="group">
-                                            <a href="{{ safe_url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                                            <a href="{{ safe_url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                            <a href="{{ safe_url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                            <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                                            <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
+                                            <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                                         </div>
                                     </div>
                                     {% endfor %}
