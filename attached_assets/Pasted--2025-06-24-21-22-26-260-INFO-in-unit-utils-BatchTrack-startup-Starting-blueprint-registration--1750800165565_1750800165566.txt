@@ -1,0 +1,100 @@
+[2025-06-24 21:22:26,260] INFO in unit_utils: BatchTrack startup
+🚀 Starting blueprint registration...
+✅ Registered blueprint: app.blueprints.auth.auth_bp
+✅ Registered blueprint: app.blueprints.inventory.inventory_bp
+✅ Registered blueprint: app.blueprints.recipes.recipes_bp
+✅ Registered blueprint: app.blueprints.batches.batches_bp
+✅ Registered blueprint: app.blueprints.products.products_bp
+✅ Registered blueprint: app.blueprints.conversion.conversion_bp
+✅ Registered blueprint: app.blueprints.expiration.expiration_bp
+✅ Registered blueprint: app.blueprints.quick_add.quick_add_bp
+✅ Registered blueprint: app.blueprints.settings.settings_bp
+✅ Registered blueprint: app.blueprints.timers.timers_bp
+✅ Registered blueprint: app.blueprints.api.api_bp
+✅ Registered blueprint: app.routes.app_routes.app_routes_bp
+✅ Registered blueprint: app.blueprints.admin.admin_routes.admin_bp
+✅ Registered blueprint: app.routes.bulk_stock_routes.bulk_stock_bp
+✅ Registered blueprint: app.routes.fault_log_routes.fault_log_bp
+✅ Registered blueprint: app.routes.tag_manager_routes.tag_manager_bp
+✅ Registered blueprint: app.blueprints.batches.add_extra.add_extra_bp
+✅ Registered blueprint: app.blueprints.fifo.fifo_bp
+✅ Registered product blueprints
+✅ Blueprint registration complete. Registered 18 blueprints.
+[2025-06-24 21:22:26,444] ERROR in __init__: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.multiplier_to_base
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.user_id AS unit_user_id 
+FROM unit 
+WHERE unit.name = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('gram', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 968285ee2160 -> d71ecf3dfae9, Add missing unit columns
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/cli.py", line 157, in upgrade
+    _upgrade(directory or g.directory, revision, sql, tag, x_arg or g.x_arg)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/migrations/env.py", line 113, in <module>
+    run_migrations_online()
+  File "/home/runner/workspace/migrations/env.py", line 107, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+  File "/home/runner/workspace/migrations/versions/d71ecf3dfae9_add_missing_unit_columns.py", line 21, in upgrade
+    with op.batch_alter_table('unit', schema=None) as batch_op:
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/base.py", line 397, in batch_alter_table
+    impl.flush()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/batch.py", line 161, in flush
+    fn(*arg, **kw)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/batch.py", line 670, in add_constraint
+    raise ValueError("Constraint must have a name")
+ValueError: Constraint must have a name

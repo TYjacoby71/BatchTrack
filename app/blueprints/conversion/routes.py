@@ -56,7 +56,7 @@ def delete_unit(unit_id):
 
 @conversion_bp.route('/units', methods=['GET', 'POST'])
 def manage_units():
-    from utils.unit_utils import get_global_unit_list
+    from ...utils.unit_utils import get_global_unit_list
     from flask_wtf.csrf import validate_csrf
     from wtforms.validators import ValidationError
 
