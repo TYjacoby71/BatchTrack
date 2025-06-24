@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
@@ -255,7 +254,7 @@
             </tbody>
           </table>
         </div>
-        
+
         <!-- Pagination for Ingredients -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top">
           <div id="ingredientsInfo" class="text-muted"></div>
@@ -493,7 +492,7 @@
             </tbody>
           </table>
         </div>
-        
+
         <!-- Pagination for Containers -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top">
           <div id="containersInfo" class="text-muted"></div>
@@ -522,7 +521,7 @@ function initTablePagination(tableType) {
   const nameFilterId = tableType + 'NameFilter';
   const sortFilterId = tableType + 'SortFilter';
   const perPageId = tableType + 'PerPage';
-  
+
   let currentPage = 1;
   let itemsPerPage = 20;
   let allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
@@ -532,13 +531,13 @@ function initTablePagination(tableType) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const visibleRows = filteredRows.slice(startIndex, endIndex);
-    
+
     // Hide all rows
     allRows.forEach(row => row.style.display = 'none');
-    
+
     // Show current page rows
     visibleRows.forEach(row => row.style.display = '');
-    
+
     updatePagination();
     updateInfo();
   }
@@ -595,7 +594,7 @@ function initTablePagination(tableType) {
   function filterAndSort() {
     const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
     const sortFilter = document.getElementById(sortFilterId).value;
-    
+
     // Filter by name
     filteredRows = allRows.filter(row => {
       const name = row.dataset.name || '';
