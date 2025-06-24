@@ -68,6 +68,7 @@ def manage_units():
             # Handle unit creation
             if 'unit_name' in request.form:
                 name = request.form.get('unit_name').strip()
+                symbol = request.form.get('unit_symbol', '').strip() or name
                 unit_type = request.form.get('unit_type')
 
                 if not name or not unit_type:
@@ -90,9 +91,10 @@ def manage_units():
 
                 new_unit = Unit(
                     name=name,
+                    symbol=symbol,
                     type=unit_type,
                     base_unit=base_units.get(unit_type, 'count'),
-                    multiplier_to_base=1.0,
+                    conversion_factor=1.0,
                     is_custom=True,
                     is_mapped=False,  # Start as unmapped
                     user_id=current_user.id if current_user.is_authenticated else None
