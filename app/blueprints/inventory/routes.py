@@ -131,7 +131,7 @@ def add_inventory():
                 unit_cost=cost_per_unit,
                 note='Initial stock creation',
                 created_by=current_user.id if current_user else None,
-                quantity_used=0.0,  # Restocks don't consume inventory - always 0
+                quantity_used=None,  # Restocks don't consume inventory - should be NULL
                 is_perishable=is_perishable,
                 shelf_life_days=shelf_life_days,
                 expiration_date=expiration_date
@@ -219,7 +219,7 @@ def adjust_inventory(id):
                 unit_cost=restock_cost or item.cost_per_unit,
                 note=notes or 'Initial stock creation via adjustment modal',
                 created_by=current_user.id,
-                quantity_used=0.0,  # Restocks don't consume inventory - always 0
+                quantity_used=None,  # Restocks don't consume inventory - should be NULL
                 is_perishable=item.is_perishable,
                 shelf_life_days=item.shelf_life_days,
                 expiration_date=item.expiration_date
@@ -329,7 +329,7 @@ def edit_inventory(id):
                                 unit=new_unit,  # Record in the new unit
                                 note=f'Unit converted from {item.unit} to {new_unit}. Quantity adjusted from {request.form.get("original_quantity", item.quantity)} {item.unit} to {converted_quantity} {new_unit}',
                                 created_by=current_user.id,
-                                quantity_used=0.0  # Unit conversions don't consume inventory - always 0
+                                quantity_used=None  # Unit conversions don't consume inventory - should be NULL
                             )
                             db.session.add(history)
                             flash(f'Unit changed and inventory converted: {item.quantity} {item.unit} → {converted_quantity} {new_unit}', 'success')
@@ -383,7 +383,7 @@ def edit_inventory(id):
             unit_cost=new_cost,
             note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
             created_by=current_user.id,
-            quantity_used=0.0  # Cost overrides don't consume inventory - always null
+            quantity_used=None  # Cost overrides don't consume inventory - should be NULL
         )
         db.session.add(history)
         item.cost_per_unit = new_cost
