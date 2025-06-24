@@ -1,7 +1,9 @@
 from flask import Blueprint
 
-batches_bp = Blueprint('batches', __name__, template_folder='templates')
+# Create the main batches blueprint
+batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
 
+# Import routes to register them with the blueprint
 from . import routes
 
 # Import individual batch operation blueprints

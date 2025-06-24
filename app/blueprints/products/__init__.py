@@ -8,7 +8,7 @@ def register_product_blueprints(app):
     """Register all product-related blueprints"""
     try:
         from .products import products_bp as main_products_bp
-        app.register_blueprint(main_products_bp, name='legacy_products_main')
+        app.register_blueprint(main_products_bp)
     except ImportError:
         pass
     

@@ -33,13 +33,14 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(32), default='user')
+    role = db.Column(db.String(32), default='organization_owner')
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     subscription_class = db.Column(db.String(32), default='free')
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
     
@@ -64,10 +65,7 @@ class User(UserMixin, db.Model):
     @property
     def is_organization_owner(self):
         """Check if user is the owner of their organization"""
-        # For now, assume first user in org is owner
-        # Later you can add an explicit owner field
-        first_user = User.query.filter_by(organization_id=self.organization_id).order_by(User.created_at).first()
-        return first_user and first_user.id == self.id
+        return self.is_owner
 
 class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)

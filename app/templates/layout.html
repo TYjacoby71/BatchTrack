@@ -94,7 +94,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Production Log</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('fault_log.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     {% endif %}
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
@@ -103,6 +103,19 @@
                         </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
+
+                    <!-- Admin Dashboards -->
+                    {% if has_role('developer') %}
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-code"></i> Developer Dashboard</a></li>
+                    {% endif %}
+                    
+                    {% if is_organization_owner() and has_subscription_feature('team_management') %}
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
+                    {% endif %}
+
+                    {% if has_role('developer') or is_organization_owner() %}
+                    <li><hr class="dropdown-divider"></li>
+                    {% endif %}
 
                     <!-- Settings & Management -->
                     {% if has_permission('settings.view') %}

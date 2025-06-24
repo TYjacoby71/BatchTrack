@@ -5,9 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
 
-settings_bp = Blueprint('settings', __name__)
+from . import settings_bp
 
-@settings_bp.route('/', endpoint='index')
+@settings_bp.route('/')
 @login_required
 def index():
     # Define default settings structure

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, Product, InventoryItem, ProductInventory, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
@@ -10,7 +10,7 @@ import uuid, os
 from werkzeug.utils import secure_filename
 from ...services.inventory_adjustment import process_inventory_adjustment
 
-batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
+from . import batches_bp
 
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required

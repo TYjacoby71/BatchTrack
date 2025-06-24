@@ -48,11 +48,12 @@ def login():
             db.session.add(new_org)
             db.session.flush()  # Get the ID
 
-            # Create new user
+            # Create new user as organization owner
             new_user = User(
                 username=username,
                 organization_id=new_org.id,
-                role='user'
+                role='organization_owner',
+                is_owner=True  # First user in organization is always the owner
             )
             new_user.set_password(password)
             db.session.add(new_user)
