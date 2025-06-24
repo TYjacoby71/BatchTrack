@@ -5,22 +5,22 @@ from ..extensions import db
 def seed_categories():
     categories = [
         # Core Categories
-        {"name": "Liquid", "default_density": 1.0},             # Water, vinegar, juices
-        {"name": "Oil", "default_density": 0.92},               # Olive, coconut, canola
-        {"name": "Solid", "default_density": 0.8},              # Soap base, butter blocks
-        {"name": "Powder", "default_density": 0.5},             # Flour, clay powder, mica
-        {"name": "Dairy", "default_density": 1.03},             # Milk, cream, yogurt
-        {"name": "Syrup", "default_density": 1.33},             # Honey, agave, glucose
+        {"name": "Liquid"},             # Water, vinegar, juices
+        {"name": "Oil"},               # Olive, coconut, canola
+        {"name": "Solid"},              # Soap base, butter blocks
+        {"name": "Powder"},             # Flour, clay powder, mica
+        {"name": "Dairy"},             # Milk, cream, yogurt
+        {"name": "Syrup"},             # Honey, agave, glucose
 
         # Specialty Categories
-        {"name": "Alcohol", "default_density": 0.789},          # Ethanol, isopropyl, tinctures
-        {"name": "Fragrance", "default_density": 0.86},         # Essential oils, perfume
-        {"name": "Gel", "default_density": 1.05},               # Aloe gel, cosmetic bases
-        {"name": "Wax", "default_density": 0.9},                # Beeswax, soy wax, paraffin
-        {"name": "Extract", "default_density": 1.1},            # Vanilla, herbal extracts
-        {"name": "Clay", "default_density": 1.6},               # Bentonite, kaolin
-        {"name": "Other", "default_density": 1.0},              # Catch-all or uncategorized
-        {"name": "Container", "default_density": 1.0}           # Added Container Category
+        {"name": "Alcohol"},          # Ethanol, isopropyl, tinctures
+        {"name": "Fragrance"},         # Essential oils, perfume
+        {"name": "Gel"},               # Aloe gel, cosmetic bases
+        {"name": "Wax"},                # Beeswax, soy wax, paraffin
+        {"name": "Extract"},            # Vanilla, herbal extracts
+        {"name": "Clay"},               # Bentonite, kaolin
+        {"name": "Other"},              # Catch-all or uncategorized
+        {"name": "Container"}           # Added Container Category
     ]
 
     for category in categories:
