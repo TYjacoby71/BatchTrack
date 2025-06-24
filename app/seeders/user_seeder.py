@@ -16,22 +16,23 @@ def seed_users():
         db.session.add(org)
         db.session.flush()  # Get the ID
     
-    # Create admin user if it doesn't exist
+    # Create developer user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
-        admin_user = User(
+        developer_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role='admin',
+            role='developer',
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
-            organization_id=org.id
+            organization_id=org.id,
+            is_owner=True  # Set as organization owner
         )
-        db.session.add(admin_user)
-        print("✅ Created admin user: admin/admin")
+        db.session.add(developer_user)
+        print("✅ Created developer user: admin/admin")
     else:
-        print("ℹ️  Admin user already exists")
+        print("ℹ️  Developer user already exists")
     
     db.session.commit()
     print("✅ User seeding completed")
