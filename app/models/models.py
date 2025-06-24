@@ -82,14 +82,11 @@ class Unit(db.Model):
 
 class CustomUnitMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ingredient_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     unit_name = db.Column(db.String(64), nullable=False)
     conversion_factor = db.Column(db.Float, nullable=False)
     base_unit = db.Column(db.String(64), nullable=False)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    ingredient_item = db.relationship('InventoryItem', backref='custom_units')
 
 class IngredientCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)

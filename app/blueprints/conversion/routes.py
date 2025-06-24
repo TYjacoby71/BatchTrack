@@ -146,8 +146,7 @@ def manage_units():
             mapping = CustomUnitMapping(
                 unit_name=custom_unit,
                 conversion_factor=base_conversion_factor,
-                base_unit=custom_unit_obj.base_unit,
-                ingredient_item_id=1  # Temporary - we'll fix this later
+                base_unit=custom_unit_obj.base_unit
             )
             db.session.add(mapping)
 
