@@ -78,7 +78,7 @@
                     <li><a class="dropdown-item" href="{{ safe_url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('batches.batches_list') }}">Batches</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('batches.list_batches') }}">Batches</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
                     <li><a class="dropdown-item" href="{{ safe_url_for('products.product_list') }}">Products</a></li>
@@ -94,7 +94,7 @@
                     <li><a class="dropdown-item" href="{{ safe_url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('fault_log.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     {% endif %}
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ safe_url_for('expiration.alerts') }}">
@@ -106,10 +106,10 @@
 
                     <!-- Settings & Management -->
                     {% if has_permission('settings.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('settings.settings_page') }}">Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('tag_manager.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
 

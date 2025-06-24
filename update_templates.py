@@ -19,20 +19,20 @@ def find_template_files(directory="app/templates"):
     return template_files
 
 def update_url_for_calls(content):
-    """Update url_for calls to safe_url_for in template content"""
-    # Pattern to match url_for calls
-    pattern = r'\{\{\s*url_for\s*\(\s*[\'"]([^\'\"]+)[\'"]\s*(?:,\s*([^}]*))?\s*\)\s*\}\}'
+    """Update safe_url_for calls back to url_for in template content"""
+    # Pattern to match safe_url_for calls
+    pattern = r'\{\{\s*safe_url_for\s*\(\s*[\'"]([^\'\"]+)[\'"]\s*(?:,\s*([^}]*))?\s*\)\s*\}\}'
     
-    def replace_url_for(match):
+    def replace_safe_url_for(match):
         endpoint = match.group(1)
         params = match.group(2) if match.group(2) else ""
         
         if params:
-            return f"{{{{ safe_url_for('{endpoint}', {params}) }}}}"
+            return f"{{{{ url_for('{endpoint}', {params}) }}}}"
         else:
-            return f"{{{{ safe_url_for('{endpoint}') }}}}"
+            return f"{{{{ url_for('{endpoint}') }}}}"
     
-    updated_content = re.sub(pattern, replace_url_for, content)
+    updated_content = re.sub(pattern, replace_safe_url_for, content)
     return updated_content
 
 def update_template_file(file_path):
@@ -57,7 +57,7 @@ def update_template_file(file_path):
 
 def main():
     """Main function to update all templates"""
-    print("🚀 Starting bulk template update...")
+    print("🚀 Converting safe_url_for back to url_for...")
     
     template_files = find_template_files()
     print(f"Found {len(template_files)} template files")
