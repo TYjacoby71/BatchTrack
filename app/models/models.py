@@ -235,7 +235,8 @@ class InventoryHistory(db.Model):
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
-    batch = db.relationship('Batch')
+    batch = db.relationship('Batch', foreign_keys=[batch_id])
+    used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
     user = db.relationship('User')
 
 class BatchTimer(db.Model):
