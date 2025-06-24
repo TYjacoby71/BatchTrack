@@ -106,7 +106,7 @@
 
                     <!-- Settings & Management -->
                     {% if has_permission('settings.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
