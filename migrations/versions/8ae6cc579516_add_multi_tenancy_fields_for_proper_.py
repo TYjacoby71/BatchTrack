@@ -1,3 +1,4 @@
+
 """add multi-tenancy fields for proper organization separation
 
 Revision ID: 8ae6cc579516
@@ -53,10 +54,18 @@ def upgrade():
         batch_op.add_column(sa.Column('created_by', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('created_at', sa.DateTime(), nullable=True))
-        batch_op.drop_constraint('fk_unit_user_id', type_='foreignkey')
+        # Try to drop the constraint, but don't fail if it doesn't exist
+        try:
+            batch_op.drop_constraint('fk_unit_user_id', type_='foreignkey')
+        except:
+            pass
         batch_op.create_foreign_key('fk_unit_created_by', 'user', ['created_by'], ['id'])
         batch_op.create_foreign_key('fk_unit_organization_id', 'organization', ['organization_id'], ['id'])
-        batch_op.drop_column('user_id')
+        # Try to drop the column, but don't fail if it doesn't exist
+        try:
+            batch_op.drop_column('user_id')
+        except:
+            pass
 
     # ### end Alembic commands ###
 
