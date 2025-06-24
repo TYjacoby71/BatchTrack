@@ -1,15 +1,20 @@
 
 {
-  "developer": ["*"],
+  "developer": [
+    "*",
+    "dev.dashboard",
+    "dev.system_admin",
+    "dev.all_organizations"
+  ],
   "organization_owner": [
     "*",
+    "organization.dashboard",
     "organization.manage_users",
     "organization.manage_settings", 
-    "organization.view_billing"
-  ],
-  "maker": [
+    "organization.view_billing",
+    "organization.manage_roles",
     "alerts.*",
-    "batch_rules.*",
+    "batch_rules.*", 
     "recipe_builder.*",
     "inventory.view",
     "inventory.edit",
@@ -28,6 +33,7 @@
     "dashboard.view",
     "settings.view",
     "settings.edit",
+    "settings.organization",
     "tags.manage",
     "timers.manage"
   ],

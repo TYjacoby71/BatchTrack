@@ -124,6 +124,37 @@ class PermissionManager:
         """Get all permissions for a user role"""
         return self.role_permissions.get(user_role, [])
 
+    def has_subscription_feature(self, subscription_tier, feature):
+        """Check if subscription tier has access to specific features"""
+        feature_map = {
+            'free': [
+                'core_functionality',
+                'basic_dashboard'
+            ],
+            'team': [
+                'core_functionality',
+                'basic_dashboard', 
+                'team_management',
+                'user_creation',
+                'team_dashboard',
+                'role_assignment'
+            ],
+            'enterprise': [
+                'core_functionality',
+                'basic_dashboard',
+                'team_management', 
+                'user_creation',
+                'team_dashboard',
+                'role_assignment',
+                'advanced_analytics',
+                'custom_integrations',
+                'priority_support'
+            ]
+        }
+        
+        tier_features = feature_map.get(subscription_tier, [])
+        return feature in tier_features
+
     def filter_data_by_scope(self, query, scope_context):
         """Apply scoping based on user, organization, or global access"""
         scope_type = scope_context.get('scope_type', 'user')
@@ -233,5 +264,21 @@ def has_role(role):
     """Template function to check user role in Jinja2 templates"""
     if not current_user.is_authenticated:
         return False
-    user_role = getattr(current_user, 'role', 'maker')
+    user_role = getattr(current_user, 'role', 'organization_owner')
     return user_role == role or user_role == 'developer'
+
+# Template function for subscription feature checking
+def has_subscription_feature(feature):
+    """Template function to check subscription features in Jinja2 templates"""
+    if not current_user.is_authenticated:
+        return False
+    
+    subscription_tier = getattr(current_user.organization, 'subscription_tier', 'free')
+    return permission_manager.has_subscription_feature(subscription_tier, feature)
+
+# Template function for organization ownership checking
+def is_organization_owner():
+    """Template function to check if user is organization owner"""
+    if not current_user.is_authenticated:
+        return False
+    return getattr(current_user, 'is_owner', False)

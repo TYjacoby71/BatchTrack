@@ -52,7 +52,7 @@ def login():
             new_user = User(
                 username=username,
                 organization_id=new_org.id,
-                role='maker',
+                role='organization_owner',
                 is_owner=True  # First user in organization is always the owner
             )
             new_user.set_password(password)
