@@ -148,3 +148,7 @@ def quick_add_ingredient():
             "name": new_item.name,
             "unit": new_item.unit
         }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
