@@ -11,7 +11,7 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ safe_url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {% block head %}{% endblock %}
     <style>
@@ -46,7 +46,7 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ safe_url_for('app_routes.dashboard') }}{% else %}{{ safe_url_for('index') }}{% endif %}">BatchTrack </a>
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('app_routes.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">BatchTrack </a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>
@@ -78,7 +78,7 @@
                     <li><a class="dropdown-item" href="{{ safe_url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('batches.batches_list') }}">Batches</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('batches.list_batches') }}">Batches</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
                     <li><a class="dropdown-item" href="{{ safe_url_for('products.product_list') }}">Products</a></li>
@@ -94,7 +94,7 @@
                     <li><a class="dropdown-item" href="{{ safe_url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('fault_log.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     {% endif %}
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ safe_url_for('expiration.alerts') }}">
@@ -106,10 +106,10 @@
 
                     <!-- Settings & Management -->
                     {% if has_permission('settings.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('settings.settings_page') }}">Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('tag_manager.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ safe_url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
 
