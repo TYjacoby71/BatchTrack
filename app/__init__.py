@@ -3,7 +3,7 @@ from flask_migrate import Migrate
 import os
 
 def register_blueprints(app):
-    """Register all application blueprints"""
+    """Register all application blueprints directly"""
     # Core blueprints
     from .blueprints.auth import auth_bp
     from .blueprints.inventory.routes import inventory_bp
@@ -14,10 +14,9 @@ def register_blueprints(app):
     from .blueprints.quick_add.routes import quick_add_bp
     from .blueprints.settings.routes import settings_bp
     from .blueprints.timers import timers_bp
-    from .blueprints.api import api_bp
     from .blueprints.fifo import fifo_bp
     
-    # Routes blueprints
+    # Route blueprints
     from .routes.app_routes import app_routes_bp
     from .blueprints.admin.admin_routes import admin_bp
     from .routes.bulk_stock_routes import bulk_stock_bp
@@ -37,7 +36,6 @@ def register_blueprints(app):
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(fifo_bp)
     app.register_blueprint(app_routes_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
@@ -47,11 +45,12 @@ def register_blueprints(app):
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
     
     # Register product blueprints
-    try:
-        from .blueprints.products import register_product_blueprints
-        register_product_blueprints(app)
-    except ImportError as e:
-        print(f"Warning: Could not register product blueprints: {e}")
+    from .blueprints.products import register_product_blueprints
+    register_product_blueprints(app)
+    
+    # Register API blueprints
+    from .blueprints.api.routes import register_api_routes
+    register_api_routes(app)
 
 def create_app(config_filename=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
@@ -96,7 +95,26 @@ def create_app(config_filename=None):
     # Register blueprints
     register_blueprints(app)
 
-    
+    # Register legacy blueprints that still exist (excluding products which are handled above)
+    legacy_blueprints = [
+        # add_extra_bp is now handled by blueprint_registry
+        # ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
+        # fifo_bp is now handled by blueprint_registry
+        # ('.blueprints.fifo', 'fifo_bp', None),
+    ]
+
+    # Legacy blueprints are now all handled by blueprint_registry
+    if legacy_blueprints:  # Only run if there are actually legacy blueprints to register
+        for module_path, bp_name, url_prefix in legacy_blueprints:
+            try:
+                module = __import__(f'app{module_path}', fromlist=[bp_name])
+                blueprint = getattr(module, bp_name)
+                if url_prefix:
+                    app.register_blueprint(blueprint, url_prefix=url_prefix)
+                else:
+                    app.register_blueprint(blueprint)
+            except (ImportError, AttributeError) as e:
+                print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:

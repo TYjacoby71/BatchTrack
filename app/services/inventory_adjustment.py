@@ -172,7 +172,7 @@ def process_inventory_adjustment(
                         fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
                         note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         created_by=created_by,
-                        quantity_used=None,  # Credits don't consume inventory - should be NULL
+                        quantity_used=0.0,  # Credits don't consume inventory
                         used_for_batch_id=batch_id
                     )
                     db.session.add(credit_history)
@@ -191,7 +191,7 @@ def process_inventory_adjustment(
                     unit_cost=cost_per_unit,
                     note=f"{notes} (Excess credit - no original FIFO found)",
                     created_by=created_by,
-                    quantity_used=None,  # Restocks don't consume inventory - should be NULL
+                    quantity_used=0.0,  # Restocks don't consume inventory
                     expiration_date=expiration_date,
                     used_for_batch_id=batch_id
                 )
@@ -209,7 +209,7 @@ def process_inventory_adjustment(
                 remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
                 unit_cost=cost_per_unit,
                 note=notes,
-                quantity_used=None,  # Additions don't consume inventory - should be NULL
+                quantity_used=0.0,  # Additions don't consume inventory - always 0
                 created_by=created_by,
                 expiration_date=expiration_date,
                 shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry

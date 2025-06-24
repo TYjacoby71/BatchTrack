@@ -35,7 +35,7 @@ def quick_add_container():
             unit_cost=0,
             note='Initial container creation via quick add',
             created_by=current_user.id if current_user else None,
-            quantity_used=None,  # Addition events don't consume inventory - should be NULL
+            quantity_used=0,  # Required field for FIFO tracking
             is_perishable=False
         )
         db.session.add(history)
