@@ -78,7 +78,9 @@ class Unit(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_custom = db.Column(db.Boolean, default=False)
     is_mapped = db.Column(db.Boolean, default=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CustomUnitMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,6 +96,9 @@ class IngredientCategory(db.Model):
     description = db.Column(db.Text)
     color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color
     is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ConversionLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -156,6 +161,8 @@ class Batch(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.Text)
     total_cost = db.Column(db.Float)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     failed_at = db.Column(db.DateTime)
@@ -262,6 +269,8 @@ class Product(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     low_stock_threshold = db.Column(db.Float, default=0)
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
     inventory = db.relationship('ProductInventory', backref='product', lazy=True)
@@ -304,6 +313,8 @@ class ProductVariation(db.Model):
     name = db.Column(db.String(128), nullable=False)  # 'Base', '2oz', '4oz', 'Trial Size', etc.
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (db.UniqueConstraint('product_id', 'name', name='unique_product_variation'),)
@@ -332,6 +343,8 @@ class InventoryItem(db.Model):
     density = db.Column(db.Float, nullable=True)  # g/ml for volume-weight conversions
     type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient' or 'container'
     is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     category = db.relationship('IngredientCategory', backref='inventory_items')
