@@ -82,14 +82,16 @@ class Unit(db.Model):
 
 class CustomUnitMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ingredient_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
-    unit_name = db.Column(db.String(64), nullable=False)
-    conversion_factor = db.Column(db.Float, nullable=False)
-    base_unit = db.Column(db.String(64), nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    multiplier = db.Column(db.Float, nullable=False)
+    ingredient_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    ingredient_item = db.relationship('InventoryItem', backref='custom_units')
+    ingredient_item = db.relationship('InventoryItem', backref='custom_mappings')
+    user = db.relationship('User', backref='custom_mappings')
 
 class IngredientCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
