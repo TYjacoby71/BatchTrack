@@ -87,6 +87,8 @@ class CustomUnitMapping(db.Model):
     conversion_factor = db.Column(db.Float, nullable=False)
     base_unit = db.Column(db.String(64), nullable=False)
     notes = db.Column(db.Text)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class IngredientCategory(db.Model):
@@ -102,6 +104,7 @@ class IngredientCategory(db.Model):
 class ConversionLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(64), nullable=False)
@@ -121,6 +124,7 @@ class RecipeIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     notes = db.Column(db.Text)
     order_position = db.Column(db.Integer, default=0)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
@@ -185,6 +189,7 @@ class BatchIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float)
     total_cost = db.Column(db.Float)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     batch = db.relationship('Batch', backref='batch_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='batch_usages')
@@ -197,6 +202,7 @@ class BatchContainer(db.Model):
     container_quantity = db.Column(db.Integer, nullable=False)
     fill_quantity = db.Column(db.Float)
     fill_unit = db.Column(db.String(32))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     batch = db.relationship('Batch', backref='containers')
 
@@ -248,6 +254,8 @@ class BatchTimer(db.Model):
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(32), default='active')  # active, completed, cancelled
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     batch = db.relationship('Batch', backref='timers')
 
@@ -381,6 +389,8 @@ class Tag(db.Model):
     color = db.Column(db.String(7), default='#6c757d')  # hex color
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class ProductInventoryHistory(db.Model):
     """FIFO tracking for product inventory similar to InventoryHistory"""
