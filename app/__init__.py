@@ -152,5 +152,15 @@ def create_app(config_filename=None):
         has_subscription_feature=has_subscription_feature,
         is_organization_owner=is_organization_owner
     )
+    
+    # Add units to global context for dropdowns
+    @app.context_processor
+    def inject_units():
+        from .models import Unit
+        try:
+            units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+            return dict(global_units=units)
+        except:
+            return dict(global_units=[])
 
     return app
