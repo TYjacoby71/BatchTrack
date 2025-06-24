@@ -81,7 +81,7 @@ def create_app(config_filename=None):
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
-    
+
     # Register template registry for safe URL generation
     from .template_registry import template_registry
     template_registry.register_template_functions(app)
@@ -131,5 +131,18 @@ def create_app(config_filename=None):
     @app.route('/homepage')
     def homepage():
         return render_template('homepage.html')
+
+    # Run all seeders
+    try:
+        from .seeders import seed_units, seed_categories, seed_users
+
+        seed_units()
+        seed_categories()
+        seed_users()
+
+        app.logger.info("✅ All seeders completed successfully")
+    except Exception as e:
+        app.logger.error(f"❌ Seeder error: {e}")
+        # Don't fail startup, just log the error
 
     return app
