@@ -1,95 +1,87 @@
-2025-06-24 22:35:39,799 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
+2025-06-24 22:45:21,130 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:45:21,786 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:45:22,640 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:45:22,789 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:52:29,941 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:52:30,166 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:52:31,440 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:52:31,637 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:53:16,665 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:53:16,673 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:53:16,940 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:53:17,004 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:53:18,815 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:53:19,135 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:53:27,459 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:53:27,700 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:53:29,007 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:53:29,200 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:00:24,898 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:00:25,168 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: inventory_item.is_archived
+[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.category_id AS inventory_item_category_id, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.density AS inventory_item_density, inventory_item.type AS inventory_item_type, inventory_item.is_active AS inventory_item_is_active, inventory_item.is_archived AS inventory_item_is_archived, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.shelf_life_days AS inventory_item_shelf_life_days, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.storage_amount AS inventory_item_storage_amount, inventory_item.storage_unit AS inventory_item_storage_unit, inventory_item.created_by AS inventory_item_created_by, inventory_item.organization_id AS inventory_item_organization_id, inventory_item.created_at AS inventory_item_created_at 
+FROM inventory_item 
+WHERE inventory_item.category_id = ?]
+[parameters: (14,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:35:48,079 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:35:48,270 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:36:33,568 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:36:33,762 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:36:37,967 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:36:38,139 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:36:41,655 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:36:41,815 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:43:28,835 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:43:29,003 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:43:34,634 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:43:34,810 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:43:39,039 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:43:39,218 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:43:43,353 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:43:43,549 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:44:55,417 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:44:55,652 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such table: unit
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:44:59,147 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:44:59,418 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such table: unit
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:45:07,637 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:45:07,828 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such table: unit
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
+2025-06-24 23:00:30,444 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:00:30,675 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:00:31,853 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:00:32,048 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:01:55,767 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:01:55,971 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:01:57,224 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:01:57,446 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:02:40,226 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:02:40,416 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:02:44,707 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:02:44,906 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:02:46,120 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:02:46,317 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:04:14,262 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:04:14,615 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:04:15,973 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:04:16,127 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:08:13,029 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:08:13,174 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:169]
+2025-06-24 23:08:19,033 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:08:19,186 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:169]
+2025-06-24 23:08:20,178 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:08:20,323 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:169]
+2025-06-24 23:15:35,884 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:15:36,044 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:17:37,503 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:17:37,648 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:17:38,482 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:17:38,629 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 23:18:34,523 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:18:34,665 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:187]
+2025-06-24 23:18:37,293 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:18:37,462 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:187]
+2025-06-24 23:18:38,385 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:18:38,530 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:187]
+2025-06-24 23:19:32,297 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:19:34,279 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:19:35,444 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:28:26,971 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:28:28,895 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:28:29,811 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:33:17,259 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:33:19,768 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:33:20,693 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:34:54,398 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:34:55,738 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:36:22,577 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:36:23,475 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:36:26,611 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:36:31,775 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:36:32,832 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:37:05,028 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:37:06,963 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:37:07,910 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:37:36,311 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:39:02,445 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:39:02,472 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:39:08,085 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:39:09,228 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:51:03,912 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 23:51:04,668 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
