@@ -20,13 +20,17 @@ class TemplateRegistry:
             'products.view_product': 'legacy_products_main.view_product',
             'products.edit_product': 'legacy_products_main.edit_product',
             
-            # Batches endpoints - map to the actual route function names
-            'batches.batches_list': 'batches.list_batches',
-            'batches.list_batches': 'batches.list_batches',
+            # Batches endpoints - fix the actual blueprint route names
+            'batches.list_batches': 'batches.batches_list',
+            'batches.batches_list': 'batches.batches_list',
             'batches.view_batch_in_progress': 'batches.view_batch_in_progress',
             'batches.view_batch': 'batches.view_batch',
             
-            # Other common endpoint mappings can be added here
+            # Settings endpoints - map to correct settings routes
+            'settings.index': 'settings.settings_page',
+            'settings.settings_page': 'settings.settings_page',
+            
+            # Other common endpoint mappings
             'inventory.list_inventory': 'inventory.list_inventory',
             'recipes.list_recipes': 'recipes.list_recipes',
             'recipes.new_recipe': 'recipes.new_recipe',
@@ -39,10 +43,21 @@ class TemplateRegistry:
             'api.get_recipe_ingredients': 'api.get_recipe_ingredients',
             'api.check_stock': 'api.check_stock',
             
-            # Missing common endpoints
-            'settings.index': 'settings.index',
+            # Auth endpoints
             'logout': 'auth.logout',
             'login': 'auth.login',
+            
+            # Tag manager endpoints
+            'tags.manage_tags': 'tag_manager.manage_tags',
+            
+            # Fault log endpoints
+            'faults.view_fault_log': 'fault_log.view_fault_log',
+            
+            # Timer endpoints
+            'timers.list_timers': 'timers.list_timers',
+            
+            # Product log endpoints
+            'product_log.view_product': 'product_log.view_product',
         }
         
         # Cache for verified endpoints
