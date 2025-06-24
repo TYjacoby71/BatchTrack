@@ -11,7 +11,7 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ safe_url_for('static', filename='style.css') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {% block head %}{% endblock %}
     <style>
@@ -46,7 +46,7 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('app_routes.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">BatchTrack </a>
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ safe_url_for('app_routes.dashboard') }}{% else %}{{ safe_url_for('index') }}{% endif %}">BatchTrack </a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>

@@ -82,7 +82,7 @@ def create_app(config_filename=None):
     from .filters.product_filters import register_filters
     register_filters(app)
 
-    # Template registry removed - using standard url_for with fixed endpoints
+    # Template registry completely removed - using standard Flask url_for
 
     # Add custom template filters
     @app.template_filter('attr_multiply')
