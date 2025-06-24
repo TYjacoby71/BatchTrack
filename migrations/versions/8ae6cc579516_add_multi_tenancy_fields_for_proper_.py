@@ -50,22 +50,33 @@ def upgrade():
         batch_op.create_foreign_key('fk_product_variation_organization_id', 'organization', ['organization_id'], ['id'])
         batch_op.create_foreign_key('fk_product_variation_created_by', 'user', ['created_by'], ['id'])
 
+    # For the unit table, we need to handle this more carefully
+    # First, check if the user_id column exists and what constraints exist
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    
+    # Get existing columns
+    columns = [col['name'] for col in inspector.get_columns('unit')]
+    constraints = inspector.get_foreign_keys('unit')
+    
     with op.batch_alter_table('unit', schema=None) as batch_op:
+        # Add new columns
         batch_op.add_column(sa.Column('created_by', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('created_at', sa.DateTime(), nullable=True))
-        # Try to drop the constraint, but don't fail if it doesn't exist
-        try:
+        
+        # Drop the old constraint if it exists
+        constraint_names = [fk['name'] for fk in constraints if fk.get('name')]
+        if 'fk_unit_user_id' in constraint_names:
             batch_op.drop_constraint('fk_unit_user_id', type_='foreignkey')
-        except:
-            pass
+        
+        # Create new foreign keys
         batch_op.create_foreign_key('fk_unit_created_by', 'user', ['created_by'], ['id'])
         batch_op.create_foreign_key('fk_unit_organization_id', 'organization', ['organization_id'], ['id'])
-        # Try to drop the column, but don't fail if it doesn't exist
-        try:
+        
+        # Drop the old column if it exists
+        if 'user_id' in columns:
             batch_op.drop_column('user_id')
-        except:
-            pass
 
     # ### end Alembic commands ###
 
