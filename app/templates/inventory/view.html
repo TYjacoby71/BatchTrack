@@ -6,7 +6,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ safe_url_for('inventory.list_inventory') }}">Inventory</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
           <li class="breadcrumb-item active">{{ item.name }}</li>
         </ol>
       </nav>
@@ -68,7 +68,7 @@
           <p>Please make the initial stock entry to begin tracking this item. This will create your first FIFO entry and allow you to manage inventory properly.</p>
         </div>
         
-        <form id="initialInventoryForm" method="POST" action="{{ safe_url_for('inventory.adjust_inventory', id=item.id) }}">
+        <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="change_type" value="restock">
           
@@ -141,7 +141,7 @@
         </form>
       </div>
       <div class="modal-footer">
-        <a href="{{ safe_url_for('inventory.list_inventory') }}" class="btn btn-secondary">Back to Inventory List</a>
+        <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-secondary">Back to Inventory List</a>
         <button type="submit" form="initialInventoryForm" class="btn btn-primary">Add Initial Inventory</button>
       </div>
     </div>
@@ -149,5 +149,5 @@
 </div>
 {% endif %}
 
-<script src="{{ safe_url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
+<script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
 {% endblock %}

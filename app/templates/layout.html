@@ -11,7 +11,7 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ safe_url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {% block head %}{% endblock %}
     <style>
@@ -46,7 +46,7 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ safe_url_for('app_routes.dashboard') }}{% else %}{{ safe_url_for('index') }}{% endif %}">BatchTrack </a>
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('app_routes.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">BatchTrack </a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav me-auto">
             </div>
@@ -66,38 +66,38 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
-                    <li><a class="dropdown-item" href="{{ safe_url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-                    <li><a class="dropdown-item" href="{{ safe_url_for('index') }}">Homepage</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Core Features -->
                     {% if has_permission('inventory.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     {% endif %}
                     {% if has_permission('recipes.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('recipes.list_recipes') }}">Recipes</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('batches.list_batches') }}">Batches</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('products.product_list') }}">Products</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
                     {% endif %}
 
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Production Tools -->
                     {% if has_permission('timers.manage') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('timers.list_timers') }}">Timer Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('product_log.view_product', product_id=1) }}">Production Log</a></li>
                     {% endif %}
                     {% if has_permission('batches.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('faults.view_fault_log') }}">Fault Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
                     {% endif %}
                     <li>
-                        <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ safe_url_for('expiration.alerts') }}">
+                        <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
                             Expiration Management
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
@@ -106,14 +106,14 @@
 
                     <!-- Settings & Management -->
                     {% if has_permission('settings.view') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('settings.index') }}">Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
-                    <li><a class="dropdown-item" href="{{ safe_url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
 
-                    <li><a class="dropdown-item" href="{{ safe_url_for('auth.logout') }}">Logout</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
 
@@ -147,13 +147,13 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom scripts -->
-    <script src="{{ safe_url_for('static', filename='js/utils/utils.js') }}"></script>
-    <script src="{{ safe_url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block scripts %}{% endblock %}
-    <script src="{{ safe_url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
-    <script src="{{ safe_url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
     {% if current_user.is_authenticated %}
-    <script src="{{ safe_url_for('static', filename='js/expiration_alerts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     {% endif %}
     </body>
 </html>

@@ -63,7 +63,7 @@
           <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
           <td>
             {% if entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
-              <a href="{{ safe_url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+              <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
             {% else %}
               NA
             {% endif %}
@@ -73,16 +73,16 @@
               {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
               {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                 {% if ref_entry.batch.status == 'in_progress' %}
-                  <a href="{{ safe_url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
+                  <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
                 {% else %}
-                  <a href="{{ safe_url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
+                  <a href="{{ url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
                 {% endif %}
               {% elif ref_entry %}
-                <a href="{{ safe_url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                   {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                 </a>
               {% else %}
-                <a href="{{ safe_url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                   {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                 </a>
               {% endif %}
@@ -93,9 +93,9 @@
           <td>
             {% if entry.change_type == 'finished_batch' and entry.batch %}
               {% if entry.batch.status == 'in_progress' %}
-                <a href="{{ safe_url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
               {% else %}
-                <a href="{{ safe_url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
               {% endif %}
             {% else %}
               {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
@@ -128,14 +128,14 @@
       <ul class="pagination justify-content-center mb-0">
         {% if pagination.has_prev %}
         <li class="page-item">
-          <a class="page-link" href="{{ safe_url_for('inventory.view_inventory', id=item.id, page=pagination.prev_num) }}">&laquo;</a>
+          <a class="page-link" href="{{ url_for('inventory.view_inventory', id=item.id, page=pagination.prev_num) }}">&laquo;</a>
         </li>
         {% endif %}
 
         {% for page in pagination.iter_pages() %}
         {% if page %}
         <li class="page-item {% if page == pagination.page %}active{% endif %}">
-          <a class="page-link" href="{{ safe_url_for('inventory.view_inventory', id=item.id, page=page) }}">{{ page }}</a>
+          <a class="page-link" href="{{ url_for('inventory.view_inventory', id=item.id, page=page) }}">{{ page }}</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -144,7 +144,7 @@
 
         {% if pagination.has_next %}
         <li class="page-item">
-          <a class="page-link" href="{{ safe_url_for('inventory.view_inventory', id=item.id, page=pagination.next_num) }}">&raquo;</a>
+          <a class="page-link" href="{{ url_for('inventory.view_inventory', id=item.id, page=pagination.next_num) }}">&raquo;</a>
         </li>
         {% endif %}
       </ul>

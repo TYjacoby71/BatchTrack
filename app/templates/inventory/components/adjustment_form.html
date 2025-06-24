@@ -4,7 +4,7 @@
     <h5 class="mb-0">Adjust Inventory</h5>
   </div>
   <div class="card-body">
-    <form method="POST" action="{{ safe_url_for('inventory.adjust_inventory', id=item.id) }}">
+    <form method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row">
         <div class="col-md-4">

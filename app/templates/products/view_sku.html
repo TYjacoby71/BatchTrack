@@ -5,8 +5,8 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ safe_url_for('products.product_list') }}">Products</a></li>
-          <li class="breadcrumb-item"><a href="{{ safe_url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
           <li class="breadcrumb-item active">{{ variant }} - {{ size_label if size_label else 'bulk' }}</li>
         </ol>
       </nav>
@@ -99,7 +99,7 @@
                       {% if entry.batch_id %}
                         {% set batch = entry.batch %}
                         {% if batch %}
-                          <a href="{{ safe_url_for('batches.view_batch', batch_identifier=batch.label_code) }}" class="text-decoration-none" style="word-break: break-all;">
+                          <a href="{{ url_for('batches.view_batch', batch_identifier=batch.label_code) }}" class="text-decoration-none" style="word-break: break-all;">
                             {{ batch.label_code }}
                           </a>
                         {% else %}
@@ -225,7 +225,7 @@
         <h5 class="modal-title">Adjust SKU Inventory</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ safe_url_for('products.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" value="{{ variant }}">
