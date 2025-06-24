@@ -67,6 +67,8 @@ def seed_units():
     # Seed regular units
     for unit in units:
         if not Unit.query.filter_by(name=unit["name"]).first():
+            # Ensure both conversion_factor and multiplier_to_base are set
+            unit["multiplier_to_base"] = unit["conversion_factor"]
             db.session.add(Unit(**unit))
 
     db.session.commit()

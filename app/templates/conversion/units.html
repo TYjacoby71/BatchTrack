@@ -28,7 +28,7 @@
           <td>{{ unit.name }}</td>
           <td>{{ unit.type }}</td>
           <td>{{ unit.base_unit }}</td>
-          <td>{{ "%.6f"|format(unit.multiplier_to_base) }}</td>
+          <td>{{ "%.6f"|format(unit.multiplier_to_base or unit.conversion_factor or 1.0) }}</td>
           <td>
             <div class="btn-group" role="group">
               {% if unit.is_custom %}
