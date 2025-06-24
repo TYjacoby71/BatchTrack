@@ -28,7 +28,7 @@
           <td>{{ unit.name }}</td>
           <td>{{ unit.type }}</td>
           <td>{{ unit.base_unit }}</td>
-          <td>{{ "%.6f"|format(unit.multiplier_to_base or unit.conversion_factor or 1.0) }}</td>
+          <td>{{ "%.6f"|format(unit.conversion_factor or 1.0) }}</td>
           <td>
             <div class="btn-group" role="group">
               {% if unit.is_custom %}
@@ -55,6 +55,9 @@
     <div class="row mb-2">
       <div class="col">
         <input type="text" class="form-control" name="unit_name" placeholder="Unit Name" required>
+      </div>
+      <div class="col">
+        <input type="text" class="form-control" name="unit_symbol" placeholder="Symbol (lb,kg,g,ml,etc)">
       </div>
       <div class="col">
         <select name="unit_type" class="form-control" required>
