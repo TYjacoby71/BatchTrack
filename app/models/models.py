@@ -343,6 +343,14 @@ class InventoryItem(db.Model):
     density = db.Column(db.Float, nullable=True)  # g/ml for volume-weight conversions
     type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient' or 'container'
     is_active = db.Column(db.Boolean, default=True)
+    is_archived = db.Column(db.Boolean, default=False)
+    # Perishable tracking fields
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.Date, nullable=True)
+    # Container-specific fields
+    storage_amount = db.Column(db.Float, nullable=True)
+    storage_unit = db.Column(db.String(32), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
