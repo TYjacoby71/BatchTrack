@@ -132,17 +132,18 @@ def create_app(config_filename=None):
     def homepage():
         return render_template('homepage.html')
 
-    # Run all seeders
-    try:
-        from .seeders import seed_units, seed_categories, seed_users
+    # Run all seeders within app context
+    with app.app_context():
+        try:
+            from .seeders import seed_units, seed_categories, seed_users
 
-        seed_units()
-        seed_categories()
-        seed_users()
+            seed_units()
+            seed_categories()
+            seed_users()
 
-        app.logger.info("✅ All seeders completed successfully")
-    except Exception as e:
-        app.logger.error(f"❌ Seeder error: {e}")
-        # Don't fail startup, just log the error
+            app.logger.info("✅ All seeders completed successfully")
+        except Exception as e:
+            app.logger.error(f"❌ Seeder error: {e}")
+            # Don't fail startup, just log the error
 
     return app
