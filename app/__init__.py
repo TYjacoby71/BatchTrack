@@ -175,19 +175,8 @@ def create_app(config_filename=None):
     def homepage():
         return render_template('homepage.html')
 
-    # Run all seeders within app context
-    with app.app_context():
-        try:
-            from .seeders import seed_units, seed_categories, seed_users
-
-            seed_units()
-            seed_categories()
-            seed_users()
-
-            app.logger.info("✅ All seeders completed successfully")
-        except Exception as e:
-            app.logger.error(f"❌ Seeder error: {e}")
-            # Don't fail startup, just log the error
+    # Seeders are available via CLI commands: flask seed-all, flask init-db
+    # No automatic seeding on startup to improve performance
 
     # Register template functions for permissions
     from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner
