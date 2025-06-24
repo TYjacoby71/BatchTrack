@@ -13,7 +13,7 @@
         <th>Name</th>
         <th>Type</th>
         <th>Base Unit</th>
-        <th>Multiplier</th>
+        <th>Conversion Factor</th>
         <th>Action</th>
       </tr>
     </thead>
@@ -57,7 +57,7 @@
         <input type="text" class="form-control" name="unit_name" placeholder="Unit Name" required>
       </div>
       <div class="col">
-        <input type="text" class="form-control" name="unit_symbol" placeholder="Symbol (lb,kg,g,ml,etc)">
+        <input type="text" class="form-control" name="unit_symbol" placeholder="Symbol (optional)">
       </div>
       <div class="col">
         <select name="unit_type" class="form-control" required>
@@ -86,6 +86,7 @@
 <!-- Custom Mappings Form -->
 <div id="custom-mapping-section" class="card p-3">
   <h4>Custom Unit Mappings</h4>
+  <p class="text-muted">Define how your custom unit relates to a known unit. For example: "1 bucket = 1 gallon"</p>
   <form method="POST" action="{{ url_for('conversion_bp.manage_units') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row g-2 align-items-center">
@@ -93,12 +94,14 @@
         <label class="form-label">1</label>
       </div>
       <div class="col">
-        <select name="from_unit" class="form-control select2" required>
-          <option value="">Select From Unit</option>
+        <select name="custom_unit" class="form-control select2" required>
+          <option value="">Select Custom Unit</option>
           {% for type, type_units in units_by_type.items() %}
           <optgroup label="{{ type|title }}">
             {% for unit in type_units %}
-            <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% if unit.is_custom and not unit.is_mapped %}
+            <option value="{{ unit.name }}">{{ unit.name }} (custom)</option>
+            {% endif %}
             {% endfor %}
           </optgroup>
           {% endfor %}
@@ -108,15 +111,17 @@
         <label class="form-label">equals</label>
       </div>
       <div class="col">
-        <input type="number" step="0.0001" name="multiplier" class="form-control" placeholder="1.0" required>
+        <input type="number" step="0.0001" name="conversion_factor" class="form-control" placeholder="1.0" required>
       </div>
       <div class="col">
-        <select name="to_unit" class="form-control select2" required>
-          <option value="">Select To Unit</option>
+        <select name="comparable_unit" class="form-control select2" required>
+          <option value="">Select Comparable Unit</option>
           {% for type, type_units in units_by_type.items() %}
           <optgroup label="{{ type|title }}">
             {% for unit in type_units %}
+            {% if not unit.is_custom %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
+            {% endif %}
             {% endfor %}
           </optgroup>
           {% endfor %}
@@ -132,18 +137,18 @@
   <table class="table table-sm mt-3">
     <thead>
       <tr>
-        <th>From Unit</th>
-        <th>Multiplier</th>
-        <th>To Unit</th>
+        <th>Custom Unit</th>
+        <th>Conversion Factor to Base</th>
+        <th>Base Unit</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for mapping in mappings %}
       <tr>
-        <td>{{ mapping.from_unit }}</td>
-        <td>{{ mapping.multiplier }}</td>
-        <td>{{ mapping.to_unit }}</td>
+        <td>{{ mapping.unit_name }}</td>
+        <td>{{ "%.6f"|format(mapping.conversion_factor) }}</td>
+        <td>{{ mapping.base_unit }}</td>
         <td>
           <form method="POST" action="{{ url_for('conversion_bp.delete_mapping', mapping_id=mapping.id) }}" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
