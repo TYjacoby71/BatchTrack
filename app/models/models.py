@@ -330,6 +330,7 @@ class InventoryItem(db.Model):
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
     density = db.Column(db.Float, nullable=True)  # g/ml for volume-weight conversions
+    type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient' or 'container'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
