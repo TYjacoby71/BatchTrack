@@ -103,50 +103,63 @@ def manage_units():
                 db.session.commit()
                 flash('Unit created successfully', 'success')
                 return redirect(url_for('conversion_bp.manage_units'))
+
+            # Handle custom unit mapping
+            custom_unit = request.form.get("custom_unit", "").strip()
+            comparable_unit = request.form.get("comparable_unit", "").strip()
+            try:
+                conversion_factor = float(request.form.get("conversion_factor", "0"))
+            except:
+                flash("Conversion factor must be a number.", "danger")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            if not custom_unit or not comparable_unit or conversion_factor <= 0:
+                flash("All fields are required.", "danger")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            custom_unit_obj = Unit.query.filter_by(name=custom_unit).first()
+            comparable_unit_obj = Unit.query.filter_by(name=comparable_unit).first()
+
+            if not custom_unit_obj or not comparable_unit_obj:
+                flash("Units not found in database.", "danger")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            if not custom_unit_obj.is_custom:
+                flash("Only custom units can be mapped.", "danger")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            if custom_unit_obj.type != comparable_unit_obj.type:
+                flash("Units must be the same type.", "danger")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            existing = CustomUnitMapping.query.filter_by(
+                unit_name=custom_unit
+            ).first()
+            if existing:
+                flash("This custom unit already has a mapping.", "warning")
+                return redirect(url_for('conversion_bp.manage_units'))
+
+            # Calculate the conversion factor to base unit
+            # If 1 bucket = 1 gallon, and 1 gallon = 3785.41 ml, then bucket conversion_factor = 3785.41
+            base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
+
+            mapping = CustomUnitMapping(
+                unit_name=custom_unit,
+                conversion_factor=base_conversion_factor,
+                base_unit=custom_unit_obj.base_unit,
+                ingredient_item_id=1  # Temporary - we'll fix this later
+            )
+            db.session.add(mapping)
+
+            # Mark the custom unit as mapped and update its conversion factor
+            custom_unit_obj.is_mapped = True
+            custom_unit_obj.conversion_factor = base_conversion_factor
+            db.session.commit()
+            flash("Custom mapping added successfully.", "success")
+            return redirect(url_for('conversion_bp.manage_units'))
         except ValidationError:
             flash("Invalid CSRF token", "danger")
             return redirect(url_for('conversion_bp.manage_units'))
-
-        from_unit = request.form.get("from_unit", "").strip()
-        to_unit = request.form.get("to_unit", "").strip()
-        try:
-            multiplier = float(request.form.get("multiplier", "0"))
-        except:
-            flash("Multiplier must be a number.", "danger")
-            return redirect(url_for('conversion_bp.manage_units'))
-
-        if not from_unit or not to_unit or multiplier <= 0:
-            flash("All fields are required.", "danger")
-            return redirect(url_for('conversion_bp.manage_units'))
-
-        from_unit_obj = Unit.query.filter_by(name=from_unit).first()
-        to_unit_obj = Unit.query.filter_by(name=to_unit).first()
-
-        if not from_unit_obj or not to_unit_obj:
-            flash("Units not found in database.", "danger")
-            return redirect(url_for('conversion_bp.manage_units'))
-
-        existing = CustomUnitMapping.query.filter_by(
-            from_unit=from_unit,
-            to_unit=to_unit
-        ).first()
-        if existing:
-            flash("This mapping already exists.", "warning")
-            return redirect(url_for('conversion_bp.manage_units'))
-
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            multiplier=multiplier,
-            user_id=getattr(current_user, "id", None)
-        )
-        db.session.add(mapping)
-
-        # Mark the custom unit as mapped
-        from_unit_obj.is_mapped = True
-        db.session.commit()
-        flash("Custom mapping added successfully.", "success")
-        return redirect(url_for('conversion_bp.manage_units'))
 
     units = get_global_unit_list()
     mappings = CustomUnitMapping.query.all()
