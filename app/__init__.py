@@ -144,4 +144,13 @@ def create_app(config_filename=None):
             app.logger.error(f"❌ Seeder error: {e}")
             # Don't fail startup, just log the error
 
+    # Register template functions for permissions
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner
+    app.jinja_env.globals.update(
+        has_permission=has_permission,
+        has_role=has_role,
+        has_subscription_feature=has_subscription_feature,
+        is_organization_owner=is_organization_owner
+    )
+
     return app
