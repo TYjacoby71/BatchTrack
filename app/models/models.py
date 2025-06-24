@@ -1,4 +1,3 @@
-
 from datetime import datetime, date
 from flask_login import current_user, UserMixin
 from ..extensions import db
@@ -10,16 +9,16 @@ class Organization(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     users = db.relationship('User', backref='organization')
-    
+
     @property
     def active_users_count(self):
         return len([u for u in self.users if u.is_active])
-    
+
     @property
     def owner(self):
         """Get the organization owner (first created user)"""
         return User.query.filter_by(organization_id=self.id).order_by(User.created_at).first()
-    
+
     def can_add_users(self):
         """Check if organization can add more users based on subscription"""
         if self.subscription_tier == 'free':
@@ -43,15 +42,15 @@ class User(UserMixin, db.Model):
     is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
-    
+
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
         self.password_hash = generate_password_hash(password)
-        
+
     def check_password(self, password):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
-    
+
     @property
     def full_name(self):
         if self.first_name and self.last_name:
@@ -61,7 +60,7 @@ class User(UserMixin, db.Model):
         elif self.last_name:
             return self.last_name
         return self.username
-    
+
     @property
     def is_organization_owner(self):
         """Check if user is the owner of their organization"""
@@ -110,7 +109,7 @@ class ConversionLog(db.Model):
     result = db.Column(db.Float, nullable=False)
     conversion_type = db.Column(db.String(32), default='unit_to_unit')
     ingredient_name = db.Column(db.String(128))
-    
+
     user = db.relationship('User', backref='conversion_logs')
 
 class RecipeIngredient(db.Model):
@@ -122,7 +121,7 @@ class RecipeIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     notes = db.Column(db.Text)
     order_position = db.Column(db.Integer, default=0)
-    
+
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
 class Recipe(db.Model):
@@ -172,7 +171,7 @@ class Batch(db.Model):
     shelf_life_days = db.Column(db.Integer)
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
-    
+
     recipe = db.relationship('Recipe', backref='batches')
     product = db.relationship('Product', backref='batches')
     variant = db.relationship('ProductVariation', backref='batches')
@@ -186,7 +185,7 @@ class BatchIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float)
     total_cost = db.Column(db.Float)
-    
+
     batch = db.relationship('Batch', backref='batch_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='batch_usages')
 
@@ -198,7 +197,7 @@ class BatchContainer(db.Model):
     container_quantity = db.Column(db.Integer, nullable=False)
     fill_quantity = db.Column(db.Float)
     fill_unit = db.Column(db.String(32))
-    
+
     batch = db.relationship('Batch', backref='containers')
 
 class ExtraBatchContainer(db.Model):
@@ -209,7 +208,7 @@ class ExtraBatchContainer(db.Model):
     container_quantity = db.Column(db.Integer, nullable=False)
     fill_quantity = db.Column(db.Float)
     fill_unit = db.Column(db.String(32))
-    
+
     batch = db.relationship('Batch', backref='extra_containers')
 
 class InventoryHistory(db.Model):
@@ -227,11 +226,13 @@ class InventoryHistory(db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    quantity_used = db.Column(db.Float, default=0.0)  # Track actual consumption vs deduction
+    used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)  # Track which batch used this
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
-    
+
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
     batch = db.relationship('Batch')
@@ -246,7 +247,7 @@ class BatchTimer(db.Model):
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(32), default='active')  # active, completed, cancelled
-    
+
     batch = db.relationship('Batch', backref='timers')
 
 class ExtraBatchIngredient(db.Model):
@@ -258,7 +259,7 @@ class ExtraBatchIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float)
     total_cost = db.Column(db.Float)
-    
+
     batch = db.relationship('Batch', backref='extra_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='extra_batch_usages')
 
@@ -274,17 +275,17 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     events = db.relationship('ProductEvent', backref='product', lazy=True)
     inventory = db.relationship('ProductInventory', backref='product', lazy=True)
-    
+
     @property
     def total_inventory(self):
         """Total inventory across all variants"""
         return sum(inv.quantity for inv in self.inventory if inv.quantity > 0)
-    
+
     @property
     def base_variant(self):
         """Get the Base ProductVariation for this product"""
         return next((v for v in self.variations if v.name == 'Base'), None)
-    
+
     @property
     def variant_count(self):
         """Total number of variants including Base"""
@@ -302,7 +303,7 @@ class ProductInventory(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
-    
+
     variant = db.relationship('ProductVariation', backref='inventory')
     batch = db.relationship('Batch')
 
@@ -316,7 +317,7 @@ class ProductVariation(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     __table_args__ = (db.UniqueConstraint('product_id', 'name', name='unique_product_variation'),)
 
 class ProductEvent(db.Model):
@@ -327,7 +328,7 @@ class ProductEvent(db.Model):
     description = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    
+
     user = db.relationship('User')
 
 class InventoryItem(db.Model):
@@ -354,7 +355,7 @@ class InventoryItem(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     category = db.relationship('IngredientCategory', backref='inventory_items')
 
 class BatchInventoryLog(db.Model):
@@ -368,7 +369,7 @@ class BatchInventoryLog(db.Model):
     old_stock = db.Column(db.Float, nullable=False)
     new_stock = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     batch = db.relationship('Batch')
     inventory_item = db.relationship('InventoryItem')
 
@@ -399,7 +400,7 @@ class ProductInventoryHistory(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
-    
+
     # Relationships
     product_inventory = db.relationship('ProductInventory', backref='history')
     batch = db.relationship('Batch')
