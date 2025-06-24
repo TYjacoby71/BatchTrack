@@ -74,7 +74,11 @@ class Unit(db.Model):
     type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
     base_unit = db.Column(db.String(64), nullable=True)  # For conversions
     conversion_factor = db.Column(db.Float, nullable=True)  # To base unit
+    multiplier_to_base = db.Column(db.Float, nullable=True)  # Alternative name for conversion_factor
     is_active = db.Column(db.Boolean, default=True)
+    is_custom = db.Column(db.Boolean, default=False)
+    is_mapped = db.Column(db.Boolean, default=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class CustomUnitMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
