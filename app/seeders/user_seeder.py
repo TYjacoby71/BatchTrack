@@ -45,7 +45,7 @@ def seed_users():
             email='maker@example.com',
             phone='555-0123',
             organization_id=org.id,
-            is_owner=False  # Boolean value - not the primary owner
+            is_owner=True  # Boolean value - organization owner
         )
         db.session.add(maker_user)
         print("✅ Created sample maker user: maker/maker123")
