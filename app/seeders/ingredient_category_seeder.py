@@ -1,4 +1,6 @@
-from app.models import IngredientCategory, db, InventoryItem # Added import for InventoryItem
+
+from ..models import IngredientCategory, InventoryItem
+from ..extensions import db
 
 def seed_categories():
     categories = [
@@ -18,7 +20,7 @@ def seed_categories():
         {"name": "Extract", "default_density": 1.1},            # Vanilla, herbal extracts
         {"name": "Clay", "default_density": 1.6},               # Bentonite, kaolin
         {"name": "Other", "default_density": 1.0},              # Catch-all or uncategorized
-        {"name": "Container", "default_density": 1.0} # Added Container Category
+        {"name": "Container", "default_density": 1.0}           # Added Container Category
     ]
 
     for category in categories:

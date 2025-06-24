@@ -1,5 +1,6 @@
 
-from app.models import Unit, db
+from ..models import Unit
+from ..extensions import db
 
 def seed_units():
     units = [
