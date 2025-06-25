@@ -78,10 +78,3 @@ function handleQuantityChange() {
 function getSelectedChangeType() {
     return document.querySelector('input[name="change_type"]:checked')?.value || 'restock';
 }
-
-// Function to update quantity display for product adjustments
-function updateQuantityDisplay(quantity, changeType) {
-    // This can be used to show real-time calculation feedback
-    // Implementation depends on specific UI requirements
-    console.log(`Quantity: ${quantity}, Change Type: ${changeType}`);
-}
