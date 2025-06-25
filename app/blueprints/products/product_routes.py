@@ -112,13 +112,6 @@ def edit_product(product_id):
         return redirect(url_for('products.view_product', product_id=product.id))
     return render_template('products/edit_product.html', product=product)
 
-@products_bp.route('/products/<int:product_id>/variant/<int:variation_id>')
-@login_required
-def view_variant(product_id, variation_id):
-    product = Product.query.get_or_404(product_id)
-    variation = ProductVariation.query.filter_by(id=variation_id, product_id=product_id).first_or_404()
-    return render_template('products/view_variation.html', product=product, variation=variation)
-
 @products_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
 @login_required
 def deduct_product(product_id):
