@@ -9,7 +9,7 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variation', product_id=product.id, variant=variant|urlencode) }}">{{ variant }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=1) }}">{{ variant }}</a></li>
                     <li class="breadcrumb-item active">{{ size_label }}</li>
                 </ol>
             </nav>
@@ -293,29 +293,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const adjustModal = document.getElementById('adjustFifoModal');
     const adjustForm = document.getElementById('adjustFifoForm');
 
-    adjustModal.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        const inventoryId = button.getAttribute('data-inventory-id');
-        const currentQuantity = button.getAttribute('data-current-quantity');
-        const unit = button.getAttribute('data-unit');
+    if (adjustModal && adjustForm) {
+        adjustModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (button) {
+                const inventoryId = button.getAttribute('data-inventory-id');
+                const currentQuantity = button.getAttribute('data-current-quantity');
+                const unit = button.getAttribute('data-unit');
 
-        // Set form action
-        adjustForm.action = `{{ url_for('product_inventory.adjust_fifo_inventory', inventory_id=0) }}`.replace('0', inventoryId);
+                // Set form action
+                adjustForm.action = `{{ url_for('product_inventory.adjust_fifo_inventory', inventory_id=0) }}`.replace('0', inventoryId);
 
-        // Update help text
-        document.getElementById('quantityHelp').textContent = 
-            `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total. For deductions: enter amount to remove.`;
-    });
+                // Update help text
+                const quantityHelp = document.getElementById('quantityHelp');
+                if (quantityHelp) {
+                    quantityHelp.textContent = 
+                        `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total. For deductions: enter amount to remove.`;
+                }
+            }
+        });
 
-    // Update help text based on adjustment type
-    document.getElementById('change_type').addEventListener('change', function() {
-        const helpText = document.getElementById('quantityHelp');
-        if (this.value === 'recount') {
-            helpText.textContent = helpText.textContent.replace(/For.*/, 'For recount: enter the new total quantity you want this entry to have.');
-        } else {
-            helpText.textContent = helpText.textContent.replace(/For.*/, 'For deductions: enter the amount to remove from this entry.');
+        // Update help text based on adjustment type
+        const changeTypeSelect = document.getElementById('change_type');
+        if (changeTypeSelect) {
+            changeTypeSelect.addEventListener('change', function() {
+                const helpText = document.getElementById('quantityHelp');
+                if (helpText) {
+                    if (this.value === 'recount') {
+                        helpText.textContent = helpText.textContent.replace(/For.*/, 'For recount: enter the new total quantity you want this entry to have.');
+                    } else {
+                        helpText.textContent = helpText.textContent.replace(/For.*/, 'For deductions: enter the amount to remove from this entry.');
+                    }
+                }
+            });
         }
-    });
+    }
 });
 </script>
 {% endblock %}
