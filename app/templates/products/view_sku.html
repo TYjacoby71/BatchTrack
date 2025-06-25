@@ -1,6 +1,11 @@
 {% extends "layout.html" %}
 {% block title %}{{ product.name }} - {{ variant }} - {{ size_label }}{% endblock %}
 
+{% block scripts %}
+<!-- Only include necessary scripts for this page -->
+<script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -134,7 +139,7 @@
                                         <small class="text-muted">{{ entry.note or '' }}</small>
                                     </td>
                                     <td>
-                                        {% if entry.remaining_quantity and entry.remaining_quantity > 0 and entry.change_type == 'batch_production' %}
+                                        {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
                                             <button class="btn btn-sm btn-outline-warning" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#adjustFifoModal"
