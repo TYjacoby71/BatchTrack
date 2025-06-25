@@ -221,6 +221,92 @@ class ProductService:
         ).all()
 
     @staticmethod
+    def recount_sku(sku_id: int, new_quantity: float, notes: str = '') -> bool:
+        """Process a recount adjustment for a specific SKU"""
+        try:
+            sku = ProductSKU.query.get_or_404(sku_id)
+            old_quantity = sku.current_quantity
+            quantity_change = new_quantity - old_quantity
+
+            if quantity_change == 0:
+                return True  # No change needed
+
+            # Update SKU quantity
+            sku.current_quantity = max(0, new_quantity)
+            sku.last_updated = datetime.utcnow()
+
+            # Create history entry
+            history = ProductSKUHistory(
+                sku_id=sku_id,
+                change_type='recount',
+                quantity_change=quantity_change,
+                old_quantity=old_quantity,
+                new_quantity=sku.current_quantity,
+                notes=f"Recount: {old_quantity} → {new_quantity} ({quantity_change:+.2f}). {notes}",
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
+            db.session.add(history)
+
+            db.session.commit()
+            return True
+
+        except Exception:
+            db.session.rollback()
+            return False
+
+    @staticmethod
+    def deduct_stock(sku_id: int, quantity: float, change_type: str,
+                    sale_price: Optional[float] = None, customer: Optional[str] = None,
+                    notes: str = '') -> bool:
+        """Deduct stock from SKU with proper validation"""
+        try:
+            sku = ProductSKU.query.get_or_404(sku_id)
+            
+            if sku.current_quantity < quantity:
+                return False  # Insufficient stock
+
+            old_quantity = sku.current_quantity
+            new_quantity = old_quantity - quantity
+
+            # Update SKU
+            sku.current_quantity = new_quantity
+            sku.last_updated = datetime.utcnow()
+
+            # Create structured note based on change type
+            if change_type == 'sale' and sale_price and customer:
+                structured_note = f"Sale: {quantity} × {sku.size_label} for ${sale_price} (${sale_price/quantity:.2f}/unit) to {customer}"
+            elif change_type == 'sale' and sale_price:
+                structured_note = f"Sale: {quantity} × {sku.size_label} for ${sale_price} (${sale_price/quantity:.2f}/unit)"
+            elif change_type == 'sample':
+                structured_note = f"Sample/Gift: {quantity} × {sku.size_label}"
+            else:
+                structured_note = f"{change_type.replace('_', ' ').title()}: {quantity} × {sku.size_label}"
+
+            if notes:
+                structured_note += f". Notes: {notes}"
+
+            # Create history entry
+            history = ProductSKUHistory(
+                sku_id=sku_id,
+                change_type=change_type,
+                quantity_change=-quantity,
+                old_quantity=old_quantity,
+                new_quantity=new_quantity,
+                sale_price=sale_price,
+                customer=customer,
+                notes=structured_note,
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
+            db.session.add(history)
+
+            db.session.commit()
+            return True
+
+        except Exception:
+            db.session.rollback()
+            return False
+
+    @staticmethod
     def delete_sku(sku_id: int) -> bool:
         """Delete a SKU and its history"""
         try:
