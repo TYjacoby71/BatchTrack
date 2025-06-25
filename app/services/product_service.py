@@ -423,28 +423,32 @@ class ProductService:
 
     @staticmethod
     def get_fifo_inventory_groups(product_id):
-        """Get FIFO inventory grouped by variant and size for product view"""
-        inventory_entries = ProductInventory.query.filter_by(
-            product_id=product_id
-        ).filter(ProductInventory.quantity > 0).order_by(
-            ProductInventory.variant, 
-            ProductInventory.size_label,
-            ProductInventory.timestamp.asc()
+        """Get FIFO inventory grouped by variant for product view"""
+        from ..models import ProductInventoryHistory
+        
+        # Get FIFO entries from ProductInventoryHistory with remaining quantity
+        inventory_entries = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventoryHistory.remaining_quantity > 0
+        ).order_by(
+            ProductInventoryHistory.timestamp.asc()
         ).all()
 
-        # Group by variant and size_label
+        # Group by variant_id if available, otherwise use a default grouping
         groups = {}
         for entry in inventory_entries:
-            key = f"{entry.variant}_{entry.size_label}"
+            # Get variant info from the related ProductInventory
+            variant_name = entry.product_inventory.variant.name if hasattr(entry.product_inventory, 'variant') and entry.product_inventory.variant else 'Base'
+            key = f"variant_{variant_name}"
+            
             if key not in groups:
                 groups[key] = {
-                    'variant': entry.variant,
-                    'size_label': entry.size_label,
+                    'variant': variant_name,
                     'unit': entry.unit,
                     'total_quantity': 0,
                     'batches': []
                 }
-            groups[key]['total_quantity'] += entry.quantity
+            groups[key]['total_quantity'] += entry.remaining_quantity
             groups[key]['batches'].append(entry)
 
         return groups
