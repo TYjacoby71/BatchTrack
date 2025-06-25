@@ -361,14 +361,17 @@ class ProductService:
             final_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
             # For standalone products without containers, always use "Bulk"
-            final_size_label = "Bulk" = "Bulk"
+            final_size_label = "Bulk"
 
         # Create ProductInventory entry
+        # Use product base unit for bulk entries, count for containers
+        inventory_unit = 'count' if container else (product.product_base_unit or 'count')
+        
         inventory = ProductInventory(
             product_id=product_id,
             variant=variant_name or 'Base',
             size_label=final_size_label,
-            unit='count',
+            unit=inventory_unit,
             quantity=quantity,
             container_id=container_id,
             batch_cost_per_unit=unit_cost,
@@ -382,7 +385,7 @@ class ProductService:
         if container:
             event_note = f"Manual addition: {quantity} × {final_size_label}"
         else:
-            event_note = f"Manual addition: {quantity} {product.product_base_unit} of {final_size_label}"
+            event_note = f"Manual addition: {quantity} {inventory_unit} of {final_size_label}"
 
         if variant_name:
             event_note += f" ({variant_name})"
