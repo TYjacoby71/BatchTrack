@@ -1,88 +1,88 @@
-2025-06-24 22:11:26,316 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:01:15,928 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: inventory_item.type
+[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.category_id AS inventory_item_category_id, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.density AS inventory_item_density, inventory_item.type AS inventory_item_type, inventory_item.is_active AS inventory_item_is_active, inventory_item.created_at AS inventory_item_created_at 
+FROM inventory_item 
+WHERE inventory_item.category_id = ?]
+[parameters: (14,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
+2025-06-24 22:01:19,872 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:01:20,043 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:01:20,846 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:01:21,083 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:01:30,615 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:01:33,529 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:01:33,671 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:01:34,549 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:01:34,700 INFO: ✅ All seeders completed successfully [in /home/runner/workspace/app/__init__.py:142]
+2025-06-24 22:07:01,444 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:07:01,588 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:12:28,191 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:12:28,337 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:07:01,628 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:07:01,805 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:12:29,462 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:12:29,660 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:07:10,101 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:07:10,261 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:12:58,717 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:12:58,859 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:07:11,280 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:07:11,399 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:12:59,831 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:12:59,972 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:08:00,994 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:08:01,177 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:13:44,950 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:13:45,159 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:10:55,858 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:10:55,998 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:14:03,634 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:14:03,809 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:10:56,049 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:10:56,262 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:14:06,096 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:14:06,228 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:11:25,166 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:11:25,167 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:11:25,279 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:14:06,989 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:14:07,171 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
+2025-06-24 22:11:25,291 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
 [SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
 FROM unit 
 WHERE unit.name = ?
  LIMIT ? OFFSET ?]
 [parameters: ('gram', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:14:38,930 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:14:39,045 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:14:39,870 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-24 22:14:40,006 ERROR: ❌ Seeder error: (sqlite3.OperationalError) no such column: unit.created_by
-[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.type AS unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.multiplier_to_base AS unit_multiplier_to_base, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at 
-FROM unit 
-WHERE unit.name = ?
- LIMIT ? OFFSET ?]
-[parameters: ('gram', 1, 0)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /home/runner/workspace/app/__init__.py:144]
-2025-06-24 22:15:27,171 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-24 22:11:26,201 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]

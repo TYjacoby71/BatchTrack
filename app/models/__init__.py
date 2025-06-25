@@ -10,7 +10,6 @@ from .models import (
     ExtraBatchIngredient, Product, ProductInventory, ProductVariation, 
     ProductEvent, InventoryItem, BatchInventoryLog, Tag, ProductInventoryHistory
 )
-from .product_sku import ProductSKU
 
 # Re-export everything for convenience
 __all__ = [
@@ -18,6 +17,5 @@ __all__ = [
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
     'ExtraBatchIngredient', 'Product', 'ProductInventory', 'ProductVariation', 
-    'ProductEvent', 'InventoryItem', 'BatchInventoryLog', 'Tag', 'ProductInventoryHistory',
-    'ProductSKU'
+    'ProductEvent', 'InventoryItem', 'BatchInventoryLog', 'Tag', 'ProductInventoryHistory'
 ]
