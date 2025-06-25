@@ -1,6 +1,7 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import db, Product, ProductInventory, ProductEvent
+from ...models import db, Product, ProductInventory, ProductEvent, ProductInventoryHistory
 from ...services.product_service import ProductService, adjust_product_fifo_entry
 from datetime import datetime
 from urllib.parse import unquote
@@ -12,40 +13,53 @@ product_inventory_bp = Blueprint('product_inventory', __name__, template_folder=
 @product_inventory_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
 @login_required  
 def view_sku(product_id, variant, size_label):
-    """View detailed SKU-level inventory with FIFO tracking"""
-    from ...models import ProductInventoryHistory
+    """View detailed SKU-level inventory with unified FIFO history"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    fifo_filter = request.args.get('fifo') == 'true'
 
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
     size_label = unquote(size_label)
 
     # Get all FIFO entries for this SKU combination (including consumed ones)
-    fifo_entries = ProductInventory.query.filter_by(
+    fifo_query = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
-    ).order_by(ProductInventory.timestamp.asc()).all()
+    ).order_by(ProductInventory.timestamp.desc())
+
+    # Apply FIFO filter if requested (only show entries with remaining quantity)
+    if fifo_filter:
+        fifo_query = fifo_query.filter(ProductInventory.quantity > 0)
+
+    # Get unified history entries for this SKU
+    history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
+        ProductInventory.product_id == product_id,
+        ProductInventory.variant == variant,
+        ProductInventory.size_label == size_label
+    ).order_by(ProductInventoryHistory.timestamp.desc())
+
+    # Paginate the history
+    history_pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+    history = history_pagination.items
 
     # Calculate totals (only count positive quantities for total)
+    fifo_entries = fifo_query.all()
     total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
-
-    # Get recent deductions/sales from product events
-    recent_deductions = ProductEvent.query.filter(
-        ProductEvent.product_id == product_id,
-        ProductEvent.description.like(f'%{variant}%'),
-        ProductEvent.description.like(f'%{size_label}%')
-    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
     return render_template('products/view_sku.html',
                          product=product,
                          variant=variant,
                          size_label=size_label,
                          fifo_entries=fifo_entries,
+                         history=history,
+                         history_pagination=history_pagination,
                          total_quantity=total_quantity,
                          total_batches=total_batches,
-                         recent_deductions=recent_deductions,
-                         moment=datetime)
+                         moment=datetime,
+                         fifo_filter=fifo_filter)
 
 @product_inventory_bp.route('/<int:product_id>/sku/<variant>/<size_label>/edit', methods=['POST'])
 @login_required
@@ -236,20 +250,3 @@ def record_sale(product_id):
         flash(f"❌ Error: {str(e)}", "error")
 
     return redirect(request.referrer or url_for('products.view_product', product_id=product_id))
-
-@product_inventory_bp.route('/<int:product_id>/manual-adjust', methods=['POST'])
-@login_required
-def manual_adjust(product_id):
-    """Manual inventory adjustments for variant/size"""
-    variant = request.form.get('variant', 'Base')
-    size_label = request.form.get('size_label')
-    adjustment_type = request.form.get('adjustment_type')
-    quantity = float(request.form.get('quantity', 0))
-    notes = request.form.get('notes', '')
-
-    # Implementation would depend on adjustment type
-    # This is a placeholder for the manual adjustment logic
-
-    flash(f'Manual adjustment applied: {adjustment_type}', 'success')
-    return redirect(url_for('product_inventory.view_sku', 
-                           product_id=product_id, variant=variant, size_label=size_label))
