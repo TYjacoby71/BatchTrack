@@ -35,25 +35,16 @@ def upgrade():
         sa.UniqueConstraint('sku_code', name='unique_sku_code')
     )
     
-    # Add sku_id column to product_inventory using batch mode for SQLite
-    with op.batch_alter_table('product_inventory', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('sku_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key('fk_product_inventory_sku_id', 'product_sku', ['sku_id'], ['id'])
+    # Add sku_id column to product_inventory
+    op.add_column('product_inventory', sa.Column('sku_id', sa.Integer(), sa.ForeignKey('product_sku.id'), nullable=True))
     
-    # Add sku_id column to product_inventory_history using batch mode for SQLite
-    with op.batch_alter_table('product_inventory_history', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('sku_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key('fk_product_inventory_history_sku_id', 'product_sku', ['sku_id'], ['id'])
+    # Add sku_id column to product_inventory_history  
+    op.add_column('product_inventory_history', sa.Column('sku_id', sa.Integer(), sa.ForeignKey('product_sku.id'), nullable=True))
 
 def downgrade():
-    # Remove sku_id columns using batch mode for SQLite
-    with op.batch_alter_table('product_inventory_history', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_product_inventory_history_sku_id', type_='foreignkey')
-        batch_op.drop_column('sku_id')
-    
-    with op.batch_alter_table('product_inventory', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_product_inventory_sku_id', type_='foreignkey')
-        batch_op.drop_column('sku_id')
+    # Remove sku_id columns
+    op.drop_column('product_inventory_history', 'sku_id')
+    op.drop_column('product_inventory', 'sku_id')
     
     # Drop ProductSKU table
     op.drop_table('product_sku')

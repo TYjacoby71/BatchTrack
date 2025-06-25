@@ -476,20 +476,6 @@ class ProductService:
             ProductInventoryHistory.timestamp.asc()
         ).all()
 
-        # Handle case where sku_id column might not exist yet
-        try:
-            return inventory_entries
-        except Exception as e:
-            if "no such column" in str(e):
-                # Fallback to old query without sku_id
-                return db.session.query(ProductInventoryHistory).join(
-                    ProductInventory
-                ).filter(
-                    ProductInventory.product_id == product_id,
-                    ProductInventoryHistory.remaining_quantity > 0
-                ).order_by(ProductInventoryHistory.timestamp.asc()).all()
-            raise e
-
         # Group by variant_id if available, otherwise use a default grouping
         groups = {}
         for entry in inventory_entries:

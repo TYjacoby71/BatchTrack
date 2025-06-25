@@ -12,7 +12,7 @@ from .product_api import *
 from .product_log_routes import *
 
 # Import the product_inventory blueprint separately
-from .product_inventory_routes import product_inventory_bp
+from .product_inventory import product_inventory_bp
 
 # Make both blueprints available for registration
 __all__ = ['products_bp', 'product_inventory_bp']
