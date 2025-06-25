@@ -12,7 +12,7 @@ from . import products_bp
 @login_required
 def list_products():
     products = Product.query.order_by(Product.created_at).all()
-    return render_template('product_list.html', products=products)
+    return render_template('products/list_products.html', products=products)
 
 @products_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
 @login_required
@@ -25,7 +25,7 @@ def view_product(product_id):
         db.session.commit()
         flash(f"Logged event: {event_type}")
         return redirect(url_for('products.view_product', product_id=product.id))
-    return render_template('product_detail.html', product=product, events=product.events)
+    return render_template('products/view_product.html', product=product, events=product.events)
 
 @products_bp.route('/products/edit/<int:product_id>', methods=['GET', 'POST'])
 @login_required
@@ -45,7 +45,7 @@ def edit_product(product_id):
         db.session.commit()
         flash('Product updated.')
         return redirect(url_for('products.view_product', product_id=product.id))
-    return render_template('edit_product.html', product=product)
+    return render_template('products/edit_product.html', product=product)
 
 @products_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
 @login_required
