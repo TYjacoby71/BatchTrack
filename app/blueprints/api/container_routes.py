@@ -1,22 +1,32 @@
-
 from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
 from ...models import Recipe, InventoryItem
 from app.services.unit_conversion import ConversionEngine
 
-container_api_bp = Blueprint('container_api', __name__)
+container_api_bp = Blueprint('container_api', __name__, url_prefix='/api')
 
-@container_api_bp.route('/api/available-containers/<int:recipe_id>')
+@container_api_bp.route('/available-containers/<int:recipe_id>')
+@login_required
 def available_containers(recipe_id):
     try:
         scale = float(request.args.get('scale', 1.0))
-        recipe = Recipe.query.get(recipe_id)
+        recipe = Recipe.query.filter_by(
+            id=recipe_id, 
+            organization_id=current_user.organization_id
+        ).first()
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
         allowed_containers = recipe.allowed_containers or []
         in_stock = []
 
-        for container in InventoryItem.query.filter_by(type='container').all():
+        # Scope containers by organization
+        containers_query = InventoryItem.query.filter_by(
+            type='container',
+            organization_id=current_user.organization_id
+        )
+
+        for container in containers_query.all():
             if allowed_containers and container.id not in allowed_containers:
                 continue
 
