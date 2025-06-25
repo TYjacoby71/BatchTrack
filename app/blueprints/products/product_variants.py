@@ -56,8 +56,8 @@ def view_variant(product_id, variation_id):
     # Get inventory for this specific variation
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
-        variant=variation.name
-    ).order_by(ProductInventory.timestamp.asc()).all()
+        variant_id=variation.id
+    ).order_by(ProductInventory.id.asc()).all()
 
     # Group by size_label and unit
     size_groups = {}
