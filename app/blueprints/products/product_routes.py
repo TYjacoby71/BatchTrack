@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from ..models import db, Product, ProductEvent, InventoryItem
+from ...models import db, Product, ProductEvent, InventoryItem
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-from ..blueprints.fifo.services import deduct_fifo
+from ...blueprints.fifo.services import deduct_fifo
 
 from . import products_bp
 
