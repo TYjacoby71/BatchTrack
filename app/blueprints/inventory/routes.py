@@ -144,10 +144,20 @@ def add_inventory():
         return redirect(url_for('inventory.list_inventory'))
 
     except ValueError as e:
+        print(f"DEBUG: ValueError in add_inventory: {str(e)}")
         db.session.rollback()
         flash(f'Invalid input values: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
+    except ImportError as e:
+        print(f"DEBUG: ImportError in add_inventory: {str(e)}")
+        db.session.rollback()
+        flash(f'Import error: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
     except Exception as e:
+        print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
@@ -278,8 +288,19 @@ def adjust_inventory(id):
                 flash('Error adjusting inventory', 'error')
 
     except ValueError as e:
+        print(f"DEBUG: ValueError in adjust_inventory: {str(e)}")
+        db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
+    except ImportError as e:
+        print(f"DEBUG: ImportError in adjust_inventory: {str(e)}")
+        db.session.rollback()
+        flash(f'Import error: {str(e)}', 'error')
     except Exception as e:
+        print(f"DEBUG: Unexpected error in adjust_inventory: {str(e)}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
         flash(f'Unexpected error: {str(e)}', 'error')
 
     return redirect(url_for('inventory.view_inventory', id=id))
@@ -404,8 +425,16 @@ def edit_inventory(id):
             else:
                 item.density = None
 
-    db.session.commit()
-    flash(f'{item.type.title()} updated successfully.')
+    try:
+        db.session.commit()
+        flash(f'{item.type.title()} updated successfully.')
+    except Exception as e:
+        print(f"DEBUG: Error committing changes in edit_inventory: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        flash(f'Error saving changes: {str(e)}', 'error')
+    
     return redirect(url_for('inventory.view_inventory', id=id))
 
 
@@ -435,3 +464,37 @@ def restore_inventory(id):
         db.session.rollback()
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
+
+
+@inventory_bp.route('/debug/<int:id>')
+@login_required
+def debug_inventory(id):
+    """Debug endpoint to check inventory status"""
+    try:
+        item = InventoryItem.query.get_or_404(id)
+        
+        # Check FIFO sync
+        from app.services.inventory_adjustment import validate_inventory_fifo_sync
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+        
+        debug_info = {
+            'item_id': item.id,
+            'item_name': item.name,
+            'item_quantity': item.quantity,
+            'item_unit': item.unit,
+            'item_type': item.type,
+            'fifo_valid': is_valid,
+            'fifo_error': error_msg,
+            'inventory_qty': inv_qty,
+            'fifo_total': fifo_total,
+            'history_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
