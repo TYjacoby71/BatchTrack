@@ -99,7 +99,7 @@ def add_stock(sku_id):
 @product_inventory_bp.route('/sku/<int:sku_id>/deduct', methods=['POST'])
 @login_required
 def deduct_stock(sku_id):
-    """Deduct stock from SKU using FIFO"""
+    """Deduct stock from SKU"""
     quantity = float(request.form.get('quantity', 0))
     change_type = request.form.get('change_type', 'manual_deduction')
     notes = request.form.get('notes', '')
@@ -111,28 +111,46 @@ def deduct_stock(sku_id):
         return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
     
     try:
-        success = ProductInventoryService.deduct_stock(
+        success = ProductService.deduct_stock(
             sku_id=sku_id,
             quantity=quantity,
             change_type=change_type,
-            notes=notes,
             sale_price=float(sale_price) if sale_price else None,
-            customer=customer
+            customer=customer,
+            notes=notes
         )
         
         if success:
-            db.session.commit()
             flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
         else:
             flash('Insufficient stock available', 'error')
             
     except Exception as e:
-        db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
     
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
 @product_inventory_bp.route('/sku/<int:sku_id>/recount', methods=['POST'])
+@login_required
+def recount_sku(sku_id):
+    """Recount SKU inventory"""
+    new_quantity = float(request.form.get('quantity', 0))
+    notes = request.form.get('notes', '')
+    
+    try:
+        success = ProductService.recount_sku(sku_id, new_quantity, notes)
+        
+        if success:
+            flash('Inventory recount completed successfully', 'success')
+        else:
+            flash('Failed to process recount', 'error')
+            
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+@product_inventory_bp.route('/sku/<int:sku_id>/deduct', methods=['POST'])
 @login_required
 def recount_stock(sku_id):
     """Recount SKU stock"""
