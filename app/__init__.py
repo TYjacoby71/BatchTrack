@@ -206,4 +206,8 @@ def create_app(config_filename=None):
             except:
                 return dict(global_units=[])
 
+    # Register CLI commands
+    from .management import register_commands
+    register_commands(app)
+
     return app
