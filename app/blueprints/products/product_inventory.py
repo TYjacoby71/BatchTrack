@@ -72,12 +72,13 @@ def view_sku(product_id, variant, size_label):
     fifo_entries = fifo_query.all()
     
     # Calculate totals - always show sum of remaining quantities for this SKU
+    # Use the same logic as variant view - sum ALL quantities, not just positive ones
     if fifo_filter:
         # When filter is active, sum only the filtered entries (which already have quantity > 0)
         total_quantity = sum(entry.quantity for entry in fifo_entries)
         total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
     else:
-        # When filter is off, get ALL entries for this SKU and sum only positive quantities
+        # When filter is off, get ALL entries for this SKU and sum ALL quantities (like variant view)
         # Handle "Bulk" entries which might have size_label as None or empty string
         if size_label == "Bulk":
             # For bulk entries, check for None, empty string, or "Bulk"
@@ -98,7 +99,8 @@ def view_sku(product_id, variant, size_label):
                 size_label=size_label
             ).all()
         
-        total_quantity = sum(entry.quantity for entry in all_sku_entries if entry.quantity > 0)
+        # Sum ALL quantities like variant view does, not just positive ones
+        total_quantity = sum(entry.quantity for entry in all_sku_entries)
         total_batches = len(set(entry.batch_id for entry in all_sku_entries if entry.batch_id and entry.quantity > 0))
 
     return render_template('products/view_sku.html',
