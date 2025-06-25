@@ -23,6 +23,10 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
+    
+    # Initialize CSRF protection
+    from .extensions import csrf
+    csrf.init_app(app)
 
     # Login manager setup
     login_manager = LoginManager()
