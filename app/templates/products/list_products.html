@@ -163,7 +163,9 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if product.total_inventory < product.low_stock_threshold %}
+                  {% if product.total_inventory == 0 %}
+                    <span class="badge bg-danger">Out of Stock</span>
+                  {% elif product.total_inventory < product.low_stock_threshold %}
                     <span class="badge bg-warning">Low Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>

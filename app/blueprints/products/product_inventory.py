@@ -13,7 +13,7 @@ product_inventory_bp = Blueprint('product_inventory', __name__, template_folder=
 @login_required  
 def view_sku(product_id, variant, size_label):
     """View detailed SKU-level inventory with FIFO tracking"""
-    from models import ProductInventoryHistory
+    from ...models import ProductInventoryHistory
 
     product = Product.query.get_or_404(product_id)
     variant = unquote(variant)
@@ -114,14 +114,14 @@ def adjust_fifo_inventory(inventory_id):
     try:
         # Get the inventory entry to determine product and SKU details for redirect
         inventory_entry = ProductInventory.query.get_or_404(inventory_id)
-        
+
         # For recount, pass the new total quantity
         # For deductions, pass the negative quantity to deduct
         if adjustment_type == 'recount':
             quantity_change = quantity  # This is the new total
         else:
             quantity_change = -quantity  # Negative for deductions
-        
+
         success = adjust_product_fifo_entry(
             fifo_entry_id=inventory_id,
             quantity=quantity_change,
@@ -174,6 +174,7 @@ def deduct_product(product_id):
 @login_required
 def add_manual_stock(product_id):
     """Add manual stock with container matching"""
+    from ...models import InventoryItem
     variant_name = request.form.get('variant_name')
     container_id = request.form.get('container_id')
     quantity = float(request.form.get('quantity', 0))

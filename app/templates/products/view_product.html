@@ -5,7 +5,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
           <li class="breadcrumb-item active">{{ product.name }}</li>
         </ol>
       </nav>
@@ -153,7 +153,7 @@
 
               <div class="mt-auto">
                 {% if variation %}
-                <a href="{{ url_for('product_variants.view_variant', product_id=product.id, variation_id=variation.id) }}" 
+                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" 
                    class="btn btn-outline-primary btn-sm w-100">
                   View Details
                 </a>
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = Object.fromEntries(formData);
         const csrfToken = document.querySelector('input[name="csrf_token"]');
 
-        fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
+        fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -4,9 +4,7 @@ from ...models import db, Product, ProductVariation, ProductInventory, ProductEv
 from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
-product_variants_bp = Blueprint('product_variants', __name__, template_folder='templates')
-
-@product_variants_bp.route('/<int:product_id>/variants/new', methods=['POST'])
+@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
@@ -43,7 +41,7 @@ def add_variant(product_id):
 
     return jsonify({'error': 'Invalid request'}), 400
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>')
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
 def view_variant(product_id, variation_id):
     """View individual product variation details"""
@@ -58,8 +56,8 @@ def view_variant(product_id, variation_id):
     # Get inventory for this specific variation
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
-        variant=variation.name
-    ).order_by(ProductInventory.timestamp.asc()).all()
+        variant_id=variation.id
+    ).order_by(ProductInventory.id.asc()).all()
 
     # Group by size_label and unit
     size_groups = {}
@@ -79,7 +77,7 @@ def view_variant(product_id, variation_id):
     # Get recent activity for this variation
     recent_events = ProductEvent.query.filter(
         ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variation.name}%')
+        ProductEvent.description.like(f'%{variation.name}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
     # Get available containers for manual stock addition
@@ -96,7 +94,7 @@ def view_variant(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
 @login_required
 def edit_variant(product_id, variation_id):
     """Edit product variation details"""
@@ -113,7 +111,7 @@ def edit_variant(product_id, variation_id):
 
     if not name:
         flash('Variation name is required', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
@@ -123,11 +121,11 @@ def edit_variant(product_id, variation_id):
     ).first()
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
     variation.description = description if description else None
 
     db.session.commit()
     flash('Variation updated successfully', 'success')
-    return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))

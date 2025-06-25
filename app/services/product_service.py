@@ -87,7 +87,7 @@ class ProductService:
                              container_id: Optional[int] = None, 
                              container_overrides: Optional[Dict[int, int]] = None) -> List[ProductInventory]:
         """Add product inventory from a finished batch, creating SKU-level entries that aggregate upward"""
-        from models import BatchContainer, InventoryItem
+        from ..models import BatchContainer, InventoryItem
 
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
@@ -343,7 +343,7 @@ class ProductService:
     @staticmethod
     def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes='', size_label=None):
         """Add manual stock with container matching"""
-        from models import InventoryItem
+        from ..models import InventoryItem
 
         product = Product.query.get_or_404(product_id)
         container = InventoryItem.query.get_or_404(container_id) if container_id else None
@@ -423,28 +423,32 @@ class ProductService:
 
     @staticmethod
     def get_fifo_inventory_groups(product_id):
-        """Get FIFO inventory grouped by variant and size for product view"""
-        inventory_entries = ProductInventory.query.filter_by(
-            product_id=product_id
-        ).filter(ProductInventory.quantity > 0).order_by(
-            ProductInventory.variant, 
-            ProductInventory.size_label,
-            ProductInventory.timestamp.asc()
+        """Get FIFO inventory grouped by variant for product view"""
+        from ..models import ProductInventoryHistory
+        
+        # Get FIFO entries from ProductInventoryHistory with remaining quantity
+        inventory_entries = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventoryHistory.remaining_quantity > 0
+        ).order_by(
+            ProductInventoryHistory.timestamp.asc()
         ).all()
 
-        # Group by variant and size_label
+        # Group by variant_id if available, otherwise use a default grouping
         groups = {}
         for entry in inventory_entries:
-            key = f"{entry.variant}_{entry.size_label}"
+            # Get variant info from the related ProductInventory
+            variant_name = entry.product_inventory.variant.name if hasattr(entry.product_inventory, 'variant') and entry.product_inventory.variant else 'Base'
+            key = f"variant_{variant_name}"
+            
             if key not in groups:
                 groups[key] = {
-                    'variant': entry.variant,
-                    'size_label': entry.size_label,
+                    'variant': variant_name,
                     'unit': entry.unit,
                     'total_quantity': 0,
                     'batches': []
                 }
-            groups[key]['total_quantity'] += entry.quantity
+            groups[key]['total_quantity'] += entry.remaining_quantity
             groups[key]['batches'].append(entry)
 
         return groups

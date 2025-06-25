@@ -157,8 +157,8 @@
         <h5 class="modal-title">Edit Variation</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_variants.edit_variant', product_id=product.id, variation_id=variation.id) }}">
-        {{ csrf_token() }}
+      <form method="POST" action="{{ url_for('products.edit_variant', product_id=product.id, variation_id=variation.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Variation Name</label>
@@ -187,7 +187,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
           <div class="mb-3">
