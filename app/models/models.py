@@ -273,65 +273,91 @@ class ExtraBatchIngredient(db.Model):
     inventory_item = db.relationship('InventoryItem', backref='extra_batch_usages')
 
 class Product(db.Model):
+    """Basic product definition - SKUs handle all inventory/variation logic"""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
-    product_base_unit = db.Column(db.String(32), nullable=False)
+    product_base_unit = db.Column(db.String(32), nullable=False)  # Default unit for new SKUs
     is_active = db.Column(db.Boolean, default=True)
-    low_stock_threshold = db.Column(db.Float, default=0)
+    
+    # Relationships - variations and SKUs manage their own data
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
+    events = db.relationship('ProductEvent', backref='product', lazy=True)
+    
+    # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    events = db.relationship('ProductEvent', backref='product', lazy=True)
-    inventory = db.relationship('ProductInventory', backref='product', lazy=True)
 
+    # COMPUTED PROPERTIES - All data comes from SKUs
     @property
     def total_inventory(self):
-        """Total inventory across all variants"""
-        return sum(inv.quantity for inv in self.inventory if inv.quantity > 0)
+        """Total inventory across all SKUs"""
+        return sum(sku.current_quantity for sku in self.skus)
 
     @property
     def base_variant(self):
-        """Get the Base ProductVariation for this product"""
+        """Get the Base ProductVariation"""
         return next((v for v in self.variations if v.name == 'Base'), None)
 
     @property
-    def variant_count(self):
-        """Total number of variants including Base"""
-        return len(self.variations)
+    def sku_count(self):
+        """Number of SKUs (not just variations)"""
+        return len(self.skus)
+    
+    @property 
+    def active_skus(self):
+        """Only active SKUs"""
+        return [sku for sku in self.skus if sku.is_active]
 
 class ProductInventory(db.Model):
     """FIFO entries for SKUs - like InventoryHistory but for products"""
     id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # Primary reference
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # PRIMARY: All data comes from SKU
     
-    # Legacy fields for backward compatibility
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
-    variant = db.Column(db.String(128), nullable=True)  # Variant name for backward compatibility
-    size_label = db.Column(db.String(128), nullable=True)  # Size/packaging info
-    sku = db.Column(db.String(128), nullable=True)  # SKU code (moved to ProductSKU)
-    
-    # FIFO entry data (like InventoryHistory.remaining_quantity)
+    # FIFO entry data only
     quantity = db.Column(db.Float, nullable=False, default=0.0)  # Remaining quantity in this FIFO entry
-    unit = db.Column(db.String(32), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # When added (FIFO order)
     
     # Source information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
-    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # Container used
-    batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost per unit
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # When added (FIFO order)
-    notes = db.Column(db.Text, nullable=True)  # Additional notes
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    batch_cost_per_unit = db.Column(db.Float, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
     
-    # Expiration tracking fields
+    # Expiration tracking
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
-    # Relationships
-    variant_obj = db.relationship('ProductVariation', backref='inventory')
+    # Relationships - all product info comes through SKU
+    sku = db.relationship('ProductSKU', backref='fifo_entries')
     batch = db.relationship('Batch')
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
+    
+    # Properties to access product info through SKU
+    @property
+    def product(self):
+        return self.sku.product
+    
+    @property
+    def variant(self):
+        return self.sku.variant
+    
+    @property
+    def variant_name(self):
+        return self.sku.variant_name
+    
+    @property
+    def size_label(self):
+        return self.sku.size_label
+    
+    @property
+    def unit(self):
+        return self.sku.unit
+    
+    @property
+    def sku_code(self):
+        return self.sku.sku_code
 
 class ProductVariation(db.Model):
     """Product variations (SKUs) - handles packaging, sizes, etc."""
@@ -410,33 +436,46 @@ class Tag(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class ProductInventoryHistory(db.Model):
-    """Audit trail for SKU changes - mirrors InventoryHistory exactly"""
+    """Audit trail for SKU changes - all data through SKU"""
     id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # Primary reference
-    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)  # FIFO entry affected
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # PRIMARY: All data from SKU
+    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)
     
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(32), nullable=False)  # manual_addition, batch_production, sale, spoil, trash, damaged, recount
-    quantity_change = db.Column(db.Float, nullable=False)  # + for additions, - for deductions
-    unit = db.Column(db.String(32), nullable=False)
-    remaining_quantity = db.Column(db.Float, nullable=True)  # Remaining in the affected FIFO entry after change
+    change_type = db.Column(db.String(32), nullable=False)
+    quantity_change = db.Column(db.Float, nullable=False)
+    remaining_quantity = db.Column(db.Float, nullable=True)
     unit_cost = db.Column(db.Float, nullable=True)
     
-    # FIFO tracking (mirrors InventoryHistory)
+    # FIFO tracking
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_inventory_history.id'), nullable=True)
-    fifo_code = db.Column(db.String(32), nullable=True)  # Base32 encoded unique identifier
+    fifo_code = db.Column(db.String(32), nullable=True)
     
     # Source information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     
-    # Expiration tracking fields
+    # Expiration tracking
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
-    # Relationships
+    # Relationships - all product info through SKU
+    sku = db.relationship('ProductSKU', backref='history')
     product_inventory = db.relationship('ProductInventory', backref='history')
     batch = db.relationship('Batch')
     user = db.relationship('User')
+    
+    # Properties to access product info through SKU (no duplication)
+    @property
+    def unit(self):
+        return self.sku.unit
+    
+    @property
+    def product(self):
+        return self.sku.product
+    
+    @property
+    def variant_name(self):
+        return self.sku.variant_name

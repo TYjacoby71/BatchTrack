@@ -7,15 +7,15 @@ from .models import (
     Organization, User, Unit, CustomUnitMapping, IngredientCategory, 
     ConversionLog, RecipeIngredient, Recipe, Batch, BatchIngredient, 
     BatchContainer, ExtraBatchContainer, InventoryHistory, BatchTimer, 
-    ExtraBatchIngredient, Product, ProductInventory, ProductVariation, 
-    ProductEvent, InventoryItem, BatchInventoryLog, Tag, ProductInventoryHistory
+    ExtraBatchIngredient, InventoryItem, BatchInventoryLog, Tag
 )
+from .product_sku import ProductSKU, ProductSKUHistory
 
 # Re-export everything for convenience
 __all__ = [
     'db', 'Organization', 'User', 'Unit', 'CustomUnitMapping', 'IngredientCategory', 
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
-    'ExtraBatchIngredient', 'Product', 'ProductInventory', 'ProductVariation', 
-    'ProductEvent', 'InventoryItem', 'BatchInventoryLog', 'Tag', 'ProductInventoryHistory'
+    'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
+    'ProductSKU', 'ProductSKUHistory'
 ]
