@@ -1,3 +1,19 @@
+"""Fix missing sku_id columns
+
+Revision ID: fix_missing_sku_id_columns
+Revises: a9fc03d8bf53
+Create Date: 2025-06-25 23:00:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = 'fix_missing_sku_id_columns'
+down_revision = 'a9fc03d8bf53'
+branch_labels = None
+depends_on = None
+
 def upgrade():
     # Add sku_id column to product_inventory_history if it doesn't exist
     with op.batch_alter_table('product_inventory_history', schema=None) as batch_op:
