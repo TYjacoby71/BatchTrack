@@ -187,7 +187,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
           <div class="mb-3">
