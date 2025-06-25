@@ -60,8 +60,6 @@ def new_product():
 @products_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
 @login_required
 def view_product(product_id):
-    from ...models import ProductInventory
-    
     product = Product.query.get_or_404(product_id)
     if request.method == 'POST':
         event_type = request.form.get('event_type')
@@ -70,27 +68,7 @@ def view_product(product_id):
         db.session.commit()
         flash(f"Logged event: {event_type}")
         return redirect(url_for('products.view_product', product_id=product.id))
-    
-    # Get inventory data grouped by variant
-    inventory_entries = ProductInventory.query.filter_by(product_id=product_id).all()
-    
-    # Group inventory by variant
-    inventory_groups = {}
-    for entry in inventory_entries:
-        variant_key = entry.variant or 'Base'
-        if variant_key not in inventory_groups:
-            inventory_groups[variant_key] = {
-                'variant': variant_key,
-                'total_quantity': 0,
-                'batches': []
-            }
-        inventory_groups[variant_key]['total_quantity'] += entry.quantity
-        inventory_groups[variant_key]['batches'].append(entry)
-    
-    return render_template('products/view_product.html', 
-                         product=product, 
-                         events=product.events,
-                         inventory_groups=inventory_groups)
+    return render_template('products/view_product.html', product=product, events=product.events)
 
 @products_bp.route('/products/edit/<int:product_id>', methods=['GET', 'POST'])
 @login_required
@@ -111,6 +89,13 @@ def edit_product(product_id):
         flash('Product updated.')
         return redirect(url_for('products.view_product', product_id=product.id))
     return render_template('products/edit_product.html', product=product)
+
+@products_bp.route('/products/<int:product_id>/variant/<int:variation_id>')
+@login_required
+def view_variant(product_id, variation_id):
+    product = Product.query.get_or_404(product_id)
+    variation = ProductVariation.query.filter_by(id=variation_id, product_id=product_id).first_or_404()
+    return render_template('products/view_variation.html', product=product, variation=variation)
 
 @products_bp.route("/products/<int:product_id>/deduct", methods=["POST"])
 @login_required
