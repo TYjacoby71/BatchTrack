@@ -1,6 +1,5 @@
 from ..models import db, Recipe, InventoryItem
 from app.services.unit_conversion import ConversionEngine
-from flask_login import current_user
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""
@@ -9,29 +8,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
     # Check each ingredient in the recipe
     for recipe_ingredient in recipe.recipe_ingredients:
-        # Get ingredient with organization scoping
-        if current_user.is_authenticated and current_user.role != 'developer':
-            ingredient = InventoryItem.query.filter_by(
-                id=recipe_ingredient.inventory_item_id,
-                organization_id=current_user.organization_id
-            ).first()
-        else:
-            ingredient = recipe_ingredient.inventory_item
-            
-        if not ingredient:
-            # Handle case where ingredient doesn't exist in user's organization
-            results.append({
-                'type': 'ingredient',
-                'name': f"Item ID {recipe_ingredient.inventory_item_id}",
-                'needed': recipe_ingredient.amount * scale,
-                'needed_unit': recipe_ingredient.unit,
-                'available': 0,
-                'available_unit': recipe_ingredient.unit,
-                'status': 'NOT_FOUND',
-                'error': 'Ingredient not found in your organization'
-            })
-            all_ok = False
-            continue
+        ingredient = recipe_ingredient.inventory_item
         needed_amount = recipe_ingredient.amount * scale
 
         # Get current inventory details
