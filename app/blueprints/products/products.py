@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import db, Product, ProductEvent, InventoryItem, ProductVariation
+from ...models import db, ProductSKU, InventoryItem
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -16,19 +16,17 @@ def product_list():
     from ...services.product_service import ProductService
 
     sort_type = request.args.get('sort', 'name')
-    products = ProductService.get_product_summary()
+    products = ProductService.get_product_summary_skus()
 
     # Sort products based on the requested sort type
     if sort_type == 'popular':
-        # Sort by sales volume (most sales first)
-        sales_data = ProductService.get_product_sales_volume()
-        sales_dict = {item['product_id']: item['total_sales'] for item in sales_data}
-        products.sort(key=lambda p: sales_dict.get(p.id, 0), reverse=True)
+        # Sort by sales volume (most sales first) - TODO: implement sales tracking for SKUs
+        products.sort(key=lambda p: p['total_quantity'], reverse=True)
     elif sort_type == 'stock':
         # Sort by stock level (low stock first)
-        products.sort(key=lambda p: p.total_inventory / max(p.low_stock_threshold, 1))
+        products.sort(key=lambda p: p['total_quantity'] / max(p.get('low_stock_threshold', 1), 1))
     else:  # default to name
-        products.sort(key=lambda p: p.name.lower())
+        products.sort(key=lambda p: p['product_name'].lower())
 
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
