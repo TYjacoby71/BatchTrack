@@ -423,24 +423,23 @@ class ProductService:
 
     @staticmethod
     def get_fifo_inventory_groups(product_id):
-        """Get FIFO inventory grouped by variant for product view"""
+        """Get FIFO inventory grouped by variant and size for product view"""
         inventory_entries = ProductInventory.query.filter_by(
             product_id=product_id
         ).filter(ProductInventory.quantity > 0).order_by(
-            ProductInventory.variant_id,
+            ProductInventory.variant, 
+            ProductInventory.size_label,
             ProductInventory.timestamp.asc()
         ).all()
 
-        # Group by variant_id
+        # Group by variant and size_label
         groups = {}
         for entry in inventory_entries:
-            variant_name = entry.variant.name if entry.variant else 'Base'
-            key = f"variant_{entry.variant_id or 0}"
-            
+            key = f"{entry.variant}_{entry.size_label}"
             if key not in groups:
                 groups[key] = {
-                    'variant': variant_name,
-                    'variant_id': entry.variant_id,
+                    'variant': entry.variant,
+                    'size_label': entry.size_label,
                     'unit': entry.unit,
                     'total_quantity': 0,
                     'batches': []
