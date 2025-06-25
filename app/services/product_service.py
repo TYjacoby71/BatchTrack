@@ -429,7 +429,7 @@ class ProductService:
         db.session.add(ProductEvent(
             product_id=product_id,
             event_type='inventory_manual_addition',
-            note=event_note
+            description=event_note
         ))
 
         db.session.commit()
