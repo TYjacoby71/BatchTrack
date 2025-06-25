@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const shelfLifeField = document.getElementById('shelfLifeField');
 
     if (expirationSection) {
-        if (getSelectedChangeType() === 'restock') {
+        const selectedChangeType = getSelectedChangeType();
+        if (selectedChangeType === 'restock') {
             expirationSection.style.display = 'block';
         } else {
             expirationSection.style.display = 'none';
@@ -49,11 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle shelf life override checkbox
-    if (expirationCheckbox) {
+    if (expirationCheckbox && shelfLifeField) {
         expirationCheckbox.addEventListener('change', function() {
-            if (shelfLifeField) {
-                shelfLifeField.style.display = this.checked ? 'block' : 'none';
-            }
+            shelfLifeField.style.display = this.checked ? 'block' : 'none';
         });
     }
 });

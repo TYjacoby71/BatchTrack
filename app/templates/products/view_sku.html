@@ -7,9 +7,9 @@
         <div class="col-md-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variation', product_id=product.id, variant_id=1) }}">{{ variant }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variation', product_id=product.id, variant=variant|urlencode) }}">{{ variant }}</a></li>
                     <li class="breadcrumb-item active">{{ size_label }}</li>
                 </ol>
             </nav>
