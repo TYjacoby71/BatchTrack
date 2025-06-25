@@ -383,20 +383,37 @@ class ProductService:
         # Use product base unit for bulk entries, count for containers
         inventory_unit = 'count' if container else (product.product_base_unit or 'count')
 
-        # Create ProductInventory entry directly (since this is product inventory, not ingredient inventory)
+        # Create ProductInventory entry with all expected fields
         inventory = ProductInventory(
             product_id=product_id,
-            variant=variant_name or 'Base',
+            variant_id=variant.id,
+            variant=variant_name or variant.name,
             size_label=final_size_label,
-            unit=inventory_unit,
             quantity=quantity,
+            unit=inventory_unit,
             container_id=container_id_int,
             batch_cost_per_unit=unit_cost,
             timestamp=datetime.utcnow(),
             notes=notes
         )
-
         db.session.add(inventory)
+        db.session.flush()  # Get the ID
+
+        # Create FIFO history entry for tracking
+        from ..services.inventory_adjustment import generate_fifo_code
+        history = ProductInventoryHistory(
+            product_inventory_id=inventory.id,
+            change_type='manual_addition',
+            quantity_change=quantity,
+            unit=inventory_unit,
+            remaining_quantity=quantity,
+            unit_cost=unit_cost,
+            fifo_code=generate_fifo_code(f"PRD{product_id}"),
+            note=f"Manual addition: {final_size_label}. {notes}",
+            created_by=current_user.id if current_user.is_authenticated else None,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(history)
 
         # Log product event
         if container:
