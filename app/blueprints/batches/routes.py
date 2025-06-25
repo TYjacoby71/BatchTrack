@@ -238,9 +238,9 @@ def view_batch_in_progress(batch_identifier):
     from ...utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
-    # Build cost summary-deleted and fixed in template screenshot taken of original code at 5-6-25 11:02 am
+    # Build cost summary
     # Recalculate batch cost from frozen batch records
-    ingredient_total = sum((ing.amount_used or 0) * (ing.ingredient.cost_per_unit or 0) for ing in batch.ingredients)
+    ingredient_total = sum((ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
     container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
     batch_cost = round(ingredient_total + container_total, 3)
 

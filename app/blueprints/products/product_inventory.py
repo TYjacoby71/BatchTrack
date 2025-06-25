@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, Product, ProductInventory, ProductEvent
@@ -6,7 +5,9 @@ from ...services.product_service import ProductService, adjust_product_fifo_entr
 from datetime import datetime
 from urllib.parse import unquote
 
-product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products')
+from . import products_bp
+
+product_inventory_bp = Blueprint('product_inventory', __name__, template_folder='templates')
 
 @product_inventory_bp.route('/<int:product_id>/sku/<variant>/<size_label>')
 @login_required  

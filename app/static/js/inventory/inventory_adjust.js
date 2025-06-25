@@ -11,8 +11,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     adjustmentForms.forEach(form => {
         form.addEventListener('submit', function(e) {
-            // Add any form validation or processing here
             console.log('Adjustment form submitted');
+            
+            // Validate required fields
+            const quantity = form.querySelector('input[name="quantity"]');
+            const changeType = form.querySelector('input[name="change_type"]:checked');
+            
+            if (!quantity || !quantity.value) {
+                e.preventDefault();
+                alert('Please enter a quantity');
+                return false;
+            }
+            
+            if (!changeType) {
+                e.preventDefault();
+                alert('Please select a change type');
+                return false;
+            }
+            
+            console.log('Form validation passed, submitting...');
         });
     });
 

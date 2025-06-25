@@ -170,19 +170,24 @@
             <div id="ingredients-container">
             {% if recipe and recipe.recipe_ingredients %}
                     {% for assoc in recipe.recipe_ingredients %}
-                    <div class="ingredient-entry row mb-3 p-3 border rounded">
+                    <div class="ingredient-entry row mb-3 p-3 border rounded" data-ingredient-id="{{ assoc.inventory_item_id }}">
                         <div class="col-md-4">
-                            <label class="form-label small">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select" required>
-                                <option value="">Select an ingredient</option>
-                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                                <option value="{{ available_ing.id }}" {% if available_ing.id == assoc.inventory_item_id %}selected{% endif %}>{{ available_ing.name }}</option>
+                            <label class="form-label">Ingredient</label>
+                            <select name="ingredient_ids[]" class="form-select ingredient-select" required onchange="updateConversionWarning(this)">
+                                <option value="">Select ingredient...</option>
+                                {% for ingredient in all_ingredients %}
+                                <option value="{{ ingredient.id }}" 
+                                        data-unit="{{ ingredient.unit }}" 
+                                        data-type="{{ ingredient.type }}"
+                                        {% if ingredient.id == assoc.inventory_item_id %}selected{% endif %}>
+                                    {{ ingredient.name }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small">Amount</label>
-                            <input type="number" step="0.01" name="amounts[]" class="form-control" value="{{ assoc.amount }}" required>
+                            <label class="form-label">Amount</label>
+                            <input type="number" step="0.001" name="amounts[]" class="form-control" value="{{ assoc.quantity or '' }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Unit</label>
@@ -342,11 +347,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const ingredientEntry = e.target.closest('.ingredient-entry');
             if (ingredientEntry) {
                 ingredientEntry.remove();
-                
+
                 // Check if we need to show empty state
                 const container = document.getElementById('ingredients-container');
                 const remainingEntries = container.querySelectorAll('.ingredient-entry');
-                
+
                 if (remainingEntries.length === 0) {
                     container.innerHTML = `
                         <div class="text-center text-muted py-4">
@@ -454,13 +459,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function addIngredient(preselectId = null, presetUnit = null) {
     const container = document.getElementById('ingredients-container');
-    
+
     // Remove empty state message if it exists
     const emptyState = container.querySelector('.text-center.text-muted');
     if (emptyState) {
         emptyState.remove();
     }
-    
+
     const entry = document.createElement('div');
     entry.classList.add('ingredient-entry', 'row', 'mb-3', 'p-3', 'border', 'rounded');
     entry.innerHTML = `
@@ -497,12 +502,12 @@ function addIngredient(preselectId = null, presetUnit = null) {
         </div>
     `;
     container.appendChild(entry);
-    
+
     if (preselectId) {
         const select = entry.querySelector('select[name="ingredient_ids[]"]');
         if (select) select.value = preselectId;
     }
-    
+
     entry.scrollIntoView({ behavior: 'smooth' });
     return entry;
 }

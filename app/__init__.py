@@ -1,120 +1,106 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask
+from flask_login import LoginManager
 from flask_migrate import Migrate
+from .extensions import db
+from .models import User
 import os
+from flask import Flask, render_template, request, redirect, url_for, flash
 
-def register_blueprints(app):
-    """Register all application blueprints directly"""
-    # Core blueprints
-    from .blueprints.auth import auth_bp
-    from .blueprints.inventory.routes import inventory_bp
-    from .blueprints.recipes.routes import recipes_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.conversion.routes import conversion_bp
-    from .blueprints.expiration.routes import expiration_bp
-    from .blueprints.quick_add.routes import quick_add_bp
-    from .blueprints.settings.routes import settings_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.fifo import fifo_bp
-    
-    # Route blueprints
-    from .routes.app_routes import app_routes_bp
-    from .blueprints.admin.admin_routes import admin_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-    
-    # Special blueprints
-    from .blueprints.batches.add_extra import add_extra_bp
-    
-    # Register all blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(fifo_bp)
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_bp, url_prefix='/tag_manager')
-    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    
-    # Register product blueprints
-    from .blueprints.products import register_product_blueprints
-    register_product_blueprints(app)
-    
-    # Register API blueprints
-    from .blueprints.api.routes import register_api_routes
-    register_api_routes(app)
 
-def create_app(config_filename=None):
+def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-    # Add custom URL rule for data files
-    app.add_url_rule('/data/<path:filename>', endpoint='data', view_func=app.send_static_file)
-
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-
-    # Ensure directories exist with proper permissions
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production') #os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
     instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
     os.makedirs(instance_path, exist_ok=True)
     os.makedirs('static/product_images', exist_ok=True)
     os.chmod(instance_path, 0o777)
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db') #'sqlite:///batchtrack.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
 
-    # Load additional config if provided
-    if config_filename:
-        app.config.from_pyfile(config_filename)
-
     # Initialize extensions
-    from .extensions import db, login_manager, migrate, csrf, bcrypt
     db.init_app(app)
+    migrate = Migrate(app, db)
+
+    # Initialize CSRF protection
+    from .extensions import csrf
+    csrf.init_app(app)
+
+    # Login manager setup
+    login_manager = LoginManager()
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
-    migrate.init_app(app, db)
-    csrf.init_app(app)
-    bcrypt.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
+    # Register blueprints
+    from .blueprints.auth import auth_bp
+    from .blueprints.recipes import recipes_bp
+    from .blueprints.inventory import inventory_bp
+    from .blueprints.batches import batches_bp
+    from .blueprints.products import products_bp
+    from .blueprints.api.stock_routes import stock_api_bp
+    from .blueprints.api.ingredient_routes import ingredient_api_bp
+    from .blueprints.conversion import conversion_bp
+    from .blueprints.expiration import expiration_bp
+    from .blueprints.settings import settings_bp
+    from .blueprints.timers import timers_bp
+    from .blueprints.quick_add import quick_add_bp
+    from .blueprints.admin import admin_bp
+    from .routes import app_routes
+    from .blueprints.fifo import fifo_bp
+    from .blueprints.batches.add_extra import add_extra_bp
+    from .routes import bulk_stock_routes
+    from .routes import fault_log_routes
+    from .routes import tag_manager_routes
+
+    # Register all blueprints
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(recipes_bp, url_prefix='/recipes')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    app.register_blueprint(batches_bp, url_prefix='/batches')
+    # Import and register blueprints
+    try:
+        from .blueprints.products import products_bp
+        app.register_blueprint(products_bp, url_prefix='/products')
+    except ImportError as e:
+        print(f"Warning: Could not register product blueprints: {e}")
+        pass
+    app.register_blueprint(stock_api_bp)
+    app.register_blueprint(ingredient_api_bp)
+
+    # Register container API blueprint
+    from .blueprints.api.container_routes import container_api_bp
+    app.register_blueprint(container_api_bp)
+
+    app.register_blueprint(conversion_bp, url_prefix='/conversion')
+    app.register_blueprint(expiration_bp, url_prefix='/expiration')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
+    app.register_blueprint(timers_bp, url_prefix='/timers')
+    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
+    app.register_blueprint(admin_bp,  url_prefix='/admin')
+    app.register_blueprint(app_routes.app_routes_bp)
+    app.register_blueprint(fifo_bp)
+    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+    app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
+    app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
+    app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
+
+    # Load additional config if provided
+    #if config_filename:
+    #    app.config.from_pyfile(config_filename)
 
     # Import models to ensure they're registered
     from . import models
-    from .models import User, Unit, IngredientCategory
+    from .models import Unit, IngredientCategory
 
     # Setup logging
     from .utils.unit_utils import setup_logging
     setup_logging(app)
-
-    # Register blueprints
-    register_blueprints(app)
-
-    # Register legacy blueprints that still exist (excluding products which are handled above)
-    legacy_blueprints = [
-        # add_extra_bp is now handled by blueprint_registry
-        # ('.blueprints.batches.add_extra', 'add_extra_bp', '/add-extra'),
-        # fifo_bp is now handled by blueprint_registry
-        # ('.blueprints.fifo', 'fifo_bp', None),
-    ]
-
-    # Legacy blueprints are now all handled by blueprint_registry
-    if legacy_blueprints:  # Only run if there are actually legacy blueprints to register
-        for module_path, bp_name, url_prefix in legacy_blueprints:
-            try:
-                module = __import__(f'app{module_path}', fromlist=[bp_name])
-                blueprint = getattr(module, bp_name)
-                if url_prefix:
-                    app.register_blueprint(blueprint, url_prefix=url_prefix)
-                else:
-                    app.register_blueprint(blueprint)
-            except (ImportError, AttributeError) as e:
-                print(f"Warning: Could not import {module_path}.{bp_name}: {e}")
 
     # Initialize API routes
     try:
@@ -158,11 +144,6 @@ def create_app(config_filename=None):
         except ImportError:
             return dict(has_permission=lambda x: True, has_role=lambda x: True)
 
-    # User loader
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(User, int(user_id))
-
     # Add main routes
     @app.route('/')
     def index():
@@ -178,13 +159,14 @@ def create_app(config_filename=None):
     # Seeders are available via CLI commands: flask seed-all, flask init-db
     # No automatic seeding on startup to improve performance
 
-    # Register template functions for permissions
-    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner
+    # Register permission template functions
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
     app.jinja_env.globals.update(
         has_permission=has_permission,
         has_role=has_role,
         has_subscription_feature=has_subscription_feature,
-        is_organization_owner=is_organization_owner
+        is_organization_owner=is_organization_owner,
+        is_developer=is_developer
     )
 
     # Add units to global context for dropdowns
@@ -204,5 +186,8 @@ def create_app(config_filename=None):
                 return dict(global_units=units)
             except:
                 return dict(global_units=[])
+
+    from .management import register_commands
+    register_commands(app)
 
     return app

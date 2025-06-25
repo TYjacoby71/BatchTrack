@@ -144,10 +144,20 @@ def add_inventory():
         return redirect(url_for('inventory.list_inventory'))
 
     except ValueError as e:
+        print(f"DEBUG: ValueError in add_inventory: {str(e)}")
         db.session.rollback()
         flash(f'Invalid input values: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
+    except ImportError as e:
+        print(f"DEBUG: ImportError in add_inventory: {str(e)}")
+        db.session.rollback()
+        flash(f'Import error: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
     except Exception as e:
+        print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
@@ -184,7 +194,7 @@ def adjust_inventory(id):
                 try:
                     custom_shelf_life = int(custom_shelf_life_str)
                     if custom_shelf_life > 0:
-                        from blueprints.expiration.services import ExpirationService
+                        from app.blueprints.expiration.services import ExpirationService
                         custom_expiration_date = ExpirationService.calculate_expiration_date(
                             datetime.utcnow(), custom_shelf_life
                         )
@@ -238,14 +248,14 @@ def adjust_inventory(id):
 
         else:
             # Pre-validation check for existing items
-            from services.inventory_adjustment import validate_inventory_fifo_sync
+            from app.services.inventory_adjustment import validate_inventory_fifo_sync
             is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
             if not is_valid:
                 flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
                 return redirect(url_for('inventory.view_inventory', id=id))
 
             # Use centralized adjustment service for regular adjustments
-            from services.inventory_adjustment import process_inventory_adjustment
+            from app.services.inventory_adjustment import process_inventory_adjustment
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit
@@ -278,8 +288,19 @@ def adjust_inventory(id):
                 flash('Error adjusting inventory', 'error')
 
     except ValueError as e:
+        print(f"DEBUG: ValueError in adjust_inventory: {str(e)}")
+        db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
+    except ImportError as e:
+        print(f"DEBUG: ImportError in adjust_inventory: {str(e)}")
+        db.session.rollback()
+        flash(f'Import error: {str(e)}', 'error')
     except Exception as e:
+        print(f"DEBUG: Unexpected error in adjust_inventory: {str(e)}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
         flash(f'Unexpected error: {str(e)}', 'error')
 
     return redirect(url_for('inventory.view_inventory', id=id))
@@ -317,7 +338,7 @@ def edit_inventory(id):
                     if convert_inventory and item.quantity > 0:
                         # Try to convert existing inventory to new unit
                         try:
-                            from services.unit_conversion import convert_unit
+                            from app.services.unit_conversion import convert_unit
                             converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
                             item.quantity = converted_quantity
 
@@ -358,12 +379,12 @@ def edit_inventory(id):
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
             # If item wasn't perishable before, update existing FIFO entries
             if not was_perishable:
-                from blueprints.fifo.services import update_fifo_perishable_status
+                from app.blueprints.fifo.services import update_fifo_perishable_status
                 update_fifo_perishable_status(item.id, shelf_life_days)
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        from blueprints.fifo.services import recount_fifo
+        from app.blueprints.fifo.services import recount_fifo
         notes = "Manual quantity update via inventory edit"
         success = recount_fifo(item.id, new_quantity, notes, current_user.id)
         if not success:
@@ -404,8 +425,16 @@ def edit_inventory(id):
             else:
                 item.density = None
 
-    db.session.commit()
-    flash(f'{item.type.title()} updated successfully.')
+    try:
+        db.session.commit()
+        flash(f'{item.type.title()} updated successfully.')
+    except Exception as e:
+        print(f"DEBUG: Error committing changes in edit_inventory: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        flash(f'Error saving changes: {str(e)}', 'error')
+    
     return redirect(url_for('inventory.view_inventory', id=id))
 
 
@@ -436,3 +465,36 @@ def restore_inventory(id):
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
 
+
+@inventory_bp.route('/debug/<int:id>')
+@login_required
+def debug_inventory(id):
+    """Debug endpoint to check inventory status"""
+    try:
+        item = InventoryItem.query.get_or_404(id)
+        
+        # Check FIFO sync
+        from app.services.inventory_adjustment import validate_inventory_fifo_sync
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+        
+        debug_info = {
+            'item_id': item.id,
+            'item_name': item.name,
+            'item_quantity': item.quantity,
+            'item_unit': item.unit,
+            'item_type': item.type,
+            'fifo_valid': is_valid,
+            'fifo_error': error_msg,
+            'inventory_qty': inv_qty,
+            'fifo_total': fifo_total,
+            'history_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500

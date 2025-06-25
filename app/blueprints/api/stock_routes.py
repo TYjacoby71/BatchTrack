@@ -1,7 +1,7 @@
-
 from flask import Blueprint, jsonify, request
-from ...models import Recipe
+from flask_login import login_required
 from ...services.stock_check import universal_stock_check
+from ...models import Recipe
 
 stock_api_bp = Blueprint('stock_api', __name__)
 
@@ -15,13 +15,13 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
         result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
-        
+
         if 'stock_check' not in result:
             result = {
                 'stock_check': result.get('ingredients', []),
                 'all_ok': result.get('all_ok', False)
             }
-            
+
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 400

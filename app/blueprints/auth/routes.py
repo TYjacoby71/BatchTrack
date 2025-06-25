@@ -81,8 +81,14 @@ def logout():
     logout_user()
     return redirect(url_for('homepage'))
 
-@auth_bp.route('/dev_login')
+@auth_bp.route('/dev-login')
 def dev_login():
-    # Placeholder for future dev login page
-    flash('Developer login coming soon!')
-    return redirect(url_for('auth.login'))
+    """Quick developer login for system access"""
+    dev_user = User.query.filter_by(username='dev', role='developer').first()
+    if dev_user:
+        login_user(dev_user)
+        flash('Developer access granted', 'success')
+        return redirect(url_for('dashboard.dashboard'))
+    else:
+        flash('Developer account not found. Please contact system administrator.', 'error')
+        return redirect(url_for('auth.login'))

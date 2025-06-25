@@ -1,8 +1,8 @@
-
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from ...models import db, Product, ProductVariation
 from ...services.product_service import ProductService
+from . import products_bp
 
 product_api_bp = Blueprint('product_api', __name__, url_prefix='/products/api')
 

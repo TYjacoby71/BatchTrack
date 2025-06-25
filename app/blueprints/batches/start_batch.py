@@ -117,7 +117,7 @@ def start_batch():
             batch_ingredient = BatchIngredient(
                 batch_id=new_batch.id,
                 ingredient_id=ingredient.id,
-                amount_used=required_converted,
+                quantity_used=required_converted,
                 unit=ingredient.unit,
                 cost_per_unit=ingredient.cost_per_unit
             )

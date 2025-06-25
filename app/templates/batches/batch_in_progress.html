@@ -138,7 +138,7 @@
                         {% if batch.ingredients %}
                         <tr><th colspan="5" class="table-secondary">Ingredients</th></tr>
                         {% for ing in batch.ingredients %}
-                            {% set amount = ing.amount_used|float or 0 %}
+                            {% set amount = ing.quantity_used|float or 0 %}
                             {% set cost = ing.cost_per_unit|float or 0 %}
                             {% set line_cost = amount * cost %}
                             <tr>

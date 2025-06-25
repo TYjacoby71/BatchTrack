@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from ...utils.unit_utils import get_global_unit_list
@@ -58,7 +58,7 @@ def new_recipe():
                         recipe_ingredient = RecipeIngredient(
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(recipe_ingredient)
@@ -159,7 +159,7 @@ def create_variation(recipe_id):
             new_ingredient = RecipeIngredient(
                 recipe_id=new_variation.id,
                 inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
+                quantity=ingredient.quantity,
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
@@ -218,7 +218,7 @@ def create_variation(recipe_id):
                         recipe_ingredient = RecipeIngredient(
                             recipe_id=new_variation.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(recipe_ingredient)
@@ -308,7 +308,7 @@ def quick_add_unit():
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        ingredients = [(ri.inventory_item_id, ri.amount, ri.unit) for ri in original.recipe_ingredients]
+        ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in original.recipe_ingredients]
 
         # Create new recipe without ingredients first
         new_recipe = Recipe(
@@ -446,7 +446,7 @@ def edit_recipe(recipe_id):
                         assoc = RecipeIngredient(
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(assoc)

@@ -282,3 +282,11 @@ def is_organization_owner():
     if not current_user.is_authenticated:
         return False
     return getattr(current_user, 'is_owner', False)
+
+# Template function for developer role checking
+def is_developer():
+    """Template function to check if user is developer"""
+    if not current_user.is_authenticated:
+        return False
+    user_role = getattr(current_user, 'role', 'organization_owner')
+    return user_role == 'developer'

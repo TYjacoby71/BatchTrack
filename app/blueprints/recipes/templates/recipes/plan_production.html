@@ -145,15 +145,15 @@ function planProduction() {
     },
 
     fetchContainerPlan() {
-      if (!this.recipeNeedsContainers) {
-        this.allowedContainers = [];
-        this.containersSelected = [];
-        return;
-      }
-
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
+          console.log('Container data received:', data);
           this.allowedContainers = data.available || [];
 
           if (this.autoFill && this.recipeNeedsContainers) {

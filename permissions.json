@@ -4,7 +4,11 @@
     "*",
     "dev.dashboard",
     "dev.system_admin",
-    "dev.all_organizations"
+    "dev.all_organizations",
+    "dev.access_all_data",
+    "dev.modify_any_organization",
+    "dev.create_organizations",
+    "dev.delete_organizations"
   ],
   "organization_owner": [
     "*",
