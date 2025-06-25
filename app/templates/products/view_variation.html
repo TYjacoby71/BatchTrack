@@ -287,3 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+{% from 'macros/utils.html' import show_modal %}
+{% call show_modal('containerModal') %}
+  {% include "stock/modals/_new_container.html" %}
+{% endcall %}
