@@ -23,11 +23,23 @@ def view_sku(product_id, variant, size_label):
     size_label = unquote(size_label)
 
     # Get all FIFO entries for this SKU combination (including consumed ones)
-    fifo_query = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        size_label=size_label
-    ).order_by(ProductInventory.timestamp.desc())
+    # Handle "Bulk" entries which might have size_label as None or empty string
+    if size_label == "Bulk":
+        fifo_query = ProductInventory.query.filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            db.or_(
+                ProductInventory.size_label == None,
+                ProductInventory.size_label == '',
+                ProductInventory.size_label == 'Bulk'
+            )
+        ).order_by(ProductInventory.timestamp.desc())
+    else:
+        fifo_query = ProductInventory.query.filter_by(
+            product_id=product_id,
+            variant=variant,
+            size_label=size_label
+        ).order_by(ProductInventory.timestamp.desc())
 
     # Apply FIFO filter if requested (only show entries with remaining quantity)
     if fifo_filter:
@@ -54,11 +66,26 @@ def view_sku(product_id, variant, size_label):
         total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
     else:
         # When filter is off, get ALL entries for this SKU and sum only positive quantities
-        all_sku_entries = ProductInventory.query.filter_by(
-            product_id=product_id,
-            variant=variant,
-            size_label=size_label
-        ).all()
+        # Handle "Bulk" entries which might have size_label as None or empty string
+        if size_label == "Bulk":
+            # For bulk entries, check for None, empty string, or "Bulk"
+            all_sku_entries = ProductInventory.query.filter(
+                ProductInventory.product_id == product_id,
+                ProductInventory.variant == variant,
+                db.or_(
+                    ProductInventory.size_label == None,
+                    ProductInventory.size_label == '',
+                    ProductInventory.size_label == 'Bulk'
+                )
+            ).all()
+        else:
+            # For non-bulk entries, exact match
+            all_sku_entries = ProductInventory.query.filter_by(
+                product_id=product_id,
+                variant=variant,
+                size_label=size_label
+            ).all()
+        
         total_quantity = sum(entry.quantity for entry in all_sku_entries if entry.quantity > 0)
         total_batches = len(set(entry.batch_id for entry in all_sku_entries if entry.batch_id and entry.quantity > 0))
 
