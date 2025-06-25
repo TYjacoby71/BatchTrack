@@ -77,7 +77,7 @@ def view_variant(product_id, variation_id):
     # Get recent activity for this variation
     recent_events = ProductEvent.query.filter(
         ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variation.name}%')
+        ProductEvent.description.like(f'%{variation.name}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
     # Get available containers for manual stock addition
