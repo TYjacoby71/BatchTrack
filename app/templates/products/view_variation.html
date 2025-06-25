@@ -22,34 +22,40 @@
           </div>
         </div>
         <div class="card-body">
-          <div class="row text-center">
-            <div class="col-4">
-              <div class="border-end">
-                {% set total_bulk = 0 %}
-                {% for group_key, group in size_groups.items() %}
-                  {% if group.size_label == 'Bulk' or not group.size_label %}
-                    {% set total_bulk = total_bulk + group.total_quantity %}
+          <div class="row">
+            <div class="col-md-2">
+              {% set total_bulk = 0 %}
+              {% set total_packaged = 0 %}
+              {% for group_key, group in size_groups.items() %}
+                {% if group.size_label and group.size_label != 'Bulk' %}
+                  {% set total_packaged = total_packaged + group.total_quantity %}
+                {% else %}
+                  {% set total_bulk = total_bulk + group.total_quantity %}
+                {% endif %}
+              {% endfor %}
+              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.product_base_unit }}
+            </div>
+            <div class="col-md-2">
+              <strong>Total Packaged:</strong> {{ total_packaged|int }} items
+            </div>
+            <div class="col-md-2">
+              <strong>Size Count:</strong> {{ size_groups|length }}
+            </div>
+            <div class="col-md-3">
+              {% set variant_total_cost = 0 %}
+              {% for group_key, group in size_groups.items() %}
+                {% for batch in group.batches %}
+                  {% if batch.quantity > 0 %}
+                    {% set variant_total_cost = variant_total_cost + ((batch.batch_cost_per_unit or 0) * batch.quantity) %}
                   {% endif %}
                 {% endfor %}
-                <h5 class="mb-0">{{ "%.1f"|format(total_bulk) }}</h5>
-                <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-              </div>
+              {% endfor %}
+              <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
             </div>
-            <div class="col-4">
-              <div class="border-end">
-                {% set total_packaged = 0 %}
-                {% for group_key, group in size_groups.items() %}
-                  {% if group.size_label and group.size_label != 'Bulk' %}
-                    {% set total_packaged = total_packaged + group.total_quantity %}
-                  {% endif %}
-                {% endfor %}
-                <h5 class="mb-0">{{ total_packaged|round(0)|int }}</h5>
-                <small class="text-muted">Packaged</small>
-              </div>
-            </div>
-            <div class="col-4">
-              <h5 class="mb-0">{{ size_groups|length }}</h5>
-              <small class="text-muted">Sizes</small>
+            <div class="col-md-3">
+              {% set variant_total_value = 0 %}
+              {# TODO: Calculate total value when retail prices are added #}
+              <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
             </div>
           </div>
           {% if variation.description %}
@@ -95,16 +101,31 @@
                   {% endfor %}
                   {% set total_cost = cost_sum %}
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
-                  <tr>
+                  <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
-                      <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
+                      <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
                         {{ size_display }}
                       </a>
+                      {% if group.total_quantity <= 0 and has_history %}
+                        <small class="badge bg-secondary ms-1">No Stock</small>
+                      {% endif %}
                     </td>
                     <td>{{ group.unit }}</td>
-                    <td>{{ "%.2f"|format(group.total_quantity) }}</td>
-                    <td>${{ "%.2f"|format(total_cost) }}</td>
-                    <td>${{ "%.2f"|format(total_value) }}</td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        {{ "%.2f"|format(group.total_quantity) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        ${{ "%.2f"|format(total_cost) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        ${{ "%.2f"|format(total_value) }}
+                      </span>
+                    </td>
                     <td>
                       <div class="dropdown">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
