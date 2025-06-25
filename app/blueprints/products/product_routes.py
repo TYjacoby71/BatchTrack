@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from ...models import db, Product, ProductEvent, InventoryItem
+from ...models import db, Product, ProductEvent, InventoryItem, ProductVariation
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
 from ...blueprints.fifo.services import deduct_fifo
+from ...utils.unit_utils import get_global_unit_list
 
 from . import products_bp
 
@@ -13,6 +14,48 @@ from . import products_bp
 def list_products():
     products = Product.query.order_by(Product.created_at).all()
     return render_template('products/list_products.html', products=products)
+
+@products_bp.route('/products/new', methods=['GET', 'POST'])
+@login_required
+def new_product():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        product_base_unit = request.form.get('product_base_unit')
+        low_stock_threshold = request.form.get('low_stock_threshold', 0)
+
+        if not name or not product_base_unit:
+            flash('Name and product base unit are required', 'error')
+            return redirect(url_for('products.new_product'))
+
+        # Check if product already exists
+        existing = Product.query.filter_by(name=name).first()
+        if existing:
+            flash('Product with this name already exists', 'error')
+            return redirect(url_for('products.new_product'))
+
+        product = Product(
+            name=name,
+            product_base_unit=product_base_unit,
+            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0
+        )
+
+        db.session.add(product)
+        db.session.flush()  # Get the product ID
+
+        # Create the Base variant automatically
+        base_variant = ProductVariation(
+            product_id=product.id,
+            name='Base',
+            description='Default base variant'
+        )
+        db.session.add(base_variant)
+        db.session.commit()
+
+        flash('Product created successfully', 'success')
+        return redirect(url_for('products.view_product', product_id=product.id))
+
+    units = get_global_unit_list()
+    return render_template('products/new_product.html', units=units)
 
 @products_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
 @login_required
