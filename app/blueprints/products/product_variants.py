@@ -53,7 +53,7 @@ def view_variant(product_id, variation_id):
         flash('Variation not found for this product', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-    # Get all inventory entries for this specific variation (including zero quantity for history)
+    # Get inventory for this specific variation
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant_id=variation.id

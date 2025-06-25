@@ -151,11 +151,15 @@
                       {% endif %}
                     </td>
                     <td data-column="actions" style="text-align: center;">
-                      <button type="button" class="btn btn-outline-{% if entry.quantity > 0 %}danger{% else %}secondary{% endif %} btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
-                              data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
-                              data-batch-id="{{ entry.batch_id or 'N/A' }}">
-                        Adjust
-                      </button>
+                      {% if entry.quantity > 0 %}
+                        <button type="button" class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
+                                data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
+                                data-batch-id="{{ entry.batch_id or 'N/A' }}">
+                          Adjust
+                        </button>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
                     </td>
                   </tr>
                   {% endfor %}
