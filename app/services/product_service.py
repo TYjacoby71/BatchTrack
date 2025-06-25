@@ -361,7 +361,7 @@ class ProductService:
             final_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
             # For standalone products without containers, always use "Bulk"
-            final_size_label = "Bulk"l = "Bulk"
+            final_size_label = "Bulk" = "Bulk"
 
         # Create ProductInventory entry
         inventory = ProductInventory(
