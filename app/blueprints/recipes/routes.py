@@ -159,7 +159,7 @@ def create_variation(recipe_id):
             new_ingredient = RecipeIngredient(
                 recipe_id=new_variation.id,
                 inventory_item_id=ingredient.inventory_item_id,
-                amount=ingredient.amount,
+                quantity=ingredient.quantity,
                 unit=ingredient.unit
             )
             db.session.add(new_ingredient)
@@ -308,7 +308,7 @@ def quick_add_unit():
 def clone_recipe(recipe_id):
     try:
         original = Recipe.query.get_or_404(recipe_id)
-        ingredients = [(ri.inventory_item_id, ri.amount, ri.unit) for ri in original.recipe_ingredients]
+        ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in original.recipe_ingredients]
 
         # Create new recipe without ingredients first
         new_recipe = Recipe(
