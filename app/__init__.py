@@ -68,7 +68,7 @@ def create_app():
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(admin_bp,  url_prefix='/admin')
-    app.register_blueprint(app_routes.main_bp)
+    app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
     app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
