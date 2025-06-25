@@ -72,6 +72,11 @@ def create_app():
         pass
     app.register_blueprint(stock_api_bp)
     app.register_blueprint(ingredient_api_bp)
+
+    # Register container API blueprint
+    from .blueprints.api.container_routes import container_api_bp
+    app.register_blueprint(container_api_bp)
+
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(settings_bp, url_prefix='/settings')
