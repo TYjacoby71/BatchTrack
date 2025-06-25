@@ -4,6 +4,7 @@
 {% block scripts %}
 <!-- Only include necessary scripts for this page -->
 <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/products/product_inventory.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -277,81 +278,5 @@
     </div>
 </div>
 
-<script>
-function toggleFifoFilter() {
-    const fifoFilter = document.getElementById('fifoFilter');
-    if (!fifoFilter) return;
 
-    // Build new URL with filter parameter and reset to page 1
-    const url = new URL(window.location);
-    url.searchParams.delete('page'); // Reset to page 1
-
-    if (fifoFilter.checked) {
-        url.searchParams.set('fifo', 'true');
-    } else {
-        url.searchParams.delete('fifo');
-    }
-
-    // Redirect to apply filter at backend level
-    window.location.href = url.toString();
-}
-
-// Handle FIFO adjustment modal
-document.addEventListener('DOMContentLoaded', function() {
-    const adjustModal = document.getElementById('adjustFifoModal');
-    const adjustForm = document.getElementById('adjustFifoForm');
-
-    if (adjustModal && adjustForm) {
-        adjustModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            if (button) {
-                const inventoryId = button.getAttribute('data-inventory-id');
-                const currentQuantity = button.getAttribute('data-current-quantity');
-                const unit = button.getAttribute('data-unit');
-
-                if (inventoryId) {
-                    // Set form action dynamically
-                    const baseUrl = "{{ url_for('product_inventory.adjust_fifo_inventory', inventory_id=0) }}";
-                    adjustForm.action = baseUrl.replace('0', inventoryId);
-                }
-
-                // Update help text
-                const quantityHelp = document.getElementById('quantityHelp');
-                if (quantityHelp && currentQuantity && unit) {
-                    quantityHelp.textContent = 
-                        `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total. For deductions: enter amount to remove.`;
-                }
-            }
-        });
-
-        // Update help text based on adjustment type
-        const changeTypeSelect = document.getElementById('change_type');
-        if (changeTypeSelect) {
-            changeTypeSelect.addEventListener('change', function() {
-                const helpText = document.getElementById('quantityHelp');
-                if (helpText) {
-                    const currentText = helpText.textContent;
-                    const beforeFor = currentText.split('For')[0];
-                    
-                    if (this.value === 'recount') {
-                        helpText.textContent = beforeFor + 'For recount: enter the new total quantity you want this entry to have.';
-                    } else {
-                        helpText.textContent = beforeFor + 'For deductions: enter the amount to remove from this entry.';
-                    }
-                }
-            });
-        }
-    }
-
-    // Initialize Bootstrap modals if not already initialized
-    if (typeof bootstrap !== 'undefined') {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(function(modal) {
-            if (!modal._bootstrap_modal) {
-                modal._bootstrap_modal = new bootstrap.Modal(modal);
-            }
-        });
-    }
-});
-</script>
 {% endblock %}
