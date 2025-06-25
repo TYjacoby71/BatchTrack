@@ -43,7 +43,7 @@ def create_app():
     from .blueprints.inventory import inventory_bp
     from .blueprints.batches import batches_bp
     from .blueprints.products import products_bp
-    from .blueprints.products.product_inventory import product_inventory_bp
+    
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp
