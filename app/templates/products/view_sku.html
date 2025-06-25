@@ -528,9 +528,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
           }
         }
-      } quantity input
-        const difference = enteredQty - currentQty;
-        quantityInput.value = difference;
+        
+        // For recount, calculate the difference and update quantity input
+        if (changeType === 'recount') {
+          const difference = enteredQty - currentQty;
+          quantityInput.value = difference;
+        }
       }
     });
   }
