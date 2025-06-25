@@ -290,30 +290,60 @@ function planProduction() {
       this.checkStock();
     },
 
-    checkStock() {
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-      fetch('/api/check-stock', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        body: JSON.stringify({ 
-          recipe_id: parseInt(this.recipeId), 
-          scale: parseFloat(this.scale)
-        })
-      })
-        .then(res => res.json())
-        .then(data => {
-          this.stockChecked = true;
-          this.stockCheckPassed = data.all_ok;
-          this.stockResults = data;
-        })
-        .catch(err => {
-          this.stockChecked = false;
-          this.stockResults = [];
-          console.error(err);
+    async checkStock() {
+      if (!this.recipeId) return;
+
+      this.stockChecked = false;
+      this.stockCheckPassed = false;
+      this.stockResults = [];
+
+      try {
+        const response = await fetch('/api/check-stock', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            recipe_id: this.recipeId,
+            scale: parseFloat(this.scale) || 1.0,
+            flex_mode: false
+          })
         });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        // Format results for display
+        this.stockResults = (data.stock_check || []).map(item => ({
+          name: item.name,
+          needed: item.needed,
+          needed_unit: item.needed_unit,
+          available: item.available,
+          available_unit: item.available_unit,
+          status: item.status,
+          error: item.error
+        }));
+
+        this.stockChecked = true;
+        this.stockCheckPassed = data.all_ok || false;
+
+        console.log('Stock check results:', this.stockResults);
+
+      } catch (error) {
+        console.error('Stock check failed:', error);
+        this.stockResults = [];
+        this.stockChecked = true;
+        this.stockCheckPassed = false;
+        alert('Stock check failed: ' + error.message);
+      }
     },
 
     downloadCSV() {
