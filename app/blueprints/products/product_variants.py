@@ -111,7 +111,7 @@ def edit_variant(product_id, variation_id):
 
     if not name:
         flash('Variation name is required', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     # Check if another variation has this name for the same product
     existing = ProductVariation.query.filter(
@@ -121,11 +121,11 @@ def edit_variant(product_id, variation_id):
     ).first()
     if existing:
         flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
 
     variation.name = name
     variation.description = description if description else None
 
     db.session.commit()
     flash('Variation updated successfully', 'success')
-    return redirect(url_for('product_variants.view_variant', product_id=product_id, variation_id=variation_id))
+    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
