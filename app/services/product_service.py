@@ -60,7 +60,7 @@ def adjust_product_fifo_entry(fifo_entry_id, quantity, change_type, notes=None, 
         db.session.add(ProductEvent(
             product_id=fifo_entry.product_id,
             event_type=f'inventory_{change_type}',
-            note=event_note
+            description=event_note
         ))
 
         db.session.commit()
@@ -141,7 +141,7 @@ class ProductService:
                 db.session.add(ProductEvent(
                     product_id=product_id,
                     event_type='inventory_addition',
-                    note=event_note
+                    description=event_note
                 ))
         else:
             # Fallback to bulk SKU for non-containerized batches
@@ -269,7 +269,7 @@ class ProductService:
         db.session.add(ProductEvent(
             product_id=product_id,
             event_type=f'inventory_{reason}',
-            note=event_note
+            description=event_note
         ))
 
         db.session.commit()
@@ -429,7 +429,7 @@ class ProductService:
         db.session.add(ProductEvent(
             product_id=product_id,
             event_type='inventory_manual_addition',
-            note=event_note
+            description=event_note
         ))
 
         db.session.commit()
