@@ -101,16 +101,29 @@
                   {% endfor %}
                   {% set total_cost = cost_sum %}
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
-                  <tr>
+                  <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
-                      <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
-                        {{ size_display }}
-                      </a>
+                      {{ size_display }}
+                      {% if group.total_quantity <= 0 and has_history %}
+                        <small class="badge bg-secondary ms-1">No Stock</small>
+                      {% endif %}
                     </td>
                     <td>{{ group.unit }}</td>
-                    <td>{{ "%.2f"|format(group.total_quantity) }}</td>
-                    <td>${{ "%.2f"|format(total_cost) }}</td>
-                    <td>${{ "%.2f"|format(total_value) }}</td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        {{ "%.2f"|format(group.total_quantity) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        ${{ "%.2f"|format(total_cost) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                        ${{ "%.2f"|format(total_value) }}
+                      </span>
+                    </td>
                     <td>
                       <div class="dropdown">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">

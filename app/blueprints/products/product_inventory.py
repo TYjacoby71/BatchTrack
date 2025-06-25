@@ -19,14 +19,14 @@ def view_sku(product_id, variant, size_label):
     variant = unquote(variant)
     size_label = unquote(size_label)
 
-    # Get all FIFO entries for this SKU combination
+    # Get all FIFO entries for this SKU combination (including consumed ones)
     fifo_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant=variant,
         size_label=size_label
     ).order_by(ProductInventory.timestamp.asc()).all()
 
-    # Calculate totals
+    # Calculate totals (only count positive quantities for total)
     total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 

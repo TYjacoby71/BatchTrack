@@ -53,26 +53,25 @@ def view_variant(product_id, variation_id):
         flash('Variation not found for this product', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-    # Get inventory for this specific variation
+    # Get inventory for this specific variation (including zero quantity entries)
     inventory_entries = ProductInventory.query.filter_by(
         product_id=product_id,
         variant_id=variation.id
     ).order_by(ProductInventory.id.asc()).all()
 
-    # Group by size_label and unit
+    # Group by size_label and unit (include all entries, not just active ones)
     size_groups = {}
     for entry in inventory_entries:
-        if entry.quantity > 0:  # Only show active inventory
-            key = f"{entry.size_label}_{entry.unit}"
-            if key not in size_groups:
-                size_groups[key] = {
-                    'size_label': entry.size_label,
-                    'unit': entry.unit,
-                    'total_quantity': 0,
-                    'batches': []
-                }
-            size_groups[key]['total_quantity'] += entry.quantity
-            size_groups[key]['batches'].append(entry)
+        key = f"{entry.size_label}_{entry.unit}"
+        if key not in size_groups:
+            size_groups[key] = {
+                'size_label': entry.size_label,
+                'unit': entry.unit,
+                'total_quantity': 0,
+                'batches': []
+            }
+        size_groups[key]['total_quantity'] += entry.quantity
+        size_groups[key]['batches'].append(entry)
 
     # Get recent activity for this variation
     recent_events = ProductEvent.query.filter(
