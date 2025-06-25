@@ -60,6 +60,8 @@ def new_product():
 @products_bp.route('/products/<int:product_id>', methods=['GET', 'POST'])
 @login_required
 def view_product(product_id):
+    from ...models import ProductInventory
+
     product = Product.query.get_or_404(product_id)
     if request.method == 'POST':
         event_type = request.form.get('event_type')
@@ -68,7 +70,27 @@ def view_product(product_id):
         db.session.commit()
         flash(f"Logged event: {event_type}")
         return redirect(url_for('products.view_product', product_id=product.id))
-    return render_template('products/view_product.html', product=product, events=product.events)
+
+    # Get inventory data grouped by variant
+    inventory_entries = ProductInventory.query.filter_by(product_id=product_id).all()
+
+    # Group inventory by variant
+    inventory_groups = {}
+    for entry in inventory_entries:
+        variant_key = entry.variant or 'Base'
+        if variant_key not in inventory_groups:
+            inventory_groups[variant_key] = {
+                'variant': variant_key,
+                'total_quantity': 0,
+                'batches': []
+            }
+        inventory_groups[variant_key]['total_quantity'] += entry.quantity
+        inventory_groups[variant_key]['batches'].append(entry)
+
+    return render_template('products/view_product.html', 
+                         product=product, 
+                         events=product.events,
+                         inventory_groups=inventory_groups)
 
 @products_bp.route('/products/edit/<int:product_id>', methods=['GET', 'POST'])
 @login_required
