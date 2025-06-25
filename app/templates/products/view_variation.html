@@ -126,7 +126,7 @@
                     </td>
                     <td>
                       <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle {% if group.total_quantity <= 0 %}opacity-75{% endif %}" type="button" data-bs-toggle="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu">
@@ -141,14 +141,6 @@
                               <i class="fas fa-eye"></i> View SKU
                             </a>
                           </li>
-                          {% if group.total_quantity <= 0 %}
-                          <li><hr class="dropdown-divider"></li>
-                          <li>
-                            <span class="dropdown-item-text text-muted small">
-                              <i class="fas fa-info-circle"></i> Historical inventory
-                            </span>
-                          </li>
-                          {% endif %}
                         </ul>
                       </div>
                     </td>
