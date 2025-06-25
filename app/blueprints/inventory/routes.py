@@ -184,7 +184,7 @@ def adjust_inventory(id):
                 try:
                     custom_shelf_life = int(custom_shelf_life_str)
                     if custom_shelf_life > 0:
-                        from blueprints.expiration.services import ExpirationService
+                        from app.blueprints.expiration.services import ExpirationService
                         custom_expiration_date = ExpirationService.calculate_expiration_date(
                             datetime.utcnow(), custom_shelf_life
                         )
@@ -435,4 +435,3 @@ def restore_inventory(id):
         db.session.rollback()
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
-
