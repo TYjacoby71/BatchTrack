@@ -62,10 +62,15 @@ def view_variant(product_id, variation_id):
     # Group by size_label and unit (include all entries, not just active ones)
     size_groups = {}
     for entry in inventory_entries:
-        key = f"{entry.size_label}_{entry.unit}"
+        # Normalize bulk entries to consistent "Bulk" label
+        display_size_label = entry.size_label
+        if not entry.size_label or entry.size_label == '':
+            display_size_label = "Bulk"
+        
+        key = f"{display_size_label}_{entry.unit}"
         if key not in size_groups:
             size_groups[key] = {
-                'size_label': entry.size_label,
+                'size_label': display_size_label,
                 'unit': entry.unit,
                 'total_quantity': 0,
                 'batches': []

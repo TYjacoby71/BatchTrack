@@ -301,25 +301,34 @@ class Product(db.Model):
         return len(self.variations)
 
 class ProductInventory(db.Model):
-    """FIFO-managed inventory for product outputs"""
+    """FIFO entries for SKUs - like InventoryHistory but for products"""
     id = db.Column(db.Integer, primary_key=True)
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # Primary reference
+    
+    # Legacy fields for backward compatibility
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
     variant = db.Column(db.String(128), nullable=True)  # Variant name for backward compatibility
     size_label = db.Column(db.String(128), nullable=True)  # Size/packaging info
-    sku = db.Column(db.String(128), nullable=True)  # SKU code
-    quantity = db.Column(db.Float, nullable=False, default=0.0)
+    sku = db.Column(db.String(128), nullable=True)  # SKU code (moved to ProductSKU)
+    
+    # FIFO entry data (like InventoryHistory.remaining_quantity)
+    quantity = db.Column(db.Float, nullable=False, default=0.0)  # Remaining quantity in this FIFO entry
     unit = db.Column(db.String(32), nullable=False)
+    
+    # Source information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # Container used
     batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost per unit
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # When added
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # When added (FIFO order)
     notes = db.Column(db.Text, nullable=True)  # Additional notes
+    
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
+    # Relationships
     variant_obj = db.relationship('ProductVariation', backref='inventory')
     batch = db.relationship('Batch')
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
@@ -401,20 +410,27 @@ class Tag(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class ProductInventoryHistory(db.Model):
-    """FIFO tracking for product inventory similar to InventoryHistory"""
+    """Audit trail for SKU changes - mirrors InventoryHistory exactly"""
     id = db.Column(db.Integer, primary_key=True)
-    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # Primary reference
+    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)  # FIFO entry affected
+    
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(32), nullable=False)  # manual_addition, batch_production, sold, spoil, trash, tester, damaged, recount
-    quantity_change = db.Column(db.Float, nullable=False)
+    change_type = db.Column(db.String(32), nullable=False)  # manual_addition, batch_production, sale, spoil, trash, damaged, recount
+    quantity_change = db.Column(db.Float, nullable=False)  # + for additions, - for deductions
     unit = db.Column(db.String(32), nullable=False)
-    remaining_quantity = db.Column(db.Float, nullable=True)  # For FIFO tracking
+    remaining_quantity = db.Column(db.Float, nullable=True)  # Remaining in the affected FIFO entry after change
     unit_cost = db.Column(db.Float, nullable=True)
+    
+    # FIFO tracking (mirrors InventoryHistory)
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_inventory_history.id'), nullable=True)
     fifo_code = db.Column(db.String(32), nullable=True)  # Base32 encoded unique identifier
+    
+    # Source information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     note = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)

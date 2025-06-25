@@ -23,31 +23,85 @@ def view_sku(product_id, variant, size_label):
     size_label = unquote(size_label)
 
     # Get all FIFO entries for this SKU combination (including consumed ones)
-    fifo_query = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant=variant,
-        size_label=size_label
-    ).order_by(ProductInventory.timestamp.desc())
+    # Handle "Bulk" entries which might have size_label as None or empty string
+    if size_label == "Bulk":
+        fifo_query = ProductInventory.query.filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            db.or_(
+                ProductInventory.size_label == None,
+                ProductInventory.size_label == '',
+                ProductInventory.size_label == 'Bulk'
+            )
+        ).order_by(ProductInventory.timestamp.desc())
+    else:
+        fifo_query = ProductInventory.query.filter_by(
+            product_id=product_id,
+            variant=variant,
+            size_label=size_label
+        ).order_by(ProductInventory.timestamp.desc())
 
     # Apply FIFO filter if requested (only show entries with remaining quantity)
     if fifo_filter:
         fifo_query = fifo_query.filter(ProductInventory.quantity > 0)
 
     # Get unified history entries for this SKU
-    history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
-        ProductInventory.product_id == product_id,
-        ProductInventory.variant == variant,
-        ProductInventory.size_label == size_label
-    ).order_by(ProductInventoryHistory.timestamp.desc())
+    # Handle "Bulk" entries which might have size_label as None or empty string
+    if size_label == "Bulk":
+        history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            db.or_(
+                ProductInventory.size_label == None,
+                ProductInventory.size_label == '',
+                ProductInventory.size_label == 'Bulk'
+            )
+        ).order_by(ProductInventoryHistory.timestamp.desc())
+    else:
+        history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            ProductInventory.size_label == size_label
+        ).order_by(ProductInventoryHistory.timestamp.desc())
 
     # Paginate the history
     history_pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = history_pagination.items
 
-    # Calculate totals (only count positive quantities for total)
+    # Get fifo_entries for display
     fifo_entries = fifo_query.all()
-    total_quantity = sum(entry.quantity for entry in fifo_entries if entry.quantity > 0)
-    total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
+    
+    # Calculate totals - always show sum of remaining quantities for this SKU
+    # Use the same logic as variant view - sum ALL quantities, not just positive ones
+    if fifo_filter:
+        # When filter is active, sum only the filtered entries (which already have quantity > 0)
+        total_quantity = sum(entry.quantity for entry in fifo_entries)
+        total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
+    else:
+        # When filter is off, get ALL entries for this SKU and sum ALL quantities (like variant view)
+        # Handle "Bulk" entries which might have size_label as None or empty string
+        if size_label == "Bulk":
+            # For bulk entries, check for None, empty string, or "Bulk"
+            all_sku_entries = ProductInventory.query.filter(
+                ProductInventory.product_id == product_id,
+                ProductInventory.variant == variant,
+                db.or_(
+                    ProductInventory.size_label == None,
+                    ProductInventory.size_label == '',
+                    ProductInventory.size_label == 'Bulk'
+                )
+            ).all()
+        else:
+            # For non-bulk entries, exact match
+            all_sku_entries = ProductInventory.query.filter_by(
+                product_id=product_id,
+                variant=variant,
+                size_label=size_label
+            ).all()
+        
+        # Sum ALL quantities like variant view does, not just positive ones
+        total_quantity = sum(entry.quantity for entry in all_sku_entries)
+        total_batches = len(set(entry.batch_id for entry in all_sku_entries if entry.batch_id and entry.quantity > 0))
 
     return render_template('products/view_sku.html',
                          product=product,
