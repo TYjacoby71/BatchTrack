@@ -238,14 +238,14 @@ def adjust_inventory(id):
 
         else:
             # Pre-validation check for existing items
-            from services.inventory_adjustment import validate_inventory_fifo_sync
+            from app.services.inventory_adjustment import validate_inventory_fifo_sync
             is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
             if not is_valid:
                 flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
                 return redirect(url_for('inventory.view_inventory', id=id))
 
             # Use centralized adjustment service for regular adjustments
-            from services.inventory_adjustment import process_inventory_adjustment
+            from app.services.inventory_adjustment import process_inventory_adjustment
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit
@@ -317,7 +317,7 @@ def edit_inventory(id):
                     if convert_inventory and item.quantity > 0:
                         # Try to convert existing inventory to new unit
                         try:
-                            from services.unit_conversion import convert_unit
+                            from app.services.unit_conversion import convert_unit
                             converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
                             item.quantity = converted_quantity
 
@@ -358,12 +358,12 @@ def edit_inventory(id):
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
             # If item wasn't perishable before, update existing FIFO entries
             if not was_perishable:
-                from blueprints.fifo.services import update_fifo_perishable_status
+                from app.blueprints.fifo.services import update_fifo_perishable_status
                 update_fifo_perishable_status(item.id, shelf_life_days)
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        from blueprints.fifo.services import recount_fifo
+        from app.blueprints.fifo.services import recount_fifo
         notes = "Manual quantity update via inventory edit"
         success = recount_fifo(item.id, new_quantity, notes, current_user.id)
         if not success:
