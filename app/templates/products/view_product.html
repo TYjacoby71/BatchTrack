@@ -107,16 +107,19 @@
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
 
         <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
-          <div class="card h-100 shadow-sm">
+          <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">{{ variant_name }}</h5>
-              <span class="badge {% if var_total_qty <= 0 %}bg-danger{% elif var_total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
-                {% if var_total_qty <= 0 %}Out of Stock{% elif var_total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
-              </span>
+              <h3>{{ product.name }} - {{ variant_name }}</h3>
+              <div>
+                {% if variation %}
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editVariationModal-{{ loop.index }}">
+                  <i class="fas fa-edit"></i> Edit Variation
+                </button>
+                {% endif %}
+              </div>
             </div>
             <div class="card-body">
-              <!-- Bulk/Packaged Stats -->
-              <div class="row text-center mb-3">
+              <div class="row text-center">
                 <div class="col-4">
                   <div class="border-end">
                     {% set total_bulk = 0 %}
@@ -154,65 +157,107 @@
                   <small class="text-muted">Sizes</small>
                 </div>
               </div>
-
-              <!-- Variant Details -->
-              <div class="variant-details mb-3">
-                <p class="card-text text-muted mb-2">
-                  <small>
-                    <i class="fas fa-boxes"></i> {{ var_size_count }} sizes
-                    | <i class="fas fa-balance-scale"></i> {{ "%.2f"|format(var_total_qty) }} total
-                    {% if variation and variation.sku %}| <i class="fas fa-barcode"></i> {{ variation.sku }}{% endif %}
-                  </small>
-                </p>
-                {% if variation and variation.description %}
-                <p class="card-text">{{ variation.description[:100] }}{% if variation.description|length > 100 %}...{% endif %}</p>
-                {% endif %}
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="d-flex gap-2">
-                {% if variation %}
-                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" 
-                   class="btn btn-outline-primary btn-sm flex-fill">
-                  View Details
-                </a>
-                {% endif %}
-                {% if var_size_count > 0 %}
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#variant-sizes-{{ loop.index }}" aria-expanded="false">
-                  <i class="fas fa-chevron-down"></i>
-                </button>
-                {% endif %}
-              </div>
-
-              <!-- Collapsible Size Labels Section -->
-              {% if var_size_count > 0 %}
-              <div class="collapse mt-3" id="variant-sizes-{{ loop.index }}">
-                <div class="border-top pt-2">
-                  <strong class="small">Size Labels:</strong>
-                  {% for group in var_inventory %}
-                    {% if group.batches %}
-                      {% for batch in group.batches %}
-                        {% if batch.remaining_quantity > 0 %}
-                          {% set size_display = batch.size_label if batch.size_label else 'Bulk' %}
-                          <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                            <div>
-                              <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant_name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
-                                <strong>{{ size_display }}</strong>
-                              </a>
-                              <br><small class="text-muted">{{ "%.2f"|format(batch.remaining_quantity) }} {{ batch.unit }}</small>
-                            </div>
-                            <div>
-                              <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant_name|urlencode, size_label=size_display|urlencode) }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-eye"></i> View SKU
-                              </a>
-                            </div>
-                          </div>
-                        {% endif %}
-                      {% endfor %}
-                    {% endif %}
-                  {% endfor %}
+              {% if variation and variation.description %}
+              <div class="row mt-2">
+                <div class="col-12">
+                  <strong>Description:</strong> {{ variation.description }}
                 </div>
               </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Sizes & Inventory -->
+          <div class="card mb-4" id="sizes">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h3>Sizes & Inventory</h3>
+              <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal-{{ loop.index }}">
+                <i class="fas fa-plus"></i> Add Manual Stock
+              </button>
+            </div>
+            <div class="card-body">
+              {% if var_size_count > 0 %}
+                <div class="table-responsive">
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Size Label</th>
+                        <th>Unit</th>
+                        <th>Quantity Remaining</th>
+                        <th>Total Cost</th>
+                        <th>Total Value</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% set processed_sizes = [] %}
+                      {% for group in var_inventory %}
+                        {% if group.batches %}
+                          {% for batch in group.batches %}
+                            {% if batch.remaining_quantity > 0 %}
+                              {% set size_display = batch.size_label if batch.size_label else 'Bulk' %}
+                              {% if size_display not in processed_sizes %}
+                                {% set _ = processed_sizes.append(size_display) %}
+                                {% set size_total_qty = 0 %}
+                                {% set size_cost_sum = 0 %}
+                                {% for g in var_inventory %}
+                                  {% if g.batches %}
+                                    {% for b in g.batches %}
+                                      {% if b.remaining_quantity > 0 %}
+                                        {% set b_size = b.size_label if b.size_label else 'Bulk' %}
+                                        {% if b_size == size_display %}
+                                          {% set size_total_qty = size_total_qty + b.remaining_quantity %}
+                                          {% if b.batch_cost_per_unit %}
+                                            {% set size_cost_sum = size_cost_sum + (b.batch_cost_per_unit * b.remaining_quantity) %}
+                                          {% endif %}
+                                        {% endif %}
+                                      {% endif %}
+                                    {% endfor %}
+                                  {% endif %}
+                                {% endfor %}
+                                <tr>
+                                  <td>
+                                    <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant_name|urlencode, size_label=size_display|urlencode) }}" class="text-decoration-none">
+                                      {{ size_display }}
+                                    </a>
+                                  </td>
+                                  <td>{{ batch.unit }}</td>
+                                  <td>{{ "%.2f"|format(size_total_qty) }}</td>
+                                  <td>${{ "%.2f"|format(size_cost_sum) }}</td>
+                                  <td>${{ "%.2f"|format(0) }}</td>
+                                  <td>
+                                    <div class="dropdown">
+                                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                      </button>
+                                      <ul class="dropdown-menu">
+                                        <li>
+                                          <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant_name|urlencode, size_label=size_display|urlencode) }}">
+                                            <i class="fas fa-edit"></i> Manage Stock
+                                          </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                          <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant_name|urlencode, size_label=size_display|urlencode) }}">
+                                            <i class="fas fa-eye"></i> View SKU
+                                          </a>
+                                        </li>
+                                      </ul>
+                                    </div>
+                                  </td>
+                                </tr>
+                              {% endif %}
+                            {% endif %}
+                          {% endfor %}
+                        {% endif %}
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="alert alert-info">
+                  No inventory found for this variation. Inventory is added when batches are completed.
+                </div>
               {% endif %}
             </div>
           </div>
