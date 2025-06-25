@@ -275,6 +275,7 @@
 <script>
 function toggleFifoFilter() {
     const fifoFilter = document.getElementById('fifoFilter');
+    if (!fifoFilter) return;
 
     // Build new URL with filter parameter and reset to page 1
     const url = new URL(window.location);
@@ -303,12 +304,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const currentQuantity = button.getAttribute('data-current-quantity');
                 const unit = button.getAttribute('data-unit');
 
-                // Set form action
-                adjustForm.action = `{{ url_for('product_inventory.adjust_fifo_inventory', inventory_id=0) }}`.replace('0', inventoryId);
+                if (inventoryId) {
+                    // Set form action dynamically
+                    const baseUrl = "{{ url_for('product_inventory.adjust_fifo_inventory', inventory_id=0) }}";
+                    adjustForm.action = baseUrl.replace('0', inventoryId);
+                }
 
                 // Update help text
                 const quantityHelp = document.getElementById('quantityHelp');
-                if (quantityHelp) {
+                if (quantityHelp && currentQuantity && unit) {
                     quantityHelp.textContent = 
                         `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total. For deductions: enter amount to remove.`;
                 }
@@ -321,14 +325,27 @@ document.addEventListener('DOMContentLoaded', function() {
             changeTypeSelect.addEventListener('change', function() {
                 const helpText = document.getElementById('quantityHelp');
                 if (helpText) {
+                    const currentText = helpText.textContent;
+                    const beforeFor = currentText.split('For')[0];
+                    
                     if (this.value === 'recount') {
-                        helpText.textContent = helpText.textContent.replace(/For.*/, 'For recount: enter the new total quantity you want this entry to have.');
+                        helpText.textContent = beforeFor + 'For recount: enter the new total quantity you want this entry to have.';
                     } else {
-                        helpText.textContent = helpText.textContent.replace(/For.*/, 'For deductions: enter the amount to remove from this entry.');
+                        helpText.textContent = beforeFor + 'For deductions: enter the amount to remove from this entry.';
                     }
                 }
             });
         }
+    }
+
+    // Initialize Bootstrap modals if not already initialized
+    if (typeof bootstrap !== 'undefined') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(function(modal) {
+            if (!modal._bootstrap_modal) {
+                modal._bootstrap_modal = new bootstrap.Modal(modal);
+            }
+        });
     }
 });
 </script>
