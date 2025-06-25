@@ -304,23 +304,16 @@ class ProductInventory(db.Model):
     """FIFO-managed inventory for product outputs"""
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    variant = db.Column(db.String(128), nullable=False, default='Base')  # Store variant name directly
-    size_label = db.Column(db.String(128), nullable=True)  # SKU size information
-    sku = db.Column(db.String(128), nullable=True)  # Optional SKU code
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
     quantity = db.Column(db.Float, nullable=False, default=0.0)
     unit = db.Column(db.String(32), nullable=False)
-    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # Link to container
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
-    batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost tracking
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    notes = db.Column(db.Text)
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
-    # Relationships
-    container = db.relationship('InventoryItem', foreign_keys=[container_id])
+    variant = db.relationship('ProductVariation', backref='inventory')
     batch = db.relationship('Batch')
 
 class ProductVariation(db.Model):
