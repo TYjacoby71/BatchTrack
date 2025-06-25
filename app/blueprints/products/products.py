@@ -6,6 +6,7 @@ from ...utils.unit_utils import get_global_unit_list
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
 @products_bp.route('/')
+@products_bp.route('/list')
 @login_required
 def product_list():
     """List all products with inventory summary and sorting"""
@@ -27,6 +28,9 @@ def product_list():
         products.sort(key=lambda p: p.name.lower())
 
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
+
+# Add alias for backward compatibility
+list_products = product_list
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required

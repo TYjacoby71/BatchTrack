@@ -3,7 +3,10 @@ from flask import Blueprint
 # Create the main products blueprint
 products_bp = Blueprint('products', __name__, template_folder='templates')
 
-# Import all route modules to register them with the blueprint
+# Import the main products routes first
+from .products import *
+
+# Import additional route modules to register them with the blueprint
 from .product_routes import *
 from .product_variants import *  
 from .product_inventory import *
