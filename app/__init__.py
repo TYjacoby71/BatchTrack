@@ -42,7 +42,7 @@ def create_app():
     from .blueprints.recipes import recipes_bp
     from .blueprints.inventory import inventory_bp
     from .blueprints.batches import batches_bp
-    from .blueprints.products import products_bp
+    from .blueprints.products import products_bp, product_inventory_bp
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp
@@ -65,8 +65,9 @@ def create_app():
     app.register_blueprint(batches_bp, url_prefix='/batches')
     # Import and register blueprints
     try:
-        from .blueprints.products import products_bp
+        from .blueprints.products import products_bp, product_inventory_bp
         app.register_blueprint(products_bp, url_prefix='/products')
+        app.register_blueprint(product_inventory_bp, url_prefix='/products')
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
