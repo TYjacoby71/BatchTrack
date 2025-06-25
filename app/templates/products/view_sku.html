@@ -5,7 +5,7 @@
     <div class="col-12">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.index') }}">Products</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
           <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
           <li class="breadcrumb-item active">{{ variant }} - {{ size_label if size_label else 'bulk' }}</li>
         </ol>
@@ -151,15 +151,11 @@
                       {% endif %}
                     </td>
                     <td data-column="actions" style="text-align: center;">
-                      {% if entry.quantity > 0 %}
-                        <button type="button" class="btn btn-outline-danger btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
-                                data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
-                                data-batch-id="{{ entry.batch_id or 'N/A' }}">
-                          Adjust
-                        </button>
-                      {% else %}
-                        <span class="text-muted">-</span>
-                      {% endif %}
+                      <button type="button" class="btn btn-outline-{% if entry.quantity > 0 %}danger{% else %}secondary{% endif %} btn-xs" data-bs-toggle="modal" data-bs-target="#adjustFifoModal"
+                              data-fifo-id="{{ entry.id }}" data-current-qty="{{ entry.quantity }}" data-unit="{{ entry.unit }}"
+                              data-batch-id="{{ entry.batch_id or 'N/A' }}">
+                        Adjust
+                      </button>
                     </td>
                   </tr>
                   {% endfor %}
@@ -225,7 +221,7 @@
         <h5 class="modal-title">Adjust SKU Inventory</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_id=product.id) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" value="{{ variant }}">
@@ -528,9 +524,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
           }
         }
-      } quantity input
-        const difference = enteredQty - currentQty;
-        quantityInput.value = difference;
+        
+        // For recount, calculate the difference and update quantity input
+        if (changeType === 'recount') {
+          const difference = enteredQty - currentQty;
+          quantityInput.value = difference;
+        }
       }
     });
   }
