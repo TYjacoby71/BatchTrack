@@ -480,7 +480,8 @@ class ProductService:
         groups = {}
         for entry in inventory_entries:
             # Get variant info from the related ProductInventory
-            variant_name = entry.product_inventory.variant.name if hasattr(entry.product_inventory, 'variant') and entry.product_inventory.variant else 'Base'
+            # The variant field is already a string, not an object
+            variant_name = entry.product_inventory.variant if entry.product_inventory.variant else 'Base'
             key = f"variant_{variant_name}"
 
             if key not in groups:

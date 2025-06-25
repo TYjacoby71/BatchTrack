@@ -33,8 +33,8 @@ def view_sku(product_id, variant, size_label):
     # Get recent deductions/sales from product events
     recent_deductions = ProductEvent.query.filter(
         ProductEvent.product_id == product_id,
-        ProductEvent.note.like(f'%{variant}%'),
-        ProductEvent.note.like(f'%{size_label}%')
+        ProductEvent.description.like(f'%{variant}%'),
+        ProductEvent.description.like(f'%{size_label}%')
     ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
 
     return render_template('products/view_sku.html',

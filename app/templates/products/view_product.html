@@ -89,13 +89,13 @@
         {% for group in var_inventory %}
           {% if group.batches %}
             {% for batch in group.batches %}
-              {% if batch.quantity > 0 %}
+              {% if batch.remaining_quantity > 0 %}
                 {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
                 {% if size_label not in unique_size_labels %}
                   {% set _ = unique_size_labels.append(size_label) %}
                 {% endif %}
                 {% if batch.batch_cost_per_unit %}
-                  {% set batch_total_cost = batch.quantity * batch.batch_cost_per_unit %}
+                  {% set batch_total_cost = batch.remaining_quantity * batch.batch_cost_per_unit %}
                   {% set total_cost = total_cost + batch_total_cost %}
                 {% endif %}
               {% endif %}
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // All modal functions have been properly cleaned up
-    
+
 });
 </script>
 {% endblock %}
