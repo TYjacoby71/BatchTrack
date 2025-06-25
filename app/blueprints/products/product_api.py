@@ -1,24 +1,33 @@
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from ...models import db, Product, ProductVariation
+from ...models import db, ProductSKU
 from ...services.product_service import ProductService
 from . import products_bp
 
 product_api_bp = Blueprint('product_api', __name__, url_prefix='/products/api')
 
-@product_api_bp.route('/<int:product_id>/variants', methods=['GET'])
+@product_api_bp.route('/<product_name>/variants', methods=['GET'])
 @login_required
-def get_product_variants(product_id):
+def get_product_variants(product_name):
     """API endpoint to get variants for a specific product"""
-    product = Product.query.get_or_404(product_id)
+    # Get all SKUs for this product name
+    skus = ProductSKU.query.filter_by(product_name=product_name, is_product_active=True).all()
+    
+    if not skus:
+        return jsonify({'error': 'Product not found'}), 404
 
     variants = []
-    for variant in product.variations:
-        variants.append({
-            'id': variant.id,
-            'name': variant.name,
-            'sku': variant.sku
-        })
+    seen_variants = set()
+    
+    for sku in skus:
+        if sku.variant_name not in seen_variants:
+            variants.append({
+                'id': sku.id,
+                'name': sku.variant_name,
+                'sku': sku.sku_code
+            })
+            seen_variants.add(sku.variant_name)
 
     # Add default variant if no variants exist
     if not variants:
@@ -39,38 +48,42 @@ def search_products():
     if len(query) < 2:
         return jsonify({'products': []})
 
-    # Search products by name
-    products = Product.query.filter(
-        Product.name.ilike(f'%{query}%'),
-        Product.is_active == True
+    # Search SKUs by product name
+    skus = ProductSKU.query.filter(
+        ProductSKU.product_name.ilike(f'%{query}%'),
+        ProductSKU.is_product_active == True,
+        ProductSKU.is_active == True
     ).limit(10).all()
 
-    result = []
-    for product in products:
-        product_data = {
-            'id': product.id,
-            'name': product.name,
-            'default_unit': product.product_base_unit,
-            'variants': []
-        }
-
-        # Add existing variants
-        for variant in product.variations:
-            product_data['variants'].append({
-                'id': variant.id,
-                'name': variant.name,
-                'sku': variant.sku
+    # Group by product name
+    products_dict = {}
+    for sku in skus:
+        if sku.product_name not in products_dict:
+            products_dict[sku.product_name] = {
+                'name': sku.product_name,
+                'default_unit': sku.product_base_unit,
+                'variants': []
+            }
+        
+        # Add variant if not already present
+        variant_exists = any(v['name'] == sku.variant_name for v in products_dict[sku.product_name]['variants'])
+        if not variant_exists:
+            products_dict[sku.product_name]['variants'].append({
+                'id': sku.id,
+                'name': sku.variant_name,
+                'sku': sku.sku_code
             })
 
-        # Add Base variant if no variants exist
-        if not product.variations:
-            product_data['variants'].append({
+    result = list(products_dict.values())
+    
+    # Add Base variant if no variants exist for each product
+    for product in result:
+        if not product['variants']:
+            product['variants'].append({
                 'id': None,
                 'name': 'Base',
                 'sku': None
             })
-
-        result.append(product_data)
 
     return jsonify({'products': result})
 
@@ -81,20 +94,26 @@ def add_from_batch():
     data = request.get_json()
 
     batch_id = data.get('batch_id')
-    product_id = data.get('product_id') 
-    variant_label = data.get('variant_label')
+    product_name = data.get('product_name')
+    variant_name = data.get('variant_name')
     size_label = data.get('size_label')
     quantity = data.get('quantity')
 
-    if not batch_id or not product_id:
-        return jsonify({'error': 'Batch ID and Product ID are required'}), 400
+    if not batch_id or not product_name:
+        return jsonify({'error': 'Batch ID and Product Name are required'}), 400
 
     try:
+        # Get or create the SKU
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name or 'Base',
+            size_label=size_label or 'Bulk'
+        )
+        
+        # Add inventory to the SKU
         inventory = ProductService.add_product_from_batch(
             batch_id=batch_id,
-            product_id=product_id,
-            variant_label=variant_label,
-            size_label=size_label,
+            sku_id=sku.id,
             quantity=quantity
         )
 
@@ -103,7 +122,7 @@ def add_from_batch():
         return jsonify({
             'success': True,
             'inventory_id': inventory.id,
-            'message': f'Added {inventory.quantity} {inventory.unit} to product inventory'
+            'message': f'Added {quantity} {sku.unit} to {sku.display_name}'
         })
 
     except Exception as e:
@@ -123,46 +142,29 @@ def quick_add_product():
     if not product_name:
         return jsonify({'error': 'Product name is required'}), 400
 
-    # Check if product exists
-    product = Product.query.filter_by(name=product_name).first()
-
-    if not product:
-        # Create new product
-        product = Product(
-            name=product_name,
-            product_base_unit=product_base_unit
+    try:
+        # Get or create the SKU
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name or 'Base',
+            size_label='Bulk',
+            unit=product_base_unit
         )
-        db.session.add(product)
-        db.session.flush()  # Get the ID
 
-    variant = None
-    if variant_name and variant_name.lower() != 'default':
-        # Check if variant exists
-        variant = ProductVariation.query.filter_by(
-            product_id=product.id, 
-            name=variant_name
-        ).first()
+        db.session.commit()
 
-        if not variant:
-            # Create new variant
-            variant = ProductVariation(
-                product_id=product.id,
-                name=variant_name
-            )
-            db.session.add(variant)
-            db.session.flush()
+        return jsonify({
+            'success': True,
+            'product': {
+                'name': sku.product_name,
+                'product_base_unit': sku.product_base_unit
+            },
+            'variant': {
+                'id': sku.id,
+                'name': sku.variant_name
+            }
+        })
 
-    db.session.commit()
-
-    return jsonify({
-        'success': True,
-        'product': {
-            'id': product.id,
-            'name': product.name,
-            'product_base_unit': product.product_base_unit
-        },
-        'variant': {
-            'id': variant.id if variant else None,
-            'name': variant.name if variant else 'Default'
-        } if variant or variant_name else None
-    })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

@@ -5,203 +5,192 @@ from typing import Optional, Dict, List, Tuple
 from flask_login import current_user
 
 class ProductService:
-    """Unified service for all product operations using single ProductSKU table"""
-
     @staticmethod
-    def create_product_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', 
-                          unit: str = 'count', product_base_unit: str = 'count', 
-                          initial_quantity: float = 0, unit_cost: float = 0,
-                          container_id: Optional[int] = None, batch_id: Optional[int] = None,
-                          notes: str = '') -> ProductSKU:
-        """Create a new ProductSKU entry"""
+    def get_or_create_sku(
+        product_name: str, 
+        variant_name: str = 'Base', 
+        size_label: str = 'Bulk',
+        unit: str = 'oz',
+        sku_code: str = None,
+        variant_description: str = None
+    ) -> ProductSKU:
+        """Get existing SKU or create new one"""
 
+        # Check if SKU already exists
+        sku = ProductSKU.query.filter_by(
+            product_name=product_name,
+            variant_name=variant_name,
+            size_label=size_label
+        ).first()
+
+        if sku:
+            return sku
+
+        # Get product_base_unit from existing SKUs or use default
+        existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
+        product_base_unit = existing_sku.product_base_unit if existing_sku else unit
+
+        # Create new SKU
         sku = ProductSKU(
             product_name=product_name,
             product_base_unit=product_base_unit,
             variant_name=variant_name,
+            variant_description=variant_description,
             size_label=size_label,
             unit=unit,
-            current_quantity=initial_quantity,
-            unit_cost=unit_cost,
-            container_id=container_id,
-            batch_id=batch_id,
-            notes=notes,
+            sku_code=sku_code,
+            current_quantity=0.0,
+            low_stock_threshold=0.0,
+            is_active=True,
+            is_product_active=True,
             created_by=current_user.id if current_user.is_authenticated else None,
             organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
 
         db.session.add(sku)
         db.session.flush()  # Get the ID
-
-        # Create history entry for initial stock
-        if initial_quantity > 0:
-            history = ProductSKUHistory(
-                sku_id=sku.id,
-                change_type='initial_stock',
-                quantity_change=initial_quantity,
-                old_quantity=0,
-                new_quantity=initial_quantity,
-                unit_cost=unit_cost,
-                batch_id=batch_id,
-                notes=f"Initial stock: {notes}",
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
-            db.session.add(history)
-
         return sku
 
     @staticmethod
-    def adjust_sku_quantity(sku_id: int, quantity_change: float, change_type: str,
-                           unit_cost: Optional[float] = None, sale_price: Optional[float] = None,
-                           customer: Optional[str] = None, notes: str = '',
-                           batch_id: Optional[int] = None) -> bool:
-        """Adjust SKU quantity and create history entry"""
+    def add_product_from_batch(batch_id: int, sku_id: int, quantity: float) -> bool:
+        """Add product inventory from a completed batch"""
+        try:
+            from ..models import ProductInventory
 
-        sku = ProductSKU.query.get_or_404(sku_id)
-        old_quantity = sku.current_quantity
+            batch = Batch.query.get_or_404(batch_id)
+            sku = ProductSKU.query.get_or_404(sku_id)
 
-        # For recount, quantity_change is the new total
-        if change_type == 'recount':
-            new_quantity = quantity_change
-            actual_change = new_quantity - old_quantity
-        else:
-            new_quantity = old_quantity + quantity_change
-            actual_change = quantity_change
-
-        # Validate quantity doesn't go negative (except for recount)
-        if new_quantity < 0 and change_type != 'recount':
-            return False
-
-        # Update SKU quantity
-        sku.current_quantity = max(0, new_quantity)
-        sku.last_updated = datetime.utcnow()
-
-        # Create history entry
-        history = ProductSKUHistory(
-            sku_id=sku_id,
-            change_type=change_type,
-            quantity_change=actual_change,
-            old_quantity=old_quantity,
-            new_quantity=sku.current_quantity,
-            unit_cost=unit_cost,
-            sale_price=sale_price,
-            customer=customer,
-            batch_id=batch_id,
-            notes=notes,
-            created_by=current_user.id if current_user.is_authenticated else None
-        )
-        db.session.add(history)
-
-        db.session.commit()
-        return True
-
-    @staticmethod
-    def add_from_batch(batch_id: int, product_name: str, variant_name: str = 'Base',
-                      size_label: str = 'Bulk', quantity: float = 0,
-                      container_overrides: Optional[Dict[int, int]] = None) -> List[ProductSKU]:
-        """Add product inventory from a finished batch"""
-        from ..models import BatchContainer, InventoryItem
-
-        batch = Batch.query.get_or_404(batch_id)
-        skus_created = []
-
-        # Get containers used in this batch
-        batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
-
-        if batch_containers:
-            # Create separate SKUs for each container type
-            for container_usage in batch_containers:
-                container = container_usage.container
-                container_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
-
-                # Use override count if provided
-                final_count = container_usage.quantity_used
-                if container_overrides and container.id in container_overrides:
-                    final_count = container_overrides[container.id]
-
-                # Calculate cost per unit
-                batch_cost_per_unit = 0
-                if batch.total_cost and batch.final_quantity:
-                    batch_cost_per_unit = batch.total_cost / batch.final_quantity
-
-                sku = ProductService.create_product_sku(
-                    product_name=product_name,
-                    variant_name=variant_name,
-                    size_label=container_size_label,
-                    unit='count',
-                    product_base_unit=batch.output_unit or 'count',
-                    initial_quantity=final_count,
-                    unit_cost=batch_cost_per_unit,
-                    container_id=container.id,
-                    batch_id=batch_id,
-                    notes=f"From batch #{batch.id} - {container.name}"
-                )
-                skus_created.append(sku)
-        else:
-            # Create bulk SKU for non-containerized batches
-            batch_unit = batch.output_unit or batch.projected_yield_unit or 'oz'
-            quantity_used = quantity or batch.final_quantity or batch.projected_yield
-
-            batch_cost_per_unit = 0
-            if batch.total_cost and batch.final_quantity:
-                batch_cost_per_unit = batch.total_cost / batch.final_quantity
-
-            sku = ProductService.create_product_sku(
-                product_name=product_name,
-                variant_name=variant_name,
-                size_label=size_label,
-                unit=batch_unit,
-                product_base_unit=batch_unit,
-                initial_quantity=quantity_used,
-                unit_cost=batch_cost_per_unit,
+            # Create FIFO entry
+            fifo_entry = ProductInventory(
+                sku_id=sku_id,
+                quantity=quantity,
                 batch_id=batch_id,
-                notes=f"Bulk from batch #{batch.id}"
+                batch_cost_per_unit=batch.total_cost / quantity if batch.total_cost and quantity > 0 else None,
+                is_perishable=batch.is_perishable,
+                shelf_life_days=batch.shelf_life_days,
+                expiration_date=batch.expiration_date,
+                notes=f'Added from batch {batch.label_code}'
             )
-            skus_created.append(sku)
 
-        db.session.commit()
-        return skus_created
+            db.session.add(fifo_entry)
 
-    @staticmethod
-    def get_product_summary():
-        """Get summary of all products grouped by product_name"""
-        results = db.session.query(
-            ProductSKU.product_name,
-            func.count(ProductSKU.id).label('sku_count'),
-            func.sum(ProductSKU.current_quantity).label('total_quantity'),
-            func.min(ProductSKU.low_stock_threshold).label('min_threshold'),
-            func.max(ProductSKU.is_product_active).label('is_active')
-        ).filter(
-            ProductSKU.is_active == True
-        ).group_by(
-            ProductSKU.product_name
-        ).order_by(
-            ProductSKU.product_name
-        ).all()
+            # Update SKU total quantity
+            sku.current_quantity += quantity
+            sku.last_updated = datetime.utcnow()
 
-        return results
+            # Create history record
+            history = ProductSKUHistory(
+                sku_id=sku_id,
+                timestamp=datetime.utcnow(),
+                change_type='batch_completion',
+                quantity_change=quantity,
+                old_quantity=sku.current_quantity - quantity,
+                new_quantity=sku.current_quantity,
+                batch_id=batch_id,
+                notes=f'Added from completed batch {batch.label_code}',
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
 
-    @staticmethod
-    def get_skus_by_product(product_name: str):
-        """Get all SKUs for a specific product"""
-        return ProductSKU.query.filter_by(
-            product_name=product_name,
-            is_active=True
-        ).order_by(
-            ProductSKU.variant_name,
-            ProductSKU.size_label
-        ).all()
+            db.session.add(history)
+            return fifo_entry
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     @staticmethod
-    def get_low_stock_skus():
-        """Get SKUs that are low on stock"""
-        return ProductSKU.query.filter(
-            ProductSKU.is_active == True,
-            ProductSKU.current_quantity <= ProductSKU.low_stock_threshold
-        ).order_by(
-            ProductSKU.product_name,
-            ProductSKU.variant_name
-        ).all()
+    def deduct_stock(
+        sku_id: int, 
+        quantity: float, 
+        change_type: str = 'manual_deduction',
+        sale_price: float = None,
+        customer: str = None,
+        notes: str = ''
+    ) -> bool:
+        """Deduct stock from SKU using FIFO"""
+        try:
+            from ..models import ProductInventory
+
+            sku = ProductSKU.query.get_or_404(sku_id)
+
+            if sku.current_quantity < quantity:
+                return False  # Insufficient stock
+
+            remaining_to_deduct = quantity
+            old_quantity = sku.current_quantity
+
+            # Get FIFO entries ordered by timestamp
+            fifo_entries = ProductInventory.query.filter_by(sku_id=sku_id)\
+                .filter(ProductInventory.quantity > 0)\
+                .order_by(ProductInventory.timestamp).all()
+
+            # Deduct from FIFO entries
+            for entry in fifo_entries:
+                if remaining_to_deduct <= 0:
+                    break
+
+                deduction_from_entry = min(entry.quantity, remaining_to_deduct)
+                entry.quantity -= deduction_from_entry
+                remaining_to_deduct -= deduction_from_entry
+
+            # Update SKU quantity
+            sku.current_quantity -= quantity
+            sku.last_updated = datetime.utcnow()
+
+            # Create history record
+            history = ProductSKUHistory(
+                sku_id=sku_id,
+                timestamp=datetime.utcnow(),
+                change_type=change_type,
+                quantity_change=-quantity,
+                old_quantity=old_quantity,
+                new_quantity=sku.current_quantity,
+                sale_price=sale_price,
+                customer=customer,
+                notes=notes,
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
+
+            db.session.add(history)
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    @staticmethod
+    def recount_sku(sku_id: int, new_quantity: float, notes: str = '') -> bool:
+        """Process a recount adjustment for a specific SKU"""
+        try:
+            sku = ProductSKU.query.get_or_404(sku_id)
+            old_quantity = sku.current_quantity
+            quantity_change = new_quantity - old_quantity
+
+            if quantity_change == 0:
+                return True  # No change needed
+
+            # Update SKU quantity
+            sku.current_quantity = max(0, new_quantity)
+            sku.last_updated = datetime.utcnow()
+
+            # Create history record
+            history = ProductSKUHistory(
+                sku_id=sku_id,
+                timestamp=datetime.utcnow(),
+                change_type='recount',
+                quantity_change=quantity_change,
+                old_quantity=old_quantity,
+                new_quantity=sku.current_quantity,
+                notes=notes,
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
+
+            db.session.add(history)
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     @staticmethod
     def search_skus(search_term: str):
@@ -221,109 +210,37 @@ class ProductService:
         ).all()
 
     @staticmethod
-    def recount_sku(sku_id: int, new_quantity: float, notes: str = '') -> bool:
-        """Process a recount adjustment for a specific SKU"""
-        try:
-            sku = ProductSKU.query.get_or_404(sku_id)
-            old_quantity = sku.current_quantity
-            quantity_change = new_quantity - old_quantity
+    def get_products_summary():
+        """Get summary of all products grouped by product name"""
+        # Get all active SKUs grouped by product name
+        skus = ProductSKU.query.filter_by(is_active=True, is_product_active=True).all()
 
-            if quantity_change == 0:
-                return True  # No change needed
+        products = {}
+        for sku in skus:
+            if sku.product_name not in products:
+                products[sku.product_name] = {
+                    'name': sku.product_name,
+                    'base_unit': sku.product_base_unit,
+                    'total_quantity': 0,
+                    'variant_count': 0,
+                    'sku_count': 0,
+                    'is_active': sku.is_product_active
+                }
 
-            # Update SKU quantity
-            sku.current_quantity = max(0, new_quantity)
-            sku.last_updated = datetime.utcnow()
+            products[sku.product_name]['total_quantity'] += sku.current_quantity
+            products[sku.product_name]['sku_count'] += 1
 
-            # Create history entry
-            history = ProductSKUHistory(
-                sku_id=sku_id,
-                change_type='recount',
-                quantity_change=quantity_change,
-                old_quantity=old_quantity,
-                new_quantity=sku.current_quantity,
-                notes=f"Recount: {old_quantity} → {new_quantity} ({quantity_change:+.2f}). {notes}",
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
-            db.session.add(history)
+        # Count unique variants per product
+        for product_name in products:
+            variant_count = len(set(sku.variant_name for sku in skus if sku.product_name == product_name))
+            products[product_name]['variant_count'] = variant_count
 
-            db.session.commit()
-            return True
-
-        except Exception:
-            db.session.rollback()
-            return False
+        return list(products.values())
 
     @staticmethod
-    def deduct_stock(sku_id: int, quantity: float, change_type: str,
-                    sale_price: Optional[float] = None, customer: Optional[str] = None,
-                    notes: str = '') -> bool:
-        """Deduct stock from SKU with proper validation"""
-        try:
-            sku = ProductSKU.query.get_or_404(sku_id)
-            
-            if sku.current_quantity < quantity:
-                return False  # Insufficient stock
-
-            old_quantity = sku.current_quantity
-            new_quantity = old_quantity - quantity
-
-            # Update SKU
-            sku.current_quantity = new_quantity
-            sku.last_updated = datetime.utcnow()
-
-            # Create structured note based on change type
-            if change_type == 'sale' and sale_price and customer:
-                structured_note = f"Sale: {quantity} × {sku.size_label} for ${sale_price} (${sale_price/quantity:.2f}/unit) to {customer}"
-            elif change_type == 'sale' and sale_price:
-                structured_note = f"Sale: {quantity} × {sku.size_label} for ${sale_price} (${sale_price/quantity:.2f}/unit)"
-            elif change_type == 'sample':
-                structured_note = f"Sample/Gift: {quantity} × {sku.size_label}"
-            else:
-                structured_note = f"{change_type.replace('_', ' ').title()}: {quantity} × {sku.size_label}"
-
-            if notes:
-                structured_note += f". Notes: {notes}"
-
-            # Create history entry
-            history = ProductSKUHistory(
-                sku_id=sku_id,
-                change_type=change_type,
-                quantity_change=-quantity,
-                old_quantity=old_quantity,
-                new_quantity=new_quantity,
-                sale_price=sale_price,
-                customer=customer,
-                notes=structured_note,
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
-            db.session.add(history)
-
-            db.session.commit()
-            return True
-
-        except Exception:
-            db.session.rollback()
-            return False
-
-    @staticmethod
-    def delete_sku(sku_id: int) -> bool:
-        """Delete a SKU and its history"""
-        try:
-            sku = ProductSKU.query.get_or_404(sku_id)
-
-            # Check if SKU has any batches associated
-            if sku.batch_id:
-                return False  # Cannot delete if tied to batches
-
-            # Delete history entries
-            ProductSKUHistory.query.filter_by(sku_id=sku_id).delete()
-
-            # Delete the SKU
-            db.session.delete(sku)
-            db.session.commit()
-            return True
-
-        except Exception:
-            db.session.rollback()
-            return False
+    def get_low_stock_skus(threshold_multiplier: float = 1.0):
+        """Get SKUs that are low on stock"""
+        return ProductSKU.query.filter(
+            ProductSKU.current_quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
+            ProductSKU.is_active == True
+        ).all()

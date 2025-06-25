@@ -1,88 +1,93 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
-from ...models import db, Product, ProductVariation, ProductInventory, ProductEvent, InventoryItem
+from ...models import db, ProductSKU, InventoryItem
+from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
-@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
+@products_bp.route('/<product_name>/variants/new', methods=['POST'])
 @login_required
-def add_variant(product_id):
+def add_variant(product_name):
     """Quick add new product variant via AJAX"""
     if request.is_json:
         data = request.get_json()
-        product_id = data.get('product_id')
         variant_name = data.get('name')
-        sku = data.get('sku')
+        sku_code = data.get('sku')
         description = data.get('description')
+        size_label = data.get('size_label', 'Bulk')
 
-        product = Product.query.get_or_404(product_id)
+        if not variant_name:
+            return jsonify({'error': 'Variant name is required'}), 400
 
-        # Check if variant already exists
-        if ProductVariation.query.filter_by(product_id=product_id, name=variant_name).first():
+        # Check if SKU already exists
+        existing_sku = ProductSKU.query.filter_by(
+            product_name=product_name, 
+            variant_name=variant_name,
+            size_label=size_label
+        ).first()
+        
+        if existing_sku:
             return jsonify({'error': 'Variant already exists'}), 400
 
-        variant = ProductVariation(
-            product_id=product_id,
-            name=variant_name,
-            sku=sku,
-            description=description
-        )
-        db.session.add(variant)
-        db.session.commit()
+        try:
+            # Create new SKU
+            sku = ProductService.get_or_create_sku(
+                product_name=product_name,
+                variant_name=variant_name,
+                size_label=size_label,
+                sku_code=sku_code,
+                variant_description=description
+            )
+            
+            db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'variant': {
-                'id': variant.id,
-                'name': variant.name,
-                'sku': variant.sku
-            }
-        })
+            return jsonify({
+                'success': True,
+                'variant': {
+                    'id': sku.id,
+                    'name': sku.variant_name,
+                    'sku': sku.sku_code
+                }
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 400
 
     return jsonify({'error': 'Invalid request'}), 400
 
-@products_bp.route('/<int:product_id>/variant/<int:variation_id>')
+@products_bp.route('/<product_name>/variant/<variant_name>')
 @login_required
-def view_variant(product_id, variation_id):
+def view_variant(product_name, variant_name):
     """View individual product variation details"""
-    product = Product.query.get_or_404(product_id)
-    variation = ProductVariation.query.get_or_404(variation_id)
+    # Get all SKUs for this product/variant combination
+    skus = ProductSKU.query.filter_by(
+        product_name=product_name,
+        variant_name=variant_name,
+        is_active=True
+    ).all()
 
-    # Ensure variation belongs to this product
-    if variation.product_id != product_id:
-        flash('Variation not found for this product', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+    if not skus:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.list_products'))
 
-    # Get inventory for this specific variation (including zero quantity entries)
-    inventory_entries = ProductInventory.query.filter_by(
-        product_id=product_id,
-        variant_id=variation.id
-    ).order_by(ProductInventory.id.asc()).all()
-
-    # Group by size_label and unit (include all entries, not just active ones)
+    # Group SKUs by size_label
     size_groups = {}
-    for entry in inventory_entries:
-        # Normalize bulk entries to consistent "Bulk" label
-        display_size_label = entry.size_label
-        if not entry.size_label or entry.size_label == '':
-            display_size_label = "Bulk"
+    for sku in skus:
+        display_size_label = sku.size_label or "Bulk"
+        key = f"{display_size_label}_{sku.unit}"
         
-        key = f"{display_size_label}_{entry.unit}"
         if key not in size_groups:
             size_groups[key] = {
                 'size_label': display_size_label,
-                'unit': entry.unit,
+                'unit': sku.unit,
                 'total_quantity': 0,
-                'batches': []
+                'skus': []
             }
-        size_groups[key]['total_quantity'] += entry.quantity
-        size_groups[key]['batches'].append(entry)
-
-    # Get recent activity for this variation
-    recent_events = ProductEvent.query.filter(
-        ProductEvent.product_id == product_id,
-        ProductEvent.description.like(f'%{variation.name}%')
-    ).order_by(ProductEvent.timestamp.desc()).limit(20).all()
+        
+        size_groups[key]['total_quantity'] += sku.current_quantity
+        size_groups[key]['skus'].append(sku)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
@@ -91,45 +96,52 @@ def view_variant(product_id, variation_id):
     ).filter(InventoryItem.quantity > 0).all()
 
     return render_template('products/view_variation.html',
-                         product=product,
-                         variation=variation,
+                         product_name=product_name,
+                         variant_name=variant_name,
+                         variant_description=skus[0].variant_description if skus else None,
                          size_groups=size_groups,
-                         recent_events=recent_events,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
+@products_bp.route('/<product_name>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
-def edit_variant(product_id, variation_id):
+def edit_variant(product_name, variant_name):
     """Edit product variation details"""
-    product = Product.query.get_or_404(product_id)
-    variation = ProductVariation.query.get_or_404(variation_id)
-
-    # Ensure variation belongs to this product
-    if variation.product_id != product_id:
-        flash('Variation not found for this product', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
-
     name = request.form.get('name')
     description = request.form.get('description')
 
     if not name:
-        flash('Variation name is required', 'error')
-        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
+        flash('Variant name is required', 'error')
+        return redirect(url_for('products.view_variant', 
+                               product_name=product_name, 
+                               variant_name=variant_name))
 
-    # Check if another variation has this name for the same product
-    existing = ProductVariation.query.filter(
-        ProductVariation.name == name,
-        ProductVariation.product_id == product_id,
-        ProductVariation.id != variation_id
+    # Check if another variant has this name for the same product
+    existing = ProductSKU.query.filter(
+        ProductSKU.variant_name == name,
+        ProductSKU.product_name == product_name,
+        ProductSKU.variant_name != variant_name
     ).first()
+    
     if existing:
-        flash('Another variation with this name already exists for this product', 'error')
-        return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
+        flash('Another variant with this name already exists for this product', 'error')
+        return redirect(url_for('products.view_variant', 
+                               product_name=product_name, 
+                               variant_name=variant_name))
 
-    variation.name = name
-    variation.description = description if description else None
+    # Update all SKUs with this variant name
+    skus = ProductSKU.query.filter_by(
+        product_name=product_name,
+        variant_name=variant_name
+    ).all()
+    
+    for sku in skus:
+        sku.variant_name = name
+        sku.variant_description = description if description else None
 
     db.session.commit()
-    flash('Variation updated successfully', 'success')
-    return redirect(url_for('products.view_variant', product_id=product_id, variation_id=variation_id))
+    flash('Variant updated successfully', 'success')
+    
+    return redirect(url_for('products.view_variant', 
+                           product_name=product_name, 
+                           variant_name=name))

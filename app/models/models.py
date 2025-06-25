@@ -154,8 +154,8 @@ class Batch(db.Model):
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
     projected_yield = db.Column(db.Float)
     projected_yield_unit = db.Column(db.String(50))
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
-    variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'))
+    # Remove product_id and variant_id references - use SKU directly
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=True)
     final_quantity = db.Column(db.Float)
     output_unit = db.Column(db.String(50))
     scale = db.Column(db.Float, default=1.0)
@@ -177,8 +177,7 @@ class Batch(db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)
 
     recipe = db.relationship('Recipe', backref='batches')
-    product = db.relationship('Product', backref='batches')
-    variant = db.relationship('ProductVariation', backref='batches')
+    sku = db.relationship('ProductSKU', backref='batches')
 
 class BatchIngredient(db.Model):
     __tablename__ = 'batch_ingredient'
@@ -281,6 +280,7 @@ class Product(db.Model):
     
     # Relationships - variations and SKUs manage their own data
     variations = db.relationship('ProductVariation', backref='product', cascade="all, delete-orphan")
+    skus = db.relationship('ProductSKU', backref='product', cascade="all, delete-orphan") # Ensuring SKUs are also related
     events = db.relationship('ProductEvent', backref='product', lazy=True)
     
     # Metadata
@@ -383,6 +383,96 @@ class ProductEvent(db.Model):
 
     user = db.relationship('User')
 
+class ProductSKU(db.Model):
+    """Stock Keeping Unit - manages inventory"""
+    __tablename__ = 'product_sku'
+    id = db.Column(db.Integer, primary_key=True)
+    sku_code = db.Column(db.String(64), unique=True, nullable=False) # Unique identifier
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False) # Link to base product
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=True) # Variation (size, pack, etc)
+    
+    # Inventory tracking
+    current_quantity = db.Column(db.Float, default=0.0)
+    unit = db.Column(db.String(32), nullable=False) # oz, g, each, etc.
+    cost_per_unit = db.Column(db.Float, default=0.0)
+    low_stock_threshold = db.Column(db.Float, default=0.0)
+    
+    # Labeling & Display
+    size_label = db.Column(db.String(64), nullable=True) # '2oz', 'Trial Size', etc.
+    is_active = db.Column(db.Boolean, default=True)
+    notes = db.Column(db.Text)
+
+    # Metadata
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    product = db.relationship('Product')
+    variant = db.relationship('ProductVariation')
+
+    # Computed properties
+    @property
+    def product_name(self):
+        return self.product.name
+    
+    @property
+    def variant_name(self):
+        return self.variant.name if self.variant else "Base"
+    
+    @property
+    def requires_expiration(self):
+        return self.product.is_perishable
+    
+    @property
+    def full_label(self):
+        return f"{self.product_name} - {self.variant_name} ({self.size_label})"
+
+class ProductInventoryHistory(db.Model):
+    """Audit trail for SKU changes - all data through SKU"""
+    id = db.Column(db.Integer, primary_key=True)
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # PRIMARY: All data from SKU
+    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)
+    
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    change_type = db.Column(db.String(32), nullable=False)
+    quantity_change = db.Column(db.Float, nullable=False)
+    remaining_quantity = db.Column(db.Float, nullable=True)
+    unit_cost = db.Column(db.Float, nullable=True)
+    
+    # FIFO tracking
+    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_inventory_history.id'), nullable=True)
+    fifo_code = db.Column(db.String(32), nullable=True)
+    
+    # Source information
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    note = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Expiration tracking
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+
+    # Relationships - all product info through SKU
+    sku = db.relationship('ProductSKU', backref='history')
+    product_inventory = db.relationship('ProductInventory', backref='history')
+    batch = db.relationship('Batch')
+    user = db.relationship('User')
+    
+    # Properties to access product info through SKU (no duplication)
+    @property
+    def unit(self):
+        return self.sku.unit
+    
+    @property
+    def product(self):
+        return self.sku.product
+    
+    @property
+    def variant_name(self):
+        return self.sku.variant_name
+
 class InventoryItem(db.Model):
     """Ingredients and raw materials"""
     __tablename__ = 'inventory_item'
@@ -434,48 +524,3 @@ class Tag(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-class ProductInventoryHistory(db.Model):
-    """Audit trail for SKU changes - all data through SKU"""
-    id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)  # PRIMARY: All data from SKU
-    product_inventory_id = db.Column(db.Integer, db.ForeignKey('product_inventory.id'), nullable=False)
-    
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(32), nullable=False)
-    quantity_change = db.Column(db.Float, nullable=False)
-    remaining_quantity = db.Column(db.Float, nullable=True)
-    unit_cost = db.Column(db.Float, nullable=True)
-    
-    # FIFO tracking
-    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_inventory_history.id'), nullable=True)
-    fifo_code = db.Column(db.String(32), nullable=True)
-    
-    # Source information
-    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
-    note = db.Column(db.Text)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    
-    # Expiration tracking
-    is_perishable = db.Column(db.Boolean, default=False)
-    shelf_life_days = db.Column(db.Integer, nullable=True)
-    expiration_date = db.Column(db.DateTime, nullable=True)
-
-    # Relationships - all product info through SKU
-    sku = db.relationship('ProductSKU', backref='history')
-    product_inventory = db.relationship('ProductInventory', backref='history')
-    batch = db.relationship('Batch')
-    user = db.relationship('User')
-    
-    # Properties to access product info through SKU (no duplication)
-    @property
-    def unit(self):
-        return self.sku.unit
-    
-    @property
-    def product(self):
-        return self.sku.product
-    
-    @property
-    def variant_name(self):
-        return self.sku.variant_name
