@@ -46,11 +46,23 @@ def view_sku(product_id, variant, size_label):
         fifo_query = fifo_query.filter(ProductInventory.quantity > 0)
 
     # Get unified history entries for this SKU
-    history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
-        ProductInventory.product_id == product_id,
-        ProductInventory.variant == variant,
-        ProductInventory.size_label == size_label
-    ).order_by(ProductInventoryHistory.timestamp.desc())
+    # Handle "Bulk" entries which might have size_label as None or empty string
+    if size_label == "Bulk":
+        history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            db.or_(
+                ProductInventory.size_label == None,
+                ProductInventory.size_label == '',
+                ProductInventory.size_label == 'Bulk'
+            )
+        ).order_by(ProductInventoryHistory.timestamp.desc())
+    else:
+        history_query = ProductInventoryHistory.query.join(ProductInventory).filter(
+            ProductInventory.product_id == product_id,
+            ProductInventory.variant == variant,
+            ProductInventory.size_label == size_label
+        ).order_by(ProductInventoryHistory.timestamp.desc())
 
     # Paginate the history
     history_pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
