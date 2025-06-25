@@ -103,7 +103,9 @@
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
                   <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
-                      {{ size_display }}
+                      <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                        {{ size_display }}
+                      </a>
                       {% if group.total_quantity <= 0 and has_history %}
                         <small class="badge bg-secondary ms-1">No Stock</small>
                       {% endif %}
