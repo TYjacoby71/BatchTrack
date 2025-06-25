@@ -305,16 +305,24 @@ class ProductInventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
+    variant = db.Column(db.String(128), nullable=True)  # Variant name for backward compatibility
+    size_label = db.Column(db.String(128), nullable=True)  # Size/packaging info
+    sku = db.Column(db.String(128), nullable=True)  # SKU code
     quantity = db.Column(db.Float, nullable=False, default=0.0)
     unit = db.Column(db.String(32), nullable=False)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # Container used
+    batch_cost_per_unit = db.Column(db.Float, nullable=True)  # Cost per unit
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # When added
+    notes = db.Column(db.Text, nullable=True)  # Additional notes
     # Expiration tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
-    variant = db.relationship('ProductVariation', backref='inventory')
+    variant_obj = db.relationship('ProductVariation', backref='inventory')
     batch = db.relationship('Batch')
+    container = db.relationship('InventoryItem', foreign_keys=[container_id])
 
 class ProductVariation(db.Model):
     """Product variations (SKUs) - handles packaging, sizes, etc."""
