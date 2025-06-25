@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from ...utils.unit_utils import get_global_unit_list
@@ -58,7 +58,7 @@ def new_recipe():
                         recipe_ingredient = RecipeIngredient(
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(recipe_ingredient)
@@ -218,7 +218,7 @@ def create_variation(recipe_id):
                         recipe_ingredient = RecipeIngredient(
                             recipe_id=new_variation.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(recipe_ingredient)
@@ -446,7 +446,7 @@ def edit_recipe(recipe_id):
                         assoc = RecipeIngredient(
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
-                            amount=float(amt.strip()),
+                            quantity=float(amt.strip()),
                             unit=unit.strip()
                         )
                         db.session.add(assoc)
