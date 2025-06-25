@@ -40,7 +40,7 @@ def upgrade():
         batch_op.add_column(sa.Column('batch_cost_per_unit', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('timestamp', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('notes', sa.Text(), nullable=True))
-        batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
+        batch_op.create_foreign_key('fk_product_inventory_container_id', 'inventory_item', ['container_id'], ['id'])
 
     # ### end Alembic commands ###
 
