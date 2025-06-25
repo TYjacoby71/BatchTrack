@@ -23,7 +23,7 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
-    
+
     # Initialize CSRF protection
     from .extensions import csrf
     csrf.init_app(app)
@@ -63,7 +63,13 @@ def create_app():
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(products_bp)
+    # Import and register blueprints
+    try:
+        from .blueprints.products import products_bp
+        app.register_blueprint(products_bp, url_prefix='/products')
+    except ImportError as e:
+        print(f"Warning: Could not register product blueprints: {e}")
+        pass
     app.register_blueprint(stock_api_bp)
     app.register_blueprint(ingredient_api_bp)
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
