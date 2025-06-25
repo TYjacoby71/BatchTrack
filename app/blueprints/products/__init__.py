@@ -7,7 +7,6 @@ products_bp = Blueprint('products', __name__, template_folder='templates')
 from .products import *
 
 # Import additional route modules to register them with the blueprint
-from .product_routes import *
 from .product_variants import *  
 from .product_inventory import *
 from .product_api import *
