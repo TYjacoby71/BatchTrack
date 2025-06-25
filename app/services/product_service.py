@@ -346,7 +346,12 @@ class ProductService:
         from ..models import InventoryItem
 
         product = Product.query.get_or_404(product_id)
-        container = InventoryItem.query.get_or_404(container_id) if container_id else None
+        container = None
+        if container_id:
+            try:
+                container = InventoryItem.query.get_or_404(int(container_id))
+            except (ValueError, TypeError):
+                container = None
 
         # Create size label from container, parameter, or use product-based labeling
         if size_label:
@@ -356,7 +361,7 @@ class ProductService:
             final_size_label = f"{container.storage_amount} {container.storage_unit} {container.name.replace('Container - ', '')}"
         else:
             # For standalone products without containers, always use "Bulk"
-            final_size_label = "Bulk"
+            final_size_label = "Bulk"l = "Bulk"
 
         # Create ProductInventory entry
         inventory = ProductInventory(
