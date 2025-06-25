@@ -4,9 +4,7 @@ from ...models import db, Product, ProductVariation, ProductInventory, ProductEv
 from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
-product_variants_bp = Blueprint('product_variants', __name__, template_folder='templates')
-
-@product_variants_bp.route('/<int:product_id>/variants/new', methods=['POST'])
+@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
@@ -43,7 +41,7 @@ def add_variant(product_id):
 
     return jsonify({'error': 'Invalid request'}), 400
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>')
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>')
 @login_required
 def view_variant(product_id, variation_id):
     """View individual product variation details"""
@@ -96,7 +94,7 @@ def view_variant(product_id, variation_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@product_variants_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<int:variation_id>/edit', methods=['POST'])
 @login_required
 def edit_variant(product_id, variation_id):
     """Edit product variation details"""
