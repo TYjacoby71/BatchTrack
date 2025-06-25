@@ -87,7 +87,7 @@ class ProductService:
                              container_id: Optional[int] = None, 
                              container_overrides: Optional[Dict[int, int]] = None) -> List[ProductInventory]:
         """Add product inventory from a finished batch, creating SKU-level entries that aggregate upward"""
-        from models import BatchContainer, InventoryItem
+        from ..models import BatchContainer, InventoryItem
 
         batch = Batch.query.get_or_404(batch_id)
         product = Product.query.get_or_404(product_id)
@@ -343,7 +343,7 @@ class ProductService:
     @staticmethod
     def add_manual_stock(product_id, variant_name, container_id, quantity, unit_cost=0, notes='', size_label=None):
         """Add manual stock with container matching"""
-        from models import InventoryItem
+        from ..models import InventoryItem
 
         product = Product.query.get_or_404(product_id)
         container = InventoryItem.query.get_or_404(container_id) if container_id else None
