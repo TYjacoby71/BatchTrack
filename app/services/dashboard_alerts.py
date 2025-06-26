@@ -1,7 +1,7 @@
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from ..models import db, InventoryItem, Batch, ProductInventory
+from ..models import db, InventoryItem, Batch, ProductSKU
 from ..services.inventory_alerts import get_low_stock_ingredients
 from ..blueprints.expiration.services import ExpirationService
 import json
@@ -227,9 +227,9 @@ class DashboardAlertService:
     def _get_product_inventory_issues() -> int:
         """Get count of products with inventory issues"""
         try:
-            # Products with zero or negative inventory
-            issues = ProductInventory.query.filter(
-                ProductInventory.quantity <= 0
+            # SKUs with zero or negative inventory
+            issues = ProductSKU.query.filter(
+                ProductSKU.current_quantity <= 0
             ).count()
             return issues
         except:
