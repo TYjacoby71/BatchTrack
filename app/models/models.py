@@ -177,7 +177,7 @@ class Batch(db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)
 
     recipe = db.relationship('Recipe', backref='batches')
-    sku = db.relationship('ProductSKU', backref='batches')
+    sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
 class BatchIngredient(db.Model):
     __tablename__ = 'batch_ingredient'
