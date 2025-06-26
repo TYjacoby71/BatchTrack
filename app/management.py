@@ -27,8 +27,18 @@ def seed_all_command():
         seed_roles_and_permissions()
 
         seed_units()
-        seed_categories()
+        
+        # Seed users first to create organization
         seed_users()
+        
+        # Get the organization ID from the first organization
+        from .models import Organization
+        org = Organization.query.first()
+        if org:
+            seed_categories(organization_id=org.id)
+        else:
+            click.echo('❌ No organization found for seeding categories')
+            return
 
         # Update existing users with database roles
         update_existing_users_with_roles()
