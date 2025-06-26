@@ -3,12 +3,11 @@ from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, user_scoped_query
-
-app_routes_bp = Blueprint('app_routes', __name__)
-
 from ..services.inventory_alerts import get_low_stock_ingredients
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
+
+app_routes_bp = Blueprint('app_routes', __name__)
 
 # Helper functions for stock checking
 def check_stock_for_recipe(recipe, scale=1):
@@ -26,7 +25,6 @@ def check_container_availability(container_ids, scale=1):
 
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
-@require_permission('dashboard.view')
 def dashboard(scope_context=None):
     recipes = Recipe.query.all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
@@ -66,7 +64,6 @@ def dashboard(scope_context=None):
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
-@require_permission('recipes.view')
 def check_stock():
     try:
         data = request.get_json()
