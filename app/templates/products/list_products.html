@@ -50,9 +50,6 @@
               </button>
               {% endif %}
             </div>
-            {% if product.total_inventory < product.low_stock_threshold %}
-              <span class="badge bg-warning">Low Stock</span>
-            {% endif %}
           </div>
           <div class="card-body">
             <div class="row text-center">
@@ -163,10 +160,11 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if product.total_inventory == 0 %}
+                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                  {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
+                  {% if total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
-                  {% elif product.total_inventory < product.low_stock_threshold %}
-                    <span class="badge bg-warning">Low Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>
                   {% endif %}

@@ -16,17 +16,31 @@ def product_list():
     from ...services.product_service import ProductService
 
     sort_type = request.args.get('sort', 'name')
-    products = ProductService.get_product_summary_skus()
+    product_data = ProductService.get_product_summary_skus()
+
+    # Convert dict data to objects with the attributes the template expects
+    class ProductSummary:
+        def __init__(self, data):
+            self.name = data.get('product_name', '')
+            self.product_base_unit = data.get('product_base_unit', '')
+            self.variant_count = data.get('variant_count', 0)
+            self.created_at = data.get('created_at')
+            self.variations = data.get('variations', [])
+            self.inventory = data.get('inventory', [])
+            # Calculate total quantity from inventory
+            self.total_quantity = data.get('total_quantity', 0)
+
+    products = [ProductSummary(data) for data in product_data]
 
     # Sort products based on the requested sort type
     if sort_type == 'popular':
         # Sort by sales volume (most sales first) - TODO: implement sales tracking for SKUs
-        products.sort(key=lambda p: p['total_quantity'], reverse=True)
+        products.sort(key=lambda p: p.total_quantity, reverse=True)
     elif sort_type == 'stock':
         # Sort by stock level (low stock first)
-        products.sort(key=lambda p: p['total_quantity'] / max(p.get('low_stock_threshold', 1), 1))
+        products.sort(key=lambda p: p.total_quantity)
     else:  # default to name
-        products.sort(key=lambda p: p['product_name'].lower())
+        products.sort(key=lambda p: p.name.lower())
 
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
@@ -150,7 +164,7 @@ def delete_product(product_name):
     try:
         # Get all SKUs for this product
         skus = ProductSKU.query.filter_by(product_name=product_name).all()
-        
+
         if not skus:
             flash('Product not found', 'error')
             return redirect(url_for('products.product_list'))
