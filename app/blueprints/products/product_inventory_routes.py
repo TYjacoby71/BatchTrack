@@ -7,10 +7,83 @@ from ...services.product_inventory_service import ProductInventoryService
 
 product_inventory_bp = Blueprint('product_inventory', __name__)
 
-@product_inventory_bp.route('/sku/<int:sku_id>')
+@product_inventory_bp.route('/sku/<int:sku_id>', methods=['GET', 'POST'])
 @login_required  
 def view_sku(sku_id):
     """View detailed SKU-level inventory - the point of truth"""
+    if request.method == 'POST':
+        # Handle different POST actions based on form data
+        action = request.form.get('action')
+
+        if action == 'edit_sku':
+            # Handle SKU code editing inline
+            sku = ProductSKU.query.get_or_404(sku_id)
+            sku_code = request.form.get('sku_code', '').strip()
+
+            # Check if SKU code already exists
+            if sku_code:
+                existing = ProductSKU.query.filter(
+                    ProductSKU.sku_code == sku_code,
+                    ProductSKU.id != sku_id
+                ).first()
+
+                if existing:
+                    flash(f'SKU code "{sku_code}" is already in use', 'error')
+                    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+            sku.sku_code = sku_code if sku_code else None
+            db.session.commit()
+
+            if sku_code:
+                flash(f'SKU code updated to "{sku_code}"', 'success')
+            else:
+                flash('SKU code removed', 'success')
+
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+        elif action == 'add_stock':
+            return add_stock(sku_id)
+        elif action == 'deduct_stock':
+            return deduct_stock(sku_id)
+        elif action == 'recount':
+            return recount_sku(sku_id)
+        elif action == 'adjust_fifo':
+            # Handle FIFO adjustment inline
+            change_type = request.form.get('change_type')
+            quantity = float(request.form.get('quantity', 0))
+            notes = request.form.get('notes', '')
+            inventory_id = request.form.get('inventory_id')
+
+            if quantity <= 0:
+                flash('Quantity must be positive', 'error')
+                return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+            try:
+                from ...services.product_inventory_service import ProductInventoryService
+                success = ProductInventoryService.adjust_fifo_entry(
+                    inventory_id=int(inventory_id),
+                    quantity=quantity,
+                    change_type=change_type,
+                    notes=notes
+                )
+
+                if success:
+                    db.session.commit()
+                    flash('FIFO entry adjusted successfully', 'success')
+                else:
+                    db.session.rollback()
+                    flash('Error adjusting FIFO entry', 'error')
+
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error: {str(e)}', 'error')
+
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+        else:
+            flash('Invalid action', 'error')
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+    # GET request handling
     page = request.args.get('page', 1, type=int)
     per_page = 10
     fifo_filter = request.args.get('fifo') == 'true'
@@ -88,7 +161,7 @@ def add_stock(sku_id):
             change_type='manual_addition'
         )
         db.session.commit()
-        
+
         # Build descriptive success message
         sku = ProductSKU.query.get(sku_id)
         if container_id:

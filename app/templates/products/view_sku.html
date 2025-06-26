@@ -245,6 +245,7 @@
             <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="adjust_fifo">
+                <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="change_type" class="form-label">Adjustment Type</label>
@@ -280,5 +281,39 @@
     </div>
 </div>
 
+<script>
+// Populate FIFO adjustment modal with data
+document.addEventListener('DOMContentLoaded', function() {
+    const adjustModal = document.getElementById('adjustFifoModal');
+    if (adjustModal) {
+        adjustModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const inventoryId = button.getAttribute('data-inventory-id');
+            const currentQuantity = button.getAttribute('data-current-quantity');
+            const unit = button.getAttribute('data-unit');
+
+            // Set the inventory ID
+            document.getElementById('modalInventoryId').value = inventoryId;
+
+            // Update help text
+            document.getElementById('quantityHelp').textContent = 
+                `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total quantity. For deductions: enter amount to remove.`;
+        });
+    }
+});
+
+function toggleFifoFilter() {
+    const checkbox = document.getElementById('fifoFilter');
+    const url = new URL(window.location);
+
+    if (checkbox.checked) {
+        url.searchParams.set('fifo', 'true');
+    } else {
+        url.searchParams.delete('fifo');
+    }
+
+    window.location.href = url.toString();
+}
+</script>
 
 {% endblock %}
