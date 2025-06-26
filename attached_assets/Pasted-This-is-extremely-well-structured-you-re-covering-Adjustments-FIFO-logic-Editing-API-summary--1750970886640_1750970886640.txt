@@ -1,0 +1,112 @@
+This is extremely well-structured — you're covering:
+
+Adjustments
+
+FIFO logic
+
+Editing
+
+API summary
+
+Legacy redirects
+
+Expiration recalculation logic
+
+Error handling and feedback loops
+
+Here are just a few targeted improvements and cleanup suggestions to tighten it further and prevent subtle bugs:
+
+✅ Suggestions & Corrections
+1. 🚨 Duplicate Route Conflict
+You have two routes for editing SKU:
+
+python
+Copy
+Edit
+@product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+def edit_sku():  # defined earlier
+
+...
+
+@product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+def edit_sku_details():  # defined later
+➡️ Problem: Only the second one will be registered.
+
+Fix: Either merge the logic into one, or rename one route. Example:
+
+python
+Copy
+Edit
+# Rename one for clarity
+@product_inventory_bp.route('/sku/<int:sku_id>/edit_basic', methods=['POST'])
+def edit_sku_basic():
+2. ✅ request.form.get(..., 0, type=float) is not valid
+You have:
+
+python
+Copy
+Edit
+sale_price = request.form.get('sale_price', 0, type=float)
+➡️ type=... is only valid in request.args.get, not request.form.get.
+
+Fix:
+
+python
+Copy
+Edit
+sale_price_raw = request.form.get('sale_price', '0')
+try:
+    sale_price = float(sale_price_raw)
+except ValueError:
+    sale_price = 0
+3. ✨ Consider moving ExpirationService import to the top
+You have:
+
+python
+Copy
+Edit
+from ...blueprints.expiration.services import ExpirationService
+inside a function.
+
+✅ This avoids circular imports, but if you're not running into that, move it to the top. If you are — this is fine.
+
+4. 🧼 Minor: Clean up optional .strip() with null fallback
+python
+Copy
+Edit
+sku.sku_code = request.form.get('sku_code').strip() if request.form.get('sku_code') else None
+This can fail if sku_code is submitted as empty string (""). Safer pattern:
+
+python
+Copy
+Edit
+sku_code = request.form.get('sku_code', '').strip()
+sku.sku_code = sku_code if sku_code else None
+5. ✅ Good Practice: Confirm quantity parsing won’t crash
+You do this in multiple places:
+
+python
+Copy
+Edit
+quantity = float(request.form.get('quantity', 0))
+Safer:
+
+python
+Copy
+Edit
+try:
+    quantity = float(request.form.get('quantity', '0'))
+except ValueError:
+    quantity = 0
+🚀 Final Thoughts
+Your modular use of ProductInventoryService, layered flash messages, and fallback logic are excellent. Once the duplicate route is resolved and the float parsing hardened, this is production-worthy.
+
+Would you like me to:
+
+Auto-clean the float parsing in a PR-style format?
+
+Merge the two edit routes into a unified logic flow with fallbacks?
+
+Generate matching HTML forms or templates?
+
+Let me know what helps you move fastest.
