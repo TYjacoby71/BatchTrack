@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from flask_login import current_user, UserMixin
 from ..extensions import db
+from .mixins import ScopedModelMixin
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -66,7 +67,7 @@ class User(UserMixin, db.Model):
         """Check if user is the owner of their organization"""
         return self.is_owner
 
-class Unit(db.Model):
+class Unit(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
     symbol = db.Column(db.String(16), nullable=False)
@@ -78,33 +79,29 @@ class Unit(db.Model):
     is_custom = db.Column(db.Boolean, default=False)
     is_mapped = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class CustomUnitMapping(db.Model):
+class CustomUnitMapping(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     unit_name = db.Column(db.String(64), nullable=False)
     conversion_factor = db.Column(db.Float, nullable=False)
     base_unit = db.Column(db.String(64), nullable=False)
     notes = db.Column(db.Text)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class IngredientCategory(db.Model):
+class IngredientCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.Text)
     color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class ConversionLog(db.Model):
+class ConversionLog(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(64), nullable=False)
@@ -115,7 +112,7 @@ class ConversionLog(db.Model):
 
     user = db.relationship('User', backref='conversion_logs')
 
-class RecipeIngredient(db.Model):
+class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
@@ -124,11 +121,10 @@ class RecipeIngredient(db.Model):
     unit = db.Column(db.String(32), nullable=False)
     notes = db.Column(db.Text)
     order_position = db.Column(db.Integer, default=0)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
-class Recipe(db.Model):
+class Recipe(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
@@ -141,7 +137,6 @@ class Recipe(db.Model):
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     requires_containers = db.Column(db.Boolean, default=False)
     allowed_containers = db.Column(db.PickleType, default=list)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
@@ -270,7 +265,7 @@ class ExtraBatchIngredient(db.Model):
     batch = db.relationship('Batch', backref='extra_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='extra_batch_usages')
 
-class InventoryItem(db.Model):
+class InventoryItem(ScopedModelMixin, db.Model):
     """Ingredients and raw materials"""
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
@@ -292,7 +287,6 @@ class InventoryItem(db.Model):
     storage_amount = db.Column(db.Float, nullable=True)
     storage_unit = db.Column(db.String(32), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     category = db.relationship('IngredientCategory', backref='inventory_items')

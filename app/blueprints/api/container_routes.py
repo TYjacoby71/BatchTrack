@@ -10,21 +10,15 @@ container_api_bp = Blueprint('container_api', __name__, url_prefix='/api')
 def available_containers(recipe_id):
     try:
         scale = float(request.args.get('scale', 1.0))
-        recipe = Recipe.query.filter_by(
-            id=recipe_id, 
-            organization_id=current_user.organization_id
-        ).first()
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
         allowed_containers = recipe.allowed_containers or []
         in_stock = []
 
-        # Scope containers by organization
-        containers_query = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=current_user.organization_id
-        )
+        # Get containers using scoped query
+        containers_query = InventoryItem.scoped().filter_by(type='container')
 
         for container in containers_query.all():
             if allowed_containers and container.id not in allowed_containers:
