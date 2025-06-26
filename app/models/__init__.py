@@ -9,7 +9,7 @@ from .models import (
 )
 from .product_sku import ProductSKU, ProductSKUHistory
 from .role import Role
-from .permission import Permission
+from .permission import Permission, role_permission
 
 # Re-export everything for convenience
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
-    'ProductSKU', 'ProductSKUHistory', 'Role', 'Permission'
+    'ProductSKU', 'ProductSKUHistory', 'Role', 'Permission', 'role_permission'
 ]
