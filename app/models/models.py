@@ -33,8 +33,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(32), default='organization_owner')  # Keep for backward compatibility
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
+    role = db.Column(db.String(64), default='organization_owner')  # Legacy role field - kept for backward compatibility
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))  # New database role relationship
+    db_role = db.relationship('Role', backref='users')  # Relationship to Role model
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
