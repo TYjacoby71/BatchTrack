@@ -5,6 +5,8 @@ import click
 from flask.cli import with_appcontext
 from .extensions import db
 from .seeders import seed_units, seed_categories, seed_users
+from .seeders.user_seeder import update_existing_users_with_roles
+from .seeders.role_permission_seeder import seed_roles_and_permissions
 
 @click.command()
 @with_appcontext
@@ -16,24 +18,47 @@ def init_db():
     seed_users()
     click.echo('✅ Database initialized successfully!')
 
-@click.command()
+@click.command('seed-all')
 @with_appcontext
-def seed_all():
-    """Seed all necessary data"""
-    print("🌱 Starting comprehensive seed...")
-    seed_units()
-    seed_categories()
-    seed_users()
-    from .seeders.role_permission_seeder import seed_roles_and_permissions
-    seed_roles_and_permissions()
-    print("✅ All seeding complete!")
+def seed_all_command():
+    """Seed all data"""
+    try:
+        # First seed roles and permissions
+        seed_roles_and_permissions()
 
-@click.command()
+        seed_units()
+        seed_categories()
+        seed_users()
+
+        # Update existing users with database roles
+        update_existing_users_with_roles()
+
+        click.echo('✅ All data seeded successfully!')
+    except Exception as e:
+        click.echo(f'❌ Error seeding data: {str(e)}')
+        raise
+
+@click.command('seed-roles-permissions')
 @with_appcontext
-def seed_roles_permissions():
-    """Seed roles and permissions"""
-    from .seeders.role_permission_seeder import seed_roles_and_permissions
-    seed_roles_and_permissions()
+def seed_roles_permissions_command():
+    """Seed roles and permissions only"""
+    try:
+        seed_roles_and_permissions()
+        click.echo('✅ Roles and permissions seeded successfully!')
+    except Exception as e:
+        click.echo(f'❌ Error seeding roles and permissions: {str(e)}')
+        raise
+
+@click.command('update-user-roles')
+@with_appcontext
+def update_user_roles_command():
+    """Update existing users with database role assignments"""
+    try:
+        update_existing_users_with_roles()
+        click.echo('✅ User roles updated successfully!')
+    except Exception as e:
+        click.echo(f'❌ Error updating user roles: {str(e)}')
+        raise
 
 @click.command()
 @with_appcontext
@@ -45,6 +70,7 @@ def seed_units_only():
 def register_commands(app):
     """Register CLI commands with the app"""
     app.cli.add_command(init_db)
-    app.cli.add_command(seed_all)
+    app.cli.add_command(seed_all_command)
     app.cli.add_command(seed_units_only)
-    app.cli.add_command(seed_roles_permissions)
+    app.cli.add_command(seed_roles_permissions_command)
+    app.cli.add_command(update_user_roles_command)

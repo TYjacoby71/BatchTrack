@@ -1,5 +1,5 @@
 
-from ..models import User, Organization
+from ..models import User, Organization, Role
 from ..extensions import db
 from werkzeug.security import generate_password_hash
 
@@ -16,12 +16,17 @@ def seed_users():
         db.session.add(org)
         db.session.flush()  # Get the ID
     
+    # Get roles from database
+    developer_role = Role.query.filter_by(name='developer').first()
+    org_owner_role = Role.query.filter_by(name='organization_owner').first()
+    
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
             username='dev',
             password_hash=generate_password_hash('dev123'),
-            role='developer',  # Use developer role
+            role='developer',  # Keep legacy role for backward compatibility
+            role_id=developer_role.id if developer_role else None,  # New database role
             first_name='System',
             last_name='Developer',
             email='dev@batchtrack.com',
@@ -39,7 +44,8 @@ def seed_users():
         admin_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role='organization_owner',  # Use organization_owner role
+            role='organization_owner',  # Keep legacy role for backward compatibility
+            role_id=org_owner_role.id if org_owner_role else None,  # New database role
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',
@@ -57,7 +63,8 @@ def seed_users():
         maker_user = User(
             username='maker',
             password_hash=generate_password_hash('maker123'),
-            role='organization_owner',
+            role='organization_owner',  # Keep legacy role for backward compatibility
+            role_id=org_owner_role.id if org_owner_role else None,  # New database role
             first_name='Sample',
             last_name='Maker',
             email='maker@example.com',
@@ -72,3 +79,26 @@ def seed_users():
     
     db.session.commit()
     print("✅ User seeding completed")
+
+def update_existing_users_with_roles():
+    """Update existing users to have database role assignments"""
+    users = User.query.all()
+    
+    for user in users:
+        if not user.role_id:  # Only update users without database roles
+            # Map legacy role strings to database roles
+            role_name = user.role
+            db_role = Role.query.filter_by(name=role_name).first()
+            
+            if db_role:
+                user.role_id = db_role.id
+                print(f"✅ Updated user {user.username} with role: {role_name}")
+            else:
+                # Default to organization_owner if role not found
+                default_role = Role.query.filter_by(name='organization_owner').first()
+                if default_role:
+                    user.role_id = default_role.id
+                    print(f"⚠️  User {user.username} had unknown role '{role_name}', set to organization_owner")
+    
+    db.session.commit()
+    print("✅ Existing users updated with database roles")
