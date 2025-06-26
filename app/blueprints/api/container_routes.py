@@ -17,8 +17,11 @@ def available_containers(recipe_id):
         allowed_containers = recipe.allowed_containers or []
         in_stock = []
 
-        # Get containers using scoped query
-        containers_query = InventoryItem.scoped().filter_by(type='container')
+        # Get containers filtered by organization
+        containers_query = InventoryItem.query.filter_by(
+            type='container',
+            organization_id=current_user.organization_id
+        )
 
         for container in containers_query.all():
             if allowed_containers and container.id not in allowed_containers:
