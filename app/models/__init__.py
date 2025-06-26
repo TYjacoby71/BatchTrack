@@ -8,6 +8,8 @@ from .models import (
     ExtraBatchIngredient, InventoryItem, BatchInventoryLog, Tag
 )
 from .product_sku import ProductSKU, ProductSKUHistory
+from .role import Role
+from .permission import Permission
 
 # Re-export everything for convenience
 __all__ = [
@@ -15,5 +17,5 @@ __all__ = [
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
-    'ProductSKU', 'ProductSKUHistory'
+    'ProductSKU', 'ProductSKUHistory', 'Role', 'Permission'
 ]
