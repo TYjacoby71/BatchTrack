@@ -14,6 +14,12 @@ product_inventory_bp = Blueprint('product_inventory', __name__)
 def view_sku(sku_id):
     """View detailed SKU-level inventory - the point of truth"""
     if request.method == 'POST':
+        # Pre-validation check for SKU/FIFO sync
+        is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+        if not is_valid:
+            flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
         # Handle standard inventory adjustment
         change_type = request.form.get('change_type')
         quantity = float(request.form.get('quantity', 0))
@@ -57,6 +63,13 @@ def view_sku(sku_id):
                 success = True
 
             if success:
+                # Post-validation check for SKU/FIFO sync
+                is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+                if not is_valid_post:
+                    db.session.rollback()
+                    flash(f'Post-adjustment validation failed: {error_msg_post}', 'error')
+                    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
                 db.session.commit()
                 action_name = change_type.replace('_', ' ').title()
                 if customer:
@@ -109,6 +122,12 @@ def edit_sku(sku_id):
     """Edit SKU details"""
     sku = ProductSKU.query.get_or_404(sku_id)
 
+    # Pre-validation check for SKU/FIFO sync
+    is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+    if not is_valid:
+        flash(f'Pre-edit validation failed: {error_msg}', 'error')
+        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
     try:
         # Update basic fields
         sku.sku_code = request.form.get('sku_code').strip() if request.form.get('sku_code') else None
@@ -133,11 +152,19 @@ def edit_sku(sku_id):
             sku.sku_code = f"{sku.product_name}-{sku.variant_name}-{sku.size_label}".replace(' ', '-').upper()
 
         sku.last_updated = datetime.utcnow()
-        db.session.commit()
+        
+        # Post-validation check for SKU/FIFO sync (in case unit changes affected calculations)
+        is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+        if not is_valid_post:
+            db.session.rollback()
+            flash(f'Post-edit validation failed: {error_msg_post}', 'error')
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
+        db.session.commit()
         flash('SKU details updated successfully!', 'success')
 
     except ValueError as e:
+        db.session.rollback()
         flash(f'Invalid input: {str(e)}', 'error')
     except Exception as e:
         db.session.rollback()
@@ -145,9 +172,9 @@ def edit_sku(sku_id):
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
-@product_inventory_bp.route('/fifo/<int:inventory_id>/adjust', methods=['POST'])
+@product_inventory_bp.route('/adjust_fifo/<int:history_id>', methods=['POST'])
 @login_required
-def adjust_fifo_entry(inventory_id):
+def adjust_fifo_entry(history_id):
     """Adjust specific FIFO entry"""
     change_type = request.form.get('change_type')
     quantity = float(request.form.get('quantity', 0))
@@ -157,15 +184,33 @@ def adjust_fifo_entry(inventory_id):
         flash('Quantity must be positive', 'error')
         return redirect(request.referrer)
 
+    # Get the SKU ID for validation
+    from ...models import ProductSKUHistory
+    history_entry = ProductSKUHistory.query.get_or_404(history_id)
+    sku_id = history_entry.sku_id
+
+    # Pre-validation check for SKU/FIFO sync
+    is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+    if not is_valid:
+        flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
+        return redirect(request.referrer)
+
     try:
         success = ProductInventoryService.adjust_fifo_entry(
-            inventory_id=inventory_id,
+            history_id=history_id,
             quantity=quantity,
             change_type=change_type,
             notes=notes
         )
 
         if success:
+            # Post-validation check for SKU/FIFO sync
+            is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
+            if not is_valid_post:
+                db.session.rollback()
+                flash(f'Post-adjustment validation failed: {error_msg_post}', 'error')
+                return redirect(request.referrer)
+
             db.session.commit()
             flash('FIFO entry adjusted successfully', 'success')
         else:
