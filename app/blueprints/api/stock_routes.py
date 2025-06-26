@@ -3,9 +3,9 @@ from flask_login import login_required
 from ...services.stock_check import universal_stock_check
 from ...models import Recipe
 
-stock_api_bp = Blueprint('stock_api', __name__)
+stock_api_bp = Blueprint('stock_api', __name__, url_prefix='/api')
 
-@stock_api_bp.route('/api/check-stock', methods=['POST'])
+@stock_api_bp.route('/check-stock', methods=['POST'])
 def check_stock():
     try:
         data = request.get_json()

@@ -85,23 +85,12 @@ def create_app():
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(admin_bp,  url_prefix='/admin')
-    from .routes import app_routes
-    from .blueprints.fifo import fifo_bp
-    from .blueprints.batches.add_extra import add_extra_bp
-    from .routes import bulk_stock_routes
-    from .routes import fault_log_routes
-    from .routes import tag_manager_routes
-
-    # Register blueprints
-    from .routes.app_routes import app_routes_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp
-    from .routes.fault_log_routes import fault_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(bulk_stock_bp)
-    app.register_blueprint(fault_log_bp)
-    app.register_blueprint(tag_manager_bp)
+    app.register_blueprint(app_routes.app_routes_bp)
+    app.register_blueprint(fifo_bp)
+    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+    app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
+    app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
+    app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
     # Register API blueprints
     from .blueprints.api.routes import register_api_routes
