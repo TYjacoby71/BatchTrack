@@ -129,7 +129,7 @@ def process_inventory_adjustment(
                 created_by=created_by,
                 quantity_used=quantity_used_value,  # Only set for actual consumption
                 used_for_batch_id=batch_id,
-                organization_id=item.organization_id
+                organization_id=current_user.organization_id
             )
             db.session.add(history)
         item.quantity += qty_change
@@ -175,7 +175,7 @@ def process_inventory_adjustment(
                         created_by=created_by,
                         quantity_used=0.0,  # Credits don't consume inventory
                         used_for_batch_id=batch_id,
-                        organization_id=item.organization_id
+                        organization_id=current_user.organization_id
                     )
                     db.session.add(credit_history)
 
@@ -196,7 +196,7 @@ def process_inventory_adjustment(
                     quantity_used=0.0,  # Restocks don't consume inventory
                     expiration_date=expiration_date,
                     used_for_batch_id=batch_id,
-                    organization_id=item.organization_id
+                    organization_id=current_user.organization_id
                 )
                 db.session.add(excess_history)
         else:
@@ -218,7 +218,7 @@ def process_inventory_adjustment(
                 shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
                 is_perishable=item.is_perishable if expiration_date else False,
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
-                organization_id=item.organization_id
+                organization_id=current_user.organization_id
             )
             db.session.add(history)
 
