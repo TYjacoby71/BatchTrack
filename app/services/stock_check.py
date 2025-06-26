@@ -13,7 +13,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     # Check each ingredient in the recipe
     for recipe_ingredient in recipe.recipe_ingredients:
         ingredient = recipe_ingredient.inventory_item
-        print(f"Processing recipe ingredient: {recipe_ingredient.amount} {recipe_ingredient.unit}")
+        print(f"Processing recipe ingredient: {recipe_ingredient.quantity} {recipe_ingredient.unit}")
         
         if not ingredient:
             print(f"  - ERROR: No inventory item linked to recipe ingredient ID {recipe_ingredient.id}")
@@ -28,7 +28,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
             continue
             
         print(f"  - Ingredient belongs to user, proceeding with stock check")
-        needed_amount = recipe_ingredient.amount * scale
+        needed_amount = recipe_ingredient.quantity * scale
 
         # Get current inventory details
         available = ingredient.quantity or 0

@@ -27,7 +27,7 @@ def check_stock():
         # Debug recipe ingredients
         for ri in recipe.recipe_ingredients:
             ingredient = ri.inventory_item
-            print(f"Recipe ingredient: {ri.amount} {ri.unit} of {ingredient.name if ingredient else 'MISSING'}")
+            print(f"Recipe ingredient: {ri.quantity} {ri.unit} of {ingredient.name if ingredient else 'MISSING'}")
             if ingredient:
                 print(f"  - Ingredient org_id: {ingredient.organization_id}, current qty: {ingredient.quantity} {ingredient.unit}")
             else:

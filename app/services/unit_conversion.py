@@ -92,18 +92,19 @@ class ConversionEngine:
         else:
             raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
 
-        # Log it
-        log = ConversionLog(
-            user_id=current_user.id if current_user and current_user.is_authenticated else None,
-            amount=amount,
-            from_unit=from_unit,
-            to_unit=to_unit,
-            result=converted,
-            conversion_type='unit_to_unit',  # Provide default value
-            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-        )
-        db.session.add(log)
-        db.session.commit()
+        # Log it only if user is authenticated and has organization
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            log = ConversionLog(
+                user_id=current_user.id,
+                amount=amount,
+                from_unit=from_unit,
+                to_unit=to_unit,
+                result=converted,
+                conversion_type='unit_to_unit',
+                organization_id=current_user.organization_id
+            )
+            db.session.add(log)
+            db.session.commit()
 
         # Return structured metadata
         return {
