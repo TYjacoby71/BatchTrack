@@ -258,8 +258,8 @@
         <h5 class="modal-title">Deduct Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_name=product.name) }}">
-        {{ csrf_token() }}
+      <form method="POST" action="{% if size_groups %}{{ url_for('product_inventory.deduct_stock', sku_id=size_groups[size_groups.keys()|first].skus[0].id) }}{% else %}#{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <input type="hidden" name="variant" id="deductVariant">
           <input type="hidden" name="size_label" id="deductSize">
@@ -271,7 +271,7 @@
 
           <div class="mb-3">
             <label class="form-label">Reason</label>
-            <select name="reason" class="form-select" required>
+            <select name="change_type" class="form-select" required>
               <option value="sale">Sale</option>
               <option value="spoiled">Spoiled</option>
               <option value="damaged">Damaged</option>
