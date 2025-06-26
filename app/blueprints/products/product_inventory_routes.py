@@ -16,11 +16,25 @@ def view_sku(sku_id):
     if request.method == 'POST':
         # Handle standard inventory adjustment
         change_type = request.form.get('change_type')
-        quantity = float(request.form.get('quantity', 0))
+        
+        # Safe float parsing
+        try:
+            quantity = float(request.form.get('quantity', '0'))
+        except ValueError:
+            quantity = 0
+            
+        try:
+            sale_price = float(request.form.get('sale_price', '0'))
+        except ValueError:
+            sale_price = 0
+            
+        try:
+            unit_cost = float(request.form.get('unit_cost', '0'))
+        except ValueError:
+            unit_cost = 0
+            
         notes = request.form.get('notes', '')
-        sale_price = request.form.get('sale_price', 0, type=float)
         customer = request.form.get('customer', '')
-        unit_cost = request.form.get('unit_cost', 0, type=float)
         enhanced_notes = {
             'user_notes': notes,
             'sale_price': sale_price,
@@ -103,30 +117,52 @@ def view_sku(sku_id):
     return render_template('products/view_sku.html', **context)
 
 
-@product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+@product_inventory_bp.route('/sku/<int:sku_id>/edit_basic', methods=['POST'])
 @login_required
-def edit_sku(sku_id):
-    """Edit SKU details"""
+def edit_sku_basic(sku_id):
+    """Edit basic SKU details"""
     sku = ProductSKU.query.get_or_404(sku_id)
 
     try:
-        # Update basic fields
-        sku.sku_code = request.form.get('sku_code').strip() if request.form.get('sku_code') else None
-        sku.size_label = request.form.get('size_label').strip()
-        sku.retail_price = float(request.form.get('retail_price')) if request.form.get('retail_price') else None
-        sku.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-        sku.unit = request.form.get('unit')
+        # Update basic fields with safe string handling
+        sku_code = request.form.get('sku_code', '').strip()
+        sku.sku_code = sku_code if sku_code else None
+        
+        size_label = request.form.get('size_label', '').strip()
+        sku.size_label = size_label if size_label else sku.size_label
+        
+        # Safe float parsing
+        try:
+            retail_price_str = request.form.get('retail_price', '').strip()
+            sku.retail_price = float(retail_price_str) if retail_price_str else None
+        except ValueError:
+            sku.retail_price = None
+            
+        try:
+            threshold_str = request.form.get('low_stock_threshold', '0').strip()
+            sku.low_stock_threshold = float(threshold_str) if threshold_str else 0
+        except ValueError:
+            sku.low_stock_threshold = 0
+
+        sku.unit = request.form.get('unit') or sku.unit
         sku.is_active = bool(request.form.get('is_active'))
         sku.track_expiration = bool(request.form.get('track_expiration'))
-        sku.description = request.form.get('description').strip() if request.form.get('description') else None
-        sku.barcode = request.form.get('barcode').strip() if request.form.get('barcode') else None
+        
+        description = request.form.get('description', '').strip()
+        sku.description = description if description else None
+        
+        barcode = request.form.get('barcode', '').strip()
+        sku.barcode = barcode if barcode else None
 
         # Handle unit cost override
         override_unit_cost = bool(request.form.get('override_unit_cost'))
         if override_unit_cost:
-            new_unit_cost = request.form.get('unit_cost')
-            if new_unit_cost:
-                sku.unit_cost = float(new_unit_cost)
+            try:
+                unit_cost_str = request.form.get('unit_cost', '').strip()
+                if unit_cost_str:
+                    sku.unit_cost = float(unit_cost_str)
+            except ValueError:
+                flash('Invalid unit cost value', 'warning')
 
         # Auto-generate SKU code if not provided
         if not sku.sku_code:
@@ -150,7 +186,13 @@ def edit_sku(sku_id):
 def adjust_fifo_entry(inventory_id):
     """Adjust specific FIFO entry"""
     change_type = request.form.get('change_type')
-    quantity = float(request.form.get('quantity', 0))
+    
+    # Safe float parsing
+    try:
+        quantity = float(request.form.get('quantity', '0'))
+    except ValueError:
+        quantity = 0
+        
     notes = request.form.get('notes', '')
 
     if quantity <= 0:
@@ -232,29 +274,46 @@ def edit_sku_details(sku_id):
         sku.size_label = request.form.get('size_label') or sku.size_label
         sku.location_name = request.form.get('location_name') or None
 
-        # Handle retail price
-        retail_price = request.form.get('retail_price')
-        sku.retail_price = float(retail_price) if retail_price else None
+        # Handle retail price with safe parsing
+        try:
+            retail_price_str = request.form.get('retail_price', '').strip()
+            sku.retail_price = float(retail_price_str) if retail_price_str else None
+        except ValueError:
+            sku.retail_price = None
 
-        # Handle low stock threshold
-        low_stock = request.form.get('low_stock_threshold')
-        sku.low_stock_threshold = float(low_stock) if low_stock else 0
+        # Handle low stock threshold with safe parsing
+        try:
+            low_stock_str = request.form.get('low_stock_threshold', '0').strip()
+            sku.low_stock_threshold = float(low_stock_str) if low_stock_str else 0
+        except ValueError:
+            sku.low_stock_threshold = 0
 
-        # Handle unit cost override
+        # Handle unit cost override with safe parsing
         if request.form.get('override_unit_cost'):
-            unit_cost = request.form.get('unit_cost')
-            if unit_cost:
-                sku.unit_cost = float(unit_cost)
+            try:
+                unit_cost_str = request.form.get('unit_cost', '').strip()
+                if unit_cost_str:
+                    sku.unit_cost = float(unit_cost_str)
+            except ValueError:
+                flash('Invalid unit cost value', 'warning')
 
         # Handle shelf life management
         is_perishable = request.form.get('is_perishable') == 'on'
         sku.is_perishable = is_perishable
 
         if is_perishable:
-            shelf_life_days = request.form.get('shelf_life_days')
-            if shelf_life_days:
+            try:
+                shelf_life_str = request.form.get('shelf_life_days', '').strip()
+                if shelf_life_str:
+                    old_shelf_life = sku.shelf_life_days
+                    sku.shelf_life_days = int(shelf_life_str)
+                else:
+                    old_shelf_life = sku.shelf_life_days
+                    sku.shelf_life_days = None
+            except ValueError:
+                flash('Invalid shelf life value', 'warning')
                 old_shelf_life = sku.shelf_life_days
-                sku.shelf_life_days = int(shelf_life_days)
+                sku.shelf_life_days = None
 
                 # If shelf life changed, update all active FIFO entries
                 if old_shelf_life != sku.shelf_life_days:
