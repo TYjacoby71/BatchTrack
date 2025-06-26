@@ -1,4 +1,3 @@
-
 """Add missing fields to ProductSKUHistory
 
 Revision ID: add_product_sku_history_fields
@@ -26,11 +25,11 @@ def upgrade():
         batch_op.add_column(sa.Column('is_reserved', sa.Boolean(), nullable=True, default=False))
         batch_op.add_column(sa.Column('sale_location', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('note', sa.Text(), nullable=True))
-        
+
         # Add foreign key constraints
         batch_op.create_foreign_key('fk_product_sku_history_fifo_reference', 'product_sku_history', ['fifo_reference_id'], ['id'])
         batch_op.create_foreign_key('fk_product_sku_history_used_for_batch', 'batch', ['used_for_batch_id'], ['id'])
-        
+
         # Add indexes
         batch_op.create_index('idx_fifo_reference', ['fifo_reference_id'], unique=False)
         batch_op.create_index('idx_order_reservation', ['order_id', 'reservation_id'], unique=False)
@@ -42,10 +41,10 @@ def downgrade():
         batch_op.drop_index('idx_sale_location')
         batch_op.drop_index('idx_order_reservation')
         batch_op.drop_index('idx_fifo_reference')
-        
+
         batch_op.drop_constraint('fk_product_sku_history_used_for_batch', type_='foreignkey')
         batch_op.drop_constraint('fk_product_sku_history_fifo_reference', type_='foreignkey')
-        
+
         batch_op.drop_column('note')
         batch_op.drop_column('sale_location')
         batch_op.drop_column('is_reserved')
