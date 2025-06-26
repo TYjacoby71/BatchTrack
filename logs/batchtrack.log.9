@@ -1,18 +1,4 @@
-2025-06-26 21:52:10,582 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 21:52:33,951 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 21:56:55,677 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 21:57:10,810 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 21:57:22,470 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 21:57:23,028 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: user.role_id
-
-The above exception was the direct cause of the following exception:
-
+2025-06-26 22:01:38,560 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -45,58 +31,41 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/app/__init__.py", line 38, in load_user
     return User.query.get(int(user_id))
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in get
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/deprecations.py", line 386, in warned
-    return fn(*args, **kwargs)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1126, in get
-    return self._get_impl(ident, loading.load_on_pk_identity)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1135, in _get_impl
-    return self.session._get_impl(
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 3874, in _get_impl
-    return db_load_fn(
-           ^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 694, in load_on_pk_identity
-    session.execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
-    return self._execute_internal(
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
-    result: Result[Any] = compile_state_cls.orm_execute_statement(
-                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
-    result = conn.execute(
-             ^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
-    return meth(
-           ^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: user.role_id
-[SQL: SELECT user.id AS user_id, user.username AS user_username, user.password_hash AS user_password_hash, user.role AS user_role, user.role_id AS user_role_id, user.first_name AS user_first_name, user.last_name AS user_last_name, user.email AS user_email, user.phone AS user_phone, user.subscription_class AS user_subscription_class, user.organization_id AS user_organization_id, user.is_owner AS user_is_owner, user.created_at AS user_created_at, user.last_login AS user_last_login 
-FROM user 
-WHERE user.id = ?]
-[parameters: (3,)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-06-26 22:00:33,469 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 22:00:38,922 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 22:01:28,537 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 22:01:28,548 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+           ^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/model.py", line 22, in __get__
+    return cls.query_class(
+           ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 276, in __init__
+    self._set_entities(entities)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 288, in _set_entities
+    self._raw_columns = [
+                        ^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 289, in <listcomp>
+    coercions.expect(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/coercions.py", line 388, in expect
+    insp._post_inspect
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 1257, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+                                           ^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2724, in _post_inspect
+    self._check_configure()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2401, in _check_configure
+    _configure_registries({self.registry}, cascade=True)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4214, in _configure_registries
+    _do_configure_registries(registries, cascade)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4255, in _do_configure_registries
+    mapper._post_configure_properties()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2418, in _post_configure_properties
+    prop.init()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/interfaces.py", line 589, in init
+    self.do_init()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 1661, in do_init
+    self._generate_backref()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 2089, in _generate_backref
+    raise sa_exc.ArgumentError(
+sqlalchemy.exc.ArgumentError: Error creating backref 'users' on relationship 'User.user_role': property of that name exists on mapper 'Mapper[Role(role)]'
+2025-06-26 22:04:47,663 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 22:06:32,390 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 22:06:36,083 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 22:07:21,047 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 22:08:16,244 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
