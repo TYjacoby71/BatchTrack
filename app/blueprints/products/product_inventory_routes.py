@@ -27,21 +27,8 @@ def view_sku(sku_id):
     total_quantity = sku.current_quantity
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    # Create a mock product object for template compatibility
-    class MockProduct:
-        def __init__(self, sku):
-            self.id = sku.id
-            self.name = sku.product_name
-    
-    product = MockProduct(sku)
-    variant = sku.variant_name
-    size_label = sku.size_label
-    
-    return render_template('products/view_sku.html',
+    return render_template('products/view_sku_new.html',
                          sku=sku,
-                         product=product,
-                         variant=variant,
-                         size_label=size_label,
                          fifo_entries=fifo_entries,
                          history=history_data['items'],
                          history_pagination=history_data['pagination'],
