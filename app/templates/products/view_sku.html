@@ -76,65 +76,140 @@
                 <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h2>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">Total Stock</h5>
-                            <h3 class="text-primary">{{ "%.2f"|format(total_quantity) }}</h3>
-                            <small class="text-muted">{{ sku.unit }}</small>
+            <!-- SKU Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">SKU Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Stock Level -->
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <h4 class="text-primary mb-1">{{ "%.2f"|format(total_quantity) }}</h4>
+                                <small class="text-muted">Total Stock</small>
+                                <br><small class="text-muted">{{ sku.unit }}</small>
+                            </div>
+                        </div>
+                        
+                        <!-- SKU Code -->
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <h6 class="text-secondary mb-1">{{ sku.sku_code or 'Not Set' }}</h6>
+                                <small class="text-muted">SKU Code</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Retail Price -->
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <h6 class="text-success mb-1">
+                                    {% if sku.retail_price %}
+                                        ${{ "%.2f"|format(sku.retail_price) }}
+                                    {% else %}
+                                        Not Set
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">Retail Price</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Average Cost -->
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <h6 class="text-warning mb-1">
+                                    {% if sku.unit_cost %}
+                                        ${{ "%.2f"|format(sku.unit_cost) }}
+                                    {% else %}
+                                        Not Set
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">Avg Cost</small>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">SKU Code</h5>
-                            <h3 class="text-secondary">{{ sku.sku_code or 'Not Set' }}</h3>
-                            <small class="text-muted">product code</small>
+
+                    <!-- Additional Details Row -->
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <span class="badge {% if total_quantity <= 0 %}bg-danger{% elif total_quantity <= sku.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ sku.stock_status }}
+                                </span>
+                                <br><small class="text-muted">Status</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <span class="text-muted">{{ sku.low_stock_threshold }}</span>
+                                <br><small class="text-muted">Low Stock Alert</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                {% if sku.reserved_quantity and sku.reserved_quantity > 0 %}
+                                    <span class="text-info">{{ "%.2f"|format(sku.reserved_quantity) }}</span>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                                <br><small class="text-muted">Reserved</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="stat-box text-center">
+                                <span class="text-primary">{{ "%.2f"|format(sku.available_for_sale) }}</span>
+                                <br><small class="text-muted">Available</small>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Main Inventory Adjustment Card -->
+            <!-- Inventory Actions Card -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Inventory Actions</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" class="row g-3 align-items-end">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="col-md-3">
-                            <label class="form-label">Action Type</label>
-                            <select class="form-select" name="change_type" required>
+                    <!-- Action Selection -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Select Action Type</label>
+                            <select class="form-select" id="actionType" onchange="showActionForm()">
+                                <option value="">Choose an action...</option>
                                 <option value="sale">Sale</option>
+                                <option value="gift">Gift</option>
                                 <option value="restock">Restock</option>
-                                <option value="adjustment">Adjustment</option>
-                                <option value="damaged">Damaged</option>
-                                <option value="return">Return</option>
+                                <option value="adjustment">Manual Adjustment</option>
+                                <option value="damaged">Damaged/Loss</option>
+                                <option value="return">Customer Return</option>
                                 <option value="spoil">Spoiled</option>
-                                <option value="recount">Recount</option>
+                                <option value="recount">Inventory Recount</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
-                            <small class="text-muted">{{ sku.unit }}</small>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Notes (Optional)</label>
-                            <input type="text" class="form-control" name="notes" placeholder="Reference, customer, etc.">
-                        </div>
-
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">Record</button>
-                        </div>
-                    </form>
+                    <!-- Dynamic Action Forms -->
+                    <div id="actionFormContainer" style="display: none;">
+                        <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" id="inventoryActionForm">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="change_type" id="hiddenChangeType">
+                            
+                            <div class="row g-3" id="dynamicFormFields">
+                                <!-- Fields will be populated by JavaScript -->
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Record Transaction</button>
+                                    <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetActionForm()">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -452,6 +527,216 @@
 
 
 <script>
+// SKU Inventory Actions - Dynamic Form Generation
+const skuData = {
+    retailPrice: {{ sku.retail_price or 0 }},
+    unitCost: {{ sku.unit_cost or 0 }},
+    currentQuantity: {{ total_quantity }},
+    unit: '{{ sku.unit }}',
+    availableQuantity: {{ sku.available_for_sale }}
+};
+
+function showActionForm() {
+    const actionType = document.getElementById('actionType').value;
+    const container = document.getElementById('actionFormContainer');
+    const formFields = document.getElementById('dynamicFormFields');
+    const hiddenChangeType = document.getElementById('hiddenChangeType');
+    
+    if (!actionType) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    hiddenChangeType.value = actionType;
+    formFields.innerHTML = generateFormFields(actionType);
+    container.style.display = 'block';
+}
+
+function generateFormFields(actionType) {
+    let fields = '';
+    
+    // Common quantity field
+    fields += `
+        <div class="col-md-4">
+            <label class="form-label">Quantity</label>
+            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
+            <small class="text-muted">${skuData.unit}</small>
+        </div>
+    `;
+    
+    // Action-specific fields
+    switch(actionType) {
+        case 'sale':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Sale Price</label>
+                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
+                    <small class="text-muted">Per ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Customer</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Customer name">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Order ID, payment method, etc.">
+                </div>
+            `;
+            break;
+            
+        case 'gift':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Sale Price</label>
+                    <input type="number" class="form-control" name="sale_price" value="0.00" readonly>
+                    <small class="text-muted">Gifts have $0 sale price</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Recipient</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Gift recipient">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for gift, event, etc.">
+                </div>
+            `;
+            break;
+            
+        case 'restock':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
+                    <small class="text-muted">Cost per ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" class="form-control" name="supplier" placeholder="Supplier name">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Purchase order, batch info, etc.">
+                </div>
+            `;
+            break;
+            
+        case 'damaged':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Damage Type</label>
+                    <select class="form-select" name="damage_type">
+                        <option value="broken">Broken/Cracked</option>
+                        <option value="contaminated">Contaminated</option>
+                        <option value="expired">Expired</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
+                    <small class="text-muted">Original cost tracked</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Damage Description</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Describe what happened..." required>
+                </div>
+            `;
+            break;
+            
+        case 'return':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Return Credit</label>
+                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
+                    <small class="text-muted">Credit amount</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Customer</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Returning customer">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Return Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for return..." required>
+                </div>
+            `;
+            break;
+            
+        case 'spoil':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Spoilage Type</label>
+                    <select class="form-select" name="spoil_type">
+                        <option value="expired">Expired</option>
+                        <option value="contaminated">Contaminated</option>
+                        <option value="temperature">Temperature Issue</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
+                    <small class="text-muted">Loss tracked at cost</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Spoilage Details</label>
+                    <input type="text" class="form-control" name="notes" placeholder="What caused the spoilage?" required>
+                </div>
+            `;
+            break;
+            
+        case 'recount':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">New Total Quantity</label>
+                    <input type="number" class="form-control" name="quantity" step="0.01" min="0" placeholder="Enter actual count">
+                    <small class="text-muted">Current: ${skuData.currentQuantity} ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Count Method</label>
+                    <select class="form-select" name="count_method">
+                        <option value="physical">Physical Count</option>
+                        <option value="system">System Adjustment</option>
+                        <option value="audit">Audit Count</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Recount Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Why was this recount needed?" required>
+                </div>
+            `;
+            break;
+            
+        case 'adjustment':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Adjustment Type</label>
+                    <select class="form-select" name="adjustment_type">
+                        <option value="increase">Increase Stock</option>
+                        <option value="decrease">Decrease Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
+                    <small class="text-muted">Cost per ${skuData.unit}</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Adjustment Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for manual adjustment..." required>
+                </div>
+            `;
+            break;
+    }
+    
+    return fields;
+}
+
+function resetActionForm() {
+    document.getElementById('actionType').value = '';
+    document.getElementById('actionFormContainer').style.display = 'none';
+    document.getElementById('dynamicFormFields').innerHTML = '';
+}
+
 // Populate FIFO adjustment modal with data
 document.addEventListener('DOMContentLoaded', function() {
     const adjustModal = document.getElementById('adjustFifoModal');

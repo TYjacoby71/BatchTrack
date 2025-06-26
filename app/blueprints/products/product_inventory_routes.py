@@ -16,47 +16,54 @@ def view_sku(sku_id):
         change_type = request.form.get('change_type')
         quantity = float(request.form.get('quantity', 0))
         notes = request.form.get('notes', '')
+        sale_price = request.form.get('sale_price', 0, type=float)
+        customer = request.form.get('customer', '')
+        unit_cost = request.form.get('unit_cost', 0, type=float)
+        enhanced_notes = {
+            'user_notes': notes,
+            'sale_price': sale_price,
+            'customer': customer,
+            'unit_cost': unit_cost
+        }
 
         if quantity <= 0:
             flash('Quantity must be positive', 'error')
             return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
         try:
-            if change_type in ['sale', 'damaged', 'spoil', 'adjustment']:
-                # Deduction actions
+            if change_type == 'recount':
+                success = ProductInventoryService.recount_sku(sku_id, quantity, enhanced_notes)
+            elif change_type in ['sale', 'gift', 'spoil', 'damaged', 'trash', 'sample']:
                 success = ProductInventoryService.deduct_stock(
                     sku_id=sku_id,
                     quantity=quantity,
                     change_type=change_type,
-                    notes=notes
+                    notes=enhanced_notes,
+                    sale_price=sale_price,
+                    customer=customer
                 )
-                if success:
-                    db.session.commit()
-                    flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-                else:
-                    db.session.rollback()
-                    flash('Insufficient stock available', 'error')
-            
-            elif change_type in ['restock', 'return']:
-                # Addition actions
+            else:  # restock, adjustment, return, manual_addition
                 ProductInventoryService.add_stock(
                     sku_id=sku_id,
                     quantity=quantity,
+                    unit_cost=unit_cost or 0,
                     change_type=change_type,
-                    notes=notes
+                    notes=enhanced_notes,
+                    sale_price=sale_price,
+                    customer=customer
                 )
+                success = True
+
+            if success:
                 db.session.commit()
-                flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-            
-            elif change_type == 'recount':
-                # Recount action
-                success = ProductInventoryService.recount_sku(sku_id, quantity, notes)
-                if success:
-                    db.session.commit()
-                    flash('Inventory recount completed successfully', 'success')
+                action_name = change_type.replace('_', ' ').title()
+                if customer:
+                    flash(f'{action_name} for {customer} recorded successfully', 'success')
                 else:
-                    db.session.rollback()
-                    flash('Failed to process recount', 'error')
+                    flash(f'{action_name} recorded successfully', 'success')
+            else:
+                db.session.rollback()
+                flash('Insufficient stock for this transaction', 'error')
 
         except Exception as e:
             db.session.rollback()
