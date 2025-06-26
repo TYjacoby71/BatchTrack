@@ -8,6 +8,8 @@
 {% endblock %}
 
 {% block content %}
+{% include 'components/sku/styles.html' %}
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -24,67 +26,11 @@
                 <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h2>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">Total Stock</h5>
-                            <h3 class="text-primary">{{ "%.2f"|format(total_quantity) }}</h3>
-                            <small class="text-muted">{{ sku.unit }}</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">SKU Code</h5>
-                            <h3 class="text-secondary">{{ sku.sku_code or 'Not Set' }}</h3>
-                            <small class="text-muted">product code</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- SKU Details Card Component -->
+            {% include 'components/sku/sku_details_card.html' %}
 
-            <!-- Main Inventory Adjustment Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Inventory Actions</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" class="row g-3 align-items-end">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="col-md-3">
-                            <label class="form-label">Action Type</label>
-                            <select class="form-select" name="change_type" required>
-                                <option value="sale">Sale</option>
-                                <option value="restock">Restock</option>
-                                <option value="adjustment">Adjustment</option>
-                                <option value="damaged">Damaged</option>
-                                <option value="return">Return</option>
-                                <option value="spoil">Spoiled</option>
-                                <option value="recount">Recount</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
-                            <small class="text-muted">{{ sku.unit }}</small>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Notes (Optional)</label>
-                            <input type="text" class="form-control" name="notes" placeholder="Reference, customer, etc.">
-                        </div>
-
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">Record</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <!-- Inventory Actions Card Component -->
+            {% include 'components/sku/inventory_actions_card.html' %}
 
             <!-- FIFO Filter -->
             <div class="row mb-3">
@@ -98,206 +44,226 @@
                 </div>
             </div>
 
-            <!-- Unified History Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Product History</h5>
-                </div>
-                <div class="card-body">
-                    {% if history %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Quantity Change</th>
-                                    <th>Remaining</th>
-                                    <th>Unit Cost</th>
-                                    <th>Batch</th>
-                                    <th>Notes</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for entry in history %}
-                                <tr>
-                                    <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') if entry.timestamp else 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge 
-                                            {% if entry.change_type == 'batch_production' %}bg-success
-                                            {% elif entry.change_type == 'sale' %}bg-primary
-                                            {% elif entry.change_type == 'spoil' %}bg-danger
-                                            {% elif entry.change_type == 'recount' %}bg-warning
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ entry.change_type.replace('_', ' ').title() }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
-                                            {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.2f"|format(entry.quantity_change) }}
-                                        </span>
-                                        {{ entry.unit }}
-                                    </td>
-                                    <td>
-                                        {% if entry.remaining_quantity is not none %}
-                                            {{ "%.2f"|format(entry.remaining_quantity) }} {{ entry.unit }}
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if entry.unit_cost %}
-                                            ${{ "%.2f"|format(entry.unit_cost) }}
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if entry.batch_id %}
-                                            <a href="{{ url_for('batches.view_batch', batch_id=entry.batch_id) }}" class="text-decoration-none">
-                                                Batch #{{ entry.batch_id }}
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">Manual</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ entry.note or '' }}</small>
-                                    </td>
-                                    <td>
-                                        {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
-                                            <button class="btn btn-sm btn-outline-warning" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#adjustFifoModal"
-                                                    data-inventory-id="{{ entry.product_inventory_id }}"
-                                                    data-current-quantity="{{ entry.remaining_quantity }}"
-                                                    data-unit="{{ entry.unit }}">
-                                                Adjust
-                                            </button>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    {% if history_pagination.pages > 1 %}
-                    <nav aria-label="History pagination">
-                        <ul class="pagination justify-content-center">
-                            {% if history_pagination.has_prev %}
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
-                                </li>
-                            {% endif %}
-
-                            {% for page_num in history_pagination.iter_pages() %}
-                                {% if page_num %}
-                                    {% if page_num != history_pagination.page %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
-                                        </li>
-                                    {% else %}
-                                        <li class="page-item active">
-                                            <span class="page-link">{{ page_num }}</span>
-                                        </li>
-                                    {% endif %}
-                                {% else %}
-                                    <li class="page-item disabled">
-                                        <span class="page-link">...</span>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-
-                            {% if history_pagination.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                    {% endif %}
-
-                    {% else %}
-                    <div class="text-center py-4">
-                        <p class="text-muted">No history entries found for this SKU.</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+            <!-- History Table Component -->
+            {% include 'components/sku/history_table.html' %}
         </div>
     </div>
 </div>
 
-
-
-<!-- FIFO Adjustment Modal -->
-<div class="modal fade" id="adjustFifoModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Adjust FIFO Entry</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="adjust_fifo">
-                <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="change_type" class="form-label">Adjustment Type</label>
-                        <select name="change_type" id="change_type" class="form-select" required>
-                  <option value="">Select adjustment type</option>
-                  <option value="manual_addition">Manual Addition</option>
-                  <option value="recount">Recount (Set Total)</option>
-                  <option value="damaged">Damaged</option>
-                  <option value="spoil">Spoiled</option>
-                  <option value="trash">Trash</option>
-                  <option value="sample">Sample</option>
-                  <option value="sale">Manual Sale</option>
-                  <option value="reserved">Reserve for Order</option>
-                  <option value="unreserved">Release Reservation</option>
-                </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity</label>
-                        <input type="number" class="form-control" id="quantity" name="quantity" 
-                               step="0.01" min="0.01" required>
-                        <div class="form-text">
-                            <span id="quantityHelp">For recount: enter new total quantity. For deductions: enter amount to remove.</span>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
-                        <textarea name="notes" id="notes" class="form-control" rows="2"></textarea>
-                </div>
-
-                <!-- POS Integration Fields -->
-                <div class="mb-3" id="orderIdGroup" style="display: none;">
-                  <label for="order_id" class="form-label">Order ID (for sales/reservations)</label>
-                  <input type="text" name="order_id" id="order_id" class="form-control" placeholder="External order ID (Shopify, Etsy, etc.)">
-                </div>
-
-                <div class="mb-3" id="reservationGroup" style="display: none;">
-                  <label for="expiration_minutes" class="form-label">Reservation Duration (minutes)</label>
-                  <input type="number" name="expiration_minutes" id="expiration_minutes" class="form-control" value="30" min="1" max="1440">
-                  <small class="form-text text-muted">How long to hold this reservation (default: 30 minutes)</small>
-                </div>
-              </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Apply Adjustment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
+<!-- Modals Component -->
+{% include 'components/sku/modals.html' %}
 
 <script>
+// SKU Inventory Actions - Dynamic Form Generation
+const skuData = {
+    retailPrice: {{ sku.retail_price or 0 }},
+    unitCost: {{ sku.unit_cost or 0 }},
+    currentQuantity: {{ total_quantity }},
+    unit: '{{ sku.unit }}',
+    availableQuantity: {{ sku.available_for_sale }}
+};
+
+function showActionForm() {
+    const actionType = document.getElementById('actionType').value;
+    const container = document.getElementById('actionFormContainer');
+    const formFields = document.getElementById('dynamicFormFields');
+    const hiddenChangeType = document.getElementById('hiddenChangeType');
+
+    if (!actionType) {
+        container.style.display = 'none';
+        return;
+    }
+
+    hiddenChangeType.value = actionType;
+    formFields.innerHTML = generateFormFields(actionType);
+    container.style.display = 'block';
+}
+
+function generateFormFields(actionType) {
+    let fields = '';
+
+    // Common quantity field
+    fields += `
+        <div class="col-md-4">
+            <label class="form-label">Quantity</label>
+            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
+            <small class="text-muted">${skuData.unit}</small>
+        </div>
+    `;
+
+    // Action-specific fields
+    switch(actionType) {
+        case 'sale':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Sale Price</label>
+                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
+                    <small class="text-muted">Per ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Customer</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Customer name">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Order ID, payment method, etc.">
+                </div>
+            `;
+            break;
+
+        case 'gift':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Sale Price</label>
+                    <input type="number" class="form-control" name="sale_price" value="0.00" readonly>
+                    <small class="text-muted">Gifts have $0 sale price</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Recipient</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Gift recipient">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for gift, event, etc.">
+                </div>
+            `;
+            break;
+
+        case 'restock':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
+                    <small class="text-muted">Cost per ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" class="form-control" name="supplier" placeholder="Supplier name">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Purchase order, batch info, etc.">
+                </div>
+            `;
+            break;
+
+        case 'damaged':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Damage Type</label>
+                    <select class="form-select" name="damage_type">
+                        <option value="broken">Broken/Cracked</option>
+                        <option value="contaminated">Contaminated</option>
+                        <option value="expired">Expired</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
+                    <small class="text-muted">Original cost tracked</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Damage Description</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Describe what happened..." required>
+                </div>
+            `;
+            break;
+
+        case 'return':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Return Credit</label>
+                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
+                    <small class="text-muted">Credit amount</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Customer</label>
+                    <input type="text" class="form-control" name="customer" placeholder="Returning customer">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Return Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for return..." required>
+                </div>
+            `;
+            break;
+
+        case 'spoil':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Spoilage Type</label>
+                    <select class="form-select" name="spoil_type">
+                        <option value="expired">Expired</option>
+                        <option value="contaminated">Contaminated</option>
+                        <option value="temperature">Temperature Issue</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
+                    <small class="text-muted">Loss tracked at cost</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Spoilage Details</label>
+                    <input type="text" class="form-control" name="notes" placeholder="What caused the spoilage?" required>
+                </div>
+            `;
+            break;
+
+        case 'recount':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">New Total Quantity</label>
+                    <input type="number" class="form-control" name="quantity" step="0.01" min="0" placeholder="Enter actual count">
+                    <small class="text-muted">Current: ${skuData.currentQuantity} ${skuData.unit}</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Count Method</label>
+                    <select class="form-select" name="count_method">
+                        <option value="physical">Physical Count</option>
+                        <option value="system">System Adjustment</option>
+                        <option value="audit">Audit Count</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Recount Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Why was this recount needed?" required>
+                </div>
+            `;
+            break;
+
+        case 'adjustment':
+            fields += `
+                <div class="col-md-4">
+                    <label class="form-label">Adjustment Type</label>
+                    <select class="form-select" name="adjustment_type">
+                        <option value="increase">Increase Stock</option>
+                        <option value="decrease">Decrease Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unit Cost</label>
+                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
+                    <small class="text-muted">Cost per ${skuData.unit}</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Adjustment Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for manual adjustment..." required>
+                </div>
+            `;
+            break;
+    }
+
+    return fields;
+}
+
+function resetActionForm() {
+    document.getElementById('actionType').value = '';
+    document.getElementById('actionFormContainer').style.display = 'none';
+    document.getElementById('dynamicFormFields').innerHTML = '';
+}
+
 // Populate FIFO adjustment modal with data
 document.addEventListener('DOMContentLoaded', function() {
     const adjustModal = document.getElementById('adjustFifoModal');
@@ -330,6 +296,24 @@ function toggleFifoFilter() {
 
     window.location.href = url.toString();
 }
+
+// Handle unit cost override checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const overrideCheckbox = document.getElementById('override_unit_cost');
+    const unitCostInput = document.getElementById('modal_unit_cost');
+
+    if (overrideCheckbox && unitCostInput) {
+        overrideCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                unitCostInput.removeAttribute('readonly');
+                unitCostInput.focus();
+            } else {
+                unitCostInput.setAttribute('readonly', 'readonly');
+                unitCostInput.value = '{{ sku.unit_cost or "" }}'; // Reset to original value
+            }
+        });
+    }
+});
 </script>
 
 {% endblock %}
