@@ -67,7 +67,7 @@ class User(UserMixin, db.Model):
         """Check if user is the owner of their organization"""
         return self.is_owner
 
-class Unit(ScopedModelMixin, db.Model):
+class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
     symbol = db.Column(db.String(16), nullable=False)
@@ -79,7 +79,27 @@ class Unit(ScopedModelMixin, db.Model):
     is_custom = db.Column(db.Boolean, default=False)
     is_mapped = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # Only for custom units
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @classmethod
+    def scoped(cls):
+        """Return query filtered by current user's organization for custom units only"""
+        if not current_user.is_authenticated:
+            return cls.query.filter(False)  # Return empty query if no user
+        # Return all standard units + user's custom units
+        return cls.query.filter(
+            (cls.is_custom == False) | 
+            (cls.organization_id == current_user.organization_id)
+        )
+    
+    def belongs_to_user(self):
+        """Check if this record belongs to the current user's organization (for custom units only)"""
+        if not self.is_custom:
+            return True  # Standard units belong to everyone
+        if not current_user.is_authenticated:
+            return False
+        return self.organization_id == current_user.organization_id
 
 class CustomUnitMapping(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
