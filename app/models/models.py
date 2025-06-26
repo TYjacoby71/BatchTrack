@@ -321,9 +321,6 @@ class Tag(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-```from datetime import datetime, date
-from flask_login import current_user, UserMixin
-from ..extensions import db
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
