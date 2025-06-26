@@ -237,6 +237,10 @@ class InventoryHistory(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
+    # POS integration fields
+    order_id = db.Column(db.String(64), nullable=True)  # External order ID (Shopify, etc.)
+    reservation_id = db.Column(db.String(64), nullable=True)  # For reserving stock
+    is_reserved = db.Column(db.Boolean, default=False)  # Track if quantity is reserved
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
@@ -292,11 +296,19 @@ class InventoryItem(db.Model):
     # Container-specific fields
     storage_amount = db.Column(db.Float, nullable=True)
     storage_unit = db.Column(db.String(32), nullable=True)
+    # POS integration fields
+    frozen_quantity = db.Column(db.Float, default=0.0)  # Reserved for orders in progress
+    available_quantity = db.Column(db.Float, default=0.0)  # quantity - frozen_quantity (computed)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
+    
+    @property
+    def calculated_available_quantity(self):
+        """Calculate available quantity (total - frozen)"""
+        return max(0, self.quantity - self.frozen_quantity)
 
 class BatchInventoryLog(db.Model):
     """Log batch impacts on inventory for debugging"""
