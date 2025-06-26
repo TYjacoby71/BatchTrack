@@ -5,6 +5,83 @@
 <!-- Only include necessary scripts for this page -->
 <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/products/product_inventory.js') }}"></script>
+
+<script>
+// Global functions that were missing after componentization
+window.showInventoryModal = function(actionType) {
+    const modal = document.getElementById('inventoryModal');
+    const form = document.getElementById('inventoryForm');
+    const actionTypeInput = document.getElementById('actionType');
+    const salePriceDiv = document.getElementById('salePriceDiv');
+    const salePriceInput = document.getElementById('salePrice');
+    const modalTitle = modal.querySelector('.modal-title');
+    
+    // Reset form
+    form.reset();
+    actionTypeInput.value = actionType;
+    
+    // Set modal title and configure based on action type
+    switch(actionType) {
+        case 'sale':
+            modalTitle.textContent = 'Record Sale';
+            salePriceDiv.style.display = 'block';
+            salePriceInput.value = '{{ sku.retail_price or 0 }}';
+            salePriceInput.required = true;
+            break;
+        case 'gift':
+            modalTitle.textContent = 'Record Gift';
+            salePriceDiv.style.display = 'block';
+            salePriceInput.value = '0.00';
+            salePriceInput.required = false;
+            break;
+        case 'damage':
+            modalTitle.textContent = 'Record Damage/Loss';
+            salePriceDiv.style.display = 'none';
+            break;
+        case 'manual':
+            modalTitle.textContent = 'Manual Adjustment';
+            salePriceDiv.style.display = 'none';
+            break;
+        case 'transfer':
+            modalTitle.textContent = 'Transfer Stock';
+            salePriceDiv.style.display = 'none';
+            break;
+        default:
+            modalTitle.textContent = 'Inventory Adjustment';
+            salePriceDiv.style.display = 'none';
+    }
+    
+    // Show modal
+    new bootstrap.Modal(modal).show();
+};
+
+window.submitInventoryAdjustment = function() {
+    const form = document.getElementById('inventoryForm');
+    const formData = new FormData(form);
+    
+    fetch("{{ url_for('product_inventory.process_inventory_adjustment', sku_id=sku.id) }}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            throw new Error('Network response was not ok');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error processing adjustment');
+    });
+};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Any page initialization code here
+    console.log('SKU page loaded');
+});
+</script>
 {% endblock %}
 
 {% block content %}

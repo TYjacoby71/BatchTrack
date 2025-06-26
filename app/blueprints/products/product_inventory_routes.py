@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from urllib.parse import unquote
 
-from ...models import db, ProductSKU
+from ...models import db, ProductSKU, ProductSKUHistory
 from ...services.product_inventory_service import ProductInventoryService
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
@@ -14,12 +14,6 @@ product_inventory_bp = Blueprint('product_inventory', __name__)
 def view_sku(sku_id):
     """View detailed SKU-level inventory - the point of truth"""
     if request.method == 'POST':
-        # Pre-validation check for SKU/FIFO sync
-        is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-        if not is_valid:
-            flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
         # Handle standard inventory adjustment
         change_type = request.form.get('change_type')
         quantity = float(request.form.get('quantity', 0))
@@ -63,13 +57,6 @@ def view_sku(sku_id):
                 success = True
 
             if success:
-                # Post-validation check for SKU/FIFO sync
-                is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-                if not is_valid_post:
-                    db.session.rollback()
-                    flash(f'Post-adjustment validation failed: {error_msg_post}', 'error')
-                    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
                 db.session.commit()
                 action_name = change_type.replace('_', ' ').title()
                 if customer:
@@ -122,12 +109,6 @@ def edit_sku(sku_id):
     """Edit SKU details"""
     sku = ProductSKU.query.get_or_404(sku_id)
 
-    # Pre-validation check for SKU/FIFO sync
-    is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-    if not is_valid:
-        flash(f'Pre-edit validation failed: {error_msg}', 'error')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
     try:
         # Update basic fields
         sku.sku_code = request.form.get('sku_code').strip() if request.form.get('sku_code') else None
@@ -152,19 +133,11 @@ def edit_sku(sku_id):
             sku.sku_code = f"{sku.product_name}-{sku.variant_name}-{sku.size_label}".replace(' ', '-').upper()
 
         sku.last_updated = datetime.utcnow()
-        
-        # Post-validation check for SKU/FIFO sync (in case unit changes affected calculations)
-        is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-        if not is_valid_post:
-            db.session.rollback()
-            flash(f'Post-edit validation failed: {error_msg_post}', 'error')
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
         db.session.commit()
+
         flash('SKU details updated successfully!', 'success')
 
     except ValueError as e:
-        db.session.rollback()
         flash(f'Invalid input: {str(e)}', 'error')
     except Exception as e:
         db.session.rollback()
@@ -172,9 +145,9 @@ def edit_sku(sku_id):
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
-@product_inventory_bp.route('/adjust_fifo/<int:history_id>', methods=['POST'])
+@product_inventory_bp.route('/fifo/<int:inventory_id>/adjust', methods=['POST'])
 @login_required
-def adjust_fifo_entry(history_id):
+def adjust_fifo_entry(inventory_id):
     """Adjust specific FIFO entry"""
     change_type = request.form.get('change_type')
     quantity = float(request.form.get('quantity', 0))
@@ -184,33 +157,15 @@ def adjust_fifo_entry(history_id):
         flash('Quantity must be positive', 'error')
         return redirect(request.referrer)
 
-    # Get the SKU ID for validation
-    from ...models import ProductSKUHistory
-    history_entry = ProductSKUHistory.query.get_or_404(history_id)
-    sku_id = history_entry.sku_id
-
-    # Pre-validation check for SKU/FIFO sync
-    is_valid, error_msg, sku_qty, fifo_total = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-    if not is_valid:
-        flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-        return redirect(request.referrer)
-
     try:
         success = ProductInventoryService.adjust_fifo_entry(
-            history_id=history_id,
+            inventory_id=inventory_id,
             quantity=quantity,
             change_type=change_type,
             notes=notes
         )
 
         if success:
-            # Post-validation check for SKU/FIFO sync
-            is_valid_post, error_msg_post, sku_qty_post, fifo_total_post = ProductInventoryService.validate_sku_fifo_sync(sku_id)
-            if not is_valid_post:
-                db.session.rollback()
-                flash(f'Post-adjustment validation failed: {error_msg_post}', 'error')
-                return redirect(request.referrer)
-
             db.session.commit()
             flash('FIFO entry adjusted successfully', 'success')
         else:
@@ -252,3 +207,93 @@ def view_sku_legacy(product_id, variant, size_label):
         return redirect(url_for('dashboard.index'))
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku.id))
+
+@product_inventory_bp.route('/sku/<int:sku_id>/process_adjustment', methods=['POST'])
+@login_required
+def process_inventory_adjustment(sku_id):
+    """Process inventory adjustment for a specific SKU"""
+    try:
+        sku = ProductSKU.query.get_or_404(sku_id)
+        return ProductInventoryService.process_inventory_adjustment(sku, request.form)
+    except Exception as e:
+        app.logger.error(f"Error processing inventory adjustment: {e}")
+        flash(f'Error processing adjustment: {str(e)}', 'error')
+        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+@product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+@login_required
+def edit_sku_details(sku_id):
+    """Edit SKU details like retail price, SKU code, shelf life, etc."""
+    sku = ProductSKU.query.get_or_404(sku_id)
+
+    try:
+        # Update basic fields
+        sku.sku_code = request.form.get('sku_code') or None
+        sku.size_label = request.form.get('size_label') or sku.size_label
+        sku.location_name = request.form.get('location_name') or None
+
+        # Handle retail price
+        retail_price = request.form.get('retail_price')
+        sku.retail_price = float(retail_price) if retail_price else None
+
+        # Handle low stock threshold
+        low_stock = request.form.get('low_stock_threshold')
+        sku.low_stock_threshold = float(low_stock) if low_stock else 0
+
+        # Handle unit cost override
+        if request.form.get('override_unit_cost'):
+            unit_cost = request.form.get('unit_cost')
+            if unit_cost:
+                sku.unit_cost = float(unit_cost)
+
+        # Handle shelf life management
+        is_perishable = request.form.get('is_perishable') == 'on'
+        sku.is_perishable = is_perishable
+
+        if is_perishable:
+            shelf_life_days = request.form.get('shelf_life_days')
+            if shelf_life_days:
+                old_shelf_life = sku.shelf_life_days
+                sku.shelf_life_days = int(shelf_life_days)
+
+                # If shelf life changed, update all active FIFO entries
+                if old_shelf_life != sku.shelf_life_days:
+                    from ...blueprints.expiration.services import ExpirationService
+
+                    # Get all active FIFO entries for this SKU
+                    fifo_entries = ProductSKUHistory.query.filter(
+                        ProductSKUHistory.sku_id == sku_id,
+                        ProductSKUHistory.remaining_quantity > 0,
+                        ProductSKUHistory.original_quantity.isnot(None)  # Only addition entries
+                    ).all()
+
+                    for entry in fifo_entries:
+                        entry.is_perishable = True
+                        entry.shelf_life_days = sku.shelf_life_days
+
+                        # Calculate new expiration date based on batch completion or timestamp
+                        if entry.batch_id:
+                            # Use batch completion date if available
+                            batch_expiration = ExpirationService.get_batch_expiration_date(entry.batch_id)
+                            if batch_expiration:
+                                entry.expiration_date = batch_expiration
+                        elif entry.timestamp:
+                            # Use entry timestamp as fallback
+                            entry.expiration_date = ExpirationService.calculate_expiration_date(
+                                entry.timestamp, sku.shelf_life_days
+                            )
+
+                    flash(f'Updated shelf life for {len(fifo_entries)} FIFO entries', 'info')
+        else:
+            sku.shelf_life_days = None
+
+        db.session.commit()
+        flash('SKU details updated successfully', 'success')
+
+    except ValueError as e:
+        flash(f'Invalid input: {str(e)}', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating SKU details: {str(e)}', 'error')
+
+    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))

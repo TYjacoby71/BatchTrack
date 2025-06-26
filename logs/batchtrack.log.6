@@ -1,4 +1,4 @@
-2025-06-26 19:19:51,562 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-26 19:08:28,408 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -83,8 +83,7 @@ FROM inventory_history
 WHERE inventory_history.expiration_date IS NOT NULL AND inventory_history.expiration_date < ? AND inventory_history.remaining_quantity > ?) AS anon_1]
 [parameters: ('2025-06-26', 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-06-26 19:21:49,399 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:21:52,064 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:21:58,836 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:22:09,193 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:22:24,634 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:16:37,792 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:16:52,239 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:19:34,201 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:19:50,695 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
