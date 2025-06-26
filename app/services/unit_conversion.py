@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from flask_login import current_user
 from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
@@ -17,7 +16,7 @@ class ConversionEngine:
             raise ValueError(f"Invalid from_unit: {from_unit}")
         if not to_unit or not isinstance(to_unit, str):
             raise ValueError(f"Invalid to_unit: {to_unit}")
-            
+
         from_u = Unit.query.filter_by(name=from_unit).first()
         to_u = Unit.query.filter_by(name=to_unit).first()
 
@@ -95,12 +94,13 @@ class ConversionEngine:
 
         # Log it
         log = ConversionLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=current_user.id if current_user and current_user.is_authenticated else None,
             timestamp=datetime.utcnow(),
             amount=amount,
             from_unit=from_unit,
             to_unit=to_unit,
-            result=converted
+            result=converted,
+            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
         )
         db.session.add(log)
         db.session.commit()
