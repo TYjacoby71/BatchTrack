@@ -1,5 +1,5 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
 from ...utils.unit_utils import get_global_unit_list
 from sqlalchemy.exc import SQLAlchemyError
