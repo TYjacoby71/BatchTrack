@@ -248,15 +248,18 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="change_type" class="form-label">Adjustment Type</label>
-                        <select class="form-select" id="change_type" name="change_type" required>
-                            <option value="">Select adjustment type</option>
-                            <option value="recount">Recount (set new total)</option>
-                            <option value="sale">Sale</option>
-                            <option value="spoil">Spoiled</option>
-                            <option value="damage">Damaged</option>
-                            <option value="trash">Trash</option>
-                            <option value="gift">Gift/Tester</option>
-                        </select>
+                        <select name="change_type" id="change_type" class="form-select" required>
+                  <option value="">Select adjustment type</option>
+                  <option value="manual_addition">Manual Addition</option>
+                  <option value="recount">Recount (Set Total)</option>
+                  <option value="damaged">Damaged</option>
+                  <option value="spoil">Spoiled</option>
+                  <option value="trash">Trash</option>
+                  <option value="sample">Sample</option>
+                  <option value="sale">Manual Sale</option>
+                  <option value="reserved">Reserve for Order</option>
+                  <option value="unreserved">Release Reservation</option>
+                </select>
                     </div>
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
@@ -268,9 +271,21 @@
                     </div>
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
-                    </div>
+                        <textarea name="notes" id="notes" class="form-control" rows="2"></textarea>
                 </div>
+
+                <!-- POS Integration Fields -->
+                <div class="mb-3" id="orderIdGroup" style="display: none;">
+                  <label for="order_id" class="form-label">Order ID (for sales/reservations)</label>
+                  <input type="text" name="order_id" id="order_id" class="form-control" placeholder="External order ID (Shopify, Etsy, etc.)">
+                </div>
+
+                <div class="mb-3" id="reservationGroup" style="display: none;">
+                  <label for="expiration_minutes" class="form-label">Reservation Duration (minutes)</label>
+                  <input type="number" name="expiration_minutes" id="expiration_minutes" class="form-control" value="30" min="1" max="1440">
+                  <small class="form-text text-muted">How long to hold this reservation (default: 30 minutes)</small>
+                </div>
+              </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Apply Adjustment</button>
