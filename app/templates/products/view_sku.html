@@ -213,8 +213,9 @@
                 <h5 class="modal-title">Edit SKU</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('product_inventory.edit_sku_code', sku_id=sku.id) }}">
+            <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="edit_sku">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="sku_code" class="form-label">SKU Code</label>
@@ -241,8 +242,9 @@
                 <h5 class="modal-title">Adjust FIFO Entry</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="adjustFifoForm">
+            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="adjust_fifo">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="change_type" class="form-label">Adjustment Type</label>
