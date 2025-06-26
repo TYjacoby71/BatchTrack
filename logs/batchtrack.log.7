@@ -1,10 +1,10 @@
-2025-06-26 18:53:18,644 ERROR: Exception on /expiration/api/summary [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-26 18:53:22,144 ERROR: Exception on /products/Apple Sauce [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: inventory_history.order_id
+sqlite3.OperationalError: no such column: inventory_item.frozen_quantity
 
 The above exception was the direct cause of the following exception:
 
@@ -24,19 +24,11 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/expiration/routes.py", line 105, in api_expiration_summary
-    summary = ExpirationService.get_expiration_summary()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/expiration/services.py", line 253, in get_expiration_summary
-    ).count()
-      ^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 3147, in count
-    self._legacy_from_self(col).enable_eagerloads(False).scalar()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2836, in scalar
-    ret = self.one()
-          ^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2809, in one
-    return self._iter().one()  # type: ignore
+  File "/home/runner/workspace/app/blueprints/products/products.py", line 119, in view_product
+    ).filter(InventoryItem.quantity > 0).all()
+                                         ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
            ^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
     result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
@@ -70,10 +62,9 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_history.order_id
-[SQL: SELECT count(*) AS count_1 
-FROM (SELECT inventory_history.id AS inventory_history_id, inventory_history.inventory_item_id AS inventory_history_inventory_item_id, inventory_history.timestamp AS inventory_history_timestamp, inventory_history.change_type AS inventory_history_change_type, inventory_history.quantity_change AS inventory_history_quantity_change, inventory_history.unit AS inventory_history_unit, inventory_history.remaining_quantity AS inventory_history_remaining_quantity, inventory_history.unit_cost AS inventory_history_unit_cost, inventory_history.fifo_reference_id AS inventory_history_fifo_reference_id, inventory_history.fifo_code AS inventory_history_fifo_code, inventory_history.batch_id AS inventory_history_batch_id, inventory_history.note AS inventory_history_note, inventory_history.created_by AS inventory_history_created_by, inventory_history.quantity_used AS inventory_history_quantity_used, inventory_history.used_for_batch_id AS inventory_history_used_for_batch_id, inventory_history.is_perishable AS inventory_history_is_perishable, inventory_history.shelf_life_days AS inventory_history_shelf_life_days, inventory_history.expiration_date AS inventory_history_expiration_date, inventory_history.order_id AS inventory_history_order_id, inventory_history.reservation_id AS inventory_history_reservation_id, inventory_history.is_reserved AS inventory_history_is_reserved 
-FROM inventory_history 
-WHERE inventory_history.expiration_date IS NOT NULL AND inventory_history.expiration_date < ? AND inventory_history.remaining_quantity > ?) AS anon_1]
-[parameters: ('2025-06-26', 0)]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_item.frozen_quantity
+[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.category_id AS inventory_item_category_id, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.density AS inventory_item_density, inventory_item.type AS inventory_item_type, inventory_item.is_active AS inventory_item_is_active, inventory_item.is_archived AS inventory_item_is_archived, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.shelf_life_days AS inventory_item_shelf_life_days, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.storage_amount AS inventory_item_storage_amount, inventory_item.storage_unit AS inventory_item_storage_unit, inventory_item.frozen_quantity AS inventory_item_frozen_quantity, inventory_item.available_quantity AS inventory_item_available_quantity, inventory_item.created_by AS inventory_item_created_by, inventory_item.organization_id AS inventory_item_organization_id, inventory_item.created_at AS inventory_item_created_at 
+FROM inventory_item 
+WHERE inventory_item.type = ? AND inventory_item.is_archived = 0 AND inventory_item.quantity > ?]
+[parameters: ('container', 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
