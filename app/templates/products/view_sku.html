@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ product.name }} - {{ variant }} - {{ size_label }}{% endblock %}
+{% block title %}{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}{% endblock %}
 
 {% block scripts %}
 <!-- Only include necessary scripts for this page -->
@@ -14,14 +14,14 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=1) }}">{{ variant }}</a></li>
-                    <li class="breadcrumb-item active">{{ size_label }}</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_name=sku.product_name) }}">{{ sku.product_name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variant', product_name=sku.product_name, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
+                    <li class="breadcrumb-item active">{{ sku.size_label }}</li>
                 </ol>
             </nav>
 
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>{{ product.name }} - {{ variant }} - {{ size_label }}</h2>
+                <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h2>
                 <div>
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSkuModal">
                         Edit SKU
@@ -36,7 +36,7 @@
                         <div class="card-body text-center">
                             <h5 class="card-title">Total Stock</h5>
                             <h3 class="text-primary">{{ "%.2f"|format(total_quantity) }}</h3>
-                            <small class="text-muted">{{ fifo_entries[0].unit if fifo_entries else 'units' }}</small>
+                            <small class="text-muted">{{ sku.unit }}</small>
                         </div>
                     </div>
                 </div>
@@ -53,7 +53,7 @@
                     <div class="card">
                         <div class="card-body text-center">
                             <h5 class="card-title">SKU Code</h5>
-                            <h3 class="text-secondary">{{ fifo_entries[0].sku or 'Not Set' if fifo_entries else 'Not Set' }}</h3>
+                            <h3 class="text-secondary">{{ sku.sku_code or 'Not Set' }}</h3>
                             <small class="text-muted">product code</small>
                         </div>
                     </div>
@@ -163,7 +163,7 @@
                         <ul class="pagination justify-content-center">
                             {% if history_pagination.has_prev %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant, size_label=size_label, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
+                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
                                 </li>
                             {% endif %}
 
@@ -171,7 +171,7 @@
                                 {% if page_num %}
                                     {% if page_num != history_pagination.page %}
                                         <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant, size_label=size_label, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
+                                            <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
                                         </li>
                                     {% else %}
                                         <li class="page-item active">
@@ -187,7 +187,7 @@
 
                             {% if history_pagination.has_next %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variant, size_label=size_label, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
+                                    <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
                                 </li>
                             {% endif %}
                         </ul>
@@ -213,13 +213,13 @@
                 <h5 class="modal-title">Edit SKU</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('product_inventory.edit_sku', product_id=product.id, variant=variant, size_label=size_label) }}">
+            <form method="POST" action="{{ url_for('product_inventory.edit_sku_code', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="sku" class="form-label">SKU Code</label>
-                        <input type="text" class="form-control" id="sku" name="sku" 
-                               value="{{ fifo_entries[0].sku or '' if fifo_entries else '' }}"
+                        <label for="sku_code" class="form-label">SKU Code</label>
+                        <input type="text" class="form-control" id="sku_code" name="sku_code" 
+                               value="{{ sku.sku_code or '' }}"
                                placeholder="Enter SKU code">
                         <div class="form-text">Leave empty to remove SKU</div>
                     </div>
