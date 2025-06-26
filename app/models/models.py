@@ -33,9 +33,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(64), default='organization_owner')  # Legacy role field - kept for backward compatibility
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))  # New database role relationship
-    db_role = db.relationship('Role', backref='users')  # Relationship to Role model
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
@@ -47,7 +45,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # Relationship to role
-    user_role = db.relationship('Role', backref='users')
+    user_role = db.relationship('Role', backref='assigned_users')
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
