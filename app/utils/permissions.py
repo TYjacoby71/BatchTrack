@@ -13,35 +13,46 @@ def load_permissions():
 
 PERMISSIONS = load_permissions()
 
-def has_permission(permission):
+def has_permission(permission_name):
     """Check if current user has a specific permission"""
     if not current_user.is_authenticated:
         return False
 
-    # First try database role system
+    # Try database role first, fallback to legacy role
     if hasattr(current_user, 'user_role') and current_user.user_role:
-        return current_user.user_role.has_permission(permission)
+        # Check database permissions
+        if current_user.user_role.has_permission(permission_name):
+            return True
 
-    # Fallback to legacy JSON-based system
+        # Check for wildcard permissions in database
+        for perm in current_user.user_role.permissions:
+            if perm.name.endswith('.*'):
+                prefix = perm.name[:-2]  # Remove ".*"
+                if permission_name.startswith(prefix + '.'):
+                    return True
+
+    # Fallback to JSON-based permissions for backward compatibility
     user_role = getattr(current_user, 'role', 'operator')
-    if not user_role:
+
+    # Load permissions from JSON file
+    permissions_file = os.path.join(os.path.dirname(__file__), '..', '..', 'permissions.json')
+    try:
+        with open(permissions_file, 'r') as f:
+            permissions_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
         return False
 
-    role_permissions = PERMISSIONS.get(user_role, [])
+    role_permissions = permissions_data.get('roles', {}).get(user_role, {}).get('permissions', [])
 
-    # Check for wildcard permissions
-    if '*' in role_permissions:
+    # Check for exact match
+    if permission_name in role_permissions:
         return True
 
-    # Check exact permission match
-    if permission in role_permissions:
-        return True
-
-    # Check wildcard patterns (e.g., "alerts.*")
+    # Check for wildcard permissions (e.g., "alerts.*" matches "alerts.show_timer_alerts")
     for perm in role_permissions:
         if perm.endswith('.*'):
-            prefix = perm[:-2]
-            if permission.startswith(prefix + '.'):
+            prefix = perm[:-2]  # Remove ".*"
+            if permission_name.startswith(prefix + '.'):
                 return True
 
     return False
