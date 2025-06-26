@@ -27,7 +27,7 @@ def view_sku(sku_id):
     total_quantity = sku.current_quantity
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    return render_template('products/view_sku_new.html',
+    return render_template('products/view_sku.html',
                          sku=sku,
                          fifo_entries=fifo_entries,
                          history=history_data['items'],
