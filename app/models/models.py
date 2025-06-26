@@ -237,10 +237,8 @@ class InventoryHistory(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
-    # POS integration fields
-    order_id = db.Column(db.String(64), nullable=True)  # External order ID (Shopify, etc.)
-    reservation_id = db.Column(db.String(64), nullable=True)  # For reserving stock
-    is_reserved = db.Column(db.Boolean, default=False)  # Track if quantity is reserved
+    # Internal reservation tracking
+    is_reserved = db.Column(db.Boolean, default=False)  # Track if quantity is reserved for production
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
