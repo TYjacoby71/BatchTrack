@@ -42,7 +42,9 @@ def new_recipe():
                 predicted_yield=float(request.form.get('predicted_yield') or 0.0),
                 predicted_yield_unit=request.form.get('predicted_yield_unit') or "",
                 requires_containers=True if request.form.get('requires_containers') else False,
-                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers')] if request.form.get('requires_containers') else []
+                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers')] if request.form.get('requires_containers') else [],
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
             )
             db.session.add(recipe)
             db.session.flush()  # Get recipe.id before committing
@@ -59,7 +61,8 @@ def new_recipe():
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
                             quantity=float(amt.strip()),
-                            unit=unit.strip()
+                            unit=unit.strip(),
+                            organization_id=current_user.organization_id
                         )
                         db.session.add(recipe_ingredient)
                     except ValueError as e:
@@ -149,7 +152,9 @@ def create_variation(recipe_id):
             name=f"{parent.name} Variation",
             instructions=parent.instructions,
             label_prefix=parent.label_prefix,
-            parent_id=parent.id
+            parent_id=parent.id,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
         )
         db.session.add(new_variation)
         db.session.flush()  # Get an ID for the new variation
@@ -160,7 +165,8 @@ def create_variation(recipe_id):
                 recipe_id=new_variation.id,
                 inventory_item_id=ingredient.inventory_item_id,
                 quantity=ingredient.quantity,
-                unit=ingredient.unit
+                unit=ingredient.unit,
+                organization_id=current_user.organization_id
             )
             db.session.add(new_ingredient)
 
@@ -219,7 +225,8 @@ def create_variation(recipe_id):
                             recipe_id=new_variation.id,
                             inventory_item_id=int(ing_id),
                             quantity=float(amt.strip()),
-                            unit=unit.strip()
+                            unit=unit.strip(),
+                            organization_id=current_user.organization_id
                         )
                         db.session.add(recipe_ingredient)
                     except ValueError as e:
@@ -447,7 +454,8 @@ def edit_recipe(recipe_id):
                             recipe_id=recipe.id,
                             inventory_item_id=int(ing_id),
                             quantity=float(amt.strip()),
-                            unit=unit.strip()
+                            unit=unit.strip(),
+                            organization_id=current_user.organization_id
                         )
                         db.session.add(assoc)
                     except Exception as e:
