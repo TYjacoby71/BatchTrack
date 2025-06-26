@@ -42,6 +42,7 @@ def create_app():
     from .blueprints.recipes import recipes_bp
     from .blueprints.inventory import inventory_bp
     from .blueprints.batches import batches_bp
+    from .blueprints.batches.start_batch import start_batch_bp
     from .blueprints.products import products_bp
     from .blueprints.products.product_inventory_routes import product_inventory_bp
     from .blueprints.api.stock_routes import stock_api_bp
@@ -64,6 +65,7 @@ def create_app():
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')
+    app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
     try:
         from .blueprints.products import products_bp, product_inventory_bp

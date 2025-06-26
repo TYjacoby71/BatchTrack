@@ -104,7 +104,11 @@ class ConversionEngine:
                 organization_id=current_user.organization_id
             )
             db.session.add(log)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                print(f"Error logging conversion: {e}")
+                db.session.rollback()
 
         # Return structured metadata
         return {
