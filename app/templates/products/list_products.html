@@ -44,13 +44,13 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <h6 class="mb-0 me-2">{{ product.name }}</h6>
-              {% if product.variations|length > 0 %}
+              {% if product.variant_count > 1 %}
               <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#card-variations-{{ product.id }}">
                 <i class="fas fa-chevron-down"></i>
               </button>
               {% endif %}
             </div>
-            {% if product.total_inventory < product.low_stock_threshold %}
+            {% if product.total_quantity < product.low_stock_threshold %}
               <span class="badge bg-warning">Low Stock</span>
             {% endif %}
           </div>
@@ -58,20 +58,13 @@
             <div class="row text-center">
               <div class="col-4">
                 <div class="border-end">
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {% if bulk_inventory %}
-                  <h5 class="mb-0">{{ bulk_inventory|sum(attribute='quantity')|round(1) }}</h5>
+                  <h5 class="mb-0">{{ product.bulk_quantity|round(1) }}</h5>
                   <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-                  {% else %}
-                  <h5 class="mb-0">0</h5>
-                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-                  {% endif %}
                 </div>
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  <h5 class="mb-0">{{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}</h5>
+                  <h5 class="mb-0">{{ product.packaged_quantity|round(0)|int }}</h5>
                   <small class="text-muted">Packaged</small>
                 </div>
               </div>
@@ -81,23 +74,11 @@
               </div>
             </div>
 
-            {% if product.variations|length > 0 %}
+            {% if product.variant_count > 1 %}
             <div class="collapse mt-3" id="card-variations-{{ product.id }}">
               <div class="border-top pt-2">
                 <strong class="small">Variations:</strong>
-
-                <!-- All Variations (including Base) -->
-                {% for variation in product.variations %}
-                <div class="d-flex justify-content-between align-items-center py-1">
-                  <div>
-                    <span class="fw-bold small">{{ variation.name }}</span>
-                    {% if variation.sku %}
-                    <span class="badge bg-secondary ms-1 small">{{ variation.sku }}</span>
-                    {% endif %}
-                  </div>
-                  <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
-                </div>
-                {% endfor %}
+                <div class="text-muted small">{{ product.variant_count }} variants available</div>
               </div>
             </div>
             {% endif %}
@@ -110,7 +91,7 @@
             </div>
           </div>
           <div class="card-footer">
-            <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
+            <a href="{{ url_for('products.view_product', product_name=product.product_name) }}" 
                class="btn btn-outline-primary btn-sm w-100">
               View Details
             </a>
@@ -141,31 +122,25 @@
               {% for product in products %}
               <tr class="product-row">
                 <td>
-                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
-                    <strong>{{ product.name }}</strong>
+                  <a href="{{ url_for('products.view_product', product_name=product.product_name) }}" class="text-decoration-none">
+                    <strong>{{ product.product_name }}</strong>
                   </a>
                 </td>
                 <td>{{ product.product_base_unit }}</td>
-                <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }}
-                </td>
-                <td>
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}
-                </td>
+                <td>{{ product.bulk_quantity|round(1) }}</td>
+                <td>{{ product.packaged_quantity|round(0)|int }}</td>
                 <td>
                   {{ product.variant_count }}
-                  {% if product.variations|length > 0 %}
+                  {% if product.variant_count > 1 %}
                   <button class="btn btn-link btn-sm p-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#table-variations-{{ product.id }}">
                     <i class="fas fa-chevron-down"></i>
                   </button>
                   {% endif %}
                 </td>
                 <td>
-                  {% if product.total_inventory == 0 %}
+                  {% if product.total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
-                  {% elif product.total_inventory < product.low_stock_threshold %}
+                  {% elif product.total_quantity < product.low_stock_threshold %}
                     <span class="badge bg-warning">Low Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>
@@ -178,84 +153,22 @@
                       Actions
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                      <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_name=product.product_name) }}">
                         <i class="fas fa-eye"></i> View Details
                       </a></li>
-                      <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
+                      <li><a class="dropdown-item" href="#" onclick="editProduct('{{ product.product_name }}')">
                         <i class="fas fa-edit"></i> Edit Product
                       </a></li>
                     </ul>
                   </div>
                 </td>
               </tr>
-              {% if product.variations|length > 0 %}
+              {% if product.variant_count > 1 %}
               <tr class="collapse" id="table-variations-{{ product.id }}">
                 <td colspan="8">
                   <div class="ps-4">
                     <strong>Variations:</strong>
-                    <div class="table-responsive mt-2">
-                      <table class="table table-sm">
-                        <thead>
-                          <tr>
-                            <th>Variation</th>
-                            <th>SKU</th>
-                            <th>Total Units</th>
-                            <th>Sizes</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <!-- All Variations (including Base) -->
-                          {% for variation in product.variations %}
-                          {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
-                          <tr>
-                            <td>
-                              {% if variation.name == 'Base' %}
-                                <strong>{{ variation.name }}</strong>
-                                <br><small class="text-muted">Default variant</small>
-                              {% else %}
-                                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" class="text-decoration-none">
-                                  <strong>{{ variation.name }}</strong>
-                                </a>
-                              {% endif %}
-                            </td>
-                            <td>
-                              {% if variation.sku %}
-                              <span class="badge bg-secondary">{{ variation.sku }}</span>
-                              {% else %}
-                              <span class="text-muted">-</span>
-                              {% endif %}
-                            </td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
-                            <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
-                            <td>{{ variation.created_at.strftime('%Y-%m-%d') }}</td>
-                            <td>
-                              <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">
-                                  Actions
-                                </button>
-                                <ul class="dropdown-menu">
-                                  {% if variation.name == 'Base' %}
-                                  <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
-                                    <i class="fas fa-eye"></i> View Details
-                                  </a></li>
-                                  {% else %}
-                                  <li><a class="dropdown-item" href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}">
-                                    <i class="fas fa-eye"></i> View Details
-                                  </a></li>
-                                  <li><a class="dropdown-item" href="#" onclick="editVariation({{ product.id }}, {{ variation.id }})">
-                                    <i class="fas fa-edit"></i> Edit Variation
-                                  </a></li>
-                                  {% endif %}
-                                </ul>
-                              </div>
-                            </td>
-                          </tr>
-                          {% endfor %}
-                        </tbody>
-                      </table>
-                    </div>
+                    <div class="text-muted">{{ product.variant_count }} variants available. Click "View Details" to see all variations.</div>
                   </div>
                 </td>
               </tr>
