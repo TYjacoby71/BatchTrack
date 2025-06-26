@@ -12,53 +12,57 @@ product_inventory_bp = Blueprint('product_inventory', __name__)
 def view_sku(sku_id):
     """View detailed SKU-level inventory - the point of truth"""
     if request.method == 'POST':
-        # Handle different POST actions based on form data
-        action = request.form.get('action')
+        # Handle standard inventory adjustment
+        change_type = request.form.get('change_type')
+        quantity = float(request.form.get('quantity', 0))
+        notes = request.form.get('notes', '')
 
-        if action == 'add_stock':
-            return add_stock(sku_id)
-        elif action == 'deduct_stock':
-            return deduct_stock(sku_id)
-        elif action == 'recount':
-            return recount_sku(sku_id)
-        elif action == 'adjust_inventory':
-            return handle_main_adjustment(sku_id)
-        elif action == 'advanced_adjust':
-            return handle_advanced_adjustment(sku_id)
-        elif action == 'adjust_fifo':
-            # Handle FIFO adjustment inline
-            change_type = request.form.get('change_type')
-            quantity = float(request.form.get('quantity', 0))
-            notes = request.form.get('notes', '')
-            inventory_id = request.form.get('inventory_id')
+        if quantity <= 0:
+            flash('Quantity must be positive', 'error')
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
-            if quantity <= 0:
-                flash('Quantity must be positive', 'error')
-                return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-            try:
-                success = ProductInventoryService.adjust_fifo_entry(
-                    inventory_id=int(inventory_id),
+        try:
+            if change_type in ['sale', 'damaged', 'spoil', 'adjustment']:
+                # Deduction actions
+                success = ProductInventoryService.deduct_stock(
+                    sku_id=sku_id,
                     quantity=quantity,
                     change_type=change_type,
                     notes=notes
                 )
-
                 if success:
                     db.session.commit()
-                    flash('FIFO entry adjusted successfully', 'success')
+                    flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
                 else:
                     db.session.rollback()
-                    flash('Error adjusting FIFO entry', 'error')
+                    flash('Insufficient stock available', 'error')
+            
+            elif change_type in ['restock', 'return']:
+                # Addition actions
+                ProductInventoryService.add_stock(
+                    sku_id=sku_id,
+                    quantity=quantity,
+                    change_type=change_type,
+                    notes=notes
+                )
+                db.session.commit()
+                flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
+            
+            elif change_type == 'recount':
+                # Recount action
+                success = ProductInventoryService.recount_sku(sku_id, quantity, notes)
+                if success:
+                    db.session.commit()
+                    flash('Inventory recount completed successfully', 'success')
+                else:
+                    db.session.rollback()
+                    flash('Failed to process recount', 'error')
 
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Error: {str(e)}', 'error')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'error')
 
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-        else:
-            flash('Invalid action', 'error')
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
     # GET request handling
     page = request.args.get('page', 1, type=int)
@@ -115,247 +119,7 @@ def edit_sku_code(sku_id):
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
-def handle_main_adjustment(sku_id):
-    """Handle main inventory adjustment from the primary form"""
-    change_type = request.form.get('change_type')
-    quantity = float(request.form.get('quantity', 0))
-    notes = request.form.get('notes', '')
 
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-    try:
-        if change_type in ['sale', 'damaged', 'spoil', 'adjustment'] and change_type != 'recount':
-            # Deduction actions
-            success = ProductInventoryService.deduct_stock(
-                sku_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                notes=notes
-            )
-            if success:
-                db.session.commit()
-                flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-            else:
-                db.session.rollback()
-                flash('Insufficient stock available', 'error')
-        
-        elif change_type in ['restock', 'return']:
-            # Addition actions
-            ProductInventoryService.add_stock(
-                sku_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                notes=notes
-            )
-            db.session.commit()
-            flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-        
-        elif change_type == 'recount':
-            # Recount action
-            success = ProductInventoryService.recount_sku(sku_id, quantity, notes)
-            if success:
-                db.session.commit()
-                flash('Inventory recount completed successfully', 'success')
-            else:
-                db.session.rollback()
-                flash('Failed to process recount', 'error')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-def handle_advanced_adjustment(sku_id):
-    """Handle advanced inventory adjustment with additional fields"""
-    change_type = request.form.get('change_type')
-    quantity = float(request.form.get('quantity', 0))
-    notes = request.form.get('notes', '')
-    sale_price = request.form.get('sale_price')
-    customer = request.form.get('customer')
-
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-    try:
-        if change_type in ['sale', 'damaged', 'spoil', 'adjustment'] and change_type != 'recount':
-            # Deduction actions with advanced options
-            success = ProductInventoryService.deduct_stock(
-                sku_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                notes=notes,
-                sale_price=float(sale_price) if sale_price else None,
-                customer=customer
-            )
-            if success:
-                db.session.commit()
-                flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-            else:
-                db.session.rollback()
-                flash('Insufficient stock available', 'error')
-        
-        elif change_type in ['restock', 'return']:
-            # Addition actions
-            ProductInventoryService.add_stock(
-                sku_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                notes=notes
-            )
-            db.session.commit()
-            flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-        
-        elif change_type == 'recount':
-            # Recount action
-            success = ProductInventoryService.recount_sku(sku_id, quantity, notes)
-            if success:
-                db.session.commit()
-                flash('Inventory recount completed successfully', 'success')
-            else:
-                db.session.rollback()
-                flash('Failed to process recount', 'error')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-@product_inventory_bp.route('/sku/<int:sku_id>/add_stock', methods=['POST'])
-@login_required
-def add_stock(sku_id):
-    """Add manual stock to SKU"""
-    quantity = float(request.form.get('quantity', 0))
-    unit_cost = float(request.form.get('unit_cost', 0))
-    notes = request.form.get('notes', '')
-    container_id = request.form.get('container_id')
-
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-    try:
-        ProductInventoryService.add_stock(
-            sku_id=sku_id,
-            quantity=quantity,
-            unit_cost=unit_cost,
-            container_id=int(container_id) if container_id else None,
-            notes=notes,
-            change_type='manual_addition'
-        )
-        db.session.commit()
-
-        # Build descriptive success message
-        sku = ProductSKU.query.get(sku_id)
-        if container_id:
-            from ...models import InventoryItem
-            container = InventoryItem.query.get(int(container_id))
-            if container:
-                # Format: "Added 5 4oz containers of Apple Sauce"
-                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} containers of {sku.product_name}', 'success')
-            else:
-                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} of {sku.product_name}', 'success')
-        else:
-            # Format: "Added 10 fl oz of bulk Apple Sauce"  
-            if sku.size_label and sku.size_label.lower() != 'bulk':
-                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} of {sku.product_name}', 'success')
-            else:
-                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.unit} of bulk {sku.product_name}', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error adding stock: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-@product_inventory_bp.route('/sku/<int:sku_id>/deduct', methods=['POST'])
-@login_required
-def deduct_stock(sku_id):
-    """Deduct stock from SKU"""
-    quantity = float(request.form.get('quantity', 0))
-    change_type = request.form.get('change_type', 'manual_deduction')
-    notes = request.form.get('notes', '')
-    sale_price = request.form.get('sale_price')
-    customer = request.form.get('customer')
-
-    if quantity <= 0:
-        flash('Quantity must be positive', 'error')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-    try:
-        success = ProductInventoryService.deduct_stock(
-            sku_id=sku_id,
-            quantity=quantity,
-            change_type=change_type,
-            sale_price=float(sale_price) if sale_price else None,
-            customer=customer,
-            notes=notes
-        )
-
-        if success:
-            db.session.commit()
-            flash(f'{change_type.replace("_", " ").title()} recorded successfully', 'success')
-        else:
-            db.session.rollback()
-            flash('Insufficient stock available', 'error')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-@product_inventory_bp.route('/sku/<int:sku_id>/recount', methods=['POST'])
-@login_required
-def recount_sku(sku_id):
-    """Recount SKU inventory"""
-    new_quantity = float(request.form.get('quantity', 0))
-    notes = request.form.get('notes', '')
-
-    try:
-        success = ProductInventoryService.recount_sku(sku_id, new_quantity, notes)
-
-        if success:
-            db.session.commit()
-            flash('Inventory recount completed successfully', 'success')
-        else:
-            db.session.rollback()
-            flash('Failed to process recount', 'error')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-@product_inventory_bp.route('/sku/<int:sku_id>/deduct', methods=['POST'])
-@login_required
-def recount_stock(sku_id):
-    """Recount SKU stock"""
-    new_total = float(request.form.get('new_total', 0))
-    notes = request.form.get('notes', '')
-
-    try:
-        success = ProductInventoryService.recount_stock(
-            sku_id=sku_id,
-            new_total=new_total,
-            notes=notes
-        )
-
-        if success:
-            db.session.commit()
-            flash('Recount completed successfully', 'success')
-        else:
-            flash('Error during recount', 'error')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-
-    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
 @product_inventory_bp.route('/fifo/<int:inventory_id>/adjust', methods=['POST'])
 @login_required
