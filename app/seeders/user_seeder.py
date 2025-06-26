@@ -16,23 +16,28 @@ def seed_users():
         db.session.add(org)
         db.session.flush()  # Get the ID
     
-    # Get roles from database
+    # Get roles from database - these should exist from role_permission_seeder
     developer_role = Role.query.filter_by(name='developer').first()
     org_owner_role = Role.query.filter_by(name='organization_owner').first()
+    manager_role = Role.query.filter_by(name='manager').first()
+    operator_role = Role.query.filter_by(name='operator').first()
+    
+    if not developer_role or not org_owner_role:
+        print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
+        return
     
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
             username='dev',
             password_hash=generate_password_hash('dev123'),
-            role='developer',  # Keep legacy role for backward compatibility
-            role_id=developer_role.id if developer_role else None,  # New database role
+            role_id=developer_role.id,
             first_name='System',
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
             organization_id=org.id,
-            is_owner=False  # Developers are not org owners
+            is_owner=False
         )
         db.session.add(developer_user)
         print("✅ Created developer user: dev/dev123")
@@ -44,38 +49,54 @@ def seed_users():
         admin_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role='organization_owner',  # Keep legacy role for backward compatibility
-            role_id=org_owner_role.id if org_owner_role else None,  # New database role
+            role_id=org_owner_role.id,
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
             organization_id=org.id,
-            is_owner=True  # Boolean value for organization owner
+            is_owner=True
         )
         db.session.add(admin_user)
         print("✅ Created organization owner user: admin/admin")
     else:
         print("ℹ️  Admin user already exists")
     
-    # Create a sample organization_owner (maker) user if it doesn't exist
-    if not User.query.filter_by(username='maker').first():
-        maker_user = User(
-            username='maker',
-            password_hash=generate_password_hash('maker123'),
-            role='organization_owner',  # Keep legacy role for backward compatibility
-            role_id=org_owner_role.id if org_owner_role else None,  # New database role
+    # Create a sample manager user if it doesn't exist
+    if not User.query.filter_by(username='manager').first() and manager_role:
+        manager_user = User(
+            username='manager',
+            password_hash=generate_password_hash('manager123'),
+            role_id=manager_role.id,
             first_name='Sample',
-            last_name='Maker',
-            email='maker@example.com',
-            phone='555-0123',
+            last_name='Manager',
+            email='manager@example.com',
+            phone='555-0124',
             organization_id=org.id,
-            is_owner=True  # Boolean value - organization owner
+            is_owner=False
         )
-        db.session.add(maker_user)
-        print("✅ Created sample maker user: maker/maker123")
+        db.session.add(manager_user)
+        print("✅ Created sample manager user: manager/manager123")
     else:
-        print("ℹ️  Sample maker user already exists")
+        print("ℹ️  Sample manager user already exists")
+    
+    # Create sample operator user if it doesn't exist
+    if not User.query.filter_by(username='operator').first() and operator_role:
+        operator_user = User(
+            username='operator',
+            password_hash=generate_password_hash('operator123'),
+            role_id=operator_role.id,
+            first_name='Sample',
+            last_name='Operator',
+            email='operator@example.com',
+            phone='555-0125',
+            organization_id=org.id,
+            is_owner=False
+        )
+        db.session.add(operator_user)
+        print("✅ Created sample operator user: operator/operator123")
+    else:
+        print("ℹ️  Sample operator user already exists")
     
     db.session.commit()
     print("✅ User seeding completed")
@@ -87,7 +108,7 @@ def update_existing_users_with_roles():
     for user in users:
         if not user.role_id:  # Only update users without database roles
             # Map legacy role strings to database roles
-            role_name = user.role
+            role_name = user.role if hasattr(user, 'role') and user.role else 'organization_owner'
             db_role = Role.query.filter_by(name=role_name).first()
             
             if db_role:
