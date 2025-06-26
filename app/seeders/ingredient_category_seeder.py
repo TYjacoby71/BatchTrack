@@ -5,7 +5,7 @@ from ..extensions import db
 
 def seed_categories(organization_id=None):
     # Use provided organization_id or current user's org
-    if organization_id is None and current_user.is_authenticated:
+    if organization_id is None and current_user and current_user.is_authenticated:
         organization_id = current_user.organization_id
     
     if not organization_id:
