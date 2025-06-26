@@ -15,33 +15,7 @@ def view_sku(sku_id):
         # Handle different POST actions based on form data
         action = request.form.get('action')
 
-        if action == 'edit_sku':
-            # Handle SKU code editing inline
-            sku = ProductSKU.query.get_or_404(sku_id)
-            sku_code = request.form.get('sku_code', '').strip()
-
-            # Check if SKU code already exists
-            if sku_code:
-                existing = ProductSKU.query.filter(
-                    ProductSKU.sku_code == sku_code,
-                    ProductSKU.id != sku_id
-                ).first()
-
-                if existing:
-                    flash(f'SKU code "{sku_code}" is already in use', 'error')
-                    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-            sku.sku_code = sku_code if sku_code else None
-            db.session.commit()
-
-            if sku_code:
-                flash(f'SKU code updated to "{sku_code}"', 'success')
-            else:
-                flash('SKU code removed', 'success')
-
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-        elif action == 'add_stock':
+        if action == 'add_stock':
             return add_stock(sku_id)
         elif action == 'deduct_stock':
             return deduct_stock(sku_id)
@@ -59,7 +33,6 @@ def view_sku(sku_id):
                 return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
             try:
-                from ...services.product_inventory_service import ProductInventoryService
                 success = ProductInventoryService.adjust_fifo_entry(
                     inventory_id=int(inventory_id),
                     quantity=quantity,

@@ -49,9 +49,13 @@ class ProductService:
         ).first()
 
         if sku:
+            # If SKU exists but doesn't have a code, generate one
+            if not sku.sku_code:
+                sku.sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
+                db.session.flush()
             return sku
 
-        # Generate SKU code automatically if not provided
+        # Always generate SKU code automatically
         if not sku_code:
             sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
 
@@ -91,6 +95,26 @@ class ProductService:
             )
             return base_sku
         return None
+
+    @staticmethod
+    def backfill_missing_sku_codes():
+        """Generate SKU codes for any SKUs that don't have them"""
+        skus_without_codes = ProductSKU.query.filter(
+            ProductSKU.sku_code.is_(None),
+            ProductSKU.is_active == True
+        ).all()
+        
+        for sku in skus_without_codes:
+            sku.sku_code = ProductService.generate_sku_code(
+                sku.product_name, 
+                sku.variant_name, 
+                sku.size_label
+            )
+        
+        if skus_without_codes:
+            db.session.commit()
+            return len(skus_without_codes)
+        return 0
 
     @staticmethod
     def generate_sku_code(product_name, variant_name, size_label):
