@@ -291,19 +291,11 @@ class InventoryItem(db.Model):
     # Container-specific fields
     storage_amount = db.Column(db.Float, nullable=True)
     storage_unit = db.Column(db.String(32), nullable=True)
-    # POS integration fields
-    frozen_quantity = db.Column(db.Float, default=0.0)  # Reserved for orders in progress
-    available_quantity = db.Column(db.Float, default=0.0)  # quantity - frozen_quantity (computed)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
-    
-    @property
-    def calculated_available_quantity(self):
-        """Calculate available quantity (total - frozen)"""
-        return max(0, self.quantity - self.frozen_quantity)
 
 class BatchInventoryLog(db.Model):
     """Log batch impacts on inventory for debugging"""
