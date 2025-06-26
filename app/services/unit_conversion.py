@@ -100,9 +100,7 @@ class ConversionEngine:
             amount=amount,
             from_unit=from_unit,
             to_unit=to_unit,
-            result=converted,
-            ingredient_id=ingredient_id,
-            density_used=used_density
+            result=converted
         )
         db.session.add(log)
         db.session.commit()
