@@ -67,7 +67,7 @@
 
       <!-- Variants Card View -->
       <div class="row" id="variantsContainer">
-        {% set all_variants = ['Base'] %}
+        {% set all_variants = [] %}
         {% for variation in product.variations %}
           {% if variation.name not in all_variants %}
             {% set _ = all_variants.append(variation.name) %}
@@ -79,6 +79,10 @@
             {% set _ = all_variants.append(group.variant) %}
           {% endif %}
         {% endfor %}
+
+        {% if not all_variants %}
+          {% set _ = all_variants.append('Base') %}
+        {% endif %}
 
         {% for variant_name in all_variants %}
         {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}

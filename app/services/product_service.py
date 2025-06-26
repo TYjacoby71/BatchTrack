@@ -75,6 +75,24 @@ class ProductService:
         return sku
 
     @staticmethod
+    def ensure_base_variant_if_needed(product_name):
+        """Create a Base variant if no variants exist for a product"""
+        existing_skus = ProductSKU.query.filter_by(
+            product_name=product_name,
+            is_active=True
+        ).all()
+        
+        if not existing_skus:
+            # No variants exist, create a Base variant
+            base_sku = ProductService.get_or_create_sku(
+                product_name=product_name,
+                variant_name='Base',
+                size_label='Bulk'
+            )
+            return base_sku
+        return None
+
+    @staticmethod
     def generate_sku_code(product_name, variant_name, size_label):
         """Generate a unique SKU code based on product components"""
         # Create base SKU from first 3 characters of each component

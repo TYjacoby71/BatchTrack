@@ -313,6 +313,28 @@ document.addEventListener('DOMContentLoaded', function() {
       if (deductSizeEl) deductSizeEl.value = size || '';
     });
   }
+
+    // Global functions
+    window.confirmDeleteVariant = function(productName, variantName) {
+        if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/products/${encodeURIComponent(productName)}/variant/${encodeURIComponent(variantName)}/delete`;
+
+            const csrfToken = document.querySelector('input[name="csrf_token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken.value;
+                form.appendChild(csrfInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    };
+
 });
 </script>
 {% endblock %}
