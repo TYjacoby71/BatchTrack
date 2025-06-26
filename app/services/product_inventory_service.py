@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from typing import Optional, List, Dict
 from flask_login import current_user
@@ -12,12 +13,24 @@ class ProductInventoryService:
     @staticmethod
     def add_stock(sku_id: int, quantity: float, unit_cost: float = 0, 
                   batch_id: Optional[int] = None, container_id: Optional[int] = None,
-                  notes: str = '', change_type: str = 'manual_addition') -> ProductSKUHistory:
+                  notes: str = '', change_type: str = 'manual_addition',
+                  sale_price: Optional[float] = None, customer: Optional[str] = None,
+                  sale_location: str = 'manual') -> ProductSKUHistory:
         """Add stock to SKU - creates FIFO history entry like InventoryHistory"""
 
         sku = ProductSKU.query.get_or_404(sku_id)
         old_quantity = sku.current_quantity
         new_quantity = old_quantity + quantity
+
+        # Calculate weighted average cost for new additions
+        if change_type in ['batch_addition', 'manual_addition', 'restock'] and quantity > 0:
+            if old_quantity > 0 and sku.unit_cost:
+                current_value = old_quantity * sku.unit_cost
+                new_value = quantity * unit_cost
+                weighted_avg_cost = (current_value + new_value) / (old_quantity + quantity)
+                sku.unit_cost = weighted_avg_cost
+            elif unit_cost > 0:
+                sku.unit_cost = unit_cost
 
         # Update SKU current quantity
         sku.current_quantity = new_quantity
@@ -31,15 +44,21 @@ class ProductInventoryService:
             quantity_change=quantity,
             old_quantity=old_quantity,
             new_quantity=new_quantity,
-            remaining_quantity=quantity,  # For FIFO tracking
+            remaining_quantity=quantity if change_type in ['batch_addition', 'manual_addition', 'restock', 'overflow_restock'] else 0,
             original_quantity=quantity,
             unit=sku.unit,
-            unit_cost=unit_cost,
+            unit_cost=unit_cost or sku.unit_cost,
+            sale_price=sale_price,
+            customer=customer,
             batch_id=batch_id,
             container_id=container_id,
             fifo_code=generate_fifo_code(f"SKU{sku_id}"),
             notes=notes,
-            created_by=current_user.id if current_user.is_authenticated else None
+            note=notes,  # Mirror field
+            created_by=current_user.id if current_user.is_authenticated else None,
+            quantity_used=0.0,  # Additions don't consume
+            sale_location=sale_location,
+            used_for_batch_id=batch_id if change_type == 'batch_addition' else None
         )
 
         db.session.add(history)
@@ -48,7 +67,8 @@ class ProductInventoryService:
     @staticmethod
     def deduct_stock(sku_id: int, quantity: float, change_type: str = 'manual_deduction',
                      notes: str = '', sale_price: Optional[float] = None,
-                     customer: Optional[str] = None) -> bool:
+                     customer: Optional[str] = None, sale_location: str = 'manual',
+                     order_id: Optional[str] = None, used_for_batch_id: Optional[int] = None) -> bool:
         """Deduct stock using FIFO - mirrors raw inventory deduct_fifo"""
 
         sku = ProductSKU.query.get_or_404(sku_id)
@@ -78,28 +98,35 @@ class ProductInventoryService:
             entry.remaining_quantity -= deduct_amount
             remaining_to_deduct -= deduct_amount
 
+            # Create individual deduction history for each FIFO entry used
+            deduction_history = ProductSKUHistory(
+                sku_id=sku_id,
+                timestamp=datetime.utcnow(),
+                change_type=change_type,
+                quantity_change=-deduct_amount,
+                old_quantity=sku.current_quantity,
+                new_quantity=sku.current_quantity - deduct_amount,
+                remaining_quantity=0,  # Deductions don't have remaining
+                unit=sku.unit,
+                unit_cost=entry.unit_cost,  # Use cost from original FIFO entry
+                sale_price=sale_price,
+                customer=customer,
+                fifo_code=generate_fifo_code(f"SKU{sku_id}"),
+                fifo_reference_id=entry.id,  # Reference to source FIFO entry
+                notes=f"{notes} (From FIFO #{entry.id})",
+                note=f"{notes} (From FIFO #{entry.id})",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
+                sale_location=sale_location,
+                order_id=order_id,
+                used_for_batch_id=used_for_batch_id
+            )
+            db.session.add(deduction_history)
+
         # Update SKU total
         sku.current_quantity = old_quantity - quantity
         sku.last_updated = datetime.utcnow()
 
-        # Create deduction history entry
-        history = ProductSKUHistory(
-            sku_id=sku_id,
-            timestamp=datetime.utcnow(),
-            change_type=change_type,
-            quantity_change=-quantity,
-            old_quantity=old_quantity,
-            new_quantity=sku.current_quantity,
-            remaining_quantity=0,  # Deductions don't have remaining
-            unit=sku.unit,
-            sale_price=sale_price,
-            customer=customer,
-            fifo_code=generate_fifo_code(f"SKU{sku_id}"),
-            notes=notes,
-            created_by=current_user.id if current_user.is_authenticated else None
-        )
-
-        db.session.add(history)
         return True
 
     @staticmethod
@@ -126,6 +153,7 @@ class ProductInventoryService:
             ProductInventoryService.add_stock(
                 sku_id=sku_id,
                 quantity=difference,
+                unit_cost=sku.unit_cost or 0,
                 change_type='recount',
                 notes=f"Recount adjustment: {old_quantity} → {new_quantity}. {notes}"
             )
@@ -166,12 +194,126 @@ class ProductInventoryService:
             new_quantity=sku.current_quantity,
             remaining_quantity=0,
             unit=sku.unit,
+            unit_cost=history_entry.unit_cost,  # Use cost from original entry
             fifo_code=generate_fifo_code(f"SKU{history_entry.sku_id}"),
+            fifo_reference_id=history_entry.id,
             notes=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
-            created_by=current_user.id if current_user.is_authenticated else None
+            note=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
+            created_by=current_user.id if current_user.is_authenticated else None,
+            quantity_used=quantity if change_type in ['spoil', 'trash', 'damage'] else 0.0,
+            sale_location='manual'
         )
 
         db.session.add(adjustment_history)
+        return True
+
+    @staticmethod
+    def process_return_credit(sku_id: int, quantity: float, original_batch_id: Optional[int] = None,
+                            notes: str = '', sale_price: Optional[float] = None) -> bool:
+        """Process returns by crediting back to original FIFO entries"""
+        
+        sku = ProductSKU.query.get_or_404(sku_id)
+        
+        if original_batch_id:
+            # Find original deductions for this batch
+            original_deductions = ProductSKUHistory.query.filter(
+                ProductSKUHistory.sku_id == sku_id,
+                ProductSKUHistory.used_for_batch_id == original_batch_id,
+                ProductSKUHistory.quantity_change < 0,
+                ProductSKUHistory.fifo_reference_id.isnot(None)
+            ).order_by(ProductSKUHistory.timestamp.desc()).all()
+
+            remaining_to_credit = quantity
+            
+            # Credit back to original FIFO entries
+            for deduction in original_deductions:
+                if remaining_to_credit <= 0:
+                    break
+
+                original_fifo_entry = ProductSKUHistory.query.get(deduction.fifo_reference_id)
+                if original_fifo_entry:
+                    credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
+                    
+                    # Credit back to original FIFO entry
+                    original_fifo_entry.remaining_quantity += credit_amount
+                    remaining_to_credit -= credit_amount
+
+                    # Create credit history
+                    credit_history = ProductSKUHistory(
+                        sku_id=sku_id,
+                        timestamp=datetime.utcnow(),
+                        change_type='refunded',
+                        quantity_change=credit_amount,
+                        old_quantity=sku.current_quantity,
+                        new_quantity=sku.current_quantity + credit_amount,
+                        remaining_quantity=0,  # Credits don't create new FIFO entries
+                        unit=sku.unit,
+                        unit_cost=original_fifo_entry.unit_cost,
+                        sale_price=sale_price,
+                        fifo_code=generate_fifo_code(f"SKU{sku_id}"),  
+                        fifo_reference_id=original_fifo_entry.id,
+                        notes=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
+                        note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
+                        created_by=current_user.id if current_user.is_authenticated else None,
+                        quantity_used=0.0,
+                        sale_location='manual',
+                        used_for_batch_id=original_batch_id
+                    )
+                    db.session.add(credit_history)
+
+            # Handle any remaining quantity as new stock
+            if remaining_to_credit > 0:
+                ProductInventoryService.add_stock(
+                    sku_id=sku_id,
+                    quantity=remaining_to_credit,
+                    unit_cost=sku.unit_cost or 0,
+                    change_type='restock',
+                    notes=f"{notes} (Excess return - no original FIFO found)"
+                )
+        else:
+            # Simple addition for returns without batch tracking
+            ProductInventoryService.add_stock(
+                sku_id=sku_id,
+                quantity=quantity,
+                unit_cost=sku.unit_cost or 0,
+                change_type='refunded',
+                notes=notes,
+                sale_price=sale_price
+            )
+
+        return True
+
+    @staticmethod
+    def reserve_stock(sku_id: int, quantity: float, order_id: str, reservation_id: str) -> bool:
+        """Reserve stock for pending orders"""
+        sku = ProductSKU.query.get_or_404(sku_id)
+        
+        if sku.available_for_sale < quantity:
+            return False
+            
+        sku.reserved_quantity = (sku.reserved_quantity or 0) + quantity
+        
+        # Create reservation history
+        history = ProductSKUHistory(
+            sku_id=sku_id,
+            timestamp=datetime.utcnow(),
+            change_type='reserved',
+            quantity_change=0,  # No actual quantity change
+            old_quantity=sku.current_quantity,
+            new_quantity=sku.current_quantity,
+            remaining_quantity=0,
+            unit=sku.unit,
+            unit_cost=sku.unit_cost,
+            order_id=order_id,
+            reservation_id=reservation_id,
+            is_reserved=True,
+            notes=f"Reserved {quantity} {sku.unit} for order {order_id}",
+            note=f"Reserved {quantity} {sku.unit} for order {order_id}",
+            created_by=current_user.id if current_user.is_authenticated else None,
+            quantity_used=0.0,
+            sale_location='pos'
+        )
+        db.session.add(history)
         return True
 
     @staticmethod
@@ -216,9 +358,29 @@ class ProductInventoryService:
                 'size_label': sku.size_label,
                 'sku_code': sku.sku_code,
                 'current_quantity': sku.current_quantity,
+                'reserved_quantity': sku.reserved_quantity or 0,
+                'available_quantity': sku.available_for_sale,
                 'unit': sku.unit,
+                'unit_cost': sku.unit_cost,
                 'low_stock_threshold': sku.low_stock_threshold,
                 'is_low_stock': sku.current_quantity <= sku.low_stock_threshold
             })
 
         return summary
+
+    @staticmethod
+    def validate_sku_fifo_sync(sku_id: int):
+        """Validate that SKU quantity matches sum of FIFO remaining quantities"""
+        sku = ProductSKU.query.get(sku_id)
+        if not sku:
+            return False, "SKU not found", 0, 0
+
+        fifo_entries = ProductInventoryService.get_fifo_entries(sku_id, active_only=True)
+        fifo_total = sum(entry.remaining_quantity for entry in fifo_entries)
+
+        # Allow small floating point differences (0.001)
+        if abs(sku.current_quantity - fifo_total) > 0.001:
+            error_msg = f"SYNC ERROR: SKU {sku.display_name} quantity ({sku.current_quantity}) != FIFO total ({fifo_total})"
+            return False, error_msg, sku.current_quantity, fifo_total
+
+        return True, "", sku.current_quantity, fifo_total
