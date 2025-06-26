@@ -1,8 +1,8 @@
-"""Initial schema with all models
+"""Initial migration with clean schema
 
-Revision ID: e04a3508f9f7
+Revision ID: f76407232fa9
 Revises: 
-Create Date: 2025-06-26 00:36:48.419646
+Create Date: 2025-06-26 19:31:08.612294
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e04a3508f9f7_initial_schema_with_all_models'
+revision = 'f76407232fa9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -326,6 +326,8 @@ def upgrade():
     sa.Column('expiration_date', sa.Date(), nullable=True),
     sa.Column('storage_amount', sa.Float(), nullable=True),
     sa.Column('storage_unit', sa.String(length=32), nullable=True),
+    sa.Column('frozen_quantity', sa.Float(), nullable=True),
+    sa.Column('available_quantity', sa.Float(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
@@ -394,6 +396,7 @@ def upgrade():
     sa.Column('is_perishable', sa.Boolean(), nullable=True),
     sa.Column('shelf_life_days', sa.Integer(), nullable=True),
     sa.Column('expiration_date', sa.DateTime(), nullable=True),
+    sa.Column('is_reserved', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['fifo_reference_id'], ['inventory_history.id'], ),
@@ -416,6 +419,8 @@ def upgrade():
     sa.Column('sale_price', sa.Float(), nullable=True),
     sa.Column('customer', sa.String(length=128), nullable=True),
     sa.Column('fifo_code', sa.String(length=64), nullable=True),
+    sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+    sa.Column('fifo_source', sa.String(length=128), nullable=True),
     sa.Column('container_id', sa.Integer(), nullable=True),
     sa.Column('is_perishable', sa.Boolean(), nullable=True),
     sa.Column('shelf_life_days', sa.Integer(), nullable=True),
@@ -423,6 +428,12 @@ def upgrade():
     sa.Column('batch_id', sa.Integer(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('quantity_used', sa.Float(), nullable=True),
+    sa.Column('order_id', sa.String(length=64), nullable=True),
+    sa.Column('reservation_id', sa.String(length=64), nullable=True),
+    sa.Column('is_reserved', sa.Boolean(), nullable=True),
+    sa.Column('sale_location', sa.String(length=64), nullable=True),
+    sa.Column('note', sa.Text(), nullable=True),
     sa.Column('batch_number', sa.String(length=128), nullable=True),
     sa.Column('lot_number', sa.String(length=128), nullable=True),
     sa.Column('temperature_at_time', sa.Float(), nullable=True),
@@ -439,6 +450,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
     sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['sku_id'], ['product_sku.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -447,9 +459,13 @@ def upgrade():
         batch_op.create_index('idx_batch_lot', ['batch_number', 'lot_number'], unique=False)
         batch_op.create_index('idx_change_type', ['change_type'], unique=False)
         batch_op.create_index('idx_fifo_code', ['fifo_code'], unique=False)
+        batch_op.create_index('idx_fifo_reference', ['fifo_reference_id'], unique=False)
+        batch_op.create_index('idx_fifo_source', ['fifo_source'], unique=False)
         batch_op.create_index('idx_location_time', ['location_id', 'timestamp'], unique=False)
         batch_op.create_index('idx_marketplace_order', ['marketplace_source', 'marketplace_order_id'], unique=False)
+        batch_op.create_index('idx_order_reservation', ['order_id', 'reservation_id'], unique=False)
         batch_op.create_index('idx_quality_compliance', ['quality_status', 'compliance_status'], unique=False)
+        batch_op.create_index('idx_sale_location', ['sale_location'], unique=False)
         batch_op.create_index('idx_sku_remaining', ['sku_id', 'remaining_quantity'], unique=False)
         batch_op.create_index('idx_sku_timestamp', ['sku_id', 'timestamp'], unique=False)
 
@@ -476,9 +492,13 @@ def downgrade():
     with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
         batch_op.drop_index('idx_sku_timestamp')
         batch_op.drop_index('idx_sku_remaining')
+        batch_op.drop_index('idx_sale_location')
         batch_op.drop_index('idx_quality_compliance')
+        batch_op.drop_index('idx_order_reservation')
         batch_op.drop_index('idx_marketplace_order')
         batch_op.drop_index('idx_location_time')
+        batch_op.drop_index('idx_fifo_source')
+        batch_op.drop_index('idx_fifo_reference')
         batch_op.drop_index('idx_fifo_code')
         batch_op.drop_index('idx_change_type')
         batch_op.drop_index('idx_batch_lot')
