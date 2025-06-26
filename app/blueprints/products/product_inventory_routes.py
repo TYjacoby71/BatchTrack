@@ -7,10 +7,27 @@ from ...services.product_inventory_service import ProductInventoryService
 
 product_inventory_bp = Blueprint('product_inventory', __name__)
 
-@product_inventory_bp.route('/sku/<int:sku_id>')
+@product_inventory_bp.route('/sku/<int:sku_id>', methods=['GET', 'POST'])
 @login_required  
 def view_sku(sku_id):
     """View detailed SKU-level inventory - the point of truth"""
+    if request.method == 'POST':
+        # Handle different POST actions based on form data
+        action = request.form.get('action')
+        
+        if action == 'edit_sku':
+            return edit_sku_code(sku_id)
+        elif action == 'add_stock':
+            return add_stock(sku_id)
+        elif action == 'deduct_stock':
+            return deduct_stock(sku_id)
+        elif action == 'recount':
+            return recount_sku(sku_id)
+        else:
+            flash('Invalid action', 'error')
+            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+    
+    # GET request handling
     page = request.args.get('page', 1, type=int)
     per_page = 10
     fifo_filter = request.args.get('fifo') == 'true'
