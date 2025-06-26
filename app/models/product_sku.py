@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from ..extensions import db
+from .mixins import ScopedModelMixin
 
-class ProductSKU(db.Model):
+class ProductSKU(ScopedModelMixin, db.Model):
     """SINGLE PRODUCT TABLE - Contains all product, variant, and inventory data"""
     __tablename__ = 'product_sku'
     
@@ -60,7 +61,6 @@ class ProductSKU(db.Model):
     
     # METADATA (from batch and user data)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # From batch data
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -221,7 +221,7 @@ class ProductSKU(db.Model):
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
 
-class ProductSKUHistory(db.Model):
+class ProductSKUHistory(ScopedModelMixin, db.Model):
     """FIFO-enabled history table for SKU changes - mirrors InventoryHistory"""
     __tablename__ = 'product_sku_history'
     

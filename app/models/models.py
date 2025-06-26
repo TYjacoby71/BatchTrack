@@ -92,7 +92,7 @@ class CustomUnitMapping(ScopedModelMixin, db.Model):
 
 class IngredientCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True, nullable=False)
+    name = db.Column(db.String(64), nullable=False)
     description = db.Column(db.Text)
     color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color
     is_active = db.Column(db.Boolean, default=True)
@@ -141,7 +141,7 @@ class Recipe(ScopedModelMixin, db.Model):
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 
-class Batch(db.Model):
+class Batch(ScopedModelMixin, db.Model):
     __tablename__ = 'batch'
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
@@ -174,7 +174,7 @@ class Batch(db.Model):
     recipe = db.relationship('Recipe', backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
-class BatchIngredient(db.Model):
+class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
@@ -188,7 +188,7 @@ class BatchIngredient(db.Model):
     batch = db.relationship('Batch', backref='batch_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='batch_usages')
 
-class BatchContainer(db.Model):
+class BatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_container'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
@@ -200,7 +200,7 @@ class BatchContainer(db.Model):
 
     batch = db.relationship('Batch', backref='containers')
 
-class ExtraBatchContainer(db.Model):
+class ExtraBatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'extra_batch_container'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
@@ -211,7 +211,7 @@ class ExtraBatchContainer(db.Model):
 
     batch = db.relationship('Batch', backref='extra_containers')
 
-class InventoryHistory(db.Model):
+class InventoryHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_history'
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
@@ -238,7 +238,7 @@ class InventoryHistory(db.Model):
     used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
     user = db.relationship('User')
 
-class BatchTimer(db.Model):
+class BatchTimer(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_timer'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
@@ -252,7 +252,7 @@ class BatchTimer(db.Model):
 
     batch = db.relationship('Batch', backref='timers')
 
-class ExtraBatchIngredient(db.Model):
+class ExtraBatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'extra_batch_ingredient'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
@@ -291,7 +291,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
 
-class BatchInventoryLog(db.Model):
+class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
@@ -306,7 +306,7 @@ class BatchInventoryLog(db.Model):
     batch = db.relationship('Batch')
     inventory_item = db.relationship('InventoryItem')
 
-class Tag(db.Model):
+class Tag(ScopedModelMixin, db.Model):
     """Tags for categorizing batches, products, etc."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
