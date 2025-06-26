@@ -4,6 +4,8 @@ from urllib.parse import unquote
 
 from ...models import db, ProductSKU
 from ...services.product_inventory_service import ProductInventoryService
+from ...utils.unit_utils import get_global_unit_list
+from datetime import datetime
 
 product_inventory_bp = Blueprint('product_inventory', __name__)
 
@@ -88,45 +90,60 @@ def view_sku(sku_id):
     total_quantity = sku.current_quantity
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    return render_template('products/view_sku.html',
-                         sku=sku,
-                         fifo_entries=fifo_entries,
-                         history=history_data['items'],
-                         history_pagination=history_data['pagination'],
-                         total_quantity=total_quantity,
-                         total_batches=total_batches,
-                         fifo_filter=fifo_filter)
+    context = {
+        'sku': sku,
+        'total_quantity': total_quantity,
+        'history': history_data['items'],
+        'history_pagination': history_data['pagination'],
+        'total_batches': total_batches,
+        'fifo_filter': fifo_filter,
+        'get_global_unit_list': get_global_unit_list
+    }
+
+    return render_template('products/view_sku.html', **context)
+
 
 @product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
 @login_required
-def edit_sku_code(sku_id):
-    """Edit SKU code"""
+def edit_sku(sku_id):
+    """Edit SKU details"""
     sku = ProductSKU.query.get_or_404(sku_id)
 
-    sku_code = request.form.get('sku_code', '').strip()
+    try:
+        # Update basic fields
+        sku.sku_code = request.form.get('sku_code').strip() if request.form.get('sku_code') else None
+        sku.size_label = request.form.get('size_label').strip()
+        sku.retail_price = float(request.form.get('retail_price')) if request.form.get('retail_price') else None
+        sku.low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
+        sku.unit = request.form.get('unit')
+        sku.is_active = bool(request.form.get('is_active'))
+        sku.track_expiration = bool(request.form.get('track_expiration'))
+        sku.description = request.form.get('description').strip() if request.form.get('description') else None
+        sku.barcode = request.form.get('barcode').strip() if request.form.get('barcode') else None
 
-    # Check if SKU code already exists
-    if sku_code:
-        existing = ProductSKU.query.filter(
-            ProductSKU.sku_code == sku_code,
-            ProductSKU.id != sku_id
-        ).first()
+        # Handle unit cost override
+        override_unit_cost = bool(request.form.get('override_unit_cost'))
+        if override_unit_cost:
+            new_unit_cost = request.form.get('unit_cost')
+            if new_unit_cost:
+                sku.unit_cost = float(new_unit_cost)
 
-        if existing:
-            flash(f'SKU code "{sku_code}" is already in use', 'error')
-            return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+        # Auto-generate SKU code if not provided
+        if not sku.sku_code:
+            sku.sku_code = f"{sku.product_name}-{sku.variant_name}-{sku.size_label}".replace(' ', '-').upper()
 
-    sku.sku_code = sku_code if sku_code else None
-    db.session.commit()
+        sku.last_updated = datetime.utcnow()
+        db.session.commit()
 
-    if sku_code:
-        flash(f'SKU code updated to "{sku_code}"', 'success')
-    else:
-        flash('SKU code removed', 'success')
+        flash('SKU details updated successfully!', 'success')
+
+    except ValueError as e:
+        flash(f'Invalid input: {str(e)}', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating SKU: {str(e)}', 'error')
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
-
-
 
 @product_inventory_bp.route('/fifo/<int:inventory_id>/adjust', methods=['POST'])
 @login_required
