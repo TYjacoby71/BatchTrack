@@ -103,9 +103,13 @@
                   {% set total_value = 0 %} {# TODO: Calculate when retail prices are added #}
                   <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
-                      <a href="{{ url_for('product_inventory.view_sku', product_name=product.name, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                      {% if group.skus %}
+                      <a href="{{ url_for('product_inventory.view_sku', sku_id=group.skus[0].id) }}">
                         {{ size_display }}
                       </a>
+                      {% else %}
+                        {{ size_display }}
+                      {% endif %}
                       {% if group.total_quantity <= 0 and has_history %}
                         <small class="badge bg-secondary ms-1">No Stock</small>
                       {% endif %}
@@ -133,15 +137,19 @@
                         </button>
                         <ul class="dropdown-menu">
                           <li>
-                            <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', product_name=product.name, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                            {% if group.skus %}
+                            <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', sku_id=group.skus[0].id) }}">
                               <i class="fas fa-edit"></i> Manage Stock
                             </a>
+                            {% endif %}
                           </li>
                           <li><hr class="dropdown-divider"></li>
                           <li>
-                            <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', product_name=product.name, variant=variation.name|urlencode, size_label=size_display|urlencode) }}">
+                            {% if group.skus %}
+                            <a class="dropdown-item" href="{{ url_for('product_inventory.view_sku', sku_id=group.skus[0].id) }}">
                               <i class="fas fa-eye"></i> View SKU
                             </a>
+                            {% endif %}
                           </li>
                         </ul>
                       </div>

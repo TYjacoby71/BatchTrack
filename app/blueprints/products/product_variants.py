@@ -83,11 +83,17 @@ def view_variant(product_name, variant_name):
                 'size_label': display_size_label,
                 'unit': sku.unit,
                 'total_quantity': 0,
-                'skus': []
+                'skus': [],
+                'batches': []  # Add batches for cost calculations
             }
         
         size_groups[key]['total_quantity'] += sku.current_quantity
         size_groups[key]['skus'].append(sku)
+        
+        # Add batch information for cost calculations
+        for batch in sku.batches:
+            if batch.quantity > 0:
+                size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
