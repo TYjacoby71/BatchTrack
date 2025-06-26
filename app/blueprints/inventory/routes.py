@@ -115,7 +115,8 @@ def add_inventory():
             shelf_life_days=shelf_life_days,
             expiration_date=expiration_date,
             storage_amount=storage_amount,
-            storage_unit=storage_unit
+            storage_unit=storage_unit,
+            organization_id=current_user.organization_id
         )
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
@@ -134,7 +135,8 @@ def add_inventory():
                 quantity_used=0.0,  # Restocks don't consume inventory - always 0
                 is_perishable=is_perishable,
                 shelf_life_days=shelf_life_days,
-                expiration_date=expiration_date
+                expiration_date=expiration_date,
+                organization_id=current_user.organization_id
             )
             db.session.add(history)
             item.quantity = quantity  # Update the current quantity

@@ -14,7 +14,10 @@ def seed_users():
             subscription_tier='free'
         )
         db.session.add(org)
-        db.session.flush()  # Get the ID
+        db.session.commit()  # Commit to ensure we have a valid ID
+        print(f"✅ Created organization: {org.name} (ID: {org.id})")
+    else:
+        print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
     
     # Get roles from database - these should exist from role_permission_seeder
     developer_role = Role.query.filter_by(name='developer').first()
@@ -40,7 +43,7 @@ def seed_users():
             is_owner=False
         )
         db.session.add(developer_user)
-        print("✅ Created developer user: dev/dev123")
+        print(f"✅ Created developer user: dev/dev123 (org_id: {org.id})")
     else:
         print("ℹ️  Developer user already exists")
     
@@ -58,7 +61,7 @@ def seed_users():
             is_owner=True
         )
         db.session.add(admin_user)
-        print("✅ Created organization owner user: admin/admin")
+        print(f"✅ Created organization owner user: admin/admin (org_id: {org.id})")
     else:
         print("ℹ️  Admin user already exists")
     
@@ -76,7 +79,7 @@ def seed_users():
             is_owner=False
         )
         db.session.add(manager_user)
-        print("✅ Created sample manager user: manager/manager123")
+        print(f"✅ Created sample manager user: manager/manager123 (org_id: {org.id})")
     else:
         print("ℹ️  Sample manager user already exists")
     
@@ -94,7 +97,7 @@ def seed_users():
             is_owner=False
         )
         db.session.add(operator_user)
-        print("✅ Created sample operator user: operator/operator123")
+        print(f"✅ Created sample operator user: operator/operator123 (org_id: {org.id})")
     else:
         print("ℹ️  Sample operator user already exists")
     

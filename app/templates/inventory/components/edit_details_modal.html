@@ -28,7 +28,7 @@
             </select>
           </div>
 
-          <div class="mb-3" x-data="{ showShelfLife: {{ 'true' if item.is_perishable else 'false' }} }">
+          <div class="mb-3" id="perishableSection" x-data="{ showShelfLife: {{ 'true' if item.is_perishable else 'false' }} }" {% if item.type == 'container' %}style="display: none;"{% endif %}>
             <label for="is_perishable">Perishable:</label>
             <div class="form-check">
               <input type="checkbox" name="is_perishable" class="form-check-input" id="is_perishable" 
@@ -183,5 +183,13 @@ document.addEventListener('DOMContentLoaded', function() {
         unitSelect.dispatchEvent(new Event('change'));
     }
     {% endif %}
+
+    // Type change handler
+    document.querySelector('select[name="type"]').addEventListener('change', function() {
+        document.getElementById('categorySection').style.display = 
+            this.value === 'ingredient' ? 'block' : 'none';
+        document.getElementById('perishableSection').style.display = 
+            this.value === 'container' ? 'none' : 'block';
+    });
 });
 </script>
