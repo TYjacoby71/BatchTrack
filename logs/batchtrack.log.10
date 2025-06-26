@@ -1,54 +1,4 @@
-2025-06-26 16:22:30,655 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:24:19,490 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:24:20,474 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:25:16,382 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:25:17,426 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:27:08,157 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:27:09,043 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:30:23,932 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:30:24,826 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:33:12,773 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:33:15,031 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:33:15,870 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:34:19,314 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:34:20,122 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:35:26,270 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:35:27,182 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:36:33,202 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:36:36,844 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:36:38,012 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:37:17,529 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:37:18,487 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:38:35,158 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:38:36,205 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:40:34,048 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:40:35,058 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:42:12,017 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:42:13,234 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:43:04,799 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:43:08,298 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:43:09,645 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:44:41,902 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:44:42,975 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:45:53,616 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:45:54,485 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:49:29,497 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:49:32,877 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:49:33,774 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:54:39,435 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 16:54:40,503 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:08:58,527 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:09:01,907 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:09:02,895 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:19:38,974 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:19:43,181 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:19:44,076 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:21:10,442 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 17:21:11,320 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:15:05,522 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:18:18,895 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:21:03,341 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:21:15,296 ERROR: Exception on /products/sku/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-26 18:39:58,978 ERROR: Exception on /products/Apple Sauce/variant/Cinnamon [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -65,12 +15,36 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 94, in view_sku
-    fifo_entries = ProductInventoryService.get_fifo_entries(sku_id, active_only=fifo_filter)
-                   ^^^^^^^^^^^^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'ProductInventoryService' where it is not associated with a value
-2025-06-26 18:23:13,952 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:24:52,646 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:27:04,423 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:34:56,557 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 18:39:52,849 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 119, in view_variant
+    return render_template('products/view_variation.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/app/templates/products/view_variation.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/layout.html", line 150, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/products/view_variation.html", line 215, in block 'content'
+    <form method="POST" action="{% if size_groups %}{{ url_for('product_inventory.add_stock', sku_id=size_groups[size_groups.keys()|first].skus[0].id) }}{% else %}#{% endif %}">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'product_inventory.add_stock' with values ['sku_id']. Did you mean 'product_inventory.view_sku' instead?
+2025-06-26 18:41:43,596 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 18:52:10,564 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
