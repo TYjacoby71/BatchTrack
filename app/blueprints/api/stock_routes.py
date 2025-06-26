@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from ...services.stock_check import universal_stock_check
 from ...models import Recipe
 
