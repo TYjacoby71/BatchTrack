@@ -6,6 +6,7 @@ from ...models import Recipe
 stock_api_bp = Blueprint('stock_api', __name__, url_prefix='/api')
 
 @stock_api_bp.route('/check-stock', methods=['POST'])
+@login_required
 def check_stock():
     try:
         data = request.get_json()
@@ -13,7 +14,10 @@ def check_stock():
         scale = float(data.get('scale', 1.0))
         flex_mode = data.get('flex_mode', False)
 
-        recipe = Recipe.query.get_or_404(recipe_id)
+        # Use scoped query to ensure recipe belongs to current user's organization
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
+        if not recipe:
+            return jsonify({"error": "Recipe not found"}), 404
         result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
 
         if 'stock_check' not in result:

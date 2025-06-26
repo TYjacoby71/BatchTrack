@@ -14,7 +14,7 @@ bulk_stock_bp = Blueprint('bulk_stock', __name__)
 @login_required
 def bulk_stock_check():
     try:
-        recipes = Recipe.query.all()
+        recipes = Recipe.scoped().all()
         summary = {}
         selected_ids = []
 
@@ -37,7 +37,7 @@ def bulk_stock_check():
             session['bulk_scale'] = scale
 
             for rid in selected_ids:
-                recipe = Recipe.query.get(int(rid))
+                recipe = Recipe.scoped().filter_by(id=int(rid)).first()
                 if not recipe:
                     continue
                 result = universal_stock_check(recipe, scale)
@@ -47,7 +47,7 @@ def bulk_stock_check():
                     name = row['name']
                     needed = row['needed']
                     from_unit = row.get('unit') or 'ml'
-                    ingredient = InventoryItem.query.filter_by(name=name).first()
+                    ingredient = InventoryItem.scoped().filter_by(name=name).first()
 
                     if not ingredient:
                         continue

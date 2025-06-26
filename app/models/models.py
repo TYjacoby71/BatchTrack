@@ -123,15 +123,16 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ConversionLog(ScopedModelMixin, db.Model):
+    __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     amount = db.Column(db.Float, nullable=False)
-    from_unit = db.Column(db.String(64), nullable=False)
-    to_unit = db.Column(db.String(64), nullable=False)
+    from_unit = db.Column(db.String(32), nullable=False)
+    to_unit = db.Column(db.String(32), nullable=False)
     result = db.Column(db.Float, nullable=False)
-    conversion_type = db.Column(db.String(32), default='unit_to_unit')
-    ingredient_name = db.Column(db.String(128))
+    conversion_type = db.Column(db.String(64), nullable=False)
+    ingredient_name = db.Column(db.String(128), nullable=True)
 
     user = db.relationship('User', backref='conversion_logs')
 

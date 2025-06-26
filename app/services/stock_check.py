@@ -1,5 +1,6 @@
 from ..models import db, Recipe, InventoryItem
 from app.services.unit_conversion import ConversionEngine
+from flask_login import current_user
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""
@@ -9,6 +10,10 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     # Check each ingredient in the recipe
     for recipe_ingredient in recipe.recipe_ingredients:
         ingredient = recipe_ingredient.inventory_item
+        
+        # Ensure ingredient belongs to current user's organization
+        if not ingredient or not ingredient.belongs_to_user():
+            continue
         needed_amount = recipe_ingredient.amount * scale
 
         # Get current inventory details

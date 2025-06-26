@@ -26,7 +26,7 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard(scope_context=None):
-    recipes = Recipe.query.all()
+    recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
     
     # Get unified dashboard alerts
@@ -41,7 +41,7 @@ def dashboard(scope_context=None):
         recipe_id = request.form.get("recipe_id")
         try:
             scale = float(request.form.get("scale", 1))
-            selected_recipe = Recipe.query.get(recipe_id)
+            selected_recipe = Recipe.scoped().filter_by(id=recipe_id).first()
             if selected_recipe:
                 stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
                 status = "ok" if all_ok else "bad"
