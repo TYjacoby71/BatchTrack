@@ -1,7 +1,4 @@
-
-"""
-Models package - imports all models for the application
-"""
+"""Models package - imports all models for the application"""
 from ..extensions import db
 from .models import (
     Organization, User, Unit, CustomUnitMapping, IngredientCategory, 
