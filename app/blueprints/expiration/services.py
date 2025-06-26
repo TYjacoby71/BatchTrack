@@ -3,16 +3,6 @@ from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSK
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
 
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
-from sqlalchemy import and_
-from ...models import db, InventoryHistory, InventoryItem, ProductInventory, Batch
-
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
-from ...models import db, InventoryItem, InventoryHistory, ProductInventory, Batch
-from sqlalchemy import and_
-
 class ExpirationService:
     """Centralized service for all expiration-related operations"""
 
