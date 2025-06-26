@@ -95,12 +95,11 @@ class ConversionEngine:
         # Log it
         log = ConversionLog(
             user_id=current_user.id if current_user and current_user.is_authenticated else None,
-            timestamp=datetime.utcnow(),
             amount=amount,
             from_unit=from_unit,
             to_unit=to_unit,
             result=converted,
-            conversion_type= conversion_type or 'unit_to_unit',
+            conversion_type='unit_to_unit',  # Provide default value
             organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
         )
         db.session.add(log)
