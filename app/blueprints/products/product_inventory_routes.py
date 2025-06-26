@@ -207,3 +207,40 @@ def view_sku_legacy(product_id, variant, size_label):
         return redirect(url_for('dashboard.index'))
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku.id))
+
+@product_inventory_bp.route('/sku/<int:sku_id>/process_adjustment', methods=['POST'])
+@login_required
+def process_inventory_adjustment(sku_id):
+    """Process inventory adjustment for a specific SKU"""
+    try:
+        sku = ProductSKU.query.get_or_404(sku_id)
+        return ProductInventoryService.process_inventory_adjustment(sku, request.form)
+    except Exception as e:
+        app.logger.error(f"Error processing inventory adjustment: {e}")
+        flash(f'Error processing adjustment: {str(e)}', 'error')
+        return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
+
+@product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+@login_required
+def edit_sku_details(sku_id):
+    """Edit SKU details like retail price, size label, etc."""
+    try:
+        sku = ProductSKU.query.get_or_404(sku_id)
+
+        # Update fields from form
+        sku.sku_code = request.form.get('sku_code', '').strip()
+        sku.retail_price = float(request.form.get('retail_price', 0)) if request.form.get('retail_price') else None
+        sku.size_label = request.form.get('size_label', '').strip()
+        sku.location = request.form.get('location', '').strip()
+
+        db.session.commit()
+        flash('SKU details updated successfully', 'success')
+
+    except ValueError:
+        flash('Invalid price value', 'error')
+    except Exception as e:
+        app.logger.error(f"Error updating SKU details: {e}")
+        flash(f'Error updating SKU: {str(e)}', 'error')
+        db.session.rollback()
+
+    return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
