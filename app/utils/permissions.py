@@ -1,4 +1,3 @@
-
 from flask_login import current_user
 import json
 import os
@@ -15,47 +14,47 @@ def load_permissions():
 PERMISSIONS = load_permissions()
 
 def has_permission(permission):
-    """Check if current user has permission"""
+    """Check if current user has a specific permission"""
     if not current_user.is_authenticated:
         return False
-    
-    # Try database-driven permissions first
+
+    # First try database role system
     if hasattr(current_user, 'user_role') and current_user.user_role:
         return current_user.user_role.has_permission(permission)
-    
-    # Fallback to JSON-based permissions
+
+    # Fallback to legacy JSON-based system
     user_role = getattr(current_user, 'role', 'operator')
     if not user_role:
         return False
-    
+
     role_permissions = PERMISSIONS.get(user_role, [])
-    
+
     # Check for wildcard permissions
     if '*' in role_permissions:
         return True
-    
+
     # Check exact permission match
     if permission in role_permissions:
         return True
-    
+
     # Check wildcard patterns (e.g., "alerts.*")
     for perm in role_permissions:
         if perm.endswith('.*'):
             prefix = perm[:-2]
             if permission.startswith(prefix + '.'):
                 return True
-    
+
     return False
 
 def has_role(role_name):
     """Check if current user has specific role"""
     if not current_user.is_authenticated:
         return False
-    
+
     # Try database-driven role first
     if hasattr(current_user, 'user_role') and current_user.user_role:
         return current_user.user_role.name == role_name
-    
+
     # Fallback to string-based role
     return getattr(current_user, 'role', 'operator') == role_name
 
@@ -100,11 +99,11 @@ def get_user_permissions():
     """Get all permissions for the current user"""
     if not current_user.is_authenticated:
         return []
-    
+
     # Try database-driven permissions first
     if hasattr(current_user, 'user_role') and current_user.user_role:
         return [perm.name for perm in current_user.user_role.permissions]
-    
+
     # Fallback to JSON-based permissions
     user_role = getattr(current_user, 'role', 'operator')
     return PERMISSIONS.get(user_role, [])

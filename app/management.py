@@ -1,4 +1,3 @@
-
 """
 Management commands for deployment and maintenance
 """
@@ -20,11 +19,21 @@ def init_db():
 @click.command()
 @with_appcontext
 def seed_all():
-    """Run all seeders"""
+    """Seed all necessary data"""
+    print("🌱 Starting comprehensive seed...")
     seed_units()
     seed_categories()
     seed_users()
-    click.echo('✅ All seeders completed!')
+    from .seeders.role_permission_seeder import seed_roles_and_permissions
+    seed_roles_and_permissions()
+    print("✅ All seeding complete!")
+
+@click.command()
+@with_appcontext
+def seed_roles_permissions():
+    """Seed roles and permissions"""
+    from .seeders.role_permission_seeder import seed_roles_and_permissions
+    seed_roles_and_permissions()
 
 @click.command()
 @with_appcontext
@@ -38,3 +47,4 @@ def register_commands(app):
     app.cli.add_command(init_db)
     app.cli.add_command(seed_all)
     app.cli.add_command(seed_units_only)
+    app.cli.add_command(seed_roles_permissions)
