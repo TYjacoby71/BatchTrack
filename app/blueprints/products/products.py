@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import db, ProductSKU, InventoryItem
+from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
