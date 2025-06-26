@@ -1,10 +1,10 @@
-2025-06-26 19:25:29,282 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-26 19:29:07,499 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: inventory_history.order_id
+sqlite3.OperationalError: no such column: inventory_history.is_reserved
 
 The above exception was the direct cause of the following exception:
 
@@ -76,15 +76,13 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_history.order_id
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_history.is_reserved
 [SQL: SELECT count(*) AS count_1 
-FROM (SELECT inventory_history.id AS inventory_history_id, inventory_history.inventory_item_id AS inventory_history_inventory_item_id, inventory_history.timestamp AS inventory_history_timestamp, inventory_history.change_type AS inventory_history_change_type, inventory_history.quantity_change AS inventory_history_quantity_change, inventory_history.unit AS inventory_history_unit, inventory_history.remaining_quantity AS inventory_history_remaining_quantity, inventory_history.unit_cost AS inventory_history_unit_cost, inventory_history.fifo_reference_id AS inventory_history_fifo_reference_id, inventory_history.fifo_code AS inventory_history_fifo_code, inventory_history.batch_id AS inventory_history_batch_id, inventory_history.note AS inventory_history_note, inventory_history.created_by AS inventory_history_created_by, inventory_history.quantity_used AS inventory_history_quantity_used, inventory_history.used_for_batch_id AS inventory_history_used_for_batch_id, inventory_history.is_perishable AS inventory_history_is_perishable, inventory_history.shelf_life_days AS inventory_history_shelf_life_days, inventory_history.expiration_date AS inventory_history_expiration_date, inventory_history.order_id AS inventory_history_order_id, inventory_history.reservation_id AS inventory_history_reservation_id, inventory_history.is_reserved AS inventory_history_is_reserved 
+FROM (SELECT inventory_history.id AS inventory_history_id, inventory_history.inventory_item_id AS inventory_history_inventory_item_id, inventory_history.timestamp AS inventory_history_timestamp, inventory_history.change_type AS inventory_history_change_type, inventory_history.quantity_change AS inventory_history_quantity_change, inventory_history.unit AS inventory_history_unit, inventory_history.remaining_quantity AS inventory_history_remaining_quantity, inventory_history.unit_cost AS inventory_history_unit_cost, inventory_history.fifo_reference_id AS inventory_history_fifo_reference_id, inventory_history.fifo_code AS inventory_history_fifo_code, inventory_history.batch_id AS inventory_history_batch_id, inventory_history.note AS inventory_history_note, inventory_history.created_by AS inventory_history_created_by, inventory_history.quantity_used AS inventory_history_quantity_used, inventory_history.used_for_batch_id AS inventory_history_used_for_batch_id, inventory_history.is_perishable AS inventory_history_is_perishable, inventory_history.shelf_life_days AS inventory_history_shelf_life_days, inventory_history.expiration_date AS inventory_history_expiration_date, inventory_history.is_reserved AS inventory_history_is_reserved 
 FROM inventory_history 
 WHERE inventory_history.expiration_date IS NOT NULL AND inventory_history.expiration_date < ? AND inventory_history.remaining_quantity > ?) AS anon_1]
 [parameters: ('2025-06-26', 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-06-26 19:27:10,875 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:27:14,145 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:27:27,319 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:28:10,829 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-26 19:28:26,233 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:29:58,829 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:30:01,571 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-26 19:30:42,430 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
