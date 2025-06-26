@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from urllib.parse import unquote
 
-from ...models import db, ProductSKU
+from ...models import db, ProductSKU, ProductSKUHistory
 from ...services.product_inventory_service import ProductInventoryService
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
@@ -223,24 +223,77 @@ def process_inventory_adjustment(sku_id):
 @product_inventory_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
 @login_required
 def edit_sku_details(sku_id):
-    """Edit SKU details like retail price, size label, etc."""
-    try:
-        sku = ProductSKU.query.get_or_404(sku_id)
+    """Edit SKU details like retail price, SKU code, shelf life, etc."""
+    sku = ProductSKU.query.get_or_404(sku_id)
 
-        # Update fields from form
-        sku.sku_code = request.form.get('sku_code', '').strip()
-        sku.retail_price = float(request.form.get('retail_price', 0)) if request.form.get('retail_price') else None
-        sku.size_label = request.form.get('size_label', '').strip()
-        sku.location = request.form.get('location', '').strip()
+    try:
+        # Update basic fields
+        sku.sku_code = request.form.get('sku_code') or None
+        sku.size_label = request.form.get('size_label') or sku.size_label
+        sku.location_name = request.form.get('location_name') or None
+
+        # Handle retail price
+        retail_price = request.form.get('retail_price')
+        sku.retail_price = float(retail_price) if retail_price else None
+
+        # Handle low stock threshold
+        low_stock = request.form.get('low_stock_threshold')
+        sku.low_stock_threshold = float(low_stock) if low_stock else 0
+
+        # Handle unit cost override
+        if request.form.get('override_unit_cost'):
+            unit_cost = request.form.get('unit_cost')
+            if unit_cost:
+                sku.unit_cost = float(unit_cost)
+
+        # Handle shelf life management
+        is_perishable = request.form.get('is_perishable') == 'on'
+        sku.is_perishable = is_perishable
+
+        if is_perishable:
+            shelf_life_days = request.form.get('shelf_life_days')
+            if shelf_life_days:
+                old_shelf_life = sku.shelf_life_days
+                sku.shelf_life_days = int(shelf_life_days)
+
+                # If shelf life changed, update all active FIFO entries
+                if old_shelf_life != sku.shelf_life_days:
+                    from ...blueprints.expiration.services import ExpirationService
+
+                    # Get all active FIFO entries for this SKU
+                    fifo_entries = ProductSKUHistory.query.filter(
+                        ProductSKUHistory.sku_id == sku_id,
+                        ProductSKUHistory.remaining_quantity > 0,
+                        ProductSKUHistory.original_quantity.isnot(None)  # Only addition entries
+                    ).all()
+
+                    for entry in fifo_entries:
+                        entry.is_perishable = True
+                        entry.shelf_life_days = sku.shelf_life_days
+
+                        # Calculate new expiration date based on batch completion or timestamp
+                        if entry.batch_id:
+                            # Use batch completion date if available
+                            batch_expiration = ExpirationService.get_batch_expiration_date(entry.batch_id)
+                            if batch_expiration:
+                                entry.expiration_date = batch_expiration
+                        elif entry.timestamp:
+                            # Use entry timestamp as fallback
+                            entry.expiration_date = ExpirationService.calculate_expiration_date(
+                                entry.timestamp, sku.shelf_life_days
+                            )
+
+                    flash(f'Updated shelf life for {len(fifo_entries)} FIFO entries', 'info')
+        else:
+            sku.shelf_life_days = None
 
         db.session.commit()
         flash('SKU details updated successfully', 'success')
 
-    except ValueError:
-        flash('Invalid price value', 'error')
+    except ValueError as e:
+        flash(f'Invalid input: {str(e)}', 'error')
     except Exception as e:
-        app.logger.error(f"Error updating SKU details: {e}")
-        flash(f'Error updating SKU: {str(e)}', 'error')
         db.session.rollback()
+        flash(f'Error updating SKU details: {str(e)}', 'error')
 
     return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
