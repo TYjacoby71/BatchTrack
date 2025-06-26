@@ -46,44 +46,57 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
         # Check if product already exists
-        existing = Product.query.filter_by(name=name).first()
+        existing = ProductSKU.query.filter_by(product_name=name).first()
         if existing:
             flash('Product with this name already exists', 'error')
             return redirect(url_for('products.new_product'))
 
-        product = Product(
-            name=name,
+        # Create the Base variant SKU automatically
+        sku = ProductSKU(
+            product_name=name,
             product_base_unit=product_base_unit,
-            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0
+            variant_name='Base',
+            size_label='Bulk',
+            unit=product_base_unit,
+            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
+            variant_description='Default base variant'
         )
-
-        db.session.add(product)
-        db.session.flush()  # Get the product ID
-
-        # Create the Base variant automatically
-        base_variant = ProductVariation(
-            product_id=product.id,
-            name='Base',
-            description='Default base variant'
-        )
-        db.session.add(base_variant)
+        db.session.add(sku)
         db.session.commit()
 
         flash('Product created successfully', 'success')
-        return redirect(url_for('products.view_product', product_id=product.id))
+        return redirect(url_for('product_inventory.view_sku', sku_id=sku.id))
 
     units = get_global_unit_list()
     return render_template('products/new_product.html', units=units)
 
-@products_bp.route('/<int:product_id>')
+@products_bp.route('/<product_name>')
 @login_required
-def view_product(product_id):
-    """View product details with FIFO inventory"""
+def view_product(product_name):
+    """View product details with all SKUs"""
     from ...services.product_service import ProductService
-    from ...models import InventoryItem
 
-    product = Product.query.get_or_404(product_id)
-    inventory_groups = ProductService.get_fifo_inventory_groups(product_id)
+    # Get all SKUs for this product
+    skus = ProductSKU.query.filter_by(
+        product_name=product_name,
+        is_active=True
+    ).all()
+
+    if not skus:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+
+    # Group SKUs by variant
+    variants = {}
+    for sku in skus:
+        variant_key = sku.variant_name
+        if variant_key not in variants:
+            variants[variant_key] = {
+                'name': sku.variant_name,
+                'description': sku.variant_description,
+                'skus': []
+            }
+        variants[variant_key]['skus'].append(sku)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
@@ -92,77 +105,74 @@ def view_product(product_id):
     ).filter(InventoryItem.quantity > 0).all()
 
     return render_template('products/view_product.html', 
-                         product=product, 
-                         inventory_groups=inventory_groups,
+                         product_name=product_name,
+                         product_base_unit=skus[0].product_base_unit if skus else None,
+                         variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/edit', methods=['POST'])
+@products_bp.route('/<product_name>/edit', methods=['POST'])
 @login_required
-def edit_product(product_id):
+def edit_product(product_name):
     """Edit product details"""
-    product = Product.query.get_or_404(product_id)
-
     name = request.form.get('name')
     product_base_unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
     if not name or not product_base_unit:
         flash('Name and product base unit are required', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products.view_product', product_name=product_name))
 
     # Check if another product has this name
-    existing = Product.query.filter(Product.name == name, Product.id != product_id).first()
+    existing = ProductSKU.query.filter(
+        ProductSKU.product_name == name,
+        ProductSKU.product_name != product_name
+    ).first()
     if existing:
         flash('Another product with this name already exists', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products.view_product', product_name=product_name))
 
-    product.name = name
-    product.product_base_unit = product_base_unit
-    product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+    # Update all SKUs for this product
+    skus = ProductSKU.query.filter_by(product_name=product_name).all()
+    for sku in skus:
+        sku.product_name = name
+        sku.product_base_unit = product_base_unit
+        sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
     db.session.commit()
     flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_id=product_id))
+    return redirect(url_for('products.view_product', product_name=name))
 
-@products_bp.route('/<int:product_id>/delete', methods=['POST'])
+@products_bp.route('/<product_name>/delete', methods=['POST'])
 @login_required
-def delete_product(product_id):
+def delete_product(product_name):
     """Delete a product and all its related data"""
-    from ...models import ProductInventoryHistory, ProductInventory, ProductEvent
-
-    product = Product.query.get_or_404(product_id)
-
     try:
-        # Check if product has any batches
-        if product.batches:
-            flash('Cannot delete product with associated batches', 'error')
-            return redirect(url_for('products.view_product', product_id=product_id))
+        # Get all SKUs for this product
+        skus = ProductSKU.query.filter_by(product_name=product_name).all()
+        
+        if not skus:
+            flash('Product not found', 'error')
+            return redirect(url_for('products.product_list'))
 
-        # Delete related records in order
-        ProductInventoryHistory.query.filter(
-            ProductInventoryHistory.product_inventory_id.in_(
-                db.session.query(ProductInventory.id).filter_by(product_id=product_id)
-            )
-        ).delete(synchronize_session=False)
+        # Check if any SKU has inventory
+        total_inventory = sum(sku.current_quantity for sku in skus)
+        if total_inventory > 0:
+            flash('Cannot delete product with remaining inventory', 'error')
+            return redirect(url_for('products.view_product', product_name=product_name))
 
-        # Delete product inventory
-        ProductInventory.query.filter_by(product_id=product_id).delete()
+        # Delete history records first
+        for sku in skus:
+            ProductSKUHistory.query.filter_by(sku_id=sku.id).delete()
 
-        # Delete product events
-        ProductEvent.query.filter_by(product_id=product_id).delete()
-
-        # Delete product variations
-        ProductVariation.query.filter_by(product_id=product_id).delete()
-
-        # Delete the product itself
-        db.session.delete(product)
+        # Delete the SKUs
+        ProductSKU.query.filter_by(product_name=product_name).delete()
         db.session.commit()
 
-        flash(f'Product "{product.name}" deleted successfully', 'success')
+        flash(f'Product "{product_name}" deleted successfully', 'success')
         return redirect(url_for('products.product_list'))
 
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting product: {str(e)}', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products.view_product', product_name=product_name))

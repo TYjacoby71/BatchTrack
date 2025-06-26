@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, date
-from ...models import db, InventoryItem, InventoryHistory, ProductInventory, ProductInventoryHistory, Batch
+from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
 
