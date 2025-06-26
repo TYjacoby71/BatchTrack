@@ -237,9 +237,6 @@ class InventoryHistory(db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
-    # Internal reservation tracking
-    is_reserved = db.Column(db.Boolean, default=False)  # Track if quantity is reserved for production
-
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
