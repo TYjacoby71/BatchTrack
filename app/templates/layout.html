@@ -120,7 +120,7 @@
                     {% endif %}
 
                     <!-- Settings & Management -->
-                    {% if has_permission('settings.view') %}
+                    {% if current_user.is_authenticated %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
