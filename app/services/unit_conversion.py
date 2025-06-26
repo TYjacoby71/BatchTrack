@@ -100,6 +100,7 @@ class ConversionEngine:
             from_unit=from_unit,
             to_unit=to_unit,
             result=converted,
+            conversion_type= conversion_type or 'unit_to_unit',
             organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
         )
         db.session.add(log)

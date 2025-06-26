@@ -70,7 +70,8 @@ def available_containers(recipe_id):
                 conversion = ConversionEngine.convert_units(
                     container.storage_amount,
                     container.storage_unit,
-                    predicted_unit
+                    predicted_unit,
+                    conversion_type='container_sizing'
                 )
                 print(f"Conversion result for {container.name}: {conversion}")
                 
@@ -84,6 +85,12 @@ def available_containers(recipe_id):
                     })
             except Exception as e:
                 print(f"Conversion failed for {container.name}: {e}")
+                # Rollback any failed database operations
+                from ...extensions import db
+                try:
+                    db.session.rollback()
+                except:
+                    pass
                 continue  # silently skip conversion failures
 
         sorted_containers = sorted(in_stock, key=lambda c: c['storage_amount'], reverse=True)
