@@ -87,7 +87,7 @@ class ProductSKU(db.Model):
         return f'<ProductSKU {self.display_name}>'
 
 class ProductSKUHistory(db.Model):
-    """SIMPLIFIED history table for SKU changes"""
+    """FIFO-enabled history table for SKU changes - mirrors InventoryHistory"""
     __tablename__ = 'product_sku_history'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -100,10 +100,24 @@ class ProductSKUHistory(db.Model):
     old_quantity = db.Column(db.Float, nullable=False)  # Quantity before change
     new_quantity = db.Column(db.Float, nullable=False)  # Quantity after change
     
+    # FIFO tracking (like InventoryHistory)
+    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO entries
+    original_quantity = db.Column(db.Float, nullable=True)  # Original amount added
+    unit = db.Column(db.String(32), nullable=False)  # Unit for this entry
+    
     # Transaction details
     unit_cost = db.Column(db.Float, nullable=True)
     sale_price = db.Column(db.Float, nullable=True)  # For sales
     customer = db.Column(db.String(128), nullable=True)  # For sales
+    
+    # FIFO metadata
+    fifo_code = db.Column(db.String(64), nullable=True)  # FIFO tracking code
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    
+    # Expiration tracking
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
     
     # Source information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
@@ -114,6 +128,13 @@ class ProductSKUHistory(db.Model):
     sku = db.relationship('ProductSKU', backref='history_entries')
     batch = db.relationship('Batch')
     user = db.relationship('User')
+    container = db.relationship('InventoryItem', foreign_keys=[container_id])
+    
+    # Indexes for FIFO performance
+    __table_args__ = (
+        db.Index('idx_sku_remaining', 'sku_id', 'remaining_quantity'),
+        db.Index('idx_sku_timestamp', 'sku_id', 'timestamp'),
+    )
     
     def __repr__(self):
         return f'<ProductSKUHistory {self.change_type}: {self.quantity_change}>'
