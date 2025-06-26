@@ -37,7 +37,7 @@
                 <i class="fas fa-edit"></i> Edit Product
               </a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct({{ product.id }}, '{{ product.name }}')">
+              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct('{{ product.name }}', '{{ product.name }}')">
                 <i class="fas fa-trash"></i> Delete Product
               </a></li>
             </ul>
@@ -117,10 +117,7 @@
             <div class="card-body d-flex flex-column">
               <div class="variant-details mb-3">
                 <p class="card-text text-muted mb-2">
-                  <small>
-                    <i class="fas fa-boxes"></i> {{ var_size_count }} sizes
-                    | <i class="fas fa-balance-scale"></i> {{ "%.2f"|format(var_total_qty) }} total
-                    {% if variation and variation.sku %}| <i class="fas fa-barcode"></i> {{ variation.sku }}{% endif %}
+          
                   </small>
                 </p>
                 {% if variation and variation.description %}
@@ -153,7 +150,7 @@
 
               <div class="mt-auto">
                 {% if variation %}
-                <a href="{{ url_for('products.view_variant', product_id=product.id, variation_id=variation.id) }}" 
+                <a href="{{ url_for('products.view_variant', product_name=product.name, variant_name=variation.name) }}" 
                    class="btn btn-outline-primary btn-sm w-100">
                   View Details
                 </a>
@@ -187,7 +184,7 @@
         <h5 class="modal-title">Edit Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_product', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('products.edit_product', product_name=product.name) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="main_csrf_token">
         <div class="modal-body">
           <div class="mb-3">
@@ -229,7 +226,7 @@
       </div>
       <div class="modal-body">
         <form id="addVariantForm">
-          <input type="hidden" name="product_id" value="{{ product.id }}">
+          <input type="hidden" name="product_name" value="{{ product.name }}">
           <div class="mb-3">
             <label class="form-label">Variant Name</label>
             <input type="text" name="name" class="form-control" required>
@@ -325,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = Object.fromEntries(formData);
         const csrfToken = document.querySelector('input[name="csrf_token"]');
 
-        fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
+        fetch("{{ url_for('products.add_variant', product_name=product.name) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -347,11 +344,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    window.confirmDeleteProduct = function(productId, productName) {
-        if (confirm(`Are you sure you want to delete "${productName}"? This cannot be undone.`)) {
+    window.confirmDeleteProduct = function(productName, displayName) {
+        if (confirm(`Are you sure you want to delete "${displayName}"? This cannot be undone.`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/products/${productId}/delete`;
+            form.action = `/products/${encodeURIComponent(productName)}/delete`;
 
             const csrfToken = document.querySelector('input[name="csrf_token"]');
             if (csrfToken) {

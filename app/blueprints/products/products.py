@@ -118,12 +118,29 @@ def view_product(product_name):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
+    # Create a product object for the template
+    product = type('Product', (), {
+        'name': product_name,
+        'product_base_unit': skus[0].product_base_unit if skus else None,
+        'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
+        'created_at': skus[0].created_at if skus else None,
+        'id': skus[0].id if skus else None,
+        'variations': [type('Variation', (), {
+            'name': variant_name,
+            'description': variant_data['description'],
+            'id': variant_data['skus'][0].id if variant_data['skus'] else None,
+            'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
+        })() for variant_name, variant_data in variants.items()]
+    })()
+
     return render_template('products/view_product.html', 
+                         product=product,
                          product_name=product_name,
                          product_base_unit=skus[0].product_base_unit if skus else None,
                          variants=variants,
                          available_containers=available_containers,
-                         get_global_unit_list=get_global_unit_list)
+                         get_global_unit_list=get_global_unit_list,
+                         inventory_groups={})
 
 @products_bp.route('/<product_name>/edit', methods=['POST'])
 @login_required

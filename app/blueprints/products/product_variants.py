@@ -83,11 +83,17 @@ def view_variant(product_name, variant_name):
                 'size_label': display_size_label,
                 'unit': sku.unit,
                 'total_quantity': 0,
-                'skus': []
+                'skus': [],
+                'batches': []  # Add batches for cost calculations
             }
         
         size_groups[key]['total_quantity'] += sku.current_quantity
         size_groups[key]['skus'].append(sku)
+        
+        # Add batch information for cost calculations
+        for batch in sku.batches:
+            if batch.quantity > 0:
+                size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
@@ -95,9 +101,26 @@ def view_variant(product_name, variant_name):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
+    # Create a product object for the template
+    product = type('Product', (), {
+        'name': product_name,
+        'id': skus[0].id if skus else None,
+        'product_base_unit': skus[0].product_base_unit if skus else None,
+        'low_stock_threshold': skus[0].low_stock_threshold if skus else 0
+    })()
+
+    # Create a variation object for the template  
+    variation = type('Variation', (), {
+        'name': variant_name,
+        'description': skus[0].variant_description if skus else None,
+        'id': skus[0].id if skus else None
+    })()
+
     return render_template('products/view_variation.html',
+                         product=product,
                          product_name=product_name,
                          variant_name=variant_name,
+                         variation=variation,
                          variant_description=skus[0].variant_description if skus else None,
                          size_groups=size_groups,
                          available_containers=available_containers,

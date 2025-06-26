@@ -85,25 +85,67 @@
 
                 <!-- All Variations (including Base) -->
                 {% for variation in product.variations %}
-                <div class="d-flex justify-content-between align-items-center py-1">
-                  <div>
-                    <span class="fw-bold small">{{ variation.name }}</span>
-                    {% if variation.sku %}
-                    <span class="badge bg-secondary ms-1 small">{{ variation.sku }}</span>
+                {% set variation_inventory = product.inventory|selectattr('variant', 'equalto', variation.name)|list %}
+                {% set variation_total_qty = variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity') %}
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center py-1">
+                    <div class="d-flex align-items-center">
+                      <span class="fw-bold small me-2">{{ variation.name }}</span>
+                      {% if variation.sku %}
+                      <span class="badge bg-secondary me-2 small">{{ variation.sku }}</span>
+                      {% endif %}
+                      {% if variation_total_qty == 0 %}
+                        <span class="badge bg-danger small">Out of Stock</span>
+                      {% else %}
+                        <span class="badge bg-success small">In Stock</span>
+                      {% endif %}
+                      <button class="btn btn-link btn-sm p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#card-variant-sizes-{{ loop.parent.index }}-{{ loop.index }}">
+                        <i class="fas fa-chevron-down small"></i>
+                      </button>
+                    </div>
+                    <a href="{{ url_for('products.view_variant', product_name=product.name, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                  </div>
+                  
+                  <!-- Size level details -->
+                  <div class="collapse ms-3" id="card-variant-sizes-{{ loop.parent.index }}-{{ loop.index }}">
+                    {% for inv in variation_inventory %}
+                    {% if inv.quantity > 0 %}
+                    <div class="d-flex justify-content-between align-items-center py-1 small">
+                      <div class="d-flex align-items-center">
+                        <span class="me-2">{{ inv.size_label if inv.size_label else 'Bulk' }}</span>
+                        <span class="badge bg-success small">{{ inv.quantity|round(1) }} {{ inv.unit }}</span>
+                      </div>
+                      <a href="{{ url_for('product_inventory.view_sku', product_id=product.id, variant=variation.name|urlencode, size_label=(inv.size_label if inv.size_label else 'Bulk')|urlencode) }}" class="btn btn-outline-secondary btn-xs">View SKU</a>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% if variation_inventory|selectattr('quantity', 'gt', 0)|list|length == 0 %}
+                    <div class="text-muted small ms-2">No stock available</div>
                     {% endif %}
                   </div>
-                  <a href="{{ url_for('products.view_variant', product_name=product.name, variation_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                 </div>
                 {% endfor %}
               </div>
             </div>
             {% endif %}
 
-            <div class="mt-3">
-              <small class="text-muted">
-                Default Unit: {{ product.product_base_unit }}<br>
-                {% if not product.variations and product.created_at %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
-              </small>
+            <div class="mt-3 d-flex justify-content-between align-items-end">
+              <div>
+                <small class="text-muted">
+                  Default Unit: {{ product.product_base_unit }}<br>
+                  {% if not product.variations and product.created_at %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                </small>
+              </div>
+              <div>
+                {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
+                {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
+                {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
+                {% if total_quantity == 0 %}
+                  <span class="badge bg-danger">Out of Stock</span>
+                {% else %}
+                  <span class="badge bg-success">In Stock</span>
+                {% endif %}
+              </div>
             </div>
           </div>
           <div class="card-footer">

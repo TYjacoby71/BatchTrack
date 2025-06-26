@@ -27,7 +27,7 @@ def view_sku(sku_id):
     total_quantity = sku.current_quantity
     total_batches = len(set(entry.batch_id for entry in fifo_entries if entry.batch_id))
 
-    return render_template('products/view_sku_new.html',
+    return render_template('products/view_sku.html',
                          sku=sku,
                          fifo_entries=fifo_entries,
                          history=history_data['items'],
@@ -88,7 +88,23 @@ def add_stock(sku_id):
             change_type='manual_addition'
         )
         db.session.commit()
-        flash(f'Added {quantity} units to SKU', 'success')
+        
+        # Build descriptive success message
+        sku = ProductSKU.query.get(sku_id)
+        if container_id:
+            from ...models import InventoryItem
+            container = InventoryItem.query.get(int(container_id))
+            if container:
+                # Format: "Added 5 4oz containers of Apple Sauce"
+                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} containers of {sku.product_name}', 'success')
+            else:
+                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} of {sku.product_name}', 'success')
+        else:
+            # Format: "Added 10 fl oz of bulk Apple Sauce"  
+            if sku.size_label and sku.size_label.lower() != 'bulk':
+                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.size_label} of {sku.product_name}', 'success')
+            else:
+                flash(f'Added {int(quantity) if quantity.is_integer() else quantity} {sku.unit} of bulk {sku.product_name}', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error adding stock: {str(e)}', 'error')
