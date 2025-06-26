@@ -248,6 +248,7 @@ class ProductSKUHistory(db.Model):
     # FIFO metadata
     fifo_code = db.Column(db.String(64), nullable=True)  # FIFO tracking code
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_sku_history.id'), nullable=True)  # Reference to parent FIFO entry
+    fifo_source = db.Column(db.String(128), nullable=True)  # FIFO source identifier - batch label or fifo code
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
     
     # Expiration tracking
@@ -262,7 +263,6 @@ class ProductSKUHistory(db.Model):
     
     # Additional tracking fields to match InventoryHistory
     quantity_used = db.Column(db.Float, default=0.0)  # Track actual consumption vs deduction
-    used_for_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)  # Track which batch used this
     
     # POS integration fields
     order_id = db.Column(db.String(64), nullable=True)  # External order ID (Shopify, etc.) 
@@ -297,7 +297,6 @@ class ProductSKUHistory(db.Model):
     # Relationships
     sku = db.relationship('ProductSKU', backref='history_entries')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
-    used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
     user = db.relationship('User', foreign_keys=[created_by])
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
@@ -310,6 +309,7 @@ class ProductSKUHistory(db.Model):
         db.Index('idx_change_type', 'change_type'),
         db.Index('idx_fifo_code', 'fifo_code'),
         db.Index('idx_fifo_reference', 'fifo_reference_id'),
+        db.Index('idx_fifo_source', 'fifo_source'),
         db.Index('idx_batch_lot', 'batch_number', 'lot_number'),
         db.Index('idx_location_time', 'location_id', 'timestamp'),
         db.Index('idx_quality_compliance', 'quality_status', 'compliance_status'),

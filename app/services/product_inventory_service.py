@@ -36,6 +36,15 @@ class ProductInventoryService:
         sku.current_quantity = new_quantity
         sku.last_updated = datetime.utcnow()
 
+        # Determine FIFO source (batch label or generated fifo code)
+        fifo_source = None
+        if batch_id and change_type == 'batch_addition':
+            from ..models import Batch
+            batch = Batch.query.get(batch_id)
+            fifo_source = batch.label_code if batch else generate_fifo_code(f"SKU{sku_id}")
+        else:
+            fifo_source = generate_fifo_code(f"SKU{sku_id}")
+
         # Create FIFO history entry (like InventoryHistory with remaining_quantity)
         history = ProductSKUHistory(
             sku_id=sku_id,
@@ -53,12 +62,12 @@ class ProductInventoryService:
             batch_id=batch_id,
             container_id=container_id,
             fifo_code=generate_fifo_code(f"SKU{sku_id}"),
+            fifo_source=fifo_source,
             notes=notes,
             note=notes,  # Mirror field
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=0.0,  # Additions don't consume
-            sale_location=sale_location,
-            used_for_batch_id=batch_id if change_type == 'batch_addition' else None
+            sale_location=sale_location
         )
 
         db.session.add(history)
@@ -113,13 +122,13 @@ class ProductInventoryService:
                 customer=customer,
                 fifo_code=generate_fifo_code(f"SKU{sku_id}"),
                 fifo_reference_id=entry.id,  # Reference to source FIFO entry
+                fifo_source=entry.fifo_source,  # Use source from original FIFO entry
                 notes=f"{notes} (From FIFO #{entry.id})",
                 note=f"{notes} (From FIFO #{entry.id})",
                 created_by=current_user.id if current_user.is_authenticated else None,
                 quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
                 sale_location=sale_location,
-                order_id=order_id,
-                used_for_batch_id=used_for_batch_id
+                order_id=order_id
             )
             db.session.add(deduction_history)
 
@@ -215,12 +224,22 @@ class ProductInventoryService:
         sku = ProductSKU.query.get_or_404(sku_id)
         
         if original_batch_id:
-            # Find original deductions for this batch
+            # Find original deductions for this batch by looking for sales with specific batch reference
+            from ..models import Batch
+            batch = Batch.query.get(original_batch_id)
+            batch_label = batch.label_code if batch else f"BATCH{original_batch_id}"
+            
+            # Find deductions that reference this batch's label as fifo_source
             original_deductions = ProductSKUHistory.query.filter(
                 ProductSKUHistory.sku_id == sku_id,
-                ProductSKUHistory.used_for_batch_id == original_batch_id,
+                ProductSKUHistory.change_type == 'sale',
                 ProductSKUHistory.quantity_change < 0,
                 ProductSKUHistory.fifo_reference_id.isnot(None)
+            ).join(
+                ProductSKUHistory.fifo_reference,
+                ProductSKUHistory.fifo_reference_id == ProductSKUHistory.id
+            ).filter(
+                ProductSKUHistory.fifo_source == batch_label
             ).order_by(ProductSKUHistory.timestamp.desc()).all()
 
             remaining_to_credit = quantity
@@ -252,12 +271,12 @@ class ProductInventoryService:
                         sale_price=sale_price,
                         fifo_code=generate_fifo_code(f"SKU{sku_id}"),  
                         fifo_reference_id=original_fifo_entry.id,
+                        fifo_source=original_fifo_entry.fifo_source,
                         notes=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         created_by=current_user.id if current_user.is_authenticated else None,
                         quantity_used=0.0,
-                        sale_location='manual',
-                        used_for_batch_id=original_batch_id
+                        sale_location='manual'
                     )
                     db.session.add(credit_history)
 
