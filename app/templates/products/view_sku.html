@@ -96,7 +96,7 @@
                             <tbody>
                                 {% for entry in history %}
                                 <tr>
-                                    <td>{{ moment.strftime(entry.timestamp, '%Y-%m-%d %H:%M') if entry.timestamp else 'N/A' }}</td>
+                                    <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') if entry.timestamp else 'N/A' }}</td>
                                     <td>
                                         <span class="badge 
                                             {% if entry.change_type == 'batch_production' %}bg-success
