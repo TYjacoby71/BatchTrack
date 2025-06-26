@@ -72,12 +72,7 @@ def create_app():
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
-    app.register_blueprint(stock_api_bp)
-    app.register_blueprint(ingredient_api_bp)
-
-    # Register container API blueprint
-    from .blueprints.api.container_routes import container_api_bp
-    app.register_blueprint(container_api_bp)
+    # API blueprints are registered via register_api_routes() function below
 
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
