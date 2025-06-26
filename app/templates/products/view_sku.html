@@ -26,7 +26,7 @@
 
             <!-- Summary Cards -->
             <div class="row mb-4">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
                         <div class="card-body text-center">
                             <h5 class="card-title">Total Stock</h5>
@@ -35,21 +35,68 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">FIFO Batches</h5>
-                            <h3 class="text-info">{{ total_batches }}</h3>
-                            <small class="text-muted">active batches</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
                         <div class="card-body text-center">
                             <h5 class="card-title">SKU Code</h5>
                             <h3 class="text-secondary">{{ sku.sku_code or 'Not Set' }}</h3>
                             <small class="text-muted">product code</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Inventory Adjustment Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Inventory Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Quick Actions -->
+                        <div class="col-md-8">
+                            <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" class="row g-3 align-items-end">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="adjust_inventory">
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Action Type</label>
+                                    <select class="form-select" name="change_type" required>
+                                        <option value="sale">Sale</option>
+                                        <option value="restock">Restock</option>
+                                        <option value="adjustment">Adjustment</option>
+                                        <option value="damaged">Damaged</option>
+                                        <option value="return">Return</option>
+                                        <option value="spoil">Spoiled</option>
+                                        <option value="recount">Recount</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
+                                    <small class="text-muted">{{ sku.unit }}</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Notes (Optional)</label>
+                                    <input type="text" class="form-control" name="notes" placeholder="Reference, customer, etc.">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary w-100">Record</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Additional Options -->
+                        <div class="col-md-4">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#advancedAdjustModal">
+                                    <i class="fas fa-cog"></i> Advanced Options
+                                </button>
+                                <small class="text-muted text-center">For sales tracking, cost overrides, etc.</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -238,6 +285,58 @@
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notes</label>
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Apply Adjustment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Adjustment Modal -->
+<div class="modal fade" id="advancedAdjustModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Advanced Inventory Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="advanced_adjust">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="change_type_adv" class="form-label">Adjustment Type</label>
+                        <select class="form-select" id="change_type_adv" name="change_type" required>
+                            <option value="">Select adjustment type</option>
+                            <option value="sale">Sale</option>
+                            <option value="restock">Restock</option>
+                            <option value="adjustment">Adjustment</option>
+                            <option value="damaged">Damaged</option>
+                            <option value="return">Return</option>
+                            <option value="spoil">Spoiled</option>
+                            <option value="recount">Recount (set new total)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity_adv" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity_adv" name="quantity" 
+                               step="0.01" min="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="unit_cost_override" class="form-label">Unit Cost Override (Optional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="unit_cost_override" name="unit_cost_override" step="0.01">
+                        </div>
+                        <small class="text-muted">Leave blank to use default FIFO cost.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes_adv" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes_adv" name="notes" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
