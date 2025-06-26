@@ -173,52 +173,48 @@ class ProductInventoryService:
                          notes: str = '') -> bool:
         """Adjust specific FIFO entry - like adjusting InventoryHistory"""
 
-        try:
-            history_entry = ProductSKUHistory.query.get_or_404(history_id)
-            sku = ProductSKU.query.get_or_404(history_entry.sku_id)
+        history_entry = ProductSKUHistory.query.get_or_404(history_id)
+        sku = ProductSKU.query.get_or_404(history_entry.sku_id)
 
-            original_remaining = history_entry.remaining_quantity
+        original_remaining = history_entry.remaining_quantity
 
-            if change_type == 'recount':
-                # Set new remaining for this entry
-                quantity_change = quantity - original_remaining
-                history_entry.remaining_quantity = max(0, quantity)
-            else:
-                # Deduction from this specific entry
-                if quantity > original_remaining:
-                    return False  # Can't deduct more than available
-                quantity_change = -quantity
-                history_entry.remaining_quantity = max(0, original_remaining - quantity)
+        if change_type == 'recount':
+            # Set new remaining for this entry
+            quantity_change = quantity - original_remaining
+            history_entry.remaining_quantity = max(0, quantity)
+        else:
+            # Deduction from this specific entry
+            if quantity > original_remaining:
+                return False  # Can't deduct more than available
+            quantity_change = -quantity
+            history_entry.remaining_quantity = max(0, original_remaining - quantity)
 
-            # Update SKU total
-            sku.current_quantity += quantity_change
-            sku.last_updated = datetime.utcnow()
+        # Update SKU total
+        sku.current_quantity += quantity_change
+        sku.last_updated = datetime.utcnow()
 
-            # Create adjustment history entry
-            adjustment_history = ProductSKUHistory(
-                sku_id=history_entry.sku_id,
-                timestamp=datetime.utcnow(),
-                change_type=f'fifo_{change_type}',
-                quantity_change=quantity_change,
-                old_quantity=sku.current_quantity - quantity_change,
-                new_quantity=sku.current_quantity,
-                remaining_quantity=0,
-                unit=sku.unit,
-                unit_cost=history_entry.unit_cost,  # Use cost from original entry
-                fifo_code=generate_fifo_code(f"SKU{history_entry.sku_id}"),
-                fifo_reference_id=history_entry.id,
-                notes=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
-                note=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                quantity_used=quantity if change_type in ['spoil', 'trash', 'damage'] else 0.0,
-                sale_location='manual'
-            )
+        # Create adjustment history entry
+        adjustment_history = ProductSKUHistory(
+            sku_id=history_entry.sku_id,
+            timestamp=datetime.utcnow(),
+            change_type=f'fifo_{change_type}',
+            quantity_change=quantity_change,
+            old_quantity=sku.current_quantity - quantity_change,
+            new_quantity=sku.current_quantity,
+            remaining_quantity=0,
+            unit=sku.unit,
+            unit_cost=history_entry.unit_cost,  # Use cost from original entry
+            fifo_code=generate_fifo_code(f"SKU{history_entry.sku_id}"),
+            fifo_reference_id=history_entry.id,
+            notes=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
+            note=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
+            created_by=current_user.id if current_user.is_authenticated else None,
+            quantity_used=quantity if change_type in ['spoil', 'trash', 'damage'] else 0.0,
+            sale_location='manual'
+        )
 
-            db.session.add(adjustment_history)
-            return True
-            
-        except Exception as e:
-            raise ValueError(f"FIFO adjustment failed: {str(e)}")
+        db.session.add(adjustment_history)
+        return True
 
     @staticmethod
     def process_return_credit(sku_id: int, quantity: float, original_batch_id: Optional[int] = None,
