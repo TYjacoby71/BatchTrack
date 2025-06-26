@@ -15,3 +15,8 @@ function downloadCSV(stockResults) {
   link.download = 'stock_check_report.csv';
   link.click();
 }
+
+function getCSRFToken() {
+  const csrfToken = document.querySelector('input[name="csrf_token"]');
+  return csrfToken ? csrfToken.value : '';
+}

@@ -24,6 +24,7 @@
                         <th>Location</th>
                         <th>Quality</th>
                         <th>Order ID</th>
+                        <th>Expiration</th>
                         <th>Notes</th>
                         <th>Actions</th>
                     </tr>
@@ -154,6 +155,40 @@
                                 <br><small class="text-success">{{ entry.marketplace_source or 'MP' }}:{{ entry.marketplace_order_id[:6] }}</small>
                             {% endif %}
                             {% if not entry.order_id and not entry.reservation_id and not entry.marketplace_order_id %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.expiration_date %}
+                                {% set exp_date = entry.expiration_date.date() if entry.expiration_date else None %}
+                                {% if exp_date %}
+                                    {% set days_until = (exp_date - now.date()).days %}
+                                    <small class="
+                                        {% if days_until < 0 %}text-danger
+                                        {% elif days_until <= 7 %}text-warning
+                                        {% else %}text-success{% endif %}">
+                                        {{ exp_date.strftime('%m/%d/%y') }}
+                                        {% if entry.is_perishable %}
+                                            <br><span class="badge badge-sm 
+                                                {% if days_until < 0 %}bg-danger
+                                                {% elif days_until <= 7 %}bg-warning
+                                                {% else %}bg-success{% endif %}">
+                                                {% if days_until < 0 %}
+                                                    Expired
+                                                {% elif days_until == 0 %}
+                                                    Today
+                                                {% elif days_until <= 7 %}
+                                                    {{ days_until }}d
+                                                {% else %}
+                                                    OK
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
