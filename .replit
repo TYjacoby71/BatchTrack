@@ -3,7 +3,6 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["cargo", "libiconv", "rustc"]
 
 [unitTest]
 language = "python3"
@@ -20,7 +19,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Run Flask App"
+runButton = "Run Flask"
 
 [[workflows.workflow]]
 name = "Run Flask"
@@ -29,22 +28,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask run --host=0.0.0.0 --port=5000"
-
-[[workflows.workflow]]
-name = "Run Flask App"
-author = 39427985
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python run.py"
-
-[[workflows.workflow]]
-name = "Run Tests"
-author = 39427985
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python run_tests.py"
+args = "PYTHONPATH=. flask run --host=0.0.0.0 --port=5000"

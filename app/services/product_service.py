@@ -40,7 +40,7 @@ class ProductService:
 
     @staticmethod
     def get_or_create_sku(product_name, variant_name, size_label, unit=None, sku_code=None, variant_description=None):
-        """Get existing SKU or create new one"""
+        """Get existing SKU or create new one with automatic SKU generation"""
         # Check if SKU already exists
         sku = ProductSKU.query.filter_by(
             product_name=product_name,
@@ -49,7 +49,15 @@ class ProductService:
         ).first()
 
         if sku:
+            # If SKU exists but doesn't have a code, generate one
+            if not sku.sku_code:
+                sku.sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
+                db.session.flush()
             return sku
+
+        # Always generate SKU code automatically
+        if not sku_code:
+            sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
 
         # Get product base unit from existing SKUs
         existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
@@ -69,6 +77,68 @@ class ProductService:
         db.session.add(sku)
         db.session.flush()
         return sku
+
+    @staticmethod
+    def ensure_base_variant_if_needed(product_name):
+        """Create a Base variant if no variants exist for a product"""
+        existing_skus = ProductSKU.query.filter_by(
+            product_name=product_name,
+            is_active=True
+        ).all()
+        
+        if not existing_skus:
+            # No variants exist, create a Base variant
+            base_sku = ProductService.get_or_create_sku(
+                product_name=product_name,
+                variant_name='Base',
+                size_label='Bulk'
+            )
+            return base_sku
+        return None
+
+    @staticmethod
+    def backfill_missing_sku_codes():
+        """Generate SKU codes for any SKUs that don't have them"""
+        skus_without_codes = ProductSKU.query.filter(
+            ProductSKU.sku_code.is_(None),
+            ProductSKU.is_active == True
+        ).all()
+        
+        for sku in skus_without_codes:
+            sku.sku_code = ProductService.generate_sku_code(
+                sku.product_name, 
+                sku.variant_name, 
+                sku.size_label
+            )
+        
+        if skus_without_codes:
+            db.session.commit()
+            return len(skus_without_codes)
+        return 0
+
+    @staticmethod
+    def generate_sku_code(product_name, variant_name, size_label):
+        """Generate a unique SKU code based on product components"""
+        # Create base SKU from first 3 characters of each component
+        product_part = ''.join(c for c in product_name[:3].upper() if c.isalnum())
+        variant_part = ''.join(c for c in variant_name[:2].upper() if c.isalnum())  
+        size_part = ''.join(c for c in size_label[:3].upper() if c.isalnum())
+        
+        # Ensure we have at least some characters from each part
+        product_part = product_part[:3].ljust(2, 'X')
+        variant_part = variant_part[:2].ljust(2, 'X')
+        size_part = size_part[:3].ljust(2, 'X')
+        
+        base_sku = f"{product_part}-{variant_part}-{size_part}"
+        
+        # Check for uniqueness by querying for existing SKUs with the same base
+        count = 1
+        unique_sku_code = base_sku
+        while ProductSKU.query.filter(ProductSKU.sku_code == unique_sku_code).first():
+            unique_sku_code = f"{base_sku}-{count}"
+            count += 1
+            
+        return unique_sku_code
 
     @staticmethod
     def get_fifo_inventory_groups(product_name):

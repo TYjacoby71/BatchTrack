@@ -22,16 +22,11 @@
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h2>
-                <div>
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSkuModal">
-                        Edit SKU
-                    </button>
-                </div>
             </div>
 
             <!-- Summary Cards -->
             <div class="row mb-4">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
                         <div class="card-body text-center">
                             <h5 class="card-title">Total Stock</h5>
@@ -40,16 +35,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">FIFO Batches</h5>
-                            <h3 class="text-info">{{ total_batches }}</h3>
-                            <small class="text-muted">active batches</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card">
                         <div class="card-body text-center">
                             <h5 class="card-title">SKU Code</h5>
@@ -57,6 +43,46 @@
                             <small class="text-muted">product code</small>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Main Inventory Adjustment Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Inventory Actions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" class="row g-3 align-items-end">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="col-md-3">
+                            <label class="form-label">Action Type</label>
+                            <select class="form-select" name="change_type" required>
+                                <option value="sale">Sale</option>
+                                <option value="restock">Restock</option>
+                                <option value="adjustment">Adjustment</option>
+                                <option value="damaged">Damaged</option>
+                                <option value="return">Return</option>
+                                <option value="spoil">Spoiled</option>
+                                <option value="recount">Recount</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
+                            <small class="text-muted">{{ sku.unit }}</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Notes (Optional)</label>
+                            <input type="text" class="form-control" name="notes" placeholder="Reference, customer, etc.">
+                        </div>
+
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Record</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -205,33 +231,7 @@
     </div>
 </div>
 
-<!-- Edit SKU Modal -->
-<div class="modal fade" id="editSkuModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit SKU</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ url_for('product_inventory.edit_sku_code', sku_id=sku.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="sku_code" class="form-label">SKU Code</label>
-                        <input type="text" class="form-control" id="sku_code" name="sku_code" 
-                               value="{{ sku.sku_code or '' }}"
-                               placeholder="Enter SKU code">
-                        <div class="form-text">Leave empty to remove SKU</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update SKU</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+
 
 <!-- FIFO Adjustment Modal -->
 <div class="modal fade" id="adjustFifoModal" tabindex="-1">
@@ -241,8 +241,10 @@
                 <h5 class="modal-title">Adjust FIFO Entry</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="adjustFifoForm">
+            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="adjust_fifo">
+                <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="change_type" class="form-label">Adjustment Type</label>
@@ -278,5 +280,41 @@
     </div>
 </div>
 
+
+
+<script>
+// Populate FIFO adjustment modal with data
+document.addEventListener('DOMContentLoaded', function() {
+    const adjustModal = document.getElementById('adjustFifoModal');
+    if (adjustModal) {
+        adjustModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const inventoryId = button.getAttribute('data-inventory-id');
+            const currentQuantity = button.getAttribute('data-current-quantity');
+            const unit = button.getAttribute('data-unit');
+
+            // Set the inventory ID
+            document.getElementById('modalInventoryId').value = inventoryId;
+
+            // Update help text
+            document.getElementById('quantityHelp').textContent = 
+                `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total quantity. For deductions: enter amount to remove.`;
+        });
+    }
+});
+
+function toggleFifoFilter() {
+    const checkbox = document.getElementById('fifoFilter');
+    const url = new URL(window.location);
+
+    if (checkbox.checked) {
+        url.searchParams.set('fifo', 'true');
+    } else {
+        url.searchParams.delete('fifo');
+    }
+
+    window.location.href = url.toString();
+}
+</script>
 
 {% endblock %}

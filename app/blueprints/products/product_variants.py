@@ -168,3 +168,47 @@ def edit_variant(product_name, variant_name):
     return redirect(url_for('products.view_variant', 
                            product_name=product_name, 
                            variant_name=name))
+
+@products_bp.route('/<product_name>/variant/<variant_name>/delete', methods=['POST'])
+@login_required
+def delete_variant(product_name, variant_name):
+    """Delete a product variant and all its SKUs"""
+    # Get all SKUs for this variant
+    skus = ProductSKU.query.filter_by(
+        product_name=product_name,
+        variant_name=variant_name
+    ).all()
+    
+    if not skus:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.view_product', product_name=product_name))
+    
+    # Check if any SKUs have inventory
+    has_inventory = any(sku.current_quantity > 0 for sku in skus)
+    if has_inventory:
+        flash('Cannot delete variant with existing inventory', 'error')
+        return redirect(url_for('products.view_variant', 
+                               product_name=product_name, 
+                               variant_name=variant_name))
+    
+    # Delete all SKUs for this variant
+    for sku in skus:
+        sku.is_active = False
+    
+    db.session.commit()
+    
+    # Check if this was the last variant for the product
+    remaining_variants = ProductSKU.query.filter_by(
+        product_name=product_name,
+        is_active=True
+    ).count()
+    
+    if remaining_variants == 0:
+        # Auto-create Base variant
+        ProductService.ensure_base_variant_if_needed(product_name)
+        db.session.commit()
+        flash(f'Variant "{variant_name}" deleted. Created default "Base" variant.', 'success')
+    else:
+        flash(f'Variant "{variant_name}" deleted successfully', 'success')
+    
+    return redirect(url_for('products.view_product', product_name=product_name))
