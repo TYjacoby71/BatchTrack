@@ -6,7 +6,7 @@
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
-          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=product.id) }}">{{ product.name }}</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_name=product.name) }}">{{ product.name }}</a></li>
           <li class="breadcrumb-item active">{{ variation.name }}</li>
         </ol>
       </nav>
@@ -172,7 +172,7 @@
         <h5 class="modal-title">Edit Variation</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_variant', product_id=product.id, variation_id=variation.id) }}">
+      <form method="POST" action="{{ url_for('products.edit_variant', product_name=product.name, variation_id=variation.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
@@ -201,7 +201,7 @@
         <h5 class="modal-title">Add Manual Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.add_manual_stock', product_name=product.name) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <input type="hidden" name="variant_name" value="{{ variation.name }}">
@@ -250,7 +250,7 @@
         <h5 class="modal-title">Deduct Stock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_id=product.id) }}">
+      <form method="POST" action="{{ url_for('product_inventory.record_sale', product_name=product.name) }}">
         {{ csrf_token() }}
         <div class="modal-body">
           <input type="hidden" name="variant" id="deductVariant">
