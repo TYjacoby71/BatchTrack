@@ -154,7 +154,9 @@ function planProduction() {
       fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`)
         .then(res => res.json())
         .then(data => {
+          console.log('Container API response:', data);
           this.allowedContainers = data.available || [];
+          console.log('Allowed containers:', this.allowedContainers);
 
           if (this.autoFill && this.recipeNeedsContainers) {
             const projected = this.baseYield * this.scale;
