@@ -1,3 +1,20 @@
+
+"""add_pos_integration_columns
+
+Revision ID: add_pos_integration_columns
+Revises: e04a3508f9f7
+Create Date: 2025-06-26 19:24:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = 'add_pos_integration_columns'
+down_revision = 'e04a3508f9f7'
+branch_labels = None
+depends_on = None
+
 def upgrade():
     # Add POS integration fields to inventory_history table
     with op.batch_alter_table('inventory_history', schema=None) as batch_op:
