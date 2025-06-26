@@ -13,30 +13,30 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">SKU Code</label>
-                            <input type="text" name="sku_code" class="form-control" value="{{ sku.sku_code or '' }}">
+                            <input type="text" name="sku_code" class="form-control" value="{{ sku.sku_code or '' }}" placeholder="Enter SKU code">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Size Label</label>
-                            <input type="text" name="size_label" class="form-control" value="{{ sku.size_label or '' }}">
+                            <input type="text" name="size_label" class="form-control" value="{{ sku.size_label or '' }}" placeholder="e.g., 8oz, Large, Standard">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Retail Price ($)</label>
-                            <input type="number" name="retail_price" class="form-control" value="{{ sku.retail_price or '' }}" step="0.01" min="0">
+                            <input type="number" name="retail_price" class="form-control" value="{{ sku.retail_price or '' }}" step="0.01" min="0" placeholder="0.00">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Low Stock Threshold</label>
-                            <input type="number" name="low_stock_threshold" class="form-control" value="{{ sku.low_stock_threshold or '' }}" step="0.01" min="0">
+                            <input type="number" name="low_stock_threshold" class="form-control" value="{{ sku.low_stock_threshold or '' }}" step="0.01" min="0" placeholder="Minimum stock level">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Location</label>
-                            <input type="text" name="location_name" class="form-control" value="{{ sku.location_name or '' }}">
+                            <input type="text" name="location_name" class="form-control" value="{{ sku.location_name or '' }}" placeholder="Storage location">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Unit Cost ($)</label>
                             <div class="input-group">
                                 <input type="number" name="unit_cost" id="edit_unit_cost" class="form-control" value="{{ sku.unit_cost or '' }}" step="0.01" min="0" readonly>
                                 <div class="input-group-text">
-                                    <input class="form-check-input" type="checkbox" id="override_edit_unit_cost" name="override_unit_cost">
+                                    <input class="form-check-input mt-0" type="checkbox" id="override_edit_unit_cost" name="override_unit_cost">
                                     <label class="form-check-label ms-1" for="override_edit_unit_cost">Override</label>
                                 </div>
                             </div>
@@ -46,7 +46,7 @@
                         <!-- Shelf Life Management -->
                         <div class="col-12">
                             <hr>
-                            <h6>Shelf Life Management</h6>
+                            <h6 class="mb-3">Shelf Life Management</h6>
                         </div>
                         <div class="col-md-6">
                             <div class="form-check">
@@ -58,7 +58,7 @@
                         </div>
                         <div class="col-md-6" id="shelfLifeGroup" style="{{ 'display: none;' if not sku.is_perishable else '' }}">
                             <label class="form-label">Shelf Life (days)</label>
-                            <input type="number" name="shelf_life_days" id="shelf_life_days" class="form-control" value="{{ sku.shelf_life_days or '' }}" min="1">
+                            <input type="number" name="shelf_life_days" id="shelf_life_days" class="form-control" value="{{ sku.shelf_life_days or '' }}" min="1" placeholder="Number of days">
                             <small class="text-muted">Will update all active FIFO entries</small>
                         </div>
                     </div>

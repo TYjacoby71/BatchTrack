@@ -130,6 +130,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Modals Component -->
 {% include 'components/sku/modals.html' %}
 
+<!-- Debug: Check if modal is included -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('editSkuModal');
+    if (!editModal) {
+        console.error('Edit SKU Modal not found in DOM');
+    } else {
+        console.log('Edit SKU Modal found and ready');
+    }
+});
+</script>
+
 <script>
 // SKU Inventory Actions - Dynamic Form Generation
 const skuData = {
