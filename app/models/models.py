@@ -33,7 +33,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(32), default='organization_owner')
+    role = db.Column(db.String(32), default='organization_owner')  # Keep for backward compatibility
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
@@ -43,6 +44,9 @@ class User(UserMixin, db.Model):
     is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
+
+    # Relationship to role
+    user_role = db.relationship('Role', backref='users')
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -92,7 +96,7 @@ class Unit(db.Model):
             (cls.is_custom == False) | 
             (cls.organization_id == current_user.organization_id)
         )
-    
+
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization (for custom units only)"""
         if not self.is_custom:
