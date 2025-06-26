@@ -1,0 +1,36 @@
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1691, in invoke
+    cmd_name, cmd, args = self.resolve_command(ctx, args)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1738, in resolve_command
+    cmd = self.get_command(ctx, cmd_name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 631, in get_command
+    app = info.load_app()
+          ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 353, in load_app
+    app = locate_app(import_name, None, raise_if_not_found=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 262, in locate_app
+    return find_best_app(module)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 72, in find_best_app
+    app = app_factory()
+          ^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/__init__.py", line 50, in create_app
+    from .blueprints.expiration import expiration_bp
+  File "/home/runner/workspace/app/blueprints/expiration/__init__.py", line 5, in <module>
+    from . import routes
+  File "/home/runner/workspace/app/blueprints/expiration/routes.py", line 4, in <module>
+    from .services import ExpirationService
+  File "/home/runner/workspace/app/blueprints/expiration/services.py", line 9, in <module>
+    from ...models import db, InventoryHistory, InventoryItem, ProductInventory, Batch
+ImportError: cannot import name 'ProductInventory' from 'app.models' (/home/runner/workspace/app/models/__init__.py)
