@@ -1,0 +1,231 @@
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Product History</h5>
+    </div>
+    <div class="card-body">
+        {% if history %}
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Qty Change</th>
+                        <th>Old Qty</th>
+                        <th>New Qty</th>
+                        <th>Remaining</th>
+                        <th>Original</th>
+                        <th>Unit Cost</th>
+                        <th>Sale Price</th>
+                        <th>Customer</th>
+                        <th>FIFO Code</th>
+                        <th>Batch/Lot</th>
+                        <th>Location</th>
+                        <th>Quality</th>
+                        <th>Order ID</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in history %}
+                    <tr>
+                        <td>{{ entry.timestamp.strftime('%m/%d %H:%M') if entry.timestamp else 'N/A' }}</td>
+                        <td>
+                            <span class="badge badge-sm
+                                {% if entry.change_type == 'batch_production' or entry.change_type == 'batch_addition' %}bg-success
+                                {% elif entry.change_type == 'sale' %}bg-primary
+                                {% elif entry.change_type == 'spoil' %}bg-danger
+                                {% elif entry.change_type == 'recount' %}bg-warning
+                                {% elif entry.change_type == 'reserved' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ entry.change_type.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.1f"|format(entry.quantity_change) }}
+                            </span>
+                        </td>
+                        <td>{{ "%.1f"|format(entry.old_quantity) if entry.old_quantity is not none else 'N/A' }}</td>
+                        <td>{{ "%.1f"|format(entry.new_quantity) if entry.new_quantity is not none else 'N/A' }}</td>
+                        <td>
+                            {% if entry.remaining_quantity is not none %}
+                                {{ "%.1f"|format(entry.remaining_quantity) }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.original_quantity is not none %}
+                                {{ "%.1f"|format(entry.original_quantity) }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.unit_cost %}
+                                ${{ "%.2f"|format(entry.unit_cost) }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.sale_price %}
+                                ${{ "%.2f"|format(entry.sale_price) }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.customer %}
+                                <small>{{ entry.customer[:12] }}{% if entry.customer|length > 12 %}...{% endif %}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.fifo_code %}
+                                <small class="font-monospace">{{ entry.fifo_code[:8] }}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.batch_id %}
+                                <a href="{{ url_for('batches.view_batch', batch_id=entry.batch_id) }}" class="text-decoration-none">
+                                    <small>B{{ entry.batch_id }}</small>
+                                </a>
+                            {% endif %}
+                            {% if entry.batch_number %}
+                                <br><small class="text-muted">{{ entry.batch_number[:8] }}</small>
+                            {% endif %}
+                            {% if entry.lot_number %}
+                                <br><small class="text-info">L{{ entry.lot_number[:8] }}</small>
+                            {% endif %}
+                            {% if not entry.batch_id and not entry.batch_number and not entry.lot_number %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.location_name %}
+                                <small>{{ entry.location_name[:10] }}{% if entry.location_name|length > 10 %}...{% endif %}</small>
+                            {% elif entry.location_id %}
+                                <small class="text-muted">{{ entry.location_id[:8] }}</small>
+                            {% endif %}
+                            {% if entry.temperature_at_time %}
+                                <br><small class="text-info">{{ entry.temperature_at_time }}°</small>
+                            {% endif %}
+                            {% if not entry.location_name and not entry.location_id and not entry.temperature_at_time %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.quality_status %}
+                                <span class="badge badge-sm 
+                                    {% if entry.quality_status == 'passed' %}bg-success
+                                    {% elif entry.quality_status == 'failed' %}bg-danger
+                                    {% elif entry.quality_status == 'quarantine' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ entry.quality_status.title() }}
+                                </span>
+                            {% endif %}
+                            {% if entry.compliance_status and entry.compliance_status != entry.quality_status %}
+                                <br><span class="badge badge-sm 
+                                    {% if entry.compliance_status == 'compliant' %}bg-success
+                                    {% elif entry.compliance_status == 'non_compliant' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ entry.compliance_status.replace('_', ' ').title() }}
+                                </span>
+                            {% endif %}
+                            {% if not entry.quality_status and not entry.compliance_status %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.order_id %}
+                                <small class="font-monospace">{{ entry.order_id[:8] }}{% if entry.order_id|length > 8 %}...{% endif %}</small>
+                            {% endif %}
+                            {% if entry.reservation_id %}
+                                <br><small class="text-info">R{{ entry.reservation_id[:6] }}</small>
+                            {% endif %}
+                            {% if entry.marketplace_order_id %}
+                                <br><small class="text-success">{{ entry.marketplace_source or 'MP' }}:{{ entry.marketplace_order_id[:6] }}</small>
+                            {% endif %}
+                            {% if not entry.order_id and not entry.reservation_id and not entry.marketplace_order_id %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set note_text = entry.notes or entry.note or '' %}
+                            {% if note_text %}
+                                <small class="text-muted" title="{{ note_text }}">{{ note_text[:15] }}{% if note_text|length > 15 %}...{% endif %}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
+                                <button class="btn btn-sm btn-outline-warning" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#adjustFifoModal"
+                                        data-inventory-id="{{ entry.id }}"
+                                        data-current-quantity="{{ entry.remaining_quantity }}"
+                                        data-unit="{{ entry.unit }}">
+                                    Adj
+                                </button>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if history_pagination.pages > 1 %}
+        <nav aria-label="History pagination">
+            <ul class="pagination justify-content-center">
+                {% if history_pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
+                    </li>
+                {% endif %}
+
+                {% for page_num in history_pagination.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != history_pagination.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if history_pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-4">
+            <p class="text-muted">No history entries found for this SKU.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

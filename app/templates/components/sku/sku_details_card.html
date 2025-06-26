@@ -1,0 +1,94 @@
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">SKU Details</h5>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editSkuModal">
+            <i class="fas fa-edit"></i> Edit Details
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Stock Level -->
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <h4 class="text-primary mb-1">{{ "%.2f"|format(total_quantity) }}</h4>
+                    <small class="text-muted">Total Stock</small>
+                    <br><small class="text-muted">{{ sku.unit }}</small>
+                </div>
+            </div>
+            
+            <!-- SKU Code -->
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <h6 class="text-secondary mb-1">{{ sku.sku_code or 'Not Set' }}</h6>
+                    <small class="text-muted">SKU Code</small>
+                </div>
+            </div>
+            
+            <!-- Retail Price -->
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <h6 class="text-success mb-1">
+                        {% if sku.retail_price %}
+                            ${{ "%.2f"|format(sku.retail_price) }}
+                        {% else %}
+                            Not Set
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">Retail Price</small>
+                </div>
+            </div>
+            
+            <!-- Average Cost -->
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <h6 class="text-warning mb-1">
+                        {% if sku.unit_cost %}
+                            ${{ "%.2f"|format(sku.unit_cost) }}
+                        {% else %}
+                            Not Set
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">Avg Cost</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Details Row -->
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <span class="badge {% if total_quantity <= 0 %}bg-danger{% elif total_quantity <= sku.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
+                        {{ sku.stock_status }}
+                    </span>
+                    <br><small class="text-muted">Status</small>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <span class="text-muted">{{ sku.low_stock_threshold }}</span>
+                    <br><small class="text-muted">Low Stock Alert</small>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    {% if sku.reserved_quantity and sku.reserved_quantity > 0 %}
+                        <span class="text-info">{{ "%.2f"|format(sku.reserved_quantity) }}</span>
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                    <br><small class="text-muted">Reserved</small>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-box text-center">
+                    <span class="text-primary">{{ "%.2f"|format(sku.available_for_sale) }}</span>
+                    <br><small class="text-muted">Available</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
