@@ -361,7 +361,7 @@ function planProduction() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': getCSRFToken()
           },
           body: JSON.stringify({
             recipe_id: this.recipeId,
