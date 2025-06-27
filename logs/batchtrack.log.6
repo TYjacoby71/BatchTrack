@@ -1,4 +1,4 @@
-2025-06-27 17:43:51,208 ERROR: Exception on /start-batch/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-27 17:53:42,713 ERROR: Exception on /start-batch/start_batch [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -116,5 +116,5 @@ Traceback (most recent call last):
 sqlalchemy.exc.OperationalError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
 (sqlite3.OperationalError) table batch_container has no column named container_id
 [SQL: INSERT INTO batch_container (batch_id, container_id, container_size, container_quantity, quantity_used, fill_quantity, fill_unit, cost_each, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (6, 3, None, None, 1, None, None, 2.0, None)]
+[parameters: (7, 2, None, None, 1, None, None, 1.0, None)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)

@@ -1,26 +1,4 @@
-2025-06-27 16:44:57,127 ERROR: Exception on /batches/in-progress/5 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/routes.py", line 255, in view_batch_in_progress
-    from ...models import Product
-ImportError: cannot import name 'Product' from 'app.models' (/home/runner/workspace/app/models/__init__.py)
-2025-06-27 16:57:38,198 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-27 17:39:18,799 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-06-27 17:39:38,395 ERROR: Exception on /batches/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-06-27 17:43:57,485 ERROR: Exception on /batches/ [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -97,5 +75,7 @@ sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: batc
 [SQL: SELECT batch_container.id AS batch_container_id, batch_container.batch_id AS batch_container_batch_id, batch_container.container_id AS batch_container_container_id, batch_container.container_size AS batch_container_container_size, batch_container.container_quantity AS batch_container_container_quantity, batch_container.quantity_used AS batch_container_quantity_used, batch_container.fill_quantity AS batch_container_fill_quantity, batch_container.fill_unit AS batch_container_fill_unit, batch_container.cost_each AS batch_container_cost_each, batch_container.organization_id AS batch_container_organization_id 
 FROM batch_container 
 WHERE ? = batch_container.batch_id]
-[parameters: (5,)]
+[parameters: (6,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-06-27 17:47:37,380 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-06-27 17:47:46,148 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
