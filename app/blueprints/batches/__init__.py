@@ -26,3 +26,6 @@ try:
     from .add_extra import add_extra_bp
 except ImportError:
     add_extra_bp = None
+
+# Make sure finish_batch_bp is available for registration
+__all__ = ['batches_bp', 'finish_batch_bp', 'start_batch_bp', 'cancel_batch_bp', 'add_extra_bp']
