@@ -86,8 +86,8 @@ def list_batches():
     session['batch_filter_end'] = end
     session['batch_sort_by'] = sort_by
 
-    # Build base query with filters
-    base_query = Batch.query
+    # Build base query with filters (use scoped query for organization filtering)
+    base_query = Batch.scoped()
 
     if status and status != 'all':
         base_query = base_query.filter_by(status=status)
