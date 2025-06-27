@@ -65,12 +65,14 @@ def start_batch():
                     )
 
                     if result:
-                        # Create single BatchContainer record
+                        # Create BatchContainer record matching the model structure
                         bc = BatchContainer(
                             batch_id=new_batch.id,
-                            container_id=container_id,
-                            quantity_used=quantity,
-                            cost_each=container_item.cost_per_unit
+                            container_size=f"{container_item.storage_amount or 1} {container_item.storage_unit or 'unit'}",
+                            container_quantity=int(quantity),
+                            fill_quantity=container_item.storage_amount or 1,
+                            fill_unit=container_item.storage_unit or 'unit',
+                            organization_id=current_user.organization_id
                         )
                         db.session.add(bc)
                     else:
@@ -133,7 +135,7 @@ def start_batch():
         for ing in new_batch.batch_ingredients:
             deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
         for cont in new_batch.containers:
-            deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
+            deduction_summary.append(f"{cont.container_quantity} containers of {cont.container_size}")
 
         deducted_items = ", ".join(deduction_summary)
         flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
