@@ -30,7 +30,7 @@ def cancel_batch(batch_id):
             if ingredient:
                 process_inventory_adjustment(
                     item_id=ingredient.id,
-                    quantity=batch_ing.amount_used,  # Positive for credit
+                    quantity=batch_ing.quantity_used,  # Use quantity_used instead of amount_used
                     change_type='refunded',
                     unit=batch_ing.unit,
                     notes=f"Refunded from cancelled batch {batch.label_code}",
@@ -91,7 +91,7 @@ def cancel_batch(batch_id):
         for batch_ing in batch_ingredients:
             ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
             if ingredient:
-                restoration_summary.append(f"{batch_ing.amount_used} {batch_ing.unit} of {ingredient.name}")
+                restoration_summary.append(f"{batch_ing.quantity_used} {batch_ing.unit} of {ingredient.name}")
 
         for extra_ing in extra_ingredients:
             if extra_ing.ingredient:
