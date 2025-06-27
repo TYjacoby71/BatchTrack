@@ -97,12 +97,14 @@ function markBatchFailed() {
     csrfInput.value = csrf;
     form.appendChild(csrfInput);
 
-    // Add reason
-    const reasonInput = document.createElement('input');
-    reasonInput.type = 'hidden';
-    reasonInput.name = 'reason';
-    reasonInput.value = reason;
-    form.appendChild(reasonInput);
+    // Add reason if provided
+    if (reason) {
+      const reasonInput = document.createElement('input');
+      reasonInput.type = 'hidden';
+      reasonInput.name = 'reason';
+      reasonInput.value = reason;
+      form.appendChild(reasonInput);
+    }
 
     document.body.appendChild(form);
     form.submit();
