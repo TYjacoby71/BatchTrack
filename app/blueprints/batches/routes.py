@@ -252,8 +252,8 @@ def view_batch_in_progress(batch_identifier):
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
     # Get products for finish batch modal
-    from ...models import ProductSKU
-    products = ProductSKU.query.filter_by(is_active=True).all()
+    from ...models import Product
+    products = Product.query.filter_by(is_active=True).all()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []

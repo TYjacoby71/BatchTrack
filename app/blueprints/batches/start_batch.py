@@ -1,3 +1,4 @@
+# Updating the template path for the start_batch route.
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
@@ -60,8 +61,7 @@ def start_batch():
                         unit=container_unit,
                         notes=f"Used in batch {label_code}",
                         batch_id=new_batch.id,
-                        created_by=current_user.id,
-                        organization_id=current_user.organization_id
+                        created_by=current_user.id
                     )
 
                     if result:
@@ -86,7 +86,7 @@ def start_batch():
         if not ingredient:
             continue
 
-        required_amount = assoc.quantity * scale
+        required_amount = assoc.amount * scale
 
         try:
             conversion_result = ConversionEngine.convert_units(
@@ -98,7 +98,7 @@ def start_batch():
             )
             required_converted = conversion_result['converted_value']
 
-            # Use centralized inventory adjustment
+            # Use centralized inventory adjustment 
             result = process_inventory_adjustment(
                 item_id=ingredient.id,
                 quantity=-required_converted,  # Negative for deduction
@@ -106,8 +106,7 @@ def start_batch():
                 unit=ingredient.unit,
                 notes=f"Used in batch {label_code}",
                 batch_id=new_batch.id,
-                created_by=current_user.id,
-                organization_id=current_user.organization_id
+                created_by=current_user.id
             )
 
             if not result:
@@ -131,8 +130,8 @@ def start_batch():
     else:
         # Build ingredients summary using the new_batch
         deduction_summary = []
-        for ing in new_batch.batch_ingredients:
-            deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
+        for ing in new_batch.ingredients:
+            deduction_summary.append(f"{ing.amount_used} {ing.unit} of {ing.ingredient.name}")
         for cont in new_batch.containers:
             deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
 
