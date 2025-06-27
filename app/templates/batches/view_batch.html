@@ -35,26 +35,35 @@
 <!-- Section 1: Basic Batch Info (Always Visible) -->
 <div class="batch-header mb-4">
     <div class="card">
-        <div class="card-body">
-            <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-            <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-            <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
-            <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
-            {% if batch.completed_at %}
-            <p><strong>Completed:</strong> {{ batch.completed_at.strftime('%Y-%m-%d %H:%M') }}</p>
-            {% elif batch.failed_at %}
-            <p><strong>Failed:</strong> {{ batch.failed_at.strftime('%Y-%m-%d %H:%M') }}</p>
-            {% elif batch.cancelled_at %}
-            <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
-            {% endif %}
-            <p><strong>Status:</strong> 
-                <span class="badge {% if batch.status == 'completed' %}bg-success
-                            {% elif batch.status == 'failed' %}bg-danger
-                            {% elif batch.status == 'cancelled' %}bg-secondary
-                            {% else %}bg-warning{% endif %}">
-                    {{ batch.status|title }}
-                </span>
-            </p>
+        <div class="card-header">
+            <h3 class="mb-0">
+                <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#batchDetailsCollapse" aria-expanded="true">
+                    <i class="fas fa-chevron-down me-2"></i>Batch Details
+                </button>
+            </h3>
+        </div>
+        <div class="collapse show" id="batchDetailsCollapse">
+            <div class="card-body">
+                <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+                <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+                <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% if batch.completed_at %}
+                <p><strong>Completed:</strong> {{ batch.completed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% elif batch.failed_at %}
+                <p><strong>Failed:</strong> {{ batch.failed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% elif batch.cancelled_at %}
+                <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% endif %}
+                <p><strong>Status:</strong> 
+                    <span class="badge {% if batch.status == 'completed' %}bg-success
+                                {% elif batch.status == 'failed' %}bg-danger
+                                {% elif batch.status == 'cancelled' %}bg-secondary
+                                {% else %}bg-warning{% endif %}">
+                        {{ batch.status|title }}
+                    </span>
+                </p>
+            </div>
         </div>
     </div>
 </div>
@@ -62,26 +71,34 @@
 <!-- Section 2: Output Info (Hidden if Cancelled) -->
 {% if batch.status != 'cancelled' %}
 <div class="batch-output mb-4">
-    <h3>Output Details</h3>
     <div class="card">
-        <div class="card-body">
-            <p><strong>Output Type:</strong> {{ batch.batch_type|title }}</p>
+        <div class="card-header">
+            <h3 class="mb-0">
+                <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#outputDetailsCollapse" aria-expanded="false">
+                    <i class="fas fa-chevron-right me-2"></i>Output Details
+                </button>
+            </h3>
+        </div>
+        <div class="collapse" id="outputDetailsCollapse">
+            <div class="card-body">
+                <p><strong>Output Type:</strong> {{ batch.batch_type|title }}</p>
 
-            {% if batch.batch_type == 'product' and batch.product %}
-                <p><strong>Product:</strong> <a href="{{ url_for('products.view_product', product_id=batch.product.id) }}">{{ batch.product.name }}</a></p>
-                {% if batch.variant %}
-                    <p><strong>Variant:</strong> {{ batch.variant }}</p>
+                {% if batch.batch_type == 'product' and batch.product %}
+                    <p><strong>Product:</strong> <a href="{{ url_for('products.view_product', product_id=batch.product.id) }}">{{ batch.product.name }}</a></p>
+                    {% if batch.variant %}
+                        <p><strong>Variant:</strong> {{ batch.variant }}</p>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
 
-            <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
-            <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
-                       {% if batch.is_perishable %}
-                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
-                {% if batch.expiration_date %}
-                    <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
+                <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+                <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
+                           {% if batch.is_perishable %}
+                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                    {% if batch.expiration_date %}
+                        <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -89,9 +106,16 @@
 
 <!-- Section 3: Batch Summary -->
 <div class="batch-summary mb-4">
-    <h3>{% if batch.status == 'cancelled' %}Inventory Refunded{% else %}Inventory Used{% endif %}</h3>
     <div class="card">
-        <div class="card-body">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#batchSummaryCollapse" aria-expanded="true">
+                    <i class="fas fa-chevron-down me-2"></i>{% if batch.status == 'cancelled' %}Inventory Refunded{% else %}Inventory Used{% endif %}
+                </button>
+            </h3>
+        </div>
+        <div class="collapse show" id="batchSummaryCollapse">
+            <div class="card-body">
             <table class="table">
                 <thead>
                     <tr>
@@ -204,24 +228,37 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Notes and Tags Section -->
 <div class="notes-section">
-    <h3>Batch Notes</h3>
-    <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="mb-3">
-            <textarea name="notes" rows="4" class="form-control mb-3">{{ batch.notes or '' }}</textarea>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#notesCollapse" aria-expanded="false">
+                    <i class="fas fa-chevron-right me-2"></i>Batch Notes
+                </button>
+            </h3>
         </div>
-        <div class="mb-3">
-            <label for="tags" class="form-label">Tags</label>
-            <input type="text" name="tags" class="form-control" value="{{ batch.tags or '' }}">
+        <div class="collapse" id="notesCollapse">
+            <div class="card-body">
+                <form method="post" action="{{ url_for('batches.update_batch_notes', batch_id=batch.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <textarea name="notes" rows="4" class="form-control mb-3">{{ batch.notes or '' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        <input type="text" name="tags" class="form-control" value="{{ batch.tags or '' }}">
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Save and Return to Batch List</button>
+                </form>
+            </div>
         </div>
-        <button type="submit" class="btn btn-secondary">Save and Return to Batch List</button>
-    </form>
+    </div>
 </div>
 <style>
 .btn-outline-primary:hover {
@@ -238,6 +275,41 @@
 .btn-outline-secondary:disabled {
     cursor: not-allowed;
 }
+
+.collapse-icon {
+    transition: transform 0.2s ease-in-out;
+}
+
+.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle collapse icon rotation
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    collapseElements.forEach(function(element) {
+        const target = document.querySelector(element.getAttribute('data-bs-target'));
+        if (target) {
+            target.addEventListener('show.bs.collapse', function() {
+                const icon = element.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                }
+            });
+            
+            target.addEventListener('hide.bs.collapse', function() {
+                const icon = element.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+            });
+        }
+    });
+});
+</script>
 
 {% endblock %}

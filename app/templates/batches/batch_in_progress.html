@@ -34,21 +34,29 @@
 
 <!-- Section 1: Basic Batch Info -->
 <div class="batch-header mb-4">
-    <h3>Batch Details</h3>
     <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
-                    <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
-                    <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                    <p><strong>Status:</strong> 
-                        <span class="badge bg-warning">In Progress</span>
-                    </p>
-                    <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+        <div class="card-header">
+            <h3 class="mb-0">
+                <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#batchDetailsCollapse" aria-expanded="true">
+                    <i class="fas fa-chevron-down me-2"></i>Batch Details
+                </button>
+            </h3>
+        </div>
+        <div class="collapse show" id="batchDetailsCollapse">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+                        <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                        <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-warning">In Progress</span>
+                        </p>
+                        <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -120,9 +128,16 @@
 
     <!-- Section 4: Batch Cost Summary -->
     <div class="batch-summary mb-4">
-        <h3>Batch Summary</h3>
         <div class="card">
-            <div class="card-body">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#batchSummaryCollapse" aria-expanded="true">
+                        <i class="fas fa-chevron-down me-2"></i>Batch Summary
+                    </button>
+                </h3>
+            </div>
+            <div class="collapse show" id="batchSummaryCollapse">
+                <div class="card-body">
                 <table class="table">
                     <thead>
                         <tr>
@@ -240,22 +255,31 @@
                         </tr>
                     </tfoot>
                 </table>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Section 5: Notes and Tags -->
     <div class="mb-4">
-        <h3>Batch Notes & Tags</h3>
         <div class="card">
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="notes" class="form-label">Batch Notes</label>
-                    <textarea name="notes" rows="4" class="form-control" placeholder="Add any notes about this batch...">{{ batch.notes or '' }}</textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="tags" class="form-label">Tags</label>
-                    <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control" placeholder="Enter tags separated by commas">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#notesTagsCollapse" aria-expanded="false">
+                        <i class="fas fa-chevron-right me-2"></i>Batch Notes & Tags
+                    </button>
+                </h3>
+            </div>
+            <div class="collapse" id="notesTagsCollapse">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Batch Notes</label>
+                        <textarea name="notes" rows="4" class="form-control" placeholder="Add any notes about this batch...">{{ batch.notes or '' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        <input type="text" name="tags" value="{{ batch.tags or '' }}" class="form-control" placeholder="Enter tags separated by commas">
+                    </div>
                 </div>
             </div>
         </div>
@@ -363,5 +387,32 @@
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
 <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle collapse icon rotation
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    collapseElements.forEach(function(element) {
+        const target = document.querySelector(element.getAttribute('data-bs-target'));
+        if (target) {
+            target.addEventListener('show.bs.collapse', function() {
+                const icon = element.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                }
+            });
+            
+            target.addEventListener('hide.bs.collapse', function() {
+                const icon = element.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+            });
+        }
+    });
+});
+</script>
 
 {% endblock %}
