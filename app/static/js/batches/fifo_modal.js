@@ -60,7 +60,7 @@ async function fetchFifoDetails(inventoryId, batchId) {
         }
     } catch (error) {
         console.error('Error fetching FIFO details:', error);
-        showFifoError('Network error occurred');
+        showFifoError('Failed to load batch source list');
     }
 }
 
@@ -76,7 +76,7 @@ async function fetchBatchInventorySummary(batchId) {
         }
     } catch (error) {
         console.error('Error fetching batch summary:', error);
-        showFifoError('Network error occurred');
+        showFifoError('Failed to load batch source list');
     }
 }
 
