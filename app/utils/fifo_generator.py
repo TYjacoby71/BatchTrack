@@ -4,15 +4,15 @@
 BASE36_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 def get_change_type_prefix(change_type):
-    """Get 3-letter prefix for change type"""
+    """Get 3-letter prefix for change type - addition events create lots"""
     prefix_map = {
-        'restock': 'RSK',
-        'batch': 'BTC', 
-        'spoil': 'SPL',
-        'trash': 'TRS',
-        'recount': 'RCN',
-        'finished_batch': 'FIN',
-        'refunded': 'REF',
+        'restock': 'LOT',  # Restock events are lots
+        'batch': 'BTC',    # Batch completions 
+        'spoil': 'SPL',    # Spoilage deductions
+        'trash': 'TRS',    # Trash deductions
+        'recount': 'RCN',  # Recount adjustments
+        'finished_batch': 'LOT',  # Finished batches create new lots
+        'refunded': 'REF', # Refund additions
         'cost_override': 'CST'
     }
     return prefix_map.get(change_type, 'UNK')
@@ -30,7 +30,10 @@ def int_to_base36(number):
     return result
 
 def generate_fifo_id(change_type):
-    """Generate next FIFO ID for given change type"""
+    """
+    Generate next FIFO ID for given change type
+    Note: Addition events (restock, finished_batch) create 'lots' with LOT prefix
+    """
     from models import db, InventoryHistory
 
     prefix = get_change_type_prefix(change_type)
