@@ -99,10 +99,20 @@ def complete_batch(batch_id):
 
             # Get container count overrides from form
             container_overrides = {}
+            total_container_products = 0
             for key, value in request.form.items():
                 if key.startswith('container_final_'):
                     container_id = int(key.replace('container_final_', ''))
-                    container_overrides[container_id] = int(value)
+                    container_count = int(value)
+                    container_overrides[container_id] = container_count
+                    total_container_products += container_count
+
+            # Validate container/yield relationship
+            if total_container_products > 0 and abs(final_quantity - total_container_products) > 0.1:
+                if final_quantity > total_container_products:
+                    flash(f"⚠️ Creating {final_quantity} products with {total_container_products} containers. Extra products will have fractional container costs.", "warning")
+                else:
+                    flash(f"⚠️ Have {total_container_products} containers but creating {final_quantity} products. Some containers unused.", "warning")
 
             # Use unified ProductService with container overrides
             from services.product_service import ProductService
