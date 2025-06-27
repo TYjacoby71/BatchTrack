@@ -62,7 +62,9 @@
           <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
           <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
           <td>
-            {% if entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
+            {% if entry.used_for_batch %}
+              <a href="{{ url_for('batches.view_batch', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
+            {% elif entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
               <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
             {% else %}
               NA
