@@ -14,12 +14,20 @@ def list_inventory():
     query = InventoryItem.query
     if inventory_type:
         query = query.filter_by(type=inventory_type)
-    items = query.all()
+    inventory_items = query.all()
     units = get_global_unit_list()
+    categories = IngredientCategory.query.all()
+    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
+
+    # Calculate freshness for each item
+    from ...blueprints.expiration.services import ExpirationService
+    for item in inventory_items:
+        item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+
     return render_template('inventory_list.html', 
-         items=items, 
-         units=units, 
-         get_global_unit_list=get_global_unit_list)
+                         inventory_items=inventory_items,
+                         categories=categories,
+                         total_value=total_value)
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 def set_column_visibility():
@@ -499,24 +507,3 @@ def debug_inventory(id):
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
-@inventory_bp.route('/')
-@login_required
-def list_inventory():
-    inventory_type = request.args.get('type')
-    query = InventoryItem.query
-    if inventory_type:
-        query = query.filter_by(type=inventory_type)
-    inventory_items = query.all()
-    units = get_global_unit_list()
-    categories = IngredientCategory.query.all()
-    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
-
-    # Calculate freshness for each item
-    from ...blueprints.expiration.services import ExpirationService
-    for item in inventory_items:
-        item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-
-    return render_template('inventory_list.html', 
-                         inventory_items=inventory_items,
-                         categories=categories,
-                         total_value=total_value)
