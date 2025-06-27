@@ -133,13 +133,6 @@ def get_batch_inventory_summary(batch_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-                'scale': batch.scale
-            },
-            'ingredient_summary': ingredient_summary
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 def get_batch_fifo_usage(inventory_id, batch_id):
     """Get FIFO usage data for a specific ingredient in a specific batch"""
