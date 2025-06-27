@@ -69,8 +69,10 @@ def start_batch():
                         bc = BatchContainer(
                             batch_id=new_batch.id,
                             container_id=container_id,
+                            container_quantity=quantity,
                             quantity_used=quantity,
-                            cost_each=container_item.cost_per_unit
+                            cost_each=container_item.cost_per_unit or 0.0,
+                            organization_id=current_user.organization_id
                         )
                         db.session.add(bc)
                     else:
