@@ -88,7 +88,7 @@ def start_batch():
         if not ingredient:
             continue
 
-        required_amount = assoc.amount * scale
+        required_amount = assoc.quantity * scale
 
         try:
             conversion_result = ConversionEngine.convert_units(
