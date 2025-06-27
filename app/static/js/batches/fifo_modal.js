@@ -70,6 +70,112 @@ async function fetchBatchInventorySummary(batchId) {
         const data = await response.json();
 
         if (response.ok) {
+            renderBatchInventorySummary(data);
+        } else {
+            showFifoError(data.error || 'Failed to load batch inventory summary');
+        }
+    } catch (error) {
+        console.error('Error fetching batch inventory summary:', error);
+        showFifoError('Failed to load batch inventory summary');
+    }
+}
+
+function renderBatchInventorySummary(data) {
+    const { batch_label, ingredients_used } = data;
+
+    let html = `
+        <div class="mb-3">
+            <h6>Batch ${batch_label} - Inventory Sources</h6>
+            <p class="text-muted">FIFO breakdown for all ingredients used in this batch</p>
+        </div>
+    `;
+
+    if (ingredients_used && ingredients_used.length > 0) {
+        html += `<div class="accordion" id="batchIngredientAccordion">`;
+
+        ingredients_used.forEach((ingredient, index) => {
+            const accordionId = `ingredient${index}`;
+            const totalCost = (ingredient.quantity_used * ingredient.cost_per_unit).toFixed(2);
+
+            html += `
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading${index}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#${accordionId}" aria-expanded="false">
+                            <strong>${ingredient.name}</strong>
+                            <span class="ms-auto me-3">
+                                ${ingredient.quantity_used} ${ingredient.unit} - $${totalCost}
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="${accordionId}" class="accordion-collapse collapse" 
+                         data-bs-parent="#batchIngredientAccordion">
+                        <div class="accordion-body">
+            `;
+
+            if (ingredient.fifo_sources && ingredient.fifo_sources.length > 0) {
+                html += `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>FIFO Source</th>
+                                    <th>Amount</th>
+                                    <th>Age</th>
+                                    <th>Freshness</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                ingredient.fifo_sources.forEach(source => {
+                    const ageText = source.age_days ? `${source.age_days} days` : 'N/A';
+                    const freshnessDisplay = source.life_remaining_percent !== null 
+                        ? `<span class="badge ${getLifeBadgeClass(source.life_remaining_percent)}">${source.life_remaining_percent}%</span>`
+                        : '<span class="text-muted">Non-perishable</span>';
+                    const sourceCost = (source.quantity_used * (source.unit_cost || 0)).toFixed(2);
+
+                    html += `
+                        <tr>
+                            <td>
+                                <a href="/inventory/view/${ingredient.inventory_item_id}?fifo=true#entry-${source.fifo_id}" 
+                                   target="_blank" class="fifo-ingredient-link">
+                                    #${source.fifo_id}
+                                </a>
+                            </td>
+                            <td>${source.quantity_used} ${source.unit}</td>
+                            <td>${ageText}</td>
+                            <td>${freshnessDisplay}</td>
+                            <td>$${sourceCost}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html += '<div class="alert alert-info">No FIFO source data available.</div>';
+            }
+
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+    } else {
+        html += '<div class="alert alert-info">No ingredient usage data available for this batch.</div>';
+    }
+
+    document.getElementById('fifoModalContent').innerHTML = html;
+
+        if (response.ok) {
             renderBatchSummary(data);
         } else {
             showFifoError(data.error || 'Failed to load batch summary');
