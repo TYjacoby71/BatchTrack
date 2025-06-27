@@ -32,6 +32,33 @@
         <i class="fas fa-print"></i> Print Batch Details
     </button>
 </div>
+
+<!-- Print Header (only visible when printing) -->
+<div class="print-only" style="display: none;">
+    <div class="batch-header">
+        <h1>Batch Production Report</h1>
+        <div class="batch-info">
+            <div class="batch-info-left">
+                <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
+                <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
+                <p><strong>Scale:</strong> {{ batch.scale }}</p>
+                <p><strong>Status:</strong> <span class="badge">{{ batch.status|title }}</span></p>
+            </div>
+            <div class="batch-info-right">
+                <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% if batch.completed_at %}
+                <p><strong>Completed:</strong> {{ batch.completed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% elif batch.failed_at %}
+                <p><strong>Failed:</strong> {{ batch.failed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% elif batch.cancelled_at %}
+                <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% endif %}
+                <p><strong>Print Date:</strong> {{ moment().format('YYYY-MM-DD HH:mm') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Section 1: Basic Batch Info (Always Visible) -->
 <div class="batch-header mb-4">
     <div class="card">
@@ -68,6 +95,34 @@
     </div>
 </div>
 
+<!-- Print Output Section (only visible when printing) -->
+{% if batch.status != 'cancelled' %}
+<div class="print-only" style="display: none;">
+    <div class="section-header">Output Details</div>
+    <div class="batch-info">
+        <div class="batch-info-left">
+            <p><strong>Output Type:</strong> {{ batch.batch_type|title }}</p>
+            {% if batch.batch_type == 'product' and batch.product %}
+                <p><strong>Product:</strong> {{ batch.product.name }}</p>
+                {% if batch.variant %}
+                    <p><strong>Variant:</strong> {{ batch.variant }}</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        <div class="batch-info-right">
+            <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+            <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
+            {% if batch.is_perishable %}
+                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                {% if batch.expiration_date %}
+                    <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Section 2: Output Info (Hidden if Cancelled) -->
 {% if batch.status != 'cancelled' %}
 <div class="batch-output mb-4">
@@ -103,6 +158,97 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Print Inventory Summary (only visible when printing) -->
+<div class="print-only" style="display: none;">
+    <div class="section-header">{% if batch.status == 'cancelled' %}Inventory Refunded{% else %}Inventory Used{% endif %}</div>
+    {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Amount</th>
+                <th>Unit</th>
+                <th>Cost/Unit</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if batch.batch_ingredients %}
+            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">INGREDIENTS</th></tr>
+            {% for ing in batch.batch_ingredients %}
+                {% set amount = ing.quantity_used|float or 0 %}
+                {% set cost = ing.cost_per_unit|float or 0 %}
+                {% set line_cost = amount * cost %}
+                <tr>
+                    <td>{{ ing.inventory_item.name }}</td>
+                    <td>{{ "%.2f"|format(amount) }}</td>
+                    <td>{{ ing.unit }}</td>
+                    <td>${{ "%.2f"|format(cost) }}</td>
+                    <td>${{ "%.2f"|format(line_cost) }}</td>
+                </tr>
+                {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
+            {% endfor %}
+            {% endif %}
+
+            {% if batch.containers %}
+            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">CONTAINERS</th></tr>
+            {% for container in batch.containers %}
+                {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
+                <tr>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
+                    <td>-</td>
+                    <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
+                    <td>${{ "%.2f"|format(line_cost) }}</td>
+                </tr>
+                {% set ns.container_total = ns.container_total + line_cost %}
+            {% endfor %}
+            {% endif %}
+
+            {% if batch.extra_ingredients %}
+            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">EXTRA INGREDIENTS</th></tr>
+            {% for extra in batch.extra_ingredients %}
+                {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
+                <tr>
+                    <td>{{ extra.inventory_item.name }}</td>
+                    <td>{{ "%.3f"|format(extra.quantity|float or 0) }}</td>
+                    <td>{{ extra.unit }}</td>
+                    <td>${{ "%.2f"|format(extra.cost_per_unit) }}</td>
+                    <td>${{ "%.2f"|format(line_cost) }}</td>
+                </tr>
+                {% set ns.extras_total = ns.extras_total + line_cost %}
+            {% endfor %}
+            {% endif %}
+
+            {% if batch.extra_containers %}
+            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">EXTRA CONTAINERS</th></tr>
+            {% for container in batch.extra_containers %}
+                {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
+                <tr>
+                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.quantity_used }}</td>
+                    <td>-</td>
+                    <td>${{ "%.2f"|format(container.cost_each) }}</td>
+                    <td>${{ "%.2f"|format(line_cost) }}</td>
+                </tr>
+                {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
+            {% endfor %}
+            {% endif %}
+        </tbody>
+        <tfoot>
+            {% set total_cost = (ns.ingredient_total if ns.ingredient_total is defined else 0) + 
+                               (ns.container_total if ns.container_total is defined else 0) + 
+                               (ns.extras_total if ns.extras_total is defined else 0) + 
+                               (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
+            <tr>
+                <td colspan="4"><strong>TOTAL BATCH COST</strong></td>
+                <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
 
 <!-- Section 3: Batch Summary -->
 <div class="batch-summary mb-4">
@@ -233,6 +379,27 @@
     </div>
 </div>
 
+<!-- Print Notes Section (only visible when printing) -->
+<div class="print-only notes-section" style="display: none;">
+    <div class="section-header">Batch Notes</div>
+    {% if batch.notes %}
+    <div class="notes-content">
+        <strong>Notes:</strong><br>
+        {{ batch.notes|nl2br }}
+    </div>
+    {% endif %}
+    {% if batch.tags %}
+    <div class="notes-content">
+        <strong>Tags:</strong> {{ batch.tags }}
+    </div>
+    {% endif %}
+    {% if batch.status_reason %}
+    <div class="notes-content">
+        <strong>Status Reason:</strong> {{ batch.status_reason }}
+    </div>
+    {% endif %}
+</div>
+
 <!-- Notes and Tags Section -->
 <div class="notes-section">
     <div class="card">
@@ -259,6 +426,11 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Print Footer (only visible when printing) -->
+<div class="print-only print-footer" style="display: none;">
+    <p>BatchTrack Production Report - Generated on {{ moment().format('YYYY-MM-DD HH:mm') }}</p>
 </div>
 <style>
 .btn-outline-primary:hover {
