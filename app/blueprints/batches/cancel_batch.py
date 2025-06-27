@@ -26,7 +26,7 @@ def cancel_batch(batch_id):
 
         # Credit batch ingredients back to inventory using centralized service
         for batch_ing in batch_ingredients:
-            ingredient = batch_ing.ingredient
+            ingredient = batch_ing.inventory_item
             if ingredient:
                 process_inventory_adjustment(
                     item_id=ingredient.id,
@@ -40,11 +40,11 @@ def cancel_batch(batch_id):
 
         # Credit extra ingredients back to inventory using centralized service
         for extra_ing in extra_ingredients:
-            ingredient = extra_ing.ingredient
+            ingredient = extra_ing.inventory_item
             if ingredient:
                 process_inventory_adjustment(
                     item_id=ingredient.id,
-                    quantity=extra_ing.quantity,  # Positive for credit
+                    quantity=extra_ing.quantity_used,  # Use quantity_used instead of quantity
                     change_type='refunded',
                     unit=extra_ing.unit,
                     notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
@@ -89,13 +89,13 @@ def cancel_batch(batch_id):
         # Build restoration summary
         restoration_summary = []
         for batch_ing in batch_ingredients:
-            ingredient = InventoryItem.query.get(batch_ing.ingredient_id)
+            ingredient = batch_ing.inventory_item
             if ingredient:
                 restoration_summary.append(f"{batch_ing.quantity_used} {batch_ing.unit} of {ingredient.name}")
 
         for extra_ing in extra_ingredients:
-            if extra_ing.ingredient:
-                restoration_summary.append(f"{extra_ing.quantity} {extra_ing.unit} of {extra_ing.ingredient.name}")
+            if extra_ing.inventory_item:
+                restoration_summary.append(f"{extra_ing.quantity_used} {extra_ing.unit} of {extra_ing.inventory_item.name}")
 
         for batch_container in batch_containers:
             container = batch_container.container

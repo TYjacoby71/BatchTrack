@@ -11,6 +11,10 @@ from werkzeug.utils import secure_filename
 from ...services.inventory_adjustment import process_inventory_adjustment
 
 from . import batches_bp
+from .start_batch import start_batch_bp
+from .cancel_batch import cancel_batch_bp
+from .add_extra import add_extra_bp
+from .finish_batch import finish_batch_bp
 
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
@@ -135,7 +139,7 @@ def list_batches():
     for batch in all_batches:
         ingredient_total = sum((ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients)
         container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
-        extras_total = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
+        extras_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
         extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
         batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
 
@@ -278,3 +282,8 @@ def view_batch_in_progress(batch_identifier):
                          container_breakdown=container_breakdown,
                          prev_batch=prev_batch,
                          next_batch=next_batch)
+
+batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
+batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
+batches_bp.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')

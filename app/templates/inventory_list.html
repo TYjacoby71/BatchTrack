@@ -52,6 +52,7 @@
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="density"> Density</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="freshness"> Freshness</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="category"> Category</label></li>
               </ul>
             </div>
@@ -220,6 +221,7 @@
                 <th class="col-quantity">Quantity</th>
                 <th class="col-density">Density (g/ml)</th>
                 <th class="col-cost">Cost/Unit</th>
+                <th class="col-freshness">Freshness</th>
                 <th class="col-category">Category</th>
                 <th class="col-actions">Actions</th>
               </tr>
@@ -232,6 +234,15 @@
                 <td class="col-quantity">{{ item.quantity }}</td>
                 <td class="col-density">{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
                 <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+                <td class="col-freshness">
+                  {% if item.freshness_percent is not none %}
+                    <span class="badge {% if item.freshness_percent >= 70 %}bg-success{% elif item.freshness_percent >= 30 %}bg-warning{% else %}bg-danger{% endif %}">
+                      {{ "%.1f"|format(item.freshness_percent) }}%
+                    </span>
+                  {% else %}
+                    <span class="text-muted">Non-perishable</span>
+                  {% endif %}
+                </td>
                 <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
                 <td class="col-actions">
                   <div class="action-dropdown">
@@ -316,6 +327,7 @@
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="storage_unit"> Storage Unit</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="freshness"> Freshness</label></li>
               </ul>
             </div>
           </div>
@@ -460,6 +472,7 @@
                 <th class="col-storage_unit">Storage Unit</th>
                 <th class="col-quantity">Quantity in Stock</th>
                 <th class="col-cost">Cost/Unit</th>
+                <th class="col-freshness">Freshness</th>
                 <th class="col-actions">Actions</th>
               </tr>
             </thead>
@@ -471,6 +484,15 @@
                 <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
                 <td class="col-quantity">{{ item.quantity }}</td>
                 <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
+                <td class="col-freshness">
+                  {% if item.freshness_percent is not none %}
+                    <span class="badge {% if item.freshness_percent >= 70 %}bg-success{% elif item.freshness_percent >= 30 %}bg-warning{% else %}bg-danger{% endif %}">
+                      {{ "%.1f"|format(item.freshness_percent) }}%
+                    </span>
+                  {% else %}
+                    <span class="text-muted">Non-perishable</span>
+                  {% endif %}
+                </td>
                 <td class="col-actions">
                   <div class="action-dropdown">
                     <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
