@@ -11,7 +11,13 @@ cancel_batch_bp = Blueprint('cancel_batch', __name__)
 @cancel_batch_bp.route('/cancel/<int:batch_id>', methods=['POST'])
 @login_required
 def cancel_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can cancel
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        flash("You don't have permission to cancel this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
 
     if batch.status != 'in_progress':
         flash("Only in-progress batches can be cancelled.")

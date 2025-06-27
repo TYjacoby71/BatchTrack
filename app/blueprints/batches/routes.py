@@ -86,8 +86,8 @@ def list_batches():
     session['batch_filter_end'] = end
     session['batch_sort_by'] = sort_by
 
-    # Build base query with filters
-    base_query = Batch.query
+    # Build base query with filters (use scoped query for organization filtering)
+    base_query = Batch.scoped()
 
     if status and status != 'all':
         base_query = base_query.filter_by(status=status)
@@ -168,34 +168,58 @@ def list_batches():
 @login_required
 def view_batch(batch_identifier):
     try:
+        print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
+        print(f"DEBUG: Current user organization_id: {current_user.organization_id}")
+        
         if batch_identifier.isdigit():
-            batch = Batch.query.get_or_404(int(batch_identifier))
+            # Check if batch exists without scoping first for debugging
+            batch_exists = Batch.query.filter_by(id=int(batch_identifier)).first()
+            print(f"DEBUG: Batch exists (unscoped): {batch_exists is not None}")
+            if batch_exists:
+                print(f"DEBUG: Batch organization_id: {batch_exists.organization_id}")
+            
+            batch = Batch.scoped().filter_by(id=int(batch_identifier)).first_or_404()
         else:
-            batch = Batch.query.filter_by(label_code=batch_identifier).first_or_404()
+            batch = Batch.scoped().filter_by(label_code=batch_identifier).first_or_404()
+
+        print(f"DEBUG: Found batch: {batch.label_code}, status: {batch.status}")
 
         if batch.status == 'in_progress':
+            print(f"DEBUG: Redirecting to in_progress view")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
         # Find previous and next batches of the same status
-        prev_batch = Batch.query.filter(
+        prev_batch = Batch.scoped().filter(
             Batch.status == batch.status,
             Batch.id < batch.id
         ).order_by(Batch.id.desc()).first()
 
-        next_batch = Batch.query.filter(
+        next_batch = Batch.scoped().filter(
             Batch.status == batch.status,
             Batch.id > batch.id
         ).order_by(Batch.id.asc()).first()
 
+        print(f"DEBUG: Rendering view_batch.html template for {batch.status} batch")
         return render_template('batches/view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
     except Exception as e:
-        flash('Error viewing batch. Please try again.')
+        print(f"DEBUG: Error in view_batch: {str(e)}")
+        import traceback
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        flash(f'Error viewing batch: {str(e)}', 'error')
         return redirect(url_for('batches.list_batches'))
 
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
 def update_batch_notes(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can modify
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        if request.is_json:
+            return jsonify({'error': 'Permission denied'}), 403
+        flash("You don't have permission to modify this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
     data = request.get_json() if request.is_json else request.form
     batch.notes = data.get('notes', '')
     batch.tags = data.get('tags', '')
@@ -209,7 +233,14 @@ def update_batch_notes(batch_id):
 def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
-    batch = Batch.query.get_or_404(batch_identifier)
+    
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_identifier).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can view in-progress batches
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        flash("You don't have permission to view this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
 
     if batch.status != 'in_progress':
         flash('This batch is no longer in progress and cannot be edited.', 'warning')

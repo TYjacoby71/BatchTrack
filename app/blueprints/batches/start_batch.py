@@ -34,7 +34,8 @@ def start_batch():
         status='in_progress',
         projected_yield=scale * recipe.predicted_yield,
         projected_yield_unit=recipe.predicted_yield_unit,
-        created_by=current_user.id
+        created_by=current_user.id,
+        organization_id=current_user.organization_id
     )
 
     db.session.add(new_batch)
@@ -121,7 +122,8 @@ def start_batch():
                 inventory_item_id=ingredient.id,
                 quantity_used=required_converted,
                 unit=ingredient.unit,
-                cost_per_unit=ingredient.cost_per_unit
+                cost_per_unit=ingredient.cost_per_unit,
+                organization_id=current_user.organization_id
             )
             db.session.add(batch_ingredient)
         except ValueError as e:

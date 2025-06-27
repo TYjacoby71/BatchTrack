@@ -1,7 +1,7 @@
 from flask import Blueprint
 
-# Create the main batches blueprint
-batches_bp = Blueprint('batches', __name__, url_prefix='/batches')
+# Create the main batches blueprint with proper template folder
+batches_bp = Blueprint('batches', __name__, url_prefix='/batches', template_folder='../../templates')
 
 # Import routes to register them with the blueprint
 from . import routes

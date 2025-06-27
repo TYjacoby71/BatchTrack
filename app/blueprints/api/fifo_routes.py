@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient
+from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient, BatchContainer, ExtraBatchContainer
 from datetime import datetime, date
 from ...utils.fifo_generator import int_to_base36
 
@@ -77,11 +77,11 @@ def get_batch_inventory_summary(batch_id):
         # Regular batch ingredients
         batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch_id).all()
         for batch_ing in batch_ingredients:
-            usage_data = get_batch_fifo_usage(batch_ing.ingredient_id, batch_id)
+            usage_data = get_batch_fifo_usage(batch_ing.inventory_item_id, batch_id)
             total_used = sum(usage['quantity_used'] for usage in usage_data)
             
             ingredient_summary.append({
-                'name': batch_ing.ingredient.name,
+                'name': batch_ing.inventory_item.name,
                 'total_used': total_used,
                 'unit': batch_ing.unit,
                 'fifo_usage': usage_data
@@ -90,14 +90,35 @@ def get_batch_inventory_summary(batch_id):
         # Extra ingredients
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch_id).all()
         for extra_ing in extra_ingredients:
-            usage_data = get_batch_fifo_usage(extra_ing.ingredient_id, batch_id)
+            usage_data = get_batch_fifo_usage(extra_ing.inventory_item_id, batch_id)
             total_used = sum(usage['quantity_used'] for usage in usage_data)
             
             ingredient_summary.append({
-                'name': extra_ing.ingredient.name,
+                'name': extra_ing.inventory_item.name,
                 'total_used': total_used,
                 'unit': extra_ing.unit,
                 'fifo_usage': usage_data
+            })
+        
+        # Add containers
+        batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
+        
+        container_summary = []
+        for container in batch_containers:
+            container_summary.append({
+                'name': container.container.name,
+                'quantity_used': container.quantity_used,
+                'cost_each': container.cost_each,
+                'type': 'regular'
+            })
+        
+        for extra_container in extra_containers:
+            container_summary.append({
+                'name': extra_container.container.name,
+                'quantity_used': extra_container.quantity_used,
+                'cost_each': extra_container.cost_each,
+                'type': 'extra'
             })
         
         return jsonify({
@@ -106,7 +127,8 @@ def get_batch_inventory_summary(batch_id):
                 'recipe_name': batch.recipe.name,
                 'scale': batch.scale
             },
-            'ingredient_summary': ingredient_summary
+            'ingredient_summary': ingredient_summary,
+            'container_summary': container_summary
         })
         
     except Exception as e:
