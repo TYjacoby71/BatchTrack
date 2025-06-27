@@ -55,7 +55,7 @@
     </div>
 </div>
 
-<form id="batchForm" method="post" action="{{ url_for('batches.complete_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
+<form id="batchForm" method="post" action="{{ url_for('finish_batch.finish_batch', batch_id=batch.id) }}" enctype="multipart/form-data" onsubmit="return validateBatchForm()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" class="csrf-token">
 
     <!-- Section 2: Batch Tools -->
@@ -266,17 +266,17 @@
                     </button>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-warning" onclick="cancelBatch()">
+                    <button type="button" class="btn btn-warning" onclick="window.location.href='{{ url_for('cancel_batch.cancel_batch', batch_id=batch.id) }}'">
                         <i class="fas fa-ban"></i> Cancel Batch
                     </button>
-                    <button type="button" class="btn btn-danger" onclick="markBatchFailed()">
+                    <button type="button" class="btn btn-danger" onclick="window.location.href='{{ url_for('cancel_batch.cancel_batch', batch_id=batch.id) }}'">
                         <i class="fas fa-exclamation-triangle"></i> Mark Failed
                     </button>
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishBatchModal">
                         <i class="fas fa-check"></i> Complete Batch
                     </button>
                     {% if has_active_timers %}
-                        <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
+                        <a href="{{ url_for('finish_batch.finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
                             <i class="fas fa-bolt"></i> Force Finish
                         </a>
                     {% endif %}
