@@ -130,8 +130,8 @@ def start_batch():
     else:
         # Build ingredients summary using the new_batch
         deduction_summary = []
-        for ing in new_batch.ingredients:
-            deduction_summary.append(f"{ing.amount_used} {ing.unit} of {ing.ingredient.name}")
+        for ing in new_batch.batch_ingredients:
+            deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
         for cont in new_batch.containers:
             deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
 
