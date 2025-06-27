@@ -211,7 +211,15 @@ def view_batch(batch_identifier):
 @batches_bp.route('/<int:batch_id>/update-notes', methods=['POST'])
 @login_required
 def update_batch_notes(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can modify
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        if request.is_json:
+            return jsonify({'error': 'Permission denied'}), 403
+        flash("You don't have permission to modify this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
     data = request.get_json() if request.is_json else request.form
     batch.notes = data.get('notes', '')
     batch.tags = data.get('tags', '')
@@ -225,7 +233,14 @@ def update_batch_notes(batch_id):
 def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
-    batch = Batch.query.get_or_404(batch_identifier)
+    
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_identifier).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can view in-progress batches
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        flash("You don't have permission to view this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
 
     if batch.status != 'in_progress':
         flash('This batch is no longer in progress and cannot be edited.', 'warning')

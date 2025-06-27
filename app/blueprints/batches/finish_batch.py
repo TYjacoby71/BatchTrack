@@ -16,15 +16,21 @@ def mark_batch_failed(batch_id):
     print(f"DEBUG: Current user: {current_user.username if current_user.is_authenticated else 'Anonymous'}")
     
     try:
-        batch = Batch.query.get_or_404(batch_id)
+        # Use scoped query to ensure user can only access their organization's batches
+        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
         print(f"DEBUG: Found batch: {batch.label_code}, current status: {batch.status}")
+        
+        # Validate ownership - only the creator or same organization can modify
+        if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+            flash("You don't have permission to modify this batch.", "error")
+            return redirect(url_for('batches.list_batches'))
         
         batch.status = 'failed'
         batch.failed_at = datetime.utcnow()
         batch.status_reason = request.form.get('reason', '')
         
         db.session.commit()
-        print(f"DEBUG: Successfully marked batch {batch.label_code} as failed")
+        print(f"DEBUG: Successfully marked batch {batch.label_code} as failed by user {current_user.id}")
         
         flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
         return redirect(url_for('batches.list_batches'))
@@ -38,7 +44,13 @@ def mark_batch_failed(batch_id):
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 def complete_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    # Use scoped query to ensure user can only access their organization's batches
+    batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
+    
+    # Validate ownership - only the creator or same organization can modify
+    if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+        flash("You don't have permission to modify this batch.", "error")
+        return redirect(url_for('batches.list_batches'))
 
     if not request.form.get('force'):
         active_timers = BatchTimer.query.filter_by(batch_id=batch.id, status='pending').all()
