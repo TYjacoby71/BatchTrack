@@ -169,8 +169,15 @@ def list_batches():
 def view_batch(batch_identifier):
     try:
         print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
+        print(f"DEBUG: Current user organization_id: {current_user.organization_id}")
         
         if batch_identifier.isdigit():
+            # Check if batch exists without scoping first for debugging
+            batch_exists = Batch.query.filter_by(id=int(batch_identifier)).first()
+            print(f"DEBUG: Batch exists (unscoped): {batch_exists is not None}")
+            if batch_exists:
+                print(f"DEBUG: Batch organization_id: {batch_exists.organization_id}")
+            
             batch = Batch.scoped().filter_by(id=int(batch_identifier)).first_or_404()
         else:
             batch = Batch.scoped().filter_by(label_code=batch_identifier).first_or_404()
