@@ -54,7 +54,7 @@ def cancel_batch(batch_id):
 
         # Credit regular containers back to inventory using centralized service
         for batch_container in batch_containers:
-            container = batch_container.inventory_item
+            container = batch_container.container
             if container:
                 process_inventory_adjustment(
                     item_id=container.id,
@@ -68,7 +68,7 @@ def cancel_batch(batch_id):
 
         # Credit extra containers back to inventory using centralized service
         for extra_container in extra_containers:
-            container = extra_container.inventory_item
+            container = extra_container.container
             if container:
                 process_inventory_adjustment(
                     item_id=container.id,
@@ -98,12 +98,12 @@ def cancel_batch(batch_id):
                 restoration_summary.append(f"{extra_ing.quantity_used} {extra_ing.unit} of {extra_ing.inventory_item.name}")
 
         for batch_container in batch_containers:
-            container = batch_container.inventory_item
+            container = batch_container.container
             if container:
                 restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
 
         for extra_container in extra_containers:
-            container = extra_container.inventory_item
+            container = extra_container.container
             if container:
                 restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
