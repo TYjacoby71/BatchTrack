@@ -117,7 +117,7 @@ function renderFifoDetails(data) {
             html += `
                 <tr>
                     <td>
-                        <a href="/inventory/view/${inventory_item.id}?fifo=true#entry-${usage.fifo_id}" 
+                        <a href="/inventory/view/${inventory_item.id}#fifo-entry-${usage.fifo_id}" 
                            target="_blank" class="fifo-ingredient-link">
                             #${usage.fifo_id}
                         </a>
