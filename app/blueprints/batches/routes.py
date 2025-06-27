@@ -170,14 +170,14 @@ def view_batch(batch_identifier):
     try:
         print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
         print(f"DEBUG: Current user organization_id: {current_user.organization_id}")
-        
+
         if batch_identifier.isdigit():
             # Check if batch exists without scoping first for debugging
             batch_exists = Batch.query.filter_by(id=int(batch_identifier)).first()
             print(f"DEBUG: Batch exists (unscoped): {batch_exists is not None}")
             if batch_exists:
                 print(f"DEBUG: Batch organization_id: {batch_exists.organization_id}")
-            
+
             batch = Batch.scoped().filter_by(id=int(batch_identifier)).first_or_404()
         else:
             batch = Batch.scoped().filter_by(label_code=batch_identifier).first_or_404()
@@ -200,7 +200,14 @@ def view_batch(batch_identifier):
         ).order_by(Batch.id.asc()).first()
 
         print(f"DEBUG: Rendering view_batch.html template for {batch.status} batch")
-        return render_template('batches/view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch)
+        try:
+            from datetime import datetime
+            current_time = datetime.now()
+            return render_template('batches/view_batch.html', batch=batch, prev_batch=prev_batch, next_batch=next_batch, current_time=current_time)
+        except Exception as e:
+            print(f"Error rendering template: {e}")
+            raise
+
     except Exception as e:
         print(f"DEBUG: Error in view_batch: {str(e)}")
         import traceback
@@ -213,7 +220,7 @@ def view_batch(batch_identifier):
 def update_batch_notes(batch_id):
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-    
+
     # Validate ownership - only the creator or same organization can modify
     if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
         if request.is_json:
@@ -233,10 +240,10 @@ def update_batch_notes(batch_id):
 def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
-    
+
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_identifier).first_or_404()
-    
+
     # Validate ownership - only the creator or same organization can view in-progress batches
     if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
         flash("You don't have permission to view this batch.", "error")

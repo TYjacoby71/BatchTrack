@@ -4,7 +4,7 @@ from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
-import base64
+from app.utils.fifo_generator import generate_fifo_id
 
 def validate_inventory_fifo_sync(item_id):
     """
@@ -25,12 +25,7 @@ def validate_inventory_fifo_sync(item_id):
 
     return True, "", item.quantity, fifo_total
 
-def generate_fifo_code(prefix):
-    """Generates a base-32 encoded FIFO code with a prefix."""
-    import time
-    timestamp = int(time.time() * 1000)  # Millisecond precision
-    encoded_timestamp = base64.b32encode(str(timestamp).encode()).decode('utf-8').lower()
-    return f"{prefix[:3].upper()}-{encoded_timestamp}"  # Use first 3 chars of prefix
+# FIFO ID generation now handled by centralized utils/fifo_generator.py
 
 def process_inventory_adjustment(
     item_id,
