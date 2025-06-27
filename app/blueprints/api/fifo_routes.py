@@ -138,10 +138,24 @@ def get_batch_fifo_usage(inventory_id, batch_id):
             batch_start = batch.started_at if batch else datetime.utcnow()
             
             # Calculate age from the source entry's creation date to when batch started
-            age_days = (batch_start - source_entry.timestamp).days
+            age_timedelta = batch_start - source_entry.timestamp
+            age_days = age_timedelta.days
+            age_hours = age_timedelta.total_seconds() / 3600
             
-            if source_entry.is_perishable and source_entry.shelf_life_days:
-                life_remaining_percent = max(0, 100 - ((age_days / source_entry.shelf_life_days) * 100))
+            if source_entry.is_perishable and source_entry.expiration_date:
+                # Use expiration date for more precise calculation
+                total_life_seconds = (source_entry.expiration_date - source_entry.timestamp).total_seconds()
+                used_life_seconds = (batch_start - source_entry.timestamp).total_seconds()
+                
+                if total_life_seconds > 0:
+                    life_remaining_percent = max(0, 100 - ((used_life_seconds / total_life_seconds) * 100))
+                    life_remaining_percent = round(life_remaining_percent, 1)
+                else:
+                    life_remaining_percent = 0.0
+            elif source_entry.is_perishable and source_entry.shelf_life_days:
+                # Fallback to shelf life days calculation with hours precision
+                shelf_life_hours = source_entry.shelf_life_days * 24
+                life_remaining_percent = max(0, 100 - ((age_hours / shelf_life_hours) * 100))
                 life_remaining_percent = round(life_remaining_percent, 1)
         elif entry.timestamp:
             # Fallback to using the deduction entry's timestamp if no source found

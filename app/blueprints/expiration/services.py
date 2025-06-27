@@ -307,6 +307,47 @@ class ExpirationService:
         }
 
     @staticmethod
+    def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
+        """Calculate weighted average freshness for an inventory item based on FIFO entries"""
+        # Get all FIFO entries with remaining quantity
+        entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.is_perishable == True,
+                InventoryHistory.expiration_date != None
+            )
+        ).all()
+
+        if not entries:
+            return None
+
+        total_weighted_freshness = 0.0
+        total_quantity = 0.0
+        now = datetime.now()
+
+        for entry in entries:
+            if entry.timestamp and entry.expiration_date:
+                # Calculate life remaining percentage based on timestamps
+                total_life_seconds = (entry.expiration_date - entry.timestamp).total_seconds()
+                if total_life_seconds <= 0:
+                    life_remaining_percent = 0.0
+                else:
+                    time_passed_seconds = (now - entry.timestamp).total_seconds()
+                    remaining_seconds = max(0, total_life_seconds - time_passed_seconds)
+                    life_remaining_percent = (remaining_seconds / total_life_seconds) * 100
+
+                # Weight by quantity
+                weighted_freshness = life_remaining_percent * entry.remaining_quantity
+                total_weighted_freshness += weighted_freshness
+                total_quantity += entry.remaining_quantity
+
+        if total_quantity == 0:
+            return None
+
+        return round(total_weighted_freshness / total_quantity, 1)
+
+    @staticmethod
     def get_product_expiration_status(product_id: int):
         """Get expiration status for a specific product"""
         # For now, return empty status since we need to implement batch-based expiration

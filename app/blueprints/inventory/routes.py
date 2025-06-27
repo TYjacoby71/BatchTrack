@@ -154,7 +154,6 @@ def add_inventory():
         print(f"DEBUG: ImportError in add_inventory: {str(e)}")
         db.session.rollback()
         flash(f'Import error: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
     except Exception as e:
         print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
         print(f"DEBUG: Exception type: {type(e)}")
@@ -436,7 +435,7 @@ def edit_inventory(id):
         traceback.print_exc()
         db.session.rollback()
         flash(f'Error saving changes: {str(e)}', 'error')
-    
+
     return redirect(url_for('inventory.view_inventory', id=id))
 
 
@@ -474,11 +473,11 @@ def debug_inventory(id):
     """Debug endpoint to check inventory status"""
     try:
         item = InventoryItem.query.get_or_404(id)
-        
+
         # Check FIFO sync
         from app.services.inventory_adjustment import validate_inventory_fifo_sync
         is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
-        
+
         debug_info = {
             'item_id': item.id,
             'item_name': item.name,
@@ -491,12 +490,33 @@ def debug_inventory(id):
             'fifo_total': fifo_total,
             'history_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
         }
-        
+
         return jsonify(debug_info)
-        
+
     except Exception as e:
         import traceback
         return jsonify({
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+@inventory_bp.route('/')
+@login_required
+def list_inventory():
+    inventory_type = request.args.get('type')
+    query = InventoryItem.query
+    if inventory_type:
+        query = query.filter_by(type=inventory_type)
+    inventory_items = query.all()
+    units = get_global_unit_list()
+    categories = IngredientCategory.query.all()
+    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
+
+    # Calculate freshness for each item
+    from ...blueprints.expiration.services import ExpirationService
+    for item in inventory_items:
+        item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+
+    return render_template('inventory_list.html', 
+                         inventory_items=inventory_items,
+                         categories=categories,
+                         total_value=total_value)
