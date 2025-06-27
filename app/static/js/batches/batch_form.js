@@ -33,16 +33,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateExpirationDate() {
   const shelfLifeElement = document.getElementById('shelf_life_days');
   if (!shelfLifeElement) return;
-  
+
   const shelfLife = shelfLifeElement.value;
   if (shelfLife && parseInt(shelfLife) > 0) {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
     const dateString = expirationDate.toISOString().split('T')[0];
-    
+
     const expDateElement = document.getElementById('expiration_date');
     const expDateDisplayElement = document.getElementById('expiration_date_display');
-    
+
     if (expDateElement) expDateElement.value = dateString;
     if (expDateDisplayElement) expDateDisplayElement.value = dateString;
   }
@@ -83,9 +83,9 @@ function markBatchFailed() {
     const batchId = window.location.pathname.split('/').pop();
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/finish-batch/${batchId}/fail`;
+    form.action = `/batches/finish-batch/${batchId}/fail`;
 
-    const csrf = document.querySelector('input[name="csrf_token"]').value;
+    const csrf = document.querySelector('.csrf-token').value;
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';

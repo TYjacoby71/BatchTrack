@@ -10,15 +10,30 @@ finish_batch_bp = Blueprint('finish_batch', __name__)
 @login_required
 def mark_batch_failed(batch_id):
     """Mark a batch as failed"""
-    batch = Batch.query.get_or_404(batch_id)
-
-    batch.status = 'failed'
-    batch.failed_at = datetime.utcnow()
-    batch.status_reason = request.form.get('reason', '')
-
-    db.session.commit()
-    flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
-    return redirect(url_for('batches.list_batches'))
+    print(f"DEBUG: mark_batch_failed called with batch_id: {batch_id}")
+    print(f"DEBUG: Request method: {request.method}")
+    print(f"DEBUG: Request form data: {dict(request.form)}")
+    print(f"DEBUG: Current user: {current_user.username if current_user.is_authenticated else 'Anonymous'}")
+    
+    try:
+        batch = Batch.query.get_or_404(batch_id)
+        print(f"DEBUG: Found batch: {batch.label_code}, current status: {batch.status}")
+        
+        batch.status = 'failed'
+        batch.failed_at = datetime.utcnow()
+        batch.status_reason = request.form.get('reason', '')
+        
+        db.session.commit()
+        print(f"DEBUG: Successfully marked batch {batch.label_code} as failed")
+        
+        flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
+        return redirect(url_for('batches.list_batches'))
+        
+    except Exception as e:
+        print(f"DEBUG: Error in mark_batch_failed: {str(e)}")
+        db.session.rollback()
+        flash(f"Error marking batch as failed: {str(e)}", "error")
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
 @finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
