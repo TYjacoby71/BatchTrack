@@ -230,7 +230,12 @@
                                            (ns.extras_total if ns.extras_total is defined else 0) + 
                                            (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
                         <tr class="table-primary">
-                            <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
+                            <td colspan="2">
+                                <button type="button" class="btn btn-info btn-sm" onclick="openBatchInventorySummary({{ batch.id }})">
+                                    <i class="fas fa-list-alt"></i> View Complete Inventory Summary
+                                </button>
+                            </td>
+                            <td colspan="2" class="text-end"><strong>Total Batch Cost:</strong></td>
                             <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
                         </tr>
                     </tfoot>
@@ -348,12 +353,7 @@
 {# FIFO Insight Modal #}
 {% include 'components/batch/fifo_insight_modal.html' %}
 
-<!-- Inventory Summary Button -->
-<div class="mb-3">
-    <button type="button" class="btn btn-info" onclick="openBatchInventorySummary({{ batch.id }})">
-        <i class="fas fa-list-alt"></i> View Complete Inventory Summary
-    </button>
-</div>
+
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
