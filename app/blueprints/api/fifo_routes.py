@@ -7,51 +7,6 @@ from ...utils.fifo_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 
-@fifo_api_bp.route('/api/batch-inventory-summary/<int:batch_id>')
-@login_required
-def get_batch_inventory_summary(batch_id):
-    """Get inventory summary for all ingredients used in a batch"""
-    try:
-        # Get batch with organization scoping
-        from ...models import Batch
-        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-        
-        # Get all batch ingredients and extra ingredients
-        ingredients_used = []
-        
-        # Regular batch ingredients
-        for batch_ingredient in batch.batch_ingredients:
-            fifo_usage = get_batch_fifo_usage(batch_ingredient.inventory_item_id, batch_id)
-            ingredients_used.append({
-                'inventory_item_id': batch_ingredient.inventory_item_id,
-                'name': batch_ingredient.inventory_item.name,
-                'quantity_used': batch_ingredient.quantity_used,
-                'unit': batch_ingredient.unit,
-                'cost_per_unit': batch_ingredient.cost_per_unit,
-                'fifo_sources': fifo_usage
-            })
-        
-        # Extra batch ingredients
-        for extra_ingredient in batch.extra_ingredients:
-            fifo_usage = get_batch_fifo_usage(extra_ingredient.inventory_item_id, batch_id)
-            ingredients_used.append({
-                'inventory_item_id': extra_ingredient.inventory_item_id,
-                'name': extra_ingredient.inventory_item.name,
-                'quantity_used': extra_ingredient.quantity,
-                'unit': extra_ingredient.unit,
-                'cost_per_unit': extra_ingredient.cost_per_unit,
-                'fifo_sources': fifo_usage
-            })
-        
-        return jsonify({
-            'success': True,
-            'batch_label': batch.label_code,
-            'ingredients_used': ingredients_used
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @fifo_api_bp.route('/api/fifo-details/<int:inventory_id>')
 @login_required
 def get_fifo_details(inventory_id):

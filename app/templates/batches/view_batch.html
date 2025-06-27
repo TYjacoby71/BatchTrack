@@ -3,9 +3,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
 {% endblock %}
 {% block content %}
-
-<!-- Include FIFO Modal Component -->
-{% include 'components/batch/fifo_insight_modal.html' %}
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <div class="d-flex align-items-center">
         <h2>Batch Details</h2>
@@ -285,8 +282,8 @@
                         {% set line_cost = amount * cost %}
                         <tr>
                             <td>
-                                <a href="#" onclick="openFifoModal({{ ing.inventory_item.id }}, '{{ ing.inventory_item.name }}', {{ batch.id }})" 
-                                   class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ ing.inventory_item.name }}">
+                                <a href="{{ url_for('inventory.view_inventory', id=ing.inventory_item.id) }}?fifo=true" 
+                                   class="text-decoration-none" title="View FIFO details for {{ ing.inventory_item.name }}">
                                     {{ ing.inventory_item.name }}
                                 </a>
                             </td>
@@ -328,8 +325,8 @@
                         {% set line_cost = (extra.quantity|float or 0) * (extra.cost_per_unit|float or 0) %}
                         <tr>
                             <td>
-                                <a href="#" onclick="openFifoModal({{ extra.inventory_item.id }}, '{{ extra.inventory_item.name }}', {{ batch.id }})" 
-                                   class="text-decoration-none fifo-ingredient-link" title="View FIFO details for {{ extra.inventory_item.name }}">
+                                <a href="{{ url_for('inventory.view_inventory', id=extra.inventory_item.id) }}?fifo=true" 
+                                   class="text-decoration-none" title="View FIFO details for {{ extra.inventory_item.name }}">
                                     {{ extra.inventory_item.name }}
                                 </a>
                             </td>
@@ -372,12 +369,7 @@
                                        (ns.extras_total if ns.extras_total is defined else 0) + 
                                        (ns.extra_container_total if ns.extra_container_total is defined else 0) %}
                     <tr>
-                        <td colspan="4" class="text-end">
-                            <strong>Total Batch Cost:</strong>
-                            <small class="text-muted ms-2">
-                                (<a href="#" onclick="openBatchInventorySummary({{ batch.id }})" class="text-decoration-none">view sources</a>)
-                            </small>
-                        </td>
+                        <td colspan="4" class="text-end"><strong>Total Batch Cost:</strong></td>
                         <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
                     </tr>
                 </tfoot>
@@ -465,7 +457,6 @@
 }
 </style>
 
-<script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle collapse icon rotation
