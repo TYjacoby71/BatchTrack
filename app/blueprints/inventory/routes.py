@@ -26,8 +26,11 @@ def list_inventory():
 
     return render_template('inventory_list.html', 
                          inventory_items=inventory_items,
+                         items=inventory_items,  # Template expects 'items'
                          categories=categories,
-                         total_value=total_value)
+                         total_value=total_value,
+                         units=units,
+                         get_global_unit_list=get_global_unit_list)
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 def set_column_visibility():
