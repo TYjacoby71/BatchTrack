@@ -62,8 +62,6 @@ def create_app():
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
