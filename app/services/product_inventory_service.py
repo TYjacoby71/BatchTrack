@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy import func, desc, asc
 
 from ..models import db, ProductSKU, ProductSKUHistory
-from ..services.inventory_adjustment import generate_fifo_code
+from ..utils.fifo_generator import generate_fifo_id
 
 class ProductInventoryService:
     """Product inventory service - mirrors raw inventory system with SKU+History only"""
