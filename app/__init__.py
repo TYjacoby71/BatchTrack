@@ -43,6 +43,7 @@ def create_app():
     from .blueprints.inventory import inventory_bp
     from .blueprints.batches import batches_bp
     from .blueprints.batches.finish_batch import finish_batch_bp
+    from .blueprints.batches.cancel_batch import cancel_batch_bp
     from .blueprints.batches.start_batch import start_batch_bp
     from .blueprints.products import products_bp
     from .blueprints.products.product_inventory_routes import product_inventory_bp
@@ -67,6 +68,7 @@ def create_app():
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')
     app.register_blueprint(finish_batch_bp, url_prefix='/batches')
+    app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
     try:
