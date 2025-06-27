@@ -81,7 +81,11 @@ function toggleOutputFields() {
 function markBatchFailed() {
   const reason = prompt('Please provide a reason for marking this batch as failed (optional):');
   if (reason !== null) { // User didn't cancel
-    const batchId = window.location.pathname.split('/').pop();
+    // Extract batch ID from URL like /batches/in-progress/9
+    const pathParts = window.location.pathname.split('/');
+    const batchId = pathParts[pathParts.length - 1];
+
+    // Create form and submit to the correct route
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/finish-batch/${batchId}/fail`;
