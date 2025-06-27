@@ -133,9 +133,9 @@ def list_batches():
     # Calculate total cost for each batch
     all_batches = in_progress_batches + completed_batches
     for batch in all_batches:
-        ingredient_total = sum((ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients)
+        ingredient_total = sum((ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients)
         container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
-        extras_total = sum((e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
+        extras_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
         extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
         batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
 
@@ -252,8 +252,8 @@ def view_batch_in_progress(batch_identifier):
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
     # Get products for finish batch modal
-    from ...models import Product
-    products = Product.query.filter_by(is_active=True).all()
+    from ...models import ProductSKU
+    products = ProductSKU.query.filter_by(is_active=True).all()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []
