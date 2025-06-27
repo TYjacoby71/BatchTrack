@@ -1,8 +1,8 @@
 """Initial migration with clean schema
 
-Revision ID: f76407232fa9
+Revision ID: 112dc7f2bfc1
 Revises: 
-Create Date: 2025-06-26 19:31:08.612294
+Create Date: 2025-06-27 17:59:40.752051
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f76407232fa9'
+revision = '112dc7f2bfc1'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -60,6 +60,16 @@ def upgrade():
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('permission',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('category', sa.String(length=64), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
+    )
     op.create_table('product_sku',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_name', sa.String(length=128), nullable=False),
@@ -92,7 +102,6 @@ def upgrade():
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('is_product_active', sa.Boolean(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('last_updated', sa.DateTime(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
@@ -136,6 +145,7 @@ def upgrade():
     sa.Column('amazon_asin', sa.String(length=64), nullable=True),
     sa.Column('marketplace_sync_status', sa.String(length=32), nullable=True),
     sa.Column('marketplace_last_sync', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
@@ -160,34 +170,29 @@ def upgrade():
         batch_op.create_index('idx_quality_status', ['quality_status'], unique=False)
         batch_op.create_index('idx_supplier', ['supplier_name'], unique=False)
         batch_op.create_index('idx_variant_name', ['variant_name'], unique=False)
+        batch_op.create_index(batch_op.f('ix_product_sku_organization_id'), ['organization_id'], unique=False)
 
-    op.create_table('batch_container',
+    op.create_table('role',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('container_size', sa.String(length=32), nullable=False),
-    sa.Column('container_quantity', sa.Integer(), nullable=False),
-    sa.Column('fill_quantity', sa.Float(), nullable=True),
-    sa.Column('fill_unit', sa.String(length=32), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
-    op.create_table('extra_batch_container',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('container_size', sa.String(length=32), nullable=False),
-    sa.Column('container_quantity', sa.Integer(), nullable=False),
-    sa.Column('fill_quantity', sa.Float(), nullable=True),
-    sa.Column('fill_unit', sa.String(length=32), nullable=True),
-    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    op.create_table('role_permission',
+    sa.Column('role_id', sa.Integer(), nullable=False),
+    sa.Column('permission_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['permission_id'], ['permission.id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['role.id'], ),
+    sa.PrimaryKeyConstraint('role_id', 'permission_id')
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=64), nullable=False),
     sa.Column('password_hash', sa.String(length=128), nullable=False),
-    sa.Column('role', sa.String(length=32), nullable=True),
+    sa.Column('role_id', sa.Integer(), nullable=False),
     sa.Column('first_name', sa.String(length=64), nullable=True),
     sa.Column('last_name', sa.String(length=64), nullable=True),
     sa.Column('email', sa.String(length=120), nullable=True),
@@ -198,6 +203,7 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('last_login', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['role.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username')
     )
@@ -218,32 +224,38 @@ def upgrade():
     )
     op.create_table('conversion_log',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
     sa.Column('amount', sa.Float(), nullable=False),
-    sa.Column('from_unit', sa.String(length=64), nullable=False),
-    sa.Column('to_unit', sa.String(length=64), nullable=False),
+    sa.Column('from_unit', sa.String(length=32), nullable=False),
+    sa.Column('to_unit', sa.String(length=32), nullable=False),
     sa.Column('result', sa.Float(), nullable=False),
-    sa.Column('conversion_type', sa.String(length=32), nullable=True),
+    sa.Column('conversion_type', sa.String(length=64), nullable=False),
     sa.Column('ingredient_name', sa.String(length=128), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('conversion_log', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_conversion_log_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('custom_unit_mapping',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('unit_name', sa.String(length=64), nullable=False),
     sa.Column('conversion_factor', sa.Float(), nullable=False),
     sa.Column('base_unit', sa.String(length=64), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('custom_unit_mapping', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_custom_unit_mapping_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('ingredient_category',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -251,13 +263,15 @@ def upgrade():
     sa.Column('color', sa.String(length=7), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
+    sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('ingredient_category', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_ingredient_category_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('recipe',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=128), nullable=True),
@@ -270,13 +284,16 @@ def upgrade():
     sa.Column('predicted_yield_unit', sa.String(length=50), nullable=True),
     sa.Column('requires_containers', sa.Boolean(), nullable=True),
     sa.Column('allowed_containers', sa.PickleType(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['parent_id'], ['recipe.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_recipe_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('tag',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -326,16 +343,33 @@ def upgrade():
     sa.Column('expiration_date', sa.Date(), nullable=True),
     sa.Column('storage_amount', sa.Float(), nullable=True),
     sa.Column('storage_unit', sa.String(length=32), nullable=True),
-    sa.Column('frozen_quantity', sa.Float(), nullable=True),
-    sa.Column('available_quantity', sa.Float(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['category_id'], ['ingredient_category.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
+    )
+    with op.batch_alter_table('inventory_item', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_inventory_item_organization_id'), ['organization_id'], unique=False)
+
+    op.create_table('batch_container',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('container_id', sa.Integer(), nullable=False),
+    sa.Column('container_size', sa.String(length=32), nullable=False),
+    sa.Column('container_quantity', sa.Integer(), nullable=False),
+    sa.Column('quantity_used', sa.Integer(), nullable=False),
+    sa.Column('fill_quantity', sa.Float(), nullable=True),
+    sa.Column('fill_unit', sa.String(length=32), nullable=True),
+    sa.Column('cost_each', sa.Float(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('batch_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -361,10 +395,34 @@ def upgrade():
     sa.Column('old_stock', sa.Float(), nullable=False),
     sa.Column('new_stock', sa.Float(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('batch_inventory_log', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_batch_inventory_log_organization_id'), ['organization_id'], unique=False)
+
+    op.create_table('extra_batch_container',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('container_id', sa.Integer(), nullable=False),
+    sa.Column('container_size', sa.String(length=32), nullable=False),
+    sa.Column('container_quantity', sa.Integer(), nullable=False),
+    sa.Column('quantity_used', sa.Integer(), nullable=False),
+    sa.Column('fill_quantity', sa.Float(), nullable=True),
+    sa.Column('fill_unit', sa.String(length=32), nullable=True),
+    sa.Column('cost_each', sa.Float(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('extra_batch_container', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_extra_batch_container_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('extra_batch_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
@@ -373,10 +431,15 @@ def upgrade():
     sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('cost_per_unit', sa.Float(), nullable=True),
     sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('extra_batch_ingredient', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_extra_batch_ingredient_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('inventory_history',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
@@ -396,14 +459,18 @@ def upgrade():
     sa.Column('is_perishable', sa.Boolean(), nullable=True),
     sa.Column('shelf_life_days', sa.Integer(), nullable=True),
     sa.Column('expiration_date', sa.DateTime(), nullable=True),
-    sa.Column('is_reserved', sa.Boolean(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['fifo_reference_id'], ['inventory_history.id'], ),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('inventory_history', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_inventory_history_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('product_sku_history',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('sku_id', sa.Integer(), nullable=False),
@@ -447,10 +514,12 @@ def upgrade():
     sa.Column('reserved_quantity_change', sa.Float(), nullable=True),
     sa.Column('old_reserved_quantity', sa.Float(), nullable=True),
     sa.Column('new_reserved_quantity', sa.Float(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['sku_id'], ['product_sku.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -468,6 +537,7 @@ def upgrade():
         batch_op.create_index('idx_sale_location', ['sale_location'], unique=False)
         batch_op.create_index('idx_sku_remaining', ['sku_id', 'remaining_quantity'], unique=False)
         batch_op.create_index('idx_sku_timestamp', ['sku_id', 'timestamp'], unique=False)
+        batch_op.create_index(batch_op.f('ix_product_sku_history_organization_id'), ['organization_id'], unique=False)
 
     op.create_table('recipe_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -477,19 +547,26 @@ def upgrade():
     sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('order_position', sa.Integer(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('recipe_ingredient', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_recipe_ingredient_organization_id'), ['organization_id'], unique=False)
+
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
+    with op.batch_alter_table('recipe_ingredient', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_recipe_ingredient_organization_id'))
+
     op.drop_table('recipe_ingredient')
     with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_product_sku_history_organization_id'))
         batch_op.drop_index('idx_sku_timestamp')
         batch_op.drop_index('idx_sku_remaining')
         batch_op.drop_index('idx_sale_location')
@@ -504,22 +581,52 @@ def downgrade():
         batch_op.drop_index('idx_batch_lot')
 
     op.drop_table('product_sku_history')
+    with op.batch_alter_table('inventory_history', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_inventory_history_organization_id'))
+
     op.drop_table('inventory_history')
+    with op.batch_alter_table('extra_batch_ingredient', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_extra_batch_ingredient_organization_id'))
+
     op.drop_table('extra_batch_ingredient')
+    with op.batch_alter_table('extra_batch_container', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_extra_batch_container_organization_id'))
+
+    op.drop_table('extra_batch_container')
+    with op.batch_alter_table('batch_inventory_log', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_batch_inventory_log_organization_id'))
+
     op.drop_table('batch_inventory_log')
     op.drop_table('batch_ingredient')
+    op.drop_table('batch_container')
+    with op.batch_alter_table('inventory_item', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_inventory_item_organization_id'))
+
     op.drop_table('inventory_item')
     op.drop_table('unit')
     op.drop_table('tag')
+    with op.batch_alter_table('recipe', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_recipe_organization_id'))
+
     op.drop_table('recipe')
+    with op.batch_alter_table('ingredient_category', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_ingredient_category_organization_id'))
+
     op.drop_table('ingredient_category')
+    with op.batch_alter_table('custom_unit_mapping', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_custom_unit_mapping_organization_id'))
+
     op.drop_table('custom_unit_mapping')
+    with op.batch_alter_table('conversion_log', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_conversion_log_organization_id'))
+
     op.drop_table('conversion_log')
     op.drop_table('batch_timer')
     op.drop_table('user')
-    op.drop_table('extra_batch_container')
-    op.drop_table('batch_container')
+    op.drop_table('role_permission')
+    op.drop_table('role')
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_product_sku_organization_id'))
         batch_op.drop_index('idx_variant_name')
         batch_op.drop_index('idx_supplier')
         batch_op.drop_index('idx_quality_status')
@@ -534,6 +641,7 @@ def downgrade():
         batch_op.drop_index('idx_active_skus')
 
     op.drop_table('product_sku')
+    op.drop_table('permission')
     op.drop_table('organization')
     op.drop_table('batch')
     # ### end Alembic commands ###
