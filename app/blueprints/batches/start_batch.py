@@ -118,7 +118,7 @@ def start_batch():
             # Create single BatchIngredient record
             batch_ingredient = BatchIngredient(
                 batch_id=new_batch.id,
-                ingredient_id=ingredient.id,
+                inventory_item_id=ingredient.id,
                 quantity_used=required_converted,
                 unit=ingredient.unit,
                 cost_per_unit=ingredient.cost_per_unit
