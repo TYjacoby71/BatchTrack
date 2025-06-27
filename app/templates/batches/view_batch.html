@@ -104,9 +104,9 @@
                 </thead>
                 {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
                 <tbody>
-                    {% if batch.ingredients %}
+                    {% if batch.batch_ingredients %}
                     <tr><th colspan="5">Ingredients</th></tr>
-                    {% for ing in batch.ingredients %}
+                    {% for ing in batch.batch_ingredients %}
                         {% set amount = ing.quantity_used|float or 0 %}
                         {% set cost = ing.cost_per_unit|float or 0 %}
                         {% set line_cost = amount * cost %}
