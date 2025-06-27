@@ -33,16 +33,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateExpirationDate() {
   const shelfLifeElement = document.getElementById('shelf_life_days');
   if (!shelfLifeElement) return;
-
+  
   const shelfLife = shelfLifeElement.value;
   if (shelfLife && parseInt(shelfLife) > 0) {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
     const dateString = expirationDate.toISOString().split('T')[0];
-
+    
     const expDateElement = document.getElementById('expiration_date');
     const expDateDisplayElement = document.getElementById('expiration_date_display');
-
+    
     if (expDateElement) expDateElement.value = dateString;
     if (expDateDisplayElement) expDateDisplayElement.value = dateString;
   }
@@ -79,13 +79,8 @@ function toggleOutputFields() {
 }
 
 function markBatchFailed() {
-  const reason = prompt('Please provide a reason for marking this batch as failed (optional):');
-  if (reason !== null) { // User didn't cancel
-    // Extract batch ID from URL like /batches/in-progress/9
-    const pathParts = window.location.pathname.split('/');
-    const batchId = pathParts[pathParts.length - 1];
-
-    // Create form and submit to the correct route
+  if (confirm('Mark this batch as failed? This action cannot be undone.')) {
+    const batchId = window.location.pathname.split('/').pop();
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/finish-batch/${batchId}/fail`;
@@ -95,17 +90,8 @@ function markBatchFailed() {
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';
     csrfInput.value = csrf;
+
     form.appendChild(csrfInput);
-
-    // Add reason if provided
-    if (reason) {
-      const reasonInput = document.createElement('input');
-      reasonInput.type = 'hidden';
-      reasonInput.name = 'reason';
-      reasonInput.value = reason;
-      form.appendChild(reasonInput);
-    }
-
     document.body.appendChild(form);
     form.submit();
   }
