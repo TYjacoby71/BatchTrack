@@ -90,9 +90,10 @@ def add_extra_to_batch(batch_id):
                 new_extra = ExtraBatchIngredient(
                     batch_id=batch.id,
                     inventory_item_id=inventory_item.id,
-                    quantity=needed_amount,
+                    quantity_used=needed_amount,
                     unit=inventory_item.unit,
-                    cost_per_unit=inventory_item.cost_per_unit
+                    cost_per_unit=inventory_item.cost_per_unit,
+                    organization_id=current_user.organization_id
                 )
                 db.session.add(new_extra)
 
