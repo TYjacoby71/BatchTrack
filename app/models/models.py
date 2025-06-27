@@ -216,24 +216,32 @@ class BatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_container'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
-    container_size = db.Column(db.String(32), nullable=False)
-    container_quantity = db.Column(db.Integer, nullable=False)
-    fill_quantity = db.Column(db.Float)
-    fill_unit = db.Column(db.String(32))
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    container_size = db.Column(db.String(32), nullable=False)  # Storage amount + unit (e.g., "4 floz")
+    container_quantity = db.Column(db.Integer, nullable=False)  # Number of containers used
+    quantity_used = db.Column(db.Integer, nullable=False)  # Same as container_quantity for backwards compatibility
+    fill_quantity = db.Column(db.Float)  # How much product each container holds
+    fill_unit = db.Column(db.String(32))  # Unit for fill_quantity
+    cost_each = db.Column(db.Float)  # Cost per container
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     batch = db.relationship('Batch', backref='containers')
+    container = db.relationship('InventoryItem', backref='batch_container_usages')
 
 class ExtraBatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'extra_batch_container'
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
-    container_size = db.Column(db.String(32), nullable=False)
-    container_quantity = db.Column(db.Integer, nullable=False)
-    fill_quantity = db.Column(db.Float)
-    fill_unit = db.Column(db.String(32))
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    container_size = db.Column(db.String(32), nullable=False)  # Storage amount + unit (e.g., "2 floz")
+    container_quantity = db.Column(db.Integer, nullable=False)  # Number of containers used
+    quantity_used = db.Column(db.Integer, nullable=False)  # Same as container_quantity for backwards compatibility
+    fill_quantity = db.Column(db.Float)  # How much product each container holds
+    fill_unit = db.Column(db.String(32))  # Unit for fill_quantity
+    cost_each = db.Column(db.Float)  # Cost per container
 
     batch = db.relationship('Batch', backref='extra_containers')
+    container = db.relationship('InventoryItem', backref='extra_batch_container_usages')
 
 class InventoryHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_history'
