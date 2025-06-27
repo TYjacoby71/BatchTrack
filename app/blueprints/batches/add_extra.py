@@ -45,8 +45,10 @@ def add_extra_to_batch(batch_id):
             new_extra = ExtraBatchContainer(
                 batch_id=batch.id,
                 container_id=container_item.id,
-                quantity_used=needed_amount,
-                cost_each=container_item.cost_per_unit
+                container_quantity=int(needed_amount),  # Number of containers used
+                quantity_used=int(needed_amount),  # Same as container_quantity for backwards compatibility
+                cost_each=container_item.cost_per_unit,
+                organization_id=current_user.organization_id
             )
             db.session.add(new_extra)
 
