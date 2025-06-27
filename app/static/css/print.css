@@ -3,8 +3,9 @@
     /* Hide non-printable elements */
     .no-print,
     .btn,
-    .collapse,
-    .card-header button,
+    .card,
+    .card-header,
+    .card-body,
     .navbar,
     .breadcrumb,
     .modal,
@@ -53,12 +54,7 @@
         margin-bottom: 10pt;
     }
 
-    /* Show all collapsed content */
-    .collapse {
-        display: block !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
+    
 
     /* Typography for print */
     h1, h2, h3, h4, h5, h6 {
