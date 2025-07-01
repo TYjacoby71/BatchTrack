@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, InventoryItem, ExtraBatchContainer, ExtraBatchIngredient, BatchContainer
 from ...services.unit_conversion import ConversionEngine
 from ...services.inventory_adjustment import process_inventory_adjustment
-from ...services.batch_container_service import BatchContainerService
+# Removed unnecessary service import
 
 add_extra_bp = Blueprint('add_extra', __name__)
 
@@ -25,17 +25,16 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        reason = container.get("reason", "primary_packaging")
-        one_time = container.get("one_time", False)
+        reason = container.get("reason", "batch")
         
-        # Validate reason
-        valid_reasons = ["primary_packaging", "overflow", "broke_container", "test_sample", "other"]
+        # Validate reason - only damaged and extra_yield allowed
+        valid_reasons = ["extra_yield", "damaged"]
         if reason not in valid_reasons:
-            errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
+            errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}. Must be 'extra_yield' or 'damaged'"})
             continue
 
-        # Check stock availability (unless one-time use)
-        if not one_time and container_item.quantity < needed_amount:
+        # Check stock availability
+        if container_item.quantity < needed_amount:
             errors.append({
                 "item": container_item.name,
                 "message": f"Not enough in stock. Available: {container_item.quantity}, Needed: {needed_amount}",
@@ -45,48 +44,35 @@ def add_extra_to_batch(batch_id):
             })
             continue
 
-        # Handle inventory deduction (unless one-time)
-        if not one_time:
-            result = process_inventory_adjustment(
-                item_id=container_item.id,
-                quantity=-needed_amount,
-                change_type='batch',
-                unit=container_item.unit,
-                notes=f"Extra container for batch {batch.label_code} - Reason: {reason}",
-                batch_id=batch.id,
-                created_by=current_user.id
-            )
-            
-            if not result:
-                errors.append({
-                    "item": container_item.name,
-                    "message": "Failed to deduct from inventory",
-                    "needed": needed_amount,
-                    "needed_unit": "units"
-                })
-                continue
-
-        # Create BatchContainer record
-        batch_container = BatchContainer(
+        # Handle inventory deduction - map to inventory adjustment types
+        adjustment_type = "damaged" if reason == "damaged" else "batch"
+        result = process_inventory_adjustment(
+            item_id=container_item.id,
+            quantity=-needed_amount,
+            change_type=adjustment_type,
+            unit=container_item.unit,
+            notes=f"Extra container for batch {batch.label_code} - {reason}",
             batch_id=batch.id,
-            container_item_id=container_item.id if not one_time else None,
-            container_name=container_item.name,
-            container_size=container_item.size or 0,
-            quantity_used=needed_amount,
-            reason=reason,
-            one_time_use=one_time,
-            exclude_from_product=(reason in ["broke_container", "test_sample"]),
             created_by=current_user.id
         )
-        db.session.add(batch_container)
+        
+        if not result:
+            errors.append({
+                "item": container_item.name,
+                "message": "Failed to deduct from inventory",
+                "needed": needed_amount,
+                "needed_unit": "units"
+            })
+            continue
 
-        # Also create legacy ExtraBatchContainer for backwards compatibility
+        # Create ExtraBatchContainer record with reason tracking
         new_extra = ExtraBatchContainer(
             batch_id=batch.id,
             container_id=container_item.id,
             container_quantity=int(needed_amount),
             quantity_used=int(needed_amount),
             cost_each=container_item.cost_per_unit,
+            reason=reason,  # Save the reason for future queries
             organization_id=current_user.organization_id
         )
         db.session.add(new_extra)

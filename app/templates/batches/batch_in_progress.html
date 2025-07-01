@@ -126,97 +126,7 @@
         </div>
     </div>
 
-    <!-- Packaging / Output Containers section -->
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5><i class="fas fa-box"></i> Packaging / Output Containers</h5>
-            <small class="text-muted">All container changes must be made here</small>
-        </div>
-        <div class="card-body">
-            <!-- Current containers display -->
-            <div id="current-containers" class="mb-3">
-                <h6>Current Containers:</h6>
-                <div class="row" id="container-cards">
-                    <!-- Container cards will be populated here -->
-                </div>
-            </div>
-
-            <!-- Add container buttons -->
-            <div class="btn-group" role="group">
-                <button class="btn btn-primary" onclick="showAddContainerModal('primary_packaging')">
-                    <i class="fas fa-plus"></i> Add Container
-                </button>
-                <button class="btn btn-warning" onclick="showAddContainerModal('overflow')">
-                    <i class="fas fa-fill-drip"></i> Overflow Container
-                </button>
-                <button class="btn btn-danger" onclick="showAddContainerModal('broke_container')">
-                    <i class="fas fa-exclamation-triangle"></i> Replace Broken
-                </button>
-                <button class="btn btn-info" onclick="showAddContainerModal('one_time')">
-                    <i class="fas fa-band-aid"></i> Emergency Container
-                </button>
-            </div>
-
-            <!-- Container validation warnings -->
-            <div id="container-warnings" class="mt-3" style="display: none;">
-                <!-- Warnings will be populated here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Container Modal -->
-    <div class="modal fade" id="addContainerModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Container</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="add-container-form">
-                        <div class="mb-3">
-                            <label class="form-label">Reason for Adding Container:</label>
-                            <select class="form-select" id="container-reason" required>
-                                <option value="primary_packaging">Primary Packaging</option>
-                                <option value="overflow">Overflow (More yield than expected)</option>
-                                <option value="broke_container">Broke Container (Replace broken one)</option>
-                                <option value="test_sample">Test Sample</option>
-                                <option value="other">Other</option>
-                            </select>
-                            <div class="form-text" id="reason-help">
-                                <!-- Dynamic help text based on selection -->
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Container:</label>
-                            <select class="form-select" id="container-item" required>
-                                <option value="">Select Container</option>
-                                <!-- Populated via AJAX -->
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Quantity:</label>
-                            <input type="number" class="form-control" id="container-quantity" min="1" value="1" required>
-                        </div>
-
-                        <div class="form-check" id="one-time-option" style="display: none;">
-                            <input class="form-check-input" type="checkbox" id="one-time-use">
-                            <label class="form-check-label" for="one-time-use">
-                                One-time use (don't deduct from inventory)
-                            </label>
-                            <div class="form-text">Use this when you need to record a container but don't have inventory to deduct</div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="addContainer()">Add Container</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- No extra container section needed - using existing extra items system -->
 
     <!-- Section 4: Batch Cost Summary -->
     <div class="batch-summary mb-4">
@@ -290,7 +200,7 @@
                                 <td>{{ extra.inventory_item.name }}</td>
                                 <td>{{ "%.3f"|format(extra.quantity_used|float or 0) }}</td>
                                 <td>{{ extra.unit }}</td>
-                                <td>${{ "%.2f"|format(cost_per_unit) }}</td>
+                                <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
                             </tr>
                             {% set ns.extras_total = ns.extras_total + line_cost %}
@@ -440,30 +350,24 @@
             </select>
         </div>
         <div class="col-md-2">
-            <input type="number" class="form-control qty" placeholder="Quantity" min="1" />
+            <input type="number" class="form-control qty" placeholder="Qty" min="1" />
         </div>
         <div class="col-md-3">
             <select class="form-select reason">
-                <option value="primary_packaging">Primary Packaging</option>
-                <option value="overflow">Overflow</option>
-                <option value="broke_container">Broke Container</option>
-                <option value="test_sample">Test Sample</option>
-                <option value="other">Other</option>
+                <option value="extra_yield">Extra Yield</option>
+                <option value="damaged">Broken/Damaged</option>
             </select>
+            <div class="form-text">
+                <small>Reason will be tracked for batch history queries</small>
+            </div>
         </div>
         <div class="col-md-2">
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
-        </div>
-        <div class="col-md-1">
-            <div class="form-check">
-                <input class="form-check-input one-time" type="checkbox">
-                <label class="form-check-label">One-time</label>
-            </div>
         </div>
     </div>
 </template>
@@ -483,25 +387,22 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
-<script src="{{ url_for('static', filename='js/batches/container_management.js') }}"></script>
 <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle collapse icon rotation
-    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
-    collapseElements.forEach(function(element) {
+    // Handle collapse icons
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(element => {
         const target = document.querySelector(element.getAttribute('data-bs-target'));
         if (target) {
-            target.addEventListener('show.bs.collapse', function() {
+            target.addEventListener('show.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-right');
                     icon.classList.add('fa-chevron-down');
                 }
             });
-
-            target.addEventListener('hide.bs.collapse', function() {
+            target.addEventListener('hide.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-down');
