@@ -52,8 +52,15 @@ function showAddContainerModal(defaultReason = 'primary_packaging') {
     modal.show();
 }
 
-// Make sure this function is globally available
+// Global functions
 window.showAddContainerModal = showAddContainerModal;
+window.removeContainer = removeContainer;
+window.updateReasonHelp = updateReasonHelp;
+
+// Get current batch ID from the page
+function getCurrentBatchId() {
+    return window.currentBatchId || document.querySelector('[data-batch-id]')?.dataset.batchId;
+}
 
 function loadAvailableContainers() {
     fetch('/api/containers/available')
