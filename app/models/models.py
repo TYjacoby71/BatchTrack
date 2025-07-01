@@ -236,6 +236,7 @@ class ExtraBatchContainer(ScopedModelMixin, db.Model):
     fill_quantity = db.Column(db.Float)  # How much product each container holds
     fill_unit = db.Column(db.String(32))  # Unit for fill_quantity
     cost_each = db.Column(db.Float)  # Cost per container
+    reason = db.Column(db.String(20), nullable=False, default='extra_yield')  # Track why container was added
 
     batch = db.relationship('Batch', backref='extra_containers')
     container = db.relationship('InventoryItem')

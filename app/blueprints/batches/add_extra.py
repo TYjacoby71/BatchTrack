@@ -27,10 +27,10 @@ def add_extra_to_batch(batch_id):
         needed_amount = float(container["quantity"])
         reason = container.get("reason", "batch")
         
-        # Validate reason - use same reasons as inventory adjustments
-        valid_reasons = ["batch", "damaged", "other"]
+        # Validate reason - only damaged and extra_yield allowed
+        valid_reasons = ["extra_yield", "damaged"]
         if reason not in valid_reasons:
-            errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
+            errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}. Must be 'extra_yield' or 'damaged'"})
             continue
 
         # Check stock availability
@@ -44,11 +44,12 @@ def add_extra_to_batch(batch_id):
             })
             continue
 
-        # Handle inventory deduction using standard reasons
+        # Handle inventory deduction - map to inventory adjustment types
+        adjustment_type = "damaged" if reason == "damaged" else "batch"
         result = process_inventory_adjustment(
             item_id=container_item.id,
             quantity=-needed_amount,
-            change_type=reason,  # Use the reason directly (batch, damaged, other)
+            change_type=adjustment_type,
             unit=container_item.unit,
             notes=f"Extra container for batch {batch.label_code} - {reason}",
             batch_id=batch.id,
@@ -64,13 +65,14 @@ def add_extra_to_batch(batch_id):
             })
             continue
 
-        # Create ExtraBatchContainer record (keep it simple)
+        # Create ExtraBatchContainer record with reason tracking
         new_extra = ExtraBatchContainer(
             batch_id=batch.id,
             container_id=container_item.id,
             container_quantity=int(needed_amount),
             quantity_used=int(needed_amount),
             cost_each=container_item.cost_per_unit,
+            reason=reason,  # Save the reason for future queries
             organization_id=current_user.organization_id
         )
         db.session.add(new_extra)
