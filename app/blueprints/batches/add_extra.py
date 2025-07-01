@@ -35,12 +35,12 @@ def add_extra_to_batch(batch_id):
             continue
 
         # Check stock availability (unless one-time use)
-        if not one_time and container_item.stock_amount < needed_amount:
+        if not one_time and container_item.quantity < needed_amount:
             errors.append({
                 "item": container_item.name,
-                "message": f"Not enough in stock. Available: {container_item.stock_amount}, Needed: {needed_amount}",
+                "message": f"Not enough in stock. Available: {container_item.quantity}, Needed: {needed_amount}",
                 "needed": needed_amount,
-                "available": container_item.stock_amount,
+                "available": container_item.quantity,
                 "needed_unit": "units"
             })
             continue
