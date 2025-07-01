@@ -38,8 +38,8 @@ def list_inventory():
                     InventoryHistory.expiration_date < today
                 )
             ).all()
-            item.temp_expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
-            item.temp_available_quantity = item.quantity - item.temp_expired_quantity
+            item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
+            item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
         else:
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
@@ -85,8 +85,8 @@ def view_inventory(id):
                 InventoryHistory.expiration_date < today
             )
         ).all()
-        item.temp_expired_quantity = sum(entry.remaining_quantity for entry in expired_entries_for_calc)
-        item.temp_available_quantity = item.quantity - item.temp_expired_quantity
+        item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
+        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
     else:
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
@@ -117,7 +117,7 @@ def view_inventory(id):
                 InventoryHistory.expiration_date < today
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
-        expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+        expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,

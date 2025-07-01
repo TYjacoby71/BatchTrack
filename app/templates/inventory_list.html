@@ -687,7 +687,8 @@ function initTablePagination(tableType) {
     updateTable();
   });
 
-  // Column visibility toggle  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
+  // Column visibility toggle
+  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
   columnCheckboxes.forEach(checkbox => {
     checkbox.addEventListener('change', function() {
       const column = this.dataset.column;
