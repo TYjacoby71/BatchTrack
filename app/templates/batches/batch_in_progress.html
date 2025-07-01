@@ -482,14 +482,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function showContainerAdjustModal(containerId, containerName, currentQuantity) {
+let currentContainerId = null;
+let currentContainerItemId = null;
+let currentQuantity = 0;
+
+function showContainerAdjustModal(containerId, containerName, currentQty) {
+  // Store the container ID properly
+  currentContainerId = containerId;
+  currentQuantity = currentQty;
+
   // Set modal content
   document.getElementById('containerName').innerText = containerName;
-  document.getElementById('currentQuantity').innerText = currentQuantity;
+  document.getElementById('currentQuantity').innerText = currentQty;
 
   // Reset values
   document.getElementById('adjustmentType').value = 'quantity';
-  document.getElementById('totalQuantity').value = currentQuantity; // Initialize with current quantity
+  document.getElementById('totalQuantity').value = currentQty; // Initialize with current quantity
   document.getElementById('newQuantity').value = 1;
   document.getElementById('damageQuantity').value = 1;
   document.getElementById('adjustmentNotes').value = '';
@@ -521,7 +529,6 @@ document.getElementById('adjustmentType').addEventListener('change', function() 
 });
 
 function saveContainerAdjustment() {
-    var containerId = document.getElementById('containerName').innerText;
     var adjustmentType = document.getElementById('adjustmentType').value;
     var totalQuantity = document.getElementById('totalQuantity').value;
     var newContainerId = document.getElementById('newContainer').value;
@@ -530,13 +537,12 @@ function saveContainerAdjustment() {
     var adjustmentNotes = document.getElementById('adjustmentNotes').value;
 
     // Basic validation
-    if (!containerId) {
+    if (!currentContainerId) {
         alert('Container ID is missing.');
         return;
     }
 
     let data = {
-        container_id: containerId,
         adjustment_type: adjustmentType,
         notes: adjustmentNotes
     };
@@ -550,7 +556,7 @@ function saveContainerAdjustment() {
         data.damage_quantity = damageQuantity;
     }
 
-    fetch('/batches/adjust_container/' + containerId, {
+    fetch(`/api/batches/${{{ batch.id }}}/containers/${currentContainerId}/adjust`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
