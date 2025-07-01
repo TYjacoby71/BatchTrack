@@ -308,7 +308,7 @@
 <!-- Templates for extra ingredients/containers -->
 <template id="extra-ingredient-template">
     <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="ingredient">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select ingredient</option>
                 {% for ingredient in all_ingredients %}
@@ -319,14 +319,22 @@
         <div class="col-md-2">
             <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
             <select class="form-select unit">
                 {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <select class="form-select reason">
+                <option value="extra_needed">Extra Needed</option>
+                <option value="spillage">Spillage</option>
+                <option value="measurement_error">Measurement Error</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="col-md-2">
             <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
         </div>
         <div class="col-md-1">
@@ -339,7 +347,7 @@
 
 <template id="extra-container-template">
     <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="container">
-        <div class="col-md-5">
+        <div class="col-md-3">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select container</option>
                 {% for container in inventory_items if container.type == 'container' %}
@@ -350,7 +358,15 @@
         <div class="col-md-2">
             <input type="number" class="form-control qty" placeholder="Quantity" min="1" />
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2">
+            <select class="form-select reason">
+                <option value="damaged">Damaged</option>
+                <option value="extra_needed">Extra Needed</option>
+                <option value="spillage">Spillage</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="col-md-3">
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
         <div class="col-md-1">

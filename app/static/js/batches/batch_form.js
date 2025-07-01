@@ -205,13 +205,15 @@ function saveExtras() {
     const qtyInput = row.querySelector('.qty');
     const costInput = row.querySelector('.cost');
     const unitSelect = row.querySelector('.unit');
+    const reasonSelect = row.querySelector('.reason');
     
     if (itemSelect.value && qtyInput.value) {
       const extra = {
         type: type,
         item_id: itemSelect.value,
         quantity: parseFloat(qtyInput.value),
-        cost: parseFloat(costInput.value) || 0
+        cost: parseFloat(costInput.value) || 0,
+        reason: reasonSelect ? reasonSelect.value : 'other'
       };
       
       if (unitSelect) {
