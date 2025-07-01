@@ -308,6 +308,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Hidden CSRF token for JavaScript access -->
+    <input type="hidden" class="csrf-token" value="{{ csrf_token() }}">
 </form>
 
 <!-- Templates for extra ingredients/containers -->

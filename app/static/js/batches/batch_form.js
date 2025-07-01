@@ -25,9 +25,23 @@ document.addEventListener('DOMContentLoaded', function() {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
-  // Initialize tooltips
-  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
+  // Initialize tooltips only if bootstrap is available
+  if (typeof bootstrap !== 'undefined') {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
+  }
+
+  // Initialize shelf life toggle if element exists
+  const isPerishableElement = document.getElementById('is_perishable');
+  if (isPerishableElement) {
+    isPerishableElement.addEventListener('change', toggleShelfLife);
+  }
+
+  // Initialize shelf life input listener if element exists
+  const shelfLifeElement = document.getElementById('shelf_life_days');
+  if (shelfLifeElement) {
+    shelfLifeElement.addEventListener('input', updateExpirationDate);
+  }
 });
 
 function updateExpirationDate() {
@@ -105,18 +119,6 @@ function updateRowCost(selectElement) {
   }
 }
 
-function addExtraItemRow(type) {
-  const template = document.getElementById(`extra-${type}-template`);
-  const clone = template.content.cloneNode(true);
-  document.getElementById('extra-ingredients-container').appendChild(clone);
-
-  const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
-  const select = newRow.querySelector('.item-select');
-  if (select) {
-    updateRowCost(select);
-  }
-}
-
 function getCurrentBatchId() {
     // Try to get from window object first
     if (window.currentBatchId) {
@@ -143,92 +145,6 @@ function showAlert(message, type) {
     } else {
         alert(message);
     }
-}
-
-function saveExtras() {
-    const extraRows = document.querySelectorAll('.extra-row');
-    const extraIngredients = [];
-    const extraContainers = [];
-
-    extraRows.forEach(row => {
-        const type = row.dataset.type;
-        const itemSelect = row.querySelector('.item-select');
-        const qtyInput = row.querySelector('.qty');
-
-        if (!itemSelect.value || !qtyInput.value) {
-            return; // Skip incomplete rows
-        }
-
-        if (type === 'ingredient') {
-            const unitSelect = row.querySelector('.unit');
-            extraIngredients.push({
-                item_id: parseInt(itemSelect.value),
-                quantity: parseFloat(qtyInput.value),
-                unit: unitSelect.value
-            });
-        } else if (type === 'container') {
-            const reasonSelect = row.querySelector('.reason');
-            const oneTimeCheck = row.querySelector('.one-time');
-
-            extraContainers.push({
-                item_id: parseInt(itemSelect.value),
-                quantity: parseInt(qtyInput.value),
-                reason: reasonSelect ? reasonSelect.value : 'primary_packaging',
-                one_time: oneTimeCheck ? oneTimeCheck.checked : false
-            });
-        }
-    });
-
-    if (extraIngredients.length === 0 && extraContainers.length === 0) {
-        showAlert('No extra items to save', 'warning');
-        return;
-    }
-
-    const batchId = getCurrentBatchId();
-    if (!batchId) {
-        showAlert('Batch ID not found', 'error');
-        return;
-    }
-
-    fetch(`/add-extra/${batchId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({
-            extra_ingredients: extraIngredients,
-            extra_containers: extraContainers
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            showAlert('Extra items saved successfully', 'success');
-
-            // Clear all extra rows
-            document.querySelectorAll('.extra-row').forEach(row => row.remove());
-
-            // Refresh container display
-            if (typeof refreshContainerDisplay === 'function') {
-                refreshContainerDisplay();
-            }
-
-            // Refresh the page to show updated data
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            const errorMsg = data.errors ? 
-                data.errors.map(err => `${err.item}: ${err.message}`).join('\n') :
-                'Error saving extra items';
-            showAlert(errorMsg, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error saving extras:', error);
-        showAlert('Error saving extra items', 'error');
-    });
 }
 
 function saveBatchNotes() {
@@ -265,4 +181,3 @@ function cancelBatch() {
     form.submit();
   }
 }
-
