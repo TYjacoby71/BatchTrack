@@ -117,6 +117,17 @@ function addExtraItemRow(type) {
   }
 }
 
+function getCurrentBatchId() {
+    // Try to get from window object first
+    if (window.currentBatchId) {
+        return window.currentBatchId;
+    }
+    
+    // Extract from URL as fallback
+    const pathParts = window.location.pathname.split('/');
+    return pathParts[pathParts.length - 1];
+}
+
 function saveExtras() {
     const extraRows = document.querySelectorAll('.extra-row');
     const extraIngredients = [];

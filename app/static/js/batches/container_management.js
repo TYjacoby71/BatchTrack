@@ -1,4 +1,3 @@
-
 // Container management for batch in progress
 
 let availableContainers = [];
@@ -10,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const pathParts = window.location.pathname.split('/');
     currentBatchId = pathParts[pathParts.length - 1];
     window.currentBatchId = currentBatchId;
-    
+
     // Load available containers
     loadAvailableContainers();
-    
+
     // Load current containers
     refreshContainerDisplay();
-    
+
     // Set up event listeners
     setupEventListeners();
 });
@@ -27,7 +26,7 @@ function setupEventListeners() {
     if (reasonSelect) {
         reasonSelect.addEventListener('change', updateReasonHelp);
     }
-    
+
     // Validate yield when estimated yield changes
     const yieldInput = document.getElementById('estimated-yield');
     if (yieldInput) {
@@ -42,12 +41,12 @@ function showAddContainerModal(defaultReason = 'primary_packaging') {
         reasonSelect.value = defaultReason;
         updateReasonHelp();
     }
-    
+
     // Load available containers if not already loaded
     if (availableContainers.length === 0) {
         loadAvailableContainers();
     }
-    
+
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('addContainerModal'));
     modal.show();
@@ -72,10 +71,10 @@ function loadAvailableContainers() {
 function populateContainerSelect() {
     const select = document.getElementById('container-item');
     if (!select) return;
-    
+
     // Clear existing options except the first one
     select.innerHTML = '<option value="">Select Container</option>';
-    
+
     // Add container options
     availableContainers.forEach(container => {
         const option = document.createElement('option');
@@ -91,9 +90,9 @@ function updateReasonHelp() {
     const reason = document.getElementById('container-reason')?.value;
     const helpText = document.getElementById('reason-help');
     const oneTimeOption = document.getElementById('one-time-option');
-    
+
     if (!helpText) return;
-    
+
     const helpTexts = {
         'primary_packaging': 'Standard containers for packaging your product',
         'overflow': 'Additional containers needed because yield exceeded expectations',
@@ -101,9 +100,9 @@ function updateReasonHelp() {
         'test_sample': 'Containers for test samples (will not count toward final product)',
         'other': 'Other reason (please specify in notes)'
     };
-    
+
     helpText.textContent = helpTexts[reason] || '';
-    
+
     // Show one-time option for broke_container
     if (oneTimeOption) {
         if (reason === 'broke_container') {
@@ -121,35 +120,35 @@ function addContainer() {
     const quantityInput = document.getElementById('container-quantity');
     const reasonSelect = document.getElementById('container-reason');
     const oneTimeCheck = document.getElementById('one-time-use');
-    
+
     if (!containerSelect || !quantityInput || !reasonSelect) {
         showAlert('Form elements not found', 'danger');
         return;
     }
-    
+
     const formData = {
         item_id: containerSelect.value,
         quantity: parseInt(quantityInput.value),
         reason: reasonSelect.value,
         one_time: oneTimeCheck ? oneTimeCheck.checked : false
     };
-    
+
     // Validation
     if (!formData.item_id || !formData.quantity || !formData.reason) {
         showAlert('Please fill in all required fields', 'warning');
         return;
     }
-    
+
     if (formData.quantity <= 0) {
         showAlert('Quantity must be greater than 0', 'warning');
         return;
     }
-    
+
     // Check stock availability (unless one-time use)
     if (!formData.one_time) {
         const selectedOption = containerSelect.selectedOptions[0];
         const availableStock = parseFloat(selectedOption?.dataset.stock || 0);
-        
+
         if (formData.quantity > availableStock) {
             const confirmMsg = `Only ${availableStock} units available in stock. Do you want to proceed with one-time use instead?`;
             if (confirm(confirmMsg)) {
@@ -159,7 +158,7 @@ function addContainer() {
             }
         }
     }
-    
+
     // Submit to server
     fetch(`/add-extra/${currentBatchId}`, {
         method: 'POST',
@@ -175,14 +174,14 @@ function addContainer() {
     .then(data => {
         if (data.status === 'success') {
             showAlert('Container added successfully', 'success');
-            
+
             // Hide modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('addContainerModal'));
             if (modal) modal.hide();
-            
+
             // Reset form
             resetContainerForm();
-            
+
             // Refresh displays
             refreshContainerDisplay();
             validateContainerYield();
@@ -209,7 +208,7 @@ function resetContainerForm() {
 
 function refreshContainerDisplay() {
     if (!currentBatchId) return;
-    
+
     fetch(`/api/batches/${currentBatchId}/containers`)
         .then(response => response.json())
         .then(data => {
@@ -224,12 +223,12 @@ function refreshContainerDisplay() {
 function updateContainerCards(containers) {
     const containerCardsDiv = document.getElementById('container-cards');
     if (!containerCardsDiv) return;
-    
+
     if (containers.length === 0) {
         containerCardsDiv.innerHTML = '<div class="col-12"><p class="text-muted">No containers added yet</p></div>';
         return;
     }
-    
+
     containerCardsDiv.innerHTML = containers.map(container => `
         <div class="col-md-6 col-lg-4 mb-3">
             <div class="card h-100 ${getContainerCardClass(container.reason)}">
@@ -275,7 +274,7 @@ function getReasonDisplayName(reason) {
 function updateContainerSummary(summary) {
     const summaryDiv = document.getElementById('container-summary');
     if (!summaryDiv) return;
-    
+
     summaryDiv.innerHTML = `
         <div class="row">
             <div class="col-md-6">
@@ -294,7 +293,7 @@ function removeContainer(containerId) {
     if (!confirm('Are you sure you want to remove this container?')) {
         return;
     }
-    
+
     fetch(`/api/batches/${currentBatchId}/containers/${containerId}`, {
         method: 'DELETE',
         headers: {
@@ -319,7 +318,7 @@ function removeContainer(containerId) {
 
 function validateContainerYield() {
     const estimatedYield = parseFloat(document.getElementById('estimated-yield')?.value || 0);
-    
+
     if (estimatedYield > 0 && currentBatchId) {
         fetch(`/api/batches/${currentBatchId}/validate-yield`, {
             method: 'POST',
@@ -342,7 +341,7 @@ function validateContainerYield() {
 function updateContainerWarnings(validation) {
     const warningsDiv = document.getElementById('container-warnings');
     if (!warningsDiv) return;
-    
+
     if (validation.warnings && validation.warnings.length > 0) {
         warningsDiv.style.display = 'block';
         warningsDiv.innerHTML = `
@@ -383,13 +382,13 @@ function showAlert(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     // Insert at top of main content
     const mainContent = document.querySelector('.container, main, body');
     if (mainContent) {
         mainContent.insertBefore(alertDiv, mainContent.firstChild);
     }
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentNode) {
@@ -397,3 +396,10 @@ function showAlert(message, type = 'info') {
         }
     }, 5000);
 }
+
+function getCurrentBatchId() {
+    return currentBatchId;
+}
+
+// Make getCurrentBatchId globally available
+window.getCurrentBatchId = getCurrentBatchId;
