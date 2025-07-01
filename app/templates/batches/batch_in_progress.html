@@ -556,7 +556,7 @@ function saveContainerAdjustment() {
         data.damage_quantity = damageQuantity;
     }
 
-    fetch(`/api/batches/${{{ batch.id }}}/containers/${currentContainerId}/adjust`, {
+    fetch(`/api/batches/{{ batch.id }}/containers/${currentContainerId}/adjust`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
