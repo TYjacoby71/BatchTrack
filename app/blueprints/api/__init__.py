@@ -1,11 +1,10 @@
 from flask import Blueprint
 
-api_bp = Blueprint('api', __name__, template_folder='templates')
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# Import all route modules
 from . import routes
-
-def init_api(app):
-    """Initialize API routes"""
-    # This function can be used to register additional API routes
-    # that need app context
-    pass
+from . import ingredient_routes
+from . import stock_routes
+from . import fifo_routes
+from . import container_routes

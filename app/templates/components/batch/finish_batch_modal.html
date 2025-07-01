@@ -68,7 +68,30 @@
             </div>
           </div>
 
-          <!-- Container Breakdown Section -->
+          <!-- Container Summary (Read-only) -->
+          <div class="mb-3">
+            <label class="form-label">Container Summary:</label>
+            <div class="alert alert-info">
+              <h6><i class="fas fa-info-circle"></i> Container Usage Review</h6>
+              <div id="finish-modal-container-summary">
+                <!-- Will be populated with container summary -->
+              </div>
+              <small class="text-muted">
+                <i class="fas fa-lock"></i> Container changes must be made in the Batch Progress page.
+              </small>
+            </div>
+          </div>
+
+          <!-- Yield Validation -->
+          <div class="mb-3" id="finish-modal-yield-validation" style="display: none;">
+            <div class="alert alert-warning">
+              <h6><i class="fas fa-exclamation-triangle"></i> Yield vs Container Validation:</h6>
+              <div id="finish-modal-validation-messages">
+                <!-- Validation messages will appear here -->
+              </div>
+            </div>
+          </div>
+
           {% if container_breakdown %}
           <div class="form-group mb-3">
             <label>Container Distribution</label>
@@ -222,8 +245,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
 
+      // Load container summary for finish modal
+      loadFinishModalContainerSummary();
+      
+      // Set up yield validation
+      const finalQuantityInput = document.getElementById('final_quantity');
+      if (finalQuantityInput) {
+        finalQuantityInput.addEventListener('input', validateFinishModalYield);
+      }
+
       toggleShelfLife();
     });
   }
 });
+
+function loadFinishModalContainerSummary() {
+  const batchId = {{ batch.id }};
+  
+  fetch(`/api/batches/${batchId}/containers`)
+    .then(response => response.json())
+    .then(data => {
+      updateFinishModalContainerSummary(data.summary || {});
+    })
+    .catch(error => {
+      console.error('Error loading container summary:', error);
+    });
+}
+
+function updateFinishModalContainerSummary(summary) {
+  const summaryDiv = document.getElementById('finish-modal-container-summary');
+  if (!summaryDiv) return;
+  
+  summaryDiv.innerHTML = `
+    <div class="row">
+      <div class="col-md-6">
+        <strong>Total Containers:</strong> ${summary.total_containers || 0}<br>
+        <strong>Total Capacity:</strong> ${summary.total_capacity || 0} ${summary.capacity_unit || 'units'}
+      </div>
+      <div class="col-md-6">
+        <strong>For Product:</strong> ${summary.product_containers || 0}<br>
+        <strong>Product Capacity:</strong> ${summary.product_capacity || 0} ${summary.capacity_unit || 'units'}
+      </div>
+    </div>
+  `;
+}
+
+function validateFinishModalYield() {
+  const finalQuantity = parseFloat(document.getElementById('final_quantity')?.value || 0);
+  const batchId = {{ batch.id }};
+  
+  if (finalQuantity > 0) {
+    fetch(`/api/batches/${batchId}/validate-yield`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({ estimated_yield: finalQuantity })
+    })
+    .then(response => response.json())
+    .then(data => {
+      updateFinishModalValidation(data);
+    })
+    .catch(error => {
+      console.error('Error validating yield:', error);
+    });
+  }
+}
+
+function updateFinishModalValidation(validation) {
+  const validationDiv = document.getElementById('finish-modal-yield-validation');
+  const messagesDiv = document.getElementById('finish-modal-validation-messages');
+  
+  if (!validationDiv || !messagesDiv) return;
+  
+  if (validation.warnings && validation.warnings.length > 0) {
+    validationDiv.style.display = 'block';
+    messagesDiv.innerHTML = validation.warnings.map(warning => `<div>• ${warning}</div>`).join('');
+  } else {
+    validationDiv.style.display = 'none';
+  }
+}
+
+function getCSRFToken() {
+  const token = document.querySelector('input[name="csrf_token"]')?.value ||
+                document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  return token || '';
+}
 </script>
