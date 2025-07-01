@@ -40,19 +40,30 @@
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">
-              <label for="product_id">Product</label>
-              <select name="product_id" id="product_id" class="form-select">
-                {% for product in products %}
-                  <option value="{{ product.id }}">{{ product.name }}</option>
-                {% endfor %}
-              </select>
+              <label class="form-label">Product</label>
+              <div class="input-group">
+                <select name="product_name" id="productSelect" class="form-select" required>
+                  <option value="">Select product...</option>
+                  {% for product in products %}
+                    <option value="{{ product.name }}">{{ product.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="btn btn-outline-secondary" onclick="showQuickAddProduct()">
+                  <i class="fas fa-plus"></i> Add Product
+                </button>
+              </div>
             </div>
 
             <div class="mb-3">
-              <label for="variant_label">Variant</label>
-              <select name="variant_label" id="variant_label" class="form-select">
-                <option value="">No variants available</option>
-              </select>
+              <label class="form-label">Variant</label>
+              <div class="input-group">
+                <select name="variant_name" id="variantSelect" class="form-select" required>
+                  <option value="">First select a product...</option>
+                </select>
+                <button type="button" class="btn btn-outline-secondary" onclick="showQuickAddVariant()">
+                  <i class="fas fa-plus"></i> Add Variant
+                </button>
+              </div>
             </div>
           </div>
 
@@ -195,11 +206,11 @@ function validateContainerYieldMatch() {
   const finalQuantity = parseFloat(document.getElementById('final_quantity').value) || 0;
   const warningDiv = document.getElementById('yieldWarning');
   const warningText = document.getElementById('yieldWarningText');
-  
+
   // Calculate total container capacity in batch units
   let totalContainerCapacity = 0;
   let totalContainerCount = 0;
-  
+
   // Get container data from the table
   const containerRows = document.querySelectorAll('tbody tr');
   containerRows.forEach(row => {
@@ -207,7 +218,7 @@ function validateContainerYieldMatch() {
     if (hiddenInput) {
       const containerCount = parseInt(hiddenInput.value) || 0;
       totalContainerCount += containerCount;
-      
+
       // Extract container capacity from size label (e.g., "4 floz")
       const sizeCell = row.cells[0]; // First cell contains size label
       if (sizeCell) {
@@ -229,7 +240,7 @@ function validateContainerYieldMatch() {
     } else if (finalQuantity < totalContainerCapacity) {
       message = `Warning: Final yield (${finalQuantity}) is less than container capacity (${totalContainerCapacity}). ${totalContainerCount} containers will not be filled completely.`;
     }
-    
+
     warningText.textContent = message;
     warningDiv.style.display = 'block';
   } else {
@@ -238,8 +249,8 @@ function validateContainerYieldMatch() {
 }
 
 function loadVariants() {
-  const productId = document.getElementById('product_id').value;
-  const variantSelect = document.getElementById('variant_label');
+  const productId = document.getElementById('productSelect').value; // Corrected ID here
+  const variantSelect = document.getElementById('variantSelect'); // Corrected ID here
 
   if (!productId) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
@@ -285,6 +296,99 @@ document.addEventListener('DOMContentLoaded', function() {
 
       toggleShelfLife();
     });
+
+// Quick add product function
+function showQuickAddProduct() {
+  const productName = prompt('Enter new product name:');
+  if (!productName || !productName.trim()) return;
+
+  const productBaseUnit = prompt('Enter product base unit (e.g., oz, floz, gram):', 'oz');
+  if (!productBaseUnit || !productBaseUnit.trim()) return;
+
+  fetch('/api/products/quick-add', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+    },
+    body: JSON.stringify({
+      product_name: productName.trim(),
+      product_base_unit: productBaseUnit.trim()
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Add to product dropdown
+      const productSelect = document.getElementById('productSelect');
+      const option = document.createElement('option');
+      option.value = data.product.name;
+      option.textContent = data.product.name;
+      option.selected = true;
+      productSelect.appendChild(option);
+
+      // Trigger variant loading
+      loadVariants();
+
+      alert(`Product "${data.product.name}" added successfully!`);
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error adding product:', error);
+    alert('Error adding product. Please try again.');
+  });
+}
+
+// Quick add variant function
+function showQuickAddVariant() {
+  const productSelect = document.getElementById('productSelect');
+  const selectedProduct = productSelect.value;
+
+  if (!selectedProduct) {
+    alert('Please select a product first');
+    return;
+  }
+
+  const variantName = prompt('Enter new variant name:');
+  if (!variantName || !variantName.trim()) return;
+
+  const variantDescription = prompt('Enter variant description (optional):') || '';
+
+  fetch('/api/products/quick-add', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+    },
+    body: JSON.stringify({
+      product_name: selectedProduct,
+      variant_name: variantName.trim(),
+      variant_description: variantDescription.trim()
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Add to variant dropdown
+      const variantSelect = document.getElementById('variantSelect');
+      const option = document.createElement('option');
+      option.value = data.variant.name;
+      option.textContent = data.variant.name;
+      option.selected = true;
+      variantSelect.appendChild(option);
+
+      alert(`Variant "${data.variant.name}" added successfully!`);
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error adding variant:', error);
+    alert('Error adding variant. Please try again.');
+  });
+}
   }
 });
 </script>
