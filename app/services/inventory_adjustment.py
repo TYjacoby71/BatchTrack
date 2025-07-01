@@ -8,19 +8,27 @@ from app.utils.fifo_generator import generate_fifo_id
 
 def validate_inventory_fifo_sync(item_id):
     """
-    Validates that inventory quantity matches sum of FIFO remaining quantities
+    Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including expired)
     Returns: (is_valid, error_message, inventory_qty, fifo_total)
     """
     item = InventoryItem.query.get(item_id)
     if not item:
         return False, "Item not found", 0, 0
 
-    fifo_entries = get_fifo_entries(item_id)
-    fifo_total = sum(entry.remaining_quantity for entry in fifo_entries)
+    # Get ALL FIFO entries with remaining quantity (including expired ones)
+    from sqlalchemy import and_
+    all_fifo_entries = InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).all()
+    
+    fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
 
     # Allow small floating point differences (0.001)
     if abs(item.quantity - fifo_total) > 0.001:
-        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total})"
+        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total}) [includes expired]"
         return False, error_msg, item.quantity, fifo_total
 
     return True, "", item.quantity, fifo_total

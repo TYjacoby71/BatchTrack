@@ -57,11 +57,29 @@ def view_inventory(id):
     history = pagination.items
 
     from datetime import datetime
+    
+    # Get expired FIFO entries for display
+    from sqlalchemy import and_
+    expired_entries = []
+    expired_total = 0
+    if item.is_perishable:
+        today = datetime.now().date()
+        expired_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )
+        ).order_by(InventoryHistory.expiration_date.asc()).all()
+        expired_total = sum(entry.remaining_quantity for entry in expired_entries)
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
                          history=history,
                          pagination=pagination,
+                         expired_entries=expired_entries,
+                         expired_total=expired_total,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
