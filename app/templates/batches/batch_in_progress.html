@@ -400,10 +400,6 @@
 <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 
 <script>
-// Initialize batch data
-window.currentBatchId = {{ batch.id }};
-window.getCurrentBatchId = function() { return {{ batch.id }}; };
-
 document.addEventListener('DOMContentLoaded', function() {
     // Handle collapse icons
     document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(element => {
