@@ -128,6 +128,23 @@ function getCurrentBatchId() {
     return pathParts[pathParts.length - 1];
 }
 
+// Also add missing utility functions that are referenced in the code
+function getCSRFToken() {
+    const csrfElement = document.querySelector('.csrf-token') || document.querySelector('input[name="csrf_token"]');
+    return csrfElement ? csrfElement.value : '';
+}
+
+function showAlert(message, type) {
+    // Simple alert implementation - could be enhanced with Bootstrap alerts
+    if (type === 'error') {
+        alert('Error: ' + message);
+    } else if (type === 'success') {
+        alert('Success: ' + message);
+    } else {
+        alert(message);
+    }
+}
+
 function saveExtras() {
     const extraRows = document.querySelectorAll('.extra-row');
     const extraIngredients = [];
