@@ -271,18 +271,6 @@ function loadVariants() {
     });
 }
 
-// Initialize on modal show
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('finishBatchModal');
-  if (modal) {
-    modal.addEventListener('shown.bs.modal', function () {
-      // Initialize based on default selection (intermediate ingredient)
-      toggleOutputFields();
-      toggleShelfLife();
-    });
-  }
-});
-
 // Quick add product function
 function showQuickAddProduct() {
   const productName = prompt('Enter new product name:');
@@ -375,4 +363,65 @@ function showQuickAddVariant() {
     alert('Error adding variant. Please try again.');
   });
 }
+
+// Quick add variant function
+function showQuickAddVariant() {
+  const productSelect = document.getElementById('productSelect');
+  const selectedProduct = productSelect.value;
+
+  if (!selectedProduct) {
+    alert('Please select a product first');
+    return;
+  }
+
+  const variantName = prompt('Enter new variant name:');
+  if (!variantName || !variantName.trim()) return;
+
+  const variantDescription = prompt('Enter variant description (optional):') || '';
+
+  fetch('/api/products/quick-add', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+    },
+    body: JSON.stringify({
+      product_name: selectedProduct,
+      variant_name: variantName.trim(),
+      variant_description: variantDescription.trim()
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Add to variant dropdown
+      const variantSelect = document.getElementById('variantSelect');
+      const option = document.createElement('option');
+      option.value = data.variant.name;
+      option.textContent = data.variant.name;
+      option.selected = true;
+      variantSelect.appendChild(option);
+
+      alert(`Variant "${data.variant.name}" added successfully!`);
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error adding variant:', error);
+    alert('Error adding variant. Please try again.');
+  });
+}
+
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('finishBatchModal');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      // Initialize based on default selection (intermediate ingredient)
+      toggleOutputFields();
+      toggleShelfLife();
+    });
+  }
+});
 </script>
