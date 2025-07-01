@@ -181,3 +181,86 @@ function cancelBatch() {
     form.submit();
   }
 }
+
+function addExtraItemRow(type) {
+  const container = document.getElementById('extra-ingredients-container');
+  const template = document.getElementById(`extra-${type}-template`);
+  
+  if (!template || !container) {
+    console.error('Template or container not found:', type);
+    return;
+  }
+  
+  const clone = template.content.cloneNode(true);
+  container.appendChild(clone);
+}
+
+function saveExtras() {
+  const extraRows = document.querySelectorAll('#extra-ingredients-container .extra-row');
+  const extras = [];
+  
+  extraRows.forEach(row => {
+    const type = row.dataset.type;
+    const itemSelect = row.querySelector('.item-select');
+    const qtyInput = row.querySelector('.qty');
+    const costInput = row.querySelector('.cost');
+    const unitSelect = row.querySelector('.unit');
+    
+    if (itemSelect.value && qtyInput.value) {
+      const extra = {
+        type: type,
+        item_id: itemSelect.value,
+        quantity: parseFloat(qtyInput.value),
+        cost: parseFloat(costInput.value) || 0
+      };
+      
+      if (unitSelect) {
+        extra.unit = unitSelect.value;
+      }
+      
+      extras.push(extra);
+    }
+  });
+  
+  if (extras.length === 0) {
+    showAlert('No extra items to save', 'warning');
+    return;
+  }
+  
+  const batchId = getCurrentBatchId();
+  const csrf = getCSRFToken();
+  
+  fetch(`/batches/${batchId}/add-extras`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrf
+    },
+    body: JSON.stringify({ extras: extras })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showAlert('Extra items saved successfully', 'success');
+      // Clear the form
+      document.getElementById('extra-ingredients-container').innerHTML = '';
+      // Reload page to show updated cost summary
+      window.location.reload();
+    } else {
+      showAlert('Error saving extra items: ' + (data.message || 'Unknown error'), 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showAlert('Error saving extra items', 'error');
+  });
+}
+
+function openBatchInventorySummary(batchId) {
+  // This function opens the FIFO modal or inventory summary
+  const modal = document.getElementById('fifoInsightModal');
+  if (modal) {
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+  }
+}
