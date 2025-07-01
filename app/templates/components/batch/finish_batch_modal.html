@@ -276,26 +276,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      const batchType = '{{ batch.batch_type }}';
-      console.log('Batch type:', batchType);
-
-      const productFields = document.getElementById('productFields');
-
-      if (batchType === 'product') {
-        if (productFields) {
-          productFields.style.display = 'block';
-          console.log('Showing product fields');
-          loadVariants();
-        }
-      } else {
-        if (productFields) {
-          productFields.style.display = 'none';
-          console.log('Hiding product fields');
-        }
-      }
-
+      // Initialize based on default selection (intermediate ingredient)
+      toggleOutputFields();
       toggleShelfLife();
     });
+  }
+});
 
 // Quick add product function
 function showQuickAddProduct() {
@@ -389,6 +375,4 @@ function showQuickAddVariant() {
     alert('Error adding variant. Please try again.');
   });
 }
-  }
-});
 </script>
