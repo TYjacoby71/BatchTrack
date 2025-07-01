@@ -25,17 +25,16 @@ def add_extra_to_batch(batch_id):
             continue
 
         needed_amount = float(container["quantity"])
-        reason = container.get("reason", "primary_packaging")
-        one_time = container.get("one_time", False)
+        reason = container.get("reason", "batch")
         
-        # Validate reason
-        valid_reasons = ["primary_packaging", "overflow", "broke_container", "emergency", "test_sample", "other"]
+        # Validate reason - use same reasons as inventory adjustments
+        valid_reasons = ["batch", "damaged", "other"]
         if reason not in valid_reasons:
             errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
             continue
 
-        # Check stock availability (unless one-time use)
-        if not one_time and container_item.quantity < needed_amount:
+        # Check stock availability
+        if container_item.quantity < needed_amount:
             errors.append({
                 "item": container_item.name,
                 "message": f"Not enough in stock. Available: {container_item.quantity}, Needed: {needed_amount}",
@@ -45,42 +44,27 @@ def add_extra_to_batch(batch_id):
             })
             continue
 
-        # Handle inventory deduction (unless one-time)
-        if not one_time:
-            result = process_inventory_adjustment(
-                item_id=container_item.id,
-                quantity=-needed_amount,
-                change_type='batch',
-                unit=container_item.unit,
-                notes=f"Extra container for batch {batch.label_code} - Reason: {reason}",
-                batch_id=batch.id,
-                created_by=current_user.id
-            )
-            
-            if not result:
-                errors.append({
-                    "item": container_item.name,
-                    "message": "Failed to deduct from inventory",
-                    "needed": needed_amount,
-                    "needed_unit": "units"
-                })
-                continue
-
-        # Create BatchContainer record
-        batch_container = BatchContainer(
+        # Handle inventory deduction using standard reasons
+        result = process_inventory_adjustment(
+            item_id=container_item.id,
+            quantity=-needed_amount,
+            change_type=reason,  # Use the reason directly (batch, damaged, other)
+            unit=container_item.unit,
+            notes=f"Extra container for batch {batch.label_code} - {reason}",
             batch_id=batch.id,
-            container_item_id=container_item.id if not one_time else None,
-            container_name=container_item.name,
-            container_size=container_item.size or 0,
-            quantity_used=needed_amount,
-            reason=reason,
-            one_time_use=one_time,
-            exclude_from_product=(reason in ["broke_container", "test_sample", "emergency"]),
             created_by=current_user.id
         )
-        db.session.add(batch_container)
+        
+        if not result:
+            errors.append({
+                "item": container_item.name,
+                "message": "Failed to deduct from inventory",
+                "needed": needed_amount,
+                "needed_unit": "units"
+            })
+            continue
 
-        # Also create legacy ExtraBatchContainer for backwards compatibility
+        # Create ExtraBatchContainer record (keep it simple)
         new_extra = ExtraBatchContainer(
             batch_id=batch.id,
             container_id=container_item.id,

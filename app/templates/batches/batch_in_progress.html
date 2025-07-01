@@ -349,32 +349,23 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <input type="number" class="form-control qty" placeholder="Qty" min="1" />
         </div>
         <div class="col-md-3">
             <select class="form-select reason">
-                <option value="primary_packaging">Primary Packaging</option>
-                <option value="overflow">Extra Yield</option>
-                <option value="broke_container">Broke Container</option>
-                <option value="emergency">Emergency (Ziplock, etc.)</option>
-                <option value="test_sample">Test Sample</option>
+                <option value="batch">Extra Yield</option>
+                <option value="damaged">Broken/Damaged</option>
                 <option value="other">Other</option>
             </select>
             <div class="form-text">
-                <small>Emergency containers won't count toward product total</small>
+                <small>Uses same tracking as inventory adjustments</small>
             </div>
         </div>
         <div class="col-md-2">
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
         <div class="col-md-2">
-            <div class="form-check">
-                <input class="form-check-input one-time" type="checkbox">
-                <label class="form-check-label text-sm">One-time use</label>
-            </div>
-        </div>
-        <div class="col-md-1">
             <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
