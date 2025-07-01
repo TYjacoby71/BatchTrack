@@ -137,61 +137,33 @@ def quick_add_product():
 
     product_name = data.get('product_name')
     variant_name = data.get('variant_name')
-    variant_description = data.get('variant_description', '')
     product_base_unit = data.get('product_base_unit', 'oz')
 
     if not product_name:
         return jsonify({'error': 'Product name is required'}), 400
 
     try:
-        from ...models import Product, ProductVariation
-        
-        # Get or create product
-        product = Product.scoped().filter_by(name=product_name).first()
-        if not product:
-            product = Product(
-                name=product_name,
-                product_base_unit=product_base_unit,
-                organization_id=current_user.organization_id
-            )
-            db.session.add(product)
-            db.session.flush()
-        
-        # Handle variant creation if variant_name is provided
-        variant = None
-        if variant_name:
-            variant = ProductVariation.scoped().filter_by(
-                product_id=product.id,
-                name=variant_name
-            ).first()
-            
-            if not variant:
-                variant = ProductVariation(
-                    product_id=product.id,
-                    name=variant_name,
-                    description=variant_description,
-                    organization_id=current_user.organization_id
-                )
-                db.session.add(variant)
-                db.session.flush()
+        # Get or create the SKU
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name or 'Base',
+            size_label='Bulk',
+            unit=product_base_unit
+        )
 
         db.session.commit()
 
-        response_data = {
+        return jsonify({
             'success': True,
             'product': {
-                'name': product.name,
-                'product_base_unit': product.product_base_unit
+                'name': sku.product_name,
+                'product_base_unit': sku.product_base_unit
+            },
+            'variant': {
+                'id': sku.id,
+                'name': sku.variant_name
             }
-        }
-        
-        if variant:
-            response_data['variant'] = {
-                'id': variant.id,
-                'name': variant.name
-            }
-
-        return jsonify(response_data)
+        })
 
     except Exception as e:
         db.session.rollback()

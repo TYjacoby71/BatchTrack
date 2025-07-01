@@ -297,10 +297,8 @@ def view_batch_in_progress(batch_identifier):
     from ...models import ProductSKU
     products = ProductSKU.query.filter_by(is_active=True).all()
 
-    # Calculate container breakdown for finish modal - include both batch containers and extra containers
+    # Calculate container breakdown for finish modal
     container_breakdown = []
-    
-    # Add batch containers
     if batch.containers:
         for container_usage in batch.containers:
             container = container_usage.container
@@ -308,20 +306,7 @@ def view_batch_in_progress(batch_identifier):
                 container_breakdown.append({
                     'container': container,
                     'size_label': f"{container.storage_amount} {container.storage_unit}",
-                    'original_used': container_usage.quantity_used or 0,
-                    'source': 'batch'
-                })
-    
-    # Add extra containers
-    if batch.extra_containers:
-        for extra_container in batch.extra_containers:
-            container = extra_container.container
-            if container.storage_amount and container.storage_unit:
-                container_breakdown.append({
-                    'container': container,
-                    'size_label': f"{container.storage_amount} {container.storage_unit}",
-                    'original_used': extra_container.quantity_used or 0,
-                    'source': 'extra'
+                    'original_used': container_usage.quantity_used or 0
                 })
 
     return render_template('batches/batch_in_progress.html',

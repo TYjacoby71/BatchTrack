@@ -99,37 +99,10 @@ def complete_batch(batch_id):
 
             # Get container count overrides from form
             container_overrides = {}
-            total_container_products = 0
             for key, value in request.form.items():
                 if key.startswith('container_final_'):
                     container_id = int(key.replace('container_final_', ''))
-                    container_count = int(value)
-                    container_overrides[container_id] = container_count
-                    total_container_products += container_count
-
-            # Calculate total container capacity for validation - include both batch and extra containers
-            total_container_capacity = 0
-            
-            # Check batch containers
-            for container_usage in batch.containers:
-                if container_usage.container.storage_amount:
-                    container_count = container_overrides.get(container_usage.container.id, container_usage.quantity_used or 0)
-                    container_capacity = container_usage.container.storage_amount * container_count
-                    total_container_capacity += container_capacity
-            
-            # Check extra containers
-            for extra_container in batch.extra_containers:
-                if extra_container.container.storage_amount:
-                    container_count = container_overrides.get(extra_container.container.id, extra_container.quantity_used or 0)
-                    container_capacity = extra_container.container.storage_amount * container_count
-                    total_container_capacity += container_capacity
-
-            # Validate final quantity vs container capacity
-            if total_container_capacity > 0 and abs(final_quantity - total_container_capacity) > 0.1:
-                if final_quantity > total_container_capacity:
-                    flash(f"⚠️ Final yield ({final_quantity}) exceeds container capacity ({total_container_capacity}). Containers may overflow.", "warning")
-                else:
-                    flash(f"⚠️ Final yield ({final_quantity}) is less than container capacity ({total_container_capacity}). Containers will not be filled completely.", "warning")
+                    container_overrides[container_id] = int(value)
 
             # Use unified ProductService with container overrides
             from services.product_service import ProductService
