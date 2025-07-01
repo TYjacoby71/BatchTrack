@@ -111,6 +111,24 @@ function markBatchFailed() {
   }
 }
 
+const clone = template.content.cloneNode(true);
+  container.appendChild(clone);
+}
+
+function addExtraItemRow(type) {
+  const container = document.getElementById('extra-ingredients-container');
+  const templateId = type === 'ingredient' ? 'extra-ingredient-template' : 'extra-container-template';
+  const template = document.getElementById(templateId);
+
+  if (!template || !container) {
+    console.error(`Template ${templateId} or container not found`);
+    return;
+  }
+
+  const clone = template.content.cloneNode(true);
+  container.appendChild(clone);
+}
+
 function updateRowCost(selectElement) {
   const selectedOption = selectElement.options[selectElement.selectedIndex];
   const cost = selectedOption.dataset.cost || 0;
@@ -128,6 +146,71 @@ function updateRowCost(selectElement) {
       unitSelect.value = unit;
     }
   }
+}
+
+function saveExtras() {
+  const extraRows = document.querySelectorAll('.extra-row');
+  const extra_ingredients = [];
+  const extra_containers = [];
+
+  extraRows.forEach(row => {
+    const type = row.dataset.type;
+    const itemSelect = row.querySelector('.item-select');
+    const qtyInput = row.querySelector('.qty');
+    const reasonSelect = row.querySelector('.reason');
+    const costInput = row.querySelector('.cost');
+
+    if (itemSelect?.value && qtyInput?.value) {
+      const extraData = {
+        item_id: parseInt(itemSelect.value),
+        quantity: parseFloat(qtyInput.value),
+        reason: reasonSelect?.value || 'other',
+        cost: parseFloat(costInput?.value || 0)
+      };
+
+      if (type === 'ingredient') {
+        const unitSelect = row.querySelector('.unit');
+        extraData.unit = unitSelect?.value || '';
+        extra_ingredients.push(extraData);
+      } else if (type === 'container') {
+        extra_containers.push(extraData);
+      }
+    }
+  });
+
+  if (extra_ingredients.length === 0 && extra_containers.length === 0) {
+    alert('No extra items to save');
+    return;
+  }
+
+  // Get batch ID from URL or form
+  const batchId = window.location.pathname.split('/').pop();
+
+  fetch(`/batches/${batchId}/add-extras`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('.csrf-token')?.value || ''
+    },
+    body: JSON.stringify({ 
+      extra_ingredients: extra_ingredients,
+      extra_containers: extra_containers 
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      alert('Extra items saved successfully');
+      location.reload(); // Refresh to show updated costs
+    } else {
+      const errorMessages = data.errors?.map(e => `${e.item}: ${e.message}`).join('\n') || 'Unknown error';
+      alert('Error saving extras:\n' + errorMessages);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error saving extras');
+  });
 }
 
 function getCurrentBatchId() {
@@ -191,82 +274,6 @@ function cancelBatch() {
     document.body.appendChild(form);
     form.submit();
   }
-}
-
-function addExtraItemRow(type) {
-  const container = document.getElementById('extra-ingredients-container');
-  const template = document.getElementById(`extra-${type}-template`);
-  
-  if (!template || !container) {
-    console.error('Template or container not found:', type);
-    return;
-  }
-  
-  const clone = template.content.cloneNode(true);
-  container.appendChild(clone);
-}
-
-function saveExtras() {
-  const extraRows = document.querySelectorAll('#extra-ingredients-container .extra-row');
-  const extras = [];
-  
-  extraRows.forEach(row => {
-    const type = row.dataset.type;
-    const itemSelect = row.querySelector('.item-select');
-    const qtyInput = row.querySelector('.qty');
-    const costInput = row.querySelector('.cost');
-    const unitSelect = row.querySelector('.unit');
-    const reasonSelect = row.querySelector('.reason');
-    
-    if (itemSelect.value && qtyInput.value) {
-      const extra = {
-        type: type,
-        item_id: itemSelect.value,
-        quantity: parseFloat(qtyInput.value),
-        cost: parseFloat(costInput.value) || 0,
-        reason: reasonSelect ? reasonSelect.value : 'other'
-      };
-      
-      if (unitSelect) {
-        extra.unit = unitSelect.value;
-      }
-      
-      extras.push(extra);
-    }
-  });
-  
-  if (extras.length === 0) {
-    showAlert('No extra items to save', 'warning');
-    return;
-  }
-  
-  const batchId = getCurrentBatchId();
-  const csrf = getCSRFToken();
-  
-  fetch(`/batches/${batchId}/add-extras`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrf
-    },
-    body: JSON.stringify({ extras: extras })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showAlert('Extra items saved successfully', 'success');
-      // Clear the form
-      document.getElementById('extra-ingredients-container').innerHTML = '';
-      // Reload page to show updated cost summary
-      window.location.reload();
-    } else {
-      showAlert('Error saving extra items: ' + (data.message || 'Unknown error'), 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    showAlert('Error saving extra items', 'error');
-  });
 }
 
 function openBatchInventorySummary(batchId) {
