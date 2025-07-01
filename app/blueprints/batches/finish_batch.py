@@ -107,12 +107,20 @@ def complete_batch(batch_id):
                     container_overrides[container_id] = container_count
                     total_container_products += container_count
 
-            # Validate container/yield relationship
-            if total_container_products > 0 and abs(final_quantity - total_container_products) > 0.1:
-                if final_quantity > total_container_products:
-                    flash(f"⚠️ Creating {final_quantity} products with {total_container_products} containers. Extra products will have fractional container costs.", "warning")
+            # Calculate total container capacity for validation
+            total_container_capacity = 0
+            for container_usage in batch.containers:
+                if container_usage.container.storage_amount:
+                    container_count = container_overrides.get(container_usage.container.id, container_usage.quantity_used or 0)
+                    container_capacity = container_usage.container.storage_amount * container_count
+                    total_container_capacity += container_capacity
+
+            # Validate final quantity vs container capacity
+            if total_container_capacity > 0 and abs(final_quantity - total_container_capacity) > 0.1:
+                if final_quantity > total_container_capacity:
+                    flash(f"⚠️ Final yield ({final_quantity}) exceeds container capacity ({total_container_capacity}). Containers may overflow.", "warning")
                 else:
-                    flash(f"⚠️ Have {total_container_products} containers but creating {final_quantity} products. Some containers unused.", "warning")
+                    flash(f"⚠️ Final yield ({final_quantity}) is less than container capacity ({total_container_capacity}). Containers will not be filled completely.", "warning")
 
             # Use unified ProductService with container overrides
             from services.product_service import ProductService

@@ -189,20 +189,38 @@ function validateContainerYieldMatch() {
   const warningDiv = document.getElementById('yieldWarning');
   const warningText = document.getElementById('yieldWarningText');
   
-  // Calculate total containers that will be used for products
-  let totalContainerProducts = 0;
-  const containerInputs = document.querySelectorAll('[id^="hidden_"]');
+  // Calculate total container capacity in batch units
+  let totalContainerCapacity = 0;
+  let totalContainerCount = 0;
   
-  containerInputs.forEach(input => {
-    totalContainerProducts += parseInt(input.value) || 0;
+  // Get container data from the table
+  const containerRows = document.querySelectorAll('tbody tr');
+  containerRows.forEach(row => {
+    const hiddenInput = row.querySelector('[id^="hidden_"]');
+    if (hiddenInput) {
+      const containerCount = parseInt(hiddenInput.value) || 0;
+      totalContainerCount += containerCount;
+      
+      // Extract container capacity from size label (e.g., "4 floz")
+      const sizeCell = row.cells[0]; // First cell contains size label
+      if (sizeCell) {
+        const sizeText = sizeCell.textContent.trim();
+        const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?)\s*(\w+)/);
+        if (sizeMatch) {
+          const containerSize = parseFloat(sizeMatch[1]);
+          totalContainerCapacity += containerCount * containerSize;
+        }
+      }
+    }
   });
 
-  if (totalContainerProducts > 0 && Math.abs(finalQuantity - totalContainerProducts) > 0.1) {
+  // Only validate if we have container data
+  if (totalContainerCapacity > 0 && Math.abs(finalQuantity - totalContainerCapacity) > 0.1) {
     let message = '';
-    if (finalQuantity > totalContainerProducts) {
-      message = `Warning: You're creating ${finalQuantity} products but only have ${totalContainerProducts} containers. Extra products will have fractional container allocation.`;
-    } else {
-      message = `Warning: You have ${totalContainerProducts} containers but creating ${finalQuantity} products. Some containers may be unused.`;
+    if (finalQuantity > totalContainerCapacity) {
+      message = `Warning: Final yield (${finalQuantity}) exceeds container capacity (${totalContainerCapacity}). ${totalContainerCount} containers can only hold ${totalContainerCapacity} units.`;
+    } else if (finalQuantity < totalContainerCapacity) {
+      message = `Warning: Final yield (${finalQuantity}) is less than container capacity (${totalContainerCapacity}). ${totalContainerCount} containers will not be filled completely.`;
     }
     
     warningText.textContent = message;
