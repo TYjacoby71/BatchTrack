@@ -27,7 +27,7 @@ def list_inventory():
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
         
-        # Calculate expired quantity
+        # Calculate expired quantity using temporary attributes instead of properties
         if item.is_perishable:
             today = datetime.now().date()
             expired_entries = InventoryHistory.query.filter(
@@ -38,11 +38,11 @@ def list_inventory():
                     InventoryHistory.expiration_date < today
                 )
             ).all()
-            item.expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
-            item.available_quantity = item.quantity - item.expired_quantity
+            item.temp_expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
+            item.temp_available_quantity = item.quantity - item.temp_expired_quantity
         else:
-            item.expired_quantity = 0
-            item.available_quantity = item.quantity
+            item.temp_expired_quantity = 0
+            item.temp_available_quantity = item.quantity
 
     return render_template('inventory_list.html', 
                          inventory_items=inventory_items,

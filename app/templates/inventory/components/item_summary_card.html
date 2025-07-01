@@ -1,66 +1,45 @@
 <!-- Summary Card -->
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h4>Inventory Item Details</h4>
-    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDetailsModal">
-      Edit Details
-    </button>
-  </div>
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-6">
-        <p><strong>Name:</strong> {{ item.name }}</p>
-        <p><strong>Type:</strong> {{ item.type|title }}</p>
-        <p><strong>Unit:</strong> {{ item.unit }}</p>
-      </div>
-      <div class="col-md-6">
-        <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
-        <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit) }}</p>
-        {% if item.shelf_life_days %}
-        <p><strong>Shelf Life:</strong> {{ item.shelf_life_days }} days</p>
-        {% endif %}
-      </div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4>Inventory Item Details</h4>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+            data-bs-target="#editDetailsModal">
+            Edit Details
+        </button>
     </div>
-  </div>
-</div>
-```
-
-```html
-<div class="col-md-3">
-          <div class="stat-item">
-            <div class="stat-value text-success">{{ "%.2f"|format(item.available_quantity or item.quantity) }}</div>
-            <div class="stat-label">Available Stock</div>
-            <div class="stat-unit">{{ item.unit or 'count' }}</div>
-            {% if item.expired_quantity and item.expired_quantity > 0 %}
-              <small class="text-danger">+{{ "%.2f"|format(item.expired_quantity) }} expired</small>
-            {% endif %}
-          </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Name:</strong> {{ item.name }}</p>
+                <p><strong>Type:</strong> {{ item.type|title }}</p>
+                <p><strong>Unit:</strong> {{ item.unit }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
+                <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit) }}</p>
+                {% if item.shelf_life_days %}
+                <p><strong>Shelf Life:</strong> {{ item.shelf_life_days }} days</p>
+                {% endif %}
+            </div>
         </div>
-```
-
-```html
-<!-- Summary Card -->
-<div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h4>Inventory Item Details</h4>
-    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDetailsModal">
-      Edit Details
-    </button>
-  </div>
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-6">
-        <p><strong>Name:</strong> {{ item.name }}</p>
-        <p><strong>Type:</strong> {{ item.type|title }}</p>
-        <p><strong>Unit:</strong> {{ item.unit }}</p>
-      </div>
-      <div class="col-md-6">
-        <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
-        <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit) }}</p>
-        {% if item.shelf_life_days %}
-        <p><strong>Shelf Life:</strong> {{ item.shelf_life_days }} days</p>
-        {% endif %}
-      </div>
+        <div class="row">
+            <div class="col-3">
+                <div class="text-center">
+                    <h6 class="text-success mb-1">{{ "%.2f"|format(item.temp_available_quantity) }}</h6>
+                    <small class="text-muted">Available</small>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="text-center">
+                    {% if item.is_perishable and item.temp_expired_quantity > 0 %}
+                    <h6 class="text-danger mb-1">{{ "%.2f"|format(item.temp_expired_quantity) }}</h6>
+                    <small class="text-muted">Expired</small>
+                    {% else %}
+                    <h6 class="text-muted mb-1">-</h6>
+                    <small class="text-muted">Expired</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
