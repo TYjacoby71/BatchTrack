@@ -26,14 +26,9 @@
                    min="0.01"
                    step="any"
                    value="{{ batch.projected_yield }}"
-                   required
-                   onchange="validateContainerYieldMatch()">
+                   required>
             <div class="form-text">
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
-            </div>
-            <div id="yieldWarning" class="alert alert-warning mt-2" style="display: none;">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span id="yieldWarningText"></span>
             </div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
@@ -179,55 +174,6 @@ function adjustContainer(containerId, change) {
   const hiddenInput = document.getElementById('hidden_' + containerId);
   if (finalElement) finalElement.textContent = finalCount;
   if (hiddenInput) hiddenInput.value = finalCount;
-
-  // Validate container/yield match
-  validateContainerYieldMatch();
-}
-
-function validateContainerYieldMatch() {
-  const finalQuantity = parseFloat(document.getElementById('final_quantity').value) || 0;
-  const warningDiv = document.getElementById('yieldWarning');
-  const warningText = document.getElementById('yieldWarningText');
-  
-  // Calculate total container capacity in batch units
-  let totalContainerCapacity = 0;
-  let totalContainerCount = 0;
-  
-  // Get container data from the table
-  const containerRows = document.querySelectorAll('tbody tr');
-  containerRows.forEach(row => {
-    const hiddenInput = row.querySelector('[id^="hidden_"]');
-    if (hiddenInput) {
-      const containerCount = parseInt(hiddenInput.value) || 0;
-      totalContainerCount += containerCount;
-      
-      // Extract container capacity from size label (e.g., "4 floz")
-      const sizeCell = row.cells[0]; // First cell contains size label
-      if (sizeCell) {
-        const sizeText = sizeCell.textContent.trim();
-        const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?)\s*(\w+)/);
-        if (sizeMatch) {
-          const containerSize = parseFloat(sizeMatch[1]);
-          totalContainerCapacity += containerCount * containerSize;
-        }
-      }
-    }
-  });
-
-  // Only validate if we have container data
-  if (totalContainerCapacity > 0 && Math.abs(finalQuantity - totalContainerCapacity) > 0.1) {
-    let message = '';
-    if (finalQuantity > totalContainerCapacity) {
-      message = `Warning: Final yield (${finalQuantity}) exceeds container capacity (${totalContainerCapacity}). ${totalContainerCount} containers can only hold ${totalContainerCapacity} units.`;
-    } else if (finalQuantity < totalContainerCapacity) {
-      message = `Warning: Final yield (${finalQuantity}) is less than container capacity (${totalContainerCapacity}). ${totalContainerCount} containers will not be filled completely.`;
-    }
-    
-    warningText.textContent = message;
-    warningDiv.style.display = 'block';
-  } else {
-    warningDiv.style.display = 'none';
-  }
 }
 
 function loadVariants() {
