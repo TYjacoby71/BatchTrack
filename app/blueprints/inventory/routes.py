@@ -38,8 +38,8 @@ def list_inventory():
                     InventoryHistory.expiration_date < today
                 )
             ).all()
-            item.temp_expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
-            item.temp_available_quantity = item.quantity - item.temp_expired_quantity
+            item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
+            item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
         else:
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
@@ -66,6 +66,31 @@ def view_inventory(id):
     fifo_filter = request.args.get('fifo') == 'true'
 
     item = InventoryItem.query.get_or_404(id)
+    
+    # Calculate freshness and expired quantities for this item (same as list_inventory)
+    from ...blueprints.expiration.services import ExpirationService
+    from datetime import datetime
+    from sqlalchemy import and_
+    
+    item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+    
+    # Calculate expired quantity using temporary attributes
+    if item.is_perishable:
+        today = datetime.now().date()
+        expired_entries_for_calc = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == item.id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )
+        ).all()
+        item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
+        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+    else:
+        item.temp_expired_quantity = 0
+        item.temp_available_quantity = item.quantity
+    
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
 
     # Apply FIFO filter at database level if requested
@@ -92,7 +117,7 @@ def view_inventory(id):
                 InventoryHistory.expiration_date < today
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
-        expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+        expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,

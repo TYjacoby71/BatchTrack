@@ -13,22 +13,22 @@ def seed_categories(organization_id=None):
     
     categories = [
         # Core Categories
-        {"name": "Liquid", "organization_id": organization_id},             # Water, vinegar, juices
-        {"name": "Oil", "organization_id": organization_id},               # Olive, coconut, canola
-        {"name": "Solid", "organization_id": organization_id},              # Soap base, butter blocks
-        {"name": "Powder", "organization_id": organization_id},             # Flour, clay powder, mica
-        {"name": "Dairy", "organization_id": organization_id},             # Milk, cream, yogurt
-        {"name": "Syrup", "organization_id": organization_id},             # Honey, agave, glucose
+        {"name": "Liquid", "organization_id": organization_id, "default_density": 1.0},             # Water, vinegar, juices
+        {"name": "Oil", "organization_id": organization_id, "default_density": 0.92},               # Olive, coconut, canola
+        {"name": "Solid", "organization_id": organization_id, "default_density": 0.91},              # Soap base, butter blocks
+        {"name": "Powder", "organization_id": organization_id, "default_density": 2.5},             # Flour, clay powder, mica
+        {"name": "Dairy", "organization_id": organization_id, "default_density": 1.03},             # Milk, cream, yogurt
+        {"name": "Syrup", "organization_id": organization_id, "default_density": 1.4},             # Honey, agave, glucose
 
         # Specialty Categories
-        {"name": "Alcohol", "organization_id": organization_id},          # Ethanol, isopropyl, tinctures
-        {"name": "Fragrance", "organization_id": organization_id},         # Essential oils, perfume
-        {"name": "Gel", "organization_id": organization_id},               # Aloe gel, cosmetic bases
-        {"name": "Wax", "organization_id": organization_id},                # Beeswax, soy wax, paraffin
-        {"name": "Extract", "organization_id": organization_id},            # Vanilla, herbal extracts
-        {"name": "Clay", "organization_id": organization_id},               # Bentonite, kaolin
-        {"name": "Other", "organization_id": organization_id},              # Catch-all or uncategorized
-        {"name": "Container", "organization_id": organization_id}           # Added Container Category
+        {"name": "Alcohol", "organization_id": organization_id, "default_density": 0.8},          # Ethanol, isopropyl, tinctures
+        {"name": "Fragrance", "organization_id": organization_id, "default_density": 0.89},         # Essential oils, perfume
+        {"name": "Gel", "organization_id": organization_id, "default_density": 1.02},               # Aloe gel, cosmetic bases
+        {"name": "Wax", "organization_id": organization_id, "default_density": 0.93},                # Beeswax, soy wax, paraffin
+        {"name": "Extract", "organization_id": organization_id, "default_density": 0.85},            # Vanilla, herbal extracts
+        {"name": "Clay", "organization_id": organization_id, "default_density": 2.5},               # Bentonite, kaolin
+        {"name": "Other", "organization_id": organization_id, "default_density": 1.0},              # Catch-all or uncategorized
+        {"name": "Container", "organization_id": organization_id, "default_density": None}           # Added Container Category
     ]
 
     for category in categories:
