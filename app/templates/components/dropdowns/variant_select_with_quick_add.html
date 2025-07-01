@@ -1,0 +1,28 @@
+
+{% macro variant_select_dropdown(name="variant_name", required=true, selected_value="", show_quick_add=true, css_class="form-select") %}
+<div class="input-group">
+  <select name="{{ name }}" class="{{ css_class }}" {% if required %}required{% endif %}>
+    <option value="">Select Variant...</option>
+    {# Variants will be populated by JavaScript when product is selected #}
+  </select>
+  {% if show_quick_add %}
+  <button type="button" class="btn btn-outline-secondary" onclick="openQuickAddVariantFromDropdown()" title="Quick Add Variant">
+    <i class="fas fa-plus"></i>
+  </button>
+  {% endif %}
+</div>
+
+<script>
+function openQuickAddVariantFromDropdown() {
+  const productSelect = document.querySelector('select[name="product_name"]');
+  const selectedProduct = productSelect ? productSelect.value : '';
+  
+  if (!selectedProduct) {
+    alert('Please select a product first');
+    return;
+  }
+  
+  openQuickAddVariant(selectedProduct);
+}
+</script>
+{% endmacro %}
