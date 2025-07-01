@@ -112,10 +112,21 @@ function markBatchFailed() {
 }
 
 function updateRowCost(selectElement) {
-  const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
-  const costInput = selectElement.parentElement.querySelector('.cost');
+  const selectedOption = selectElement.options[selectElement.selectedIndex];
+  const cost = selectedOption.dataset.cost || 0;
+  const unit = selectedOption.dataset.unit || '';
+
+  const row = selectElement.closest('.extra-row');
+  const costInput = row.querySelector('.cost');
   if (costInput) {
     costInput.value = cost;
+  }
+
+  if (unit) {
+    const unitSelect = row.querySelector('.unit');
+    if (unitSelect) {
+      unitSelect.value = unit;
+    }
   }
 }
 
