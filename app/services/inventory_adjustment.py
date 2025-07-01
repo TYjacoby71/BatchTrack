@@ -8,14 +8,14 @@ from app.utils.fifo_generator import generate_fifo_id
 
 def validate_inventory_fifo_sync(item_id):
     """
-    Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including expired)
+    Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including frozen expired)
     Returns: (is_valid, error_message, inventory_qty, fifo_total)
     """
     item = InventoryItem.query.get(item_id)
     if not item:
         return False, "Item not found", 0, 0
 
-    # Get ALL FIFO entries with remaining quantity (including expired ones)
+    # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
     from sqlalchemy import and_
     all_fifo_entries = InventoryHistory.query.filter(
         and_(
@@ -28,7 +28,7 @@ def validate_inventory_fifo_sync(item_id):
 
     # Allow small floating point differences (0.001)
     if abs(item.quantity - fifo_total) > 0.001:
-        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total}) [includes expired]"
+        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total}) [includes frozen expired]"
         return False, error_msg, item.quantity, fifo_total
 
     return True, "", item.quantity, fifo_total
@@ -105,9 +105,37 @@ def process_inventory_adjustment(
 
     # Deductions
     if qty_change < 0:
-        success, deductions = deduct_fifo(item.id, abs(qty_change), change_type, notes)
-        if not success:
-            raise ValueError("Insufficient FIFO stock")
+        # For spoil/trash operations, allow targeting expired lots specifically
+        if change_type in ['spoil', 'trash']:
+            from app.blueprints.fifo.services import get_expired_fifo_entries
+            expired_entries = get_expired_fifo_entries(item.id)
+            
+            # If we have expired stock and the request quantity matches available expired stock,
+            # deduct from expired lots instead of fresh stock
+            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+            if expired_total >= abs(qty_change):
+                # Deduct from expired entries manually
+                remaining_to_deduct = abs(qty_change)
+                deductions = []
+                
+                for entry in expired_entries:
+                    if remaining_to_deduct <= 0:
+                        break
+                    
+                    deduction = min(entry.remaining_quantity, remaining_to_deduct)
+                    entry.remaining_quantity -= deduction
+                    remaining_to_deduct -= deduction
+                    deductions.append((entry.id, deduction, entry.unit_cost))
+            else:
+                # Fall back to normal FIFO if not enough expired stock
+                success, deductions = deduct_fifo(item.id, abs(qty_change), change_type, notes)
+                if not success:
+                    raise ValueError("Insufficient FIFO stock (expired lots frozen)")
+        else:
+            # Regular operations use normal FIFO (skips expired)
+            success, deductions = deduct_fifo(item.id, abs(qty_change), change_type, notes)
+            if not success:
+                raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
 
         for entry_id, deduction_amount, _ in deductions:
             # Show clearer description for batch cancellations

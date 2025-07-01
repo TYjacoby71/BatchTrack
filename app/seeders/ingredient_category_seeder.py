@@ -39,6 +39,10 @@ def seed_categories(organization_id=None):
         ).first()
         if not existing:
             db.session.add(IngredientCategory(**category))
+        else:
+            # Update existing category with new density value if it's missing
+            if existing.default_density is None and category.get("default_density") is not None:
+                existing.default_density = category["default_density"]
 
     db.session.commit()
 
