@@ -192,6 +192,103 @@ def remove_batch_container(batch_id, container_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>/adjust', methods=['POST'])
+@login_required
+def adjust_batch_container(batch_id, container_id):
+    """Adjust container quantity, replace container type, or mark as damaged"""
+    try:
+        data = request.get_json()
+        adjustment_type = data.get('adjustment_type')
+        notes = data.get('notes', '')
+        
+        batch = Batch.query.get_or_404(batch_id)
+        container_record = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+        
+        if adjustment_type == 'quantity':
+            quantity_change = data.get('quantity_change', 0)
+            if quantity_change == 0:
+                return jsonify({'success': False, 'message': 'No quantity change specified'})
+            
+            new_quantity = container_record.quantity_used + quantity_change
+            if new_quantity < 0:
+                return jsonify({'success': False, 'message': 'Cannot reduce below zero'})
+            
+            # Adjust inventory
+            from ...services.inventory_adjustment import process_inventory_adjustment
+            process_inventory_adjustment(
+                item_id=container_record.container_id,
+                quantity=-quantity_change,  # Negative for deduction
+                change_type='batch_adjustment',
+                unit='count',
+                notes=f"Container adjustment for batch {batch.label_code}: {notes}",
+                batch_id=batch_id,
+                created_by=current_user.id
+            )
+            
+            container_record.quantity_used = new_quantity
+            
+        elif adjustment_type == 'replace':
+            new_container_id = data.get('new_container_id')
+            new_quantity = data.get('new_quantity', 1)
+            
+            # Return old containers to inventory
+            process_inventory_adjustment(
+                item_id=container_record.container_id,
+                quantity=container_record.quantity_used,  # Positive to return
+                change_type='batch_adjustment',
+                unit='count',
+                notes=f"Container replacement return for batch {batch.label_code}",
+                batch_id=batch_id,
+                created_by=current_user.id
+            )
+            
+            # Deduct new containers
+            new_container = InventoryItem.query.get_or_404(new_container_id)
+            process_inventory_adjustment(
+                item_id=new_container_id,
+                quantity=-new_quantity,  # Negative for deduction
+                change_type='batch',
+                unit='count',
+                notes=f"Container replacement for batch {batch.label_code}: {notes}",
+                batch_id=batch_id,
+                created_by=current_user.id
+            )
+            
+            # Update container record
+            container_record.container_id = new_container_id
+            container_record.quantity_used = new_quantity
+            container_record.cost_each = new_container.cost_per_unit or 0.0
+            
+        elif adjustment_type == 'damage':
+            damage_quantity = data.get('damage_quantity', 0)
+            if damage_quantity <= 0 or damage_quantity > container_record.quantity_used:
+                return jsonify({'success': False, 'message': 'Invalid damage quantity'})
+            
+            # Create extra container record to track the damaged containers
+            from ...models import ExtraBatchContainer
+            damaged_record = ExtraBatchContainer(
+                batch_id=batch_id,
+                container_id=container_record.container_id,
+                container_quantity=damage_quantity,
+                quantity_used=damage_quantity,
+                cost_each=container_record.cost_each,
+                reason='damaged',
+                organization_id=current_user.organization_id
+            )
+            db.session.add(damaged_record)
+            
+            # Reduce original container count
+            container_record.quantity_used -= damage_quantity
+            
+            # No inventory adjustment needed - containers were already deducted
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Container adjusted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @container_api_bp.route('/batches/<int:batch_id>/validate-yield', methods=['POST'])
 @login_required
 def validate_batch_yield(batch_id):

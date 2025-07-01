@@ -122,7 +122,7 @@ function getCurrentBatchId() {
     if (window.currentBatchId) {
         return window.currentBatchId;
     }
-    
+
     // Extract from URL as fallback
     const pathParts = window.location.pathname.split('/');
     return pathParts[pathParts.length - 1];
@@ -248,3 +248,76 @@ function cancelBatch() {
     form.submit();
   }
 }
+
+let currentContainerId = null;
+
+function showContainerAdjustModal(containerId, containerName, currentQty) {
+    currentContainerId = containerId;
+    document.getElementById('containerName').textContent = containerName;
+    document.getElementById('currentQuantity').textContent = currentQty;
+
+    // Reset form
+    document.getElementById('adjustmentType').value = 'quantity';
+    document.getElementById('quantityChange').value = 0;
+    document.getElementById('adjustmentNotes').value = '';
+    showAdjustmentOptions();
+
+    const modal = new bootstrap.Modal(document.getElementById('containerAdjustModal'));
+    modal.show();
+}
+
+function showAdjustmentOptions() {
+    const type = document.getElementById('adjustmentType').value;
+
+    document.getElementById('quantityAdjustment').style.display = type === 'quantity' ? 'block' : 'none';
+    document.getElementById('containerReplacement').style.display = type === 'replace' ? 'block' : 'none';
+    document.getElementById('damageReason').style.display = type === 'damage' ? 'block' : 'none';
+}
+
+function saveContainerAdjustment() {
+    const type = document.getElementById('adjustmentType').value;
+    const notes = document.getElementById('adjustmentNotes').value;
+    const batchId = getCurrentBatchId();
+
+    let data = {
+        adjustment_type: type,
+        notes: notes
+    };
+
+    if (type === 'quantity') {
+        data.quantity_change = parseInt(document.getElementById('quantityChange').value);
+    } else if (type === 'replace') {
+        data.new_container_id = document.getElementById('newContainer').value;
+        data.new_quantity = parseInt(document.getElementById('newQuantity').value);
+    } else if (type === 'damage') {
+        data.damage_quantity = parseInt(document.getElementById('damageQuantity').value);
+    }
+
+    fetch(`/api/batches/${batchId}/containers/${currentContainerId}/adjust`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Refresh to show changes
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error adjusting container:', error);
+        alert('Failed to adjust container');
+    });
+}
+
+// Event listener for adjustment type changes
+document.addEventListener('DOMContentLoaded', function() {
+    const adjustmentSelect = document.getElementById('adjustmentType');
+    if (adjustmentSelect) {
+        adjustmentSelect.addEventListener('change', showAdjustmentOptions);
+    }
+});
