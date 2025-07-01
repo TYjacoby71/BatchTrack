@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, InventoryItem, ExtraBatchContainer, ExtraBatchIngredient, BatchContainer
 from ...services.unit_conversion import ConversionEngine
 from ...services.inventory_adjustment import process_inventory_adjustment
-from ...services.batch_container_service import BatchContainerService
+# Removed unnecessary service import
 
 add_extra_bp = Blueprint('add_extra', __name__)
 
@@ -29,7 +29,7 @@ def add_extra_to_batch(batch_id):
         one_time = container.get("one_time", False)
         
         # Validate reason
-        valid_reasons = ["primary_packaging", "overflow", "broke_container", "test_sample", "other"]
+        valid_reasons = ["primary_packaging", "overflow", "broke_container", "emergency", "test_sample", "other"]
         if reason not in valid_reasons:
             errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
             continue
@@ -75,7 +75,7 @@ def add_extra_to_batch(batch_id):
             quantity_used=needed_amount,
             reason=reason,
             one_time_use=one_time,
-            exclude_from_product=(reason in ["broke_container", "test_sample"]),
+            exclude_from_product=(reason in ["broke_container", "test_sample", "emergency"]),
             created_by=current_user.id
         )
         db.session.add(batch_container)
