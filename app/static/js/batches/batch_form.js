@@ -266,10 +266,6 @@ function cancelBatch() {
   }
 }
 
-let currentContainerId = null;
-let currentContainerItemId = null;
-let currentQuantity = 0;
-
 function showContainerAdjustModal(containerId, containerName, currentQty) {
     currentContainerId = containerId;
     currentQuantity = currentQty;
