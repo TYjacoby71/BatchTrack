@@ -1,4 +1,5 @@
 
+
 // Timer Functions
 function startTimer(name, duration) {
   const formData = new FormData();
@@ -117,7 +118,6 @@ function saveExtras() {
     const type = row.dataset.type;
     const itemSelect = row.querySelector('.item-select');
     const qtyInput = row.querySelector('.qty');
-    const reasonSelect = row.querySelector('.reason');
     const costInput = row.querySelector('.cost');
 
     if (!itemSelect.value || !qtyInput.value) return;
@@ -125,7 +125,6 @@ function saveExtras() {
     const itemData = {
       item_id: parseInt(itemSelect.value),
       quantity: parseFloat(qtyInput.value),
-      reason: reasonSelect ? reasonSelect.value : 'extra_needed',
       cost: parseFloat(costInput.value) || 0
     };
 
@@ -157,7 +156,12 @@ function saveExtras() {
       extra_containers: extraContainers
     })
   })
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.status === 'success') {
       alert('Extra items saved successfully');
@@ -169,7 +173,7 @@ function saveExtras() {
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Error saving extras');
+    alert('Error saving extras: ' + error.message);
   });
 }
 
@@ -233,3 +237,4 @@ function validateBatchForm() {
 function openBatchInventorySummary(batchId) {
   window.open(`/batches/${batchId}/inventory-summary`, '_blank');
 }
+

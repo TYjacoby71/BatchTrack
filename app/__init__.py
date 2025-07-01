@@ -195,4 +195,12 @@ def create_app():
     from .management import register_commands
     register_commands(app)
 
+    # Register batches blueprint
+    from .blueprints.batches import batches_bp
+    app.register_blueprint(batches_bp)
+
+    # Register add_extras blueprint
+    from .blueprints.batches.add_extras import add_extra_bp
+    app.register_blueprint(add_extra_bp, url_prefix='/batches')
+
     return app
