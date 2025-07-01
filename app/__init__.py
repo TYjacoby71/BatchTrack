@@ -57,7 +57,6 @@ def create_app():
     from .blueprints.admin import admin_bp
     from .routes import app_routes
     from .blueprints.fifo import fifo_bp
-    from .blueprints.batches.add_extra import add_extra_bp
     from .routes import bulk_stock_routes
     from .routes import fault_log_routes
     from .routes import tag_manager_routes
@@ -88,7 +87,6 @@ def create_app():
     app.register_blueprint(admin_bp,  url_prefix='/admin')
     app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
-    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
     app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
     app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
