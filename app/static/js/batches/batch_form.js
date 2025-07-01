@@ -1,232 +1,342 @@
-
-// Global batch ID for this page
-let currentBatchId;
-
-// Initialize when DOM is loaded
+// Batch form functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Extract batch ID from URL
-    const pathParts = window.location.pathname.split('/');
-    currentBatchId = pathParts[pathParts.indexOf('batches') + 1];
-    
-    console.log('Batch form initialized for batch:', currentBatchId);
+  const modal = document.getElementById('finishBatchModal');
+  const modalForm = document.getElementById('finishBatchModalForm');
+  const outputTypeSelect = document.getElementById('output_type');
+
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      const form = document.getElementById('finishBatchModalForm');
+      if (form && outputTypeSelect) {
+        toggleOutputFields();
+        toggleShelfLife();
+      }
+    });
+  }
+
+  if (modalForm) {
+    modalForm.addEventListener('submit', function(e) {
+      // Form validation can be added here
+      return true;
+    });
+  }
+
+  if (outputTypeSelect) {
+    outputTypeSelect.addEventListener('change', toggleOutputFields);
+  }
+
+  // Initialize tooltips
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
 });
 
-// Extra items management
-function addExtraItemRow(type) {
-    const container = document.getElementById('extra-ingredients-container');
-    const template = document.getElementById(`extra-${type}-template`);
-    
-    if (!template || !container) {
-        console.error('Template or container not found:', type);
-        return;
+function updateExpirationDate() {
+  const shelfLifeElement = document.getElementById('shelf_life_days');
+  if (!shelfLifeElement) return;
+
+  const shelfLife = shelfLifeElement.value;
+  if (shelfLife && parseInt(shelfLife) > 0) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
+    const dateString = expirationDate.toISOString().split('T')[0];
+
+    const expDateElement = document.getElementById('expiration_date');
+    const expDateDisplayElement = document.getElementById('expiration_date_display');
+
+    if (expDateElement) expDateElement.value = dateString;
+    if (expDateDisplayElement) expDateDisplayElement.value = dateString;
+  }
+}
+
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable').checked;
+  const shelfLifeField = document.getElementById('shelfLifeField');
+
+  if (shelfLifeField) {
+    shelfLifeField.style.display = isPerishable ? 'block' : 'none';
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = isPerishable;
+      if (!isPerishable) {
+        shelfLifeInput.value = '';
+        document.getElementById('expiration_date').value = '';
+        document.getElementById('expiration_date_display').value = '';
+      }
     }
-    
-    const clone = template.content.cloneNode(true);
-    container.appendChild(clone);
+  }
+}
+
+function toggleOutputFields() {
+  const type = document.getElementById('output_type').value;
+  const productFields = document.getElementById('productFields');
+  const productSelect = document.getElementById('product_id');
+
+  if (productFields && productSelect) {
+    const isProduct = type === 'product';
+    productFields.style.display = isProduct ? 'block' : 'none';
+    productSelect.required = isProduct;
+  }
+}
+
+function markBatchFailed() {
+  if (confirm('Mark this batch as failed? This action cannot be undone.')) {
+    const batchId = window.location.pathname.split('/').pop();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/batches/finish-batch/${batchId}/fail`;
+
+    const csrf = document.querySelector('.csrf-token').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrf;
+
+    form.appendChild(csrfInput);
+    document.body.appendChild(form);
+    form.submit();
+  }
 }
 
 function updateRowCost(selectElement) {
-    const row = selectElement.closest('.extra-row');
-    const costInput = row.querySelector('.cost');
-    const unitSelect = row.querySelector('.unit');
-    
-    const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const cost = selectedOption.dataset.cost || '0';
-    const unit = selectedOption.dataset.unit;
-    
-    if (costInput) {
-        costInput.value = parseFloat(cost).toFixed(2);
+  const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
+  const costInput = selectElement.parentElement.querySelector('.cost');
+  if (costInput) {
+    costInput.value = cost;
+  }
+}
+
+function addExtraItemRow(type) {
+  const template = document.getElementById(`extra-${type}-template`);
+  const clone = template.content.cloneNode(true);
+  document.getElementById('extra-ingredients-container').appendChild(clone);
+
+  const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
+  const select = newRow.querySelector('.item-select');
+  if (select) {
+    updateRowCost(select);
+  }
+}
+
+function getCurrentBatchId() {
+    // Try to get from window object first
+    if (window.currentBatchId) {
+        return window.currentBatchId;
     }
-    
-    if (unitSelect && unit) {
-        // Set the unit if it's an ingredient
-        for (let option of unitSelect.options) {
-            if (option.value === unit) {
-                option.selected = true;
-                break;
-            }
-        }
+
+    // Extract from URL as fallback
+    const pathParts = window.location.pathname.split('/');
+    return pathParts[pathParts.length - 1];
+}
+
+// Also add missing utility functions that are referenced in the code
+function getCSRFToken() {
+    const csrfElement = document.querySelector('.csrf-token') || document.querySelector('input[name="csrf_token"]');
+    return csrfElement ? csrfElement.value : '';
+}
+
+function showAlert(message, type) {
+    // Simple alert implementation - could be enhanced with Bootstrap alerts
+    if (type === 'error') {
+        alert('Error: ' + message);
+    } else if (type === 'success') {
+        alert('Success: ' + message);
+    } else {
+        alert(message);
     }
 }
 
 function saveExtras() {
-    if (!currentBatchId) {
-        alert('Batch ID not found');
-        return;
-    }
-    
     const extraRows = document.querySelectorAll('.extra-row');
     const extraIngredients = [];
     const extraContainers = [];
-    
+
     extraRows.forEach(row => {
         const type = row.dataset.type;
         const itemSelect = row.querySelector('.item-select');
         const qtyInput = row.querySelector('.qty');
-        const costInput = row.querySelector('.cost');
-        
-        if (!itemSelect.value || !qtyInput.value) return;
-        
-        const itemData = {
-            item_id: parseInt(itemSelect.value),
-            quantity: parseFloat(qtyInput.value),
-            cost: parseFloat(costInput.value) || 0
-        };
-        
+
+        if (!itemSelect.value || !qtyInput.value) {
+            return; // Skip incomplete rows
+        }
+
         if (type === 'ingredient') {
             const unitSelect = row.querySelector('.unit');
-            itemData.unit = unitSelect ? unitSelect.value : 'g';
-            extraIngredients.push(itemData);
+            extraIngredients.push({
+                item_id: parseInt(itemSelect.value),
+                quantity: parseFloat(qtyInput.value),
+                unit: unitSelect.value
+            });
         } else if (type === 'container') {
-            extraContainers.push(itemData);
+            const reasonSelect = row.querySelector('.reason');
+            const oneTimeCheck = row.querySelector('.one-time');
+
+            extraContainers.push({
+                item_id: parseInt(itemSelect.value),
+                quantity: parseInt(qtyInput.value),
+                reason: reasonSelect ? reasonSelect.value : 'primary_packaging',
+                one_time: oneTimeCheck ? oneTimeCheck.checked : false
+            });
         }
     });
-    
-    // Send data to server
-    fetch(`/batches/${currentBatchId}/add-extras`, {
+
+    if (extraIngredients.length === 0 && extraContainers.length === 0) {
+        showAlert('No extra items to save', 'warning');
+        return;
+    }
+
+    const batchId = getCurrentBatchId();
+    if (!batchId) {
+        showAlert('Batch ID not found', 'error');
+        return;
+    }
+
+    fetch(`/add-extra/${batchId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
+            'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify({
             extra_ingredients: extraIngredients,
             extra_containers: extraContainers
         })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Extra items saved successfully');
-            location.reload();
-        } else {
-            alert('Error: ' + (data.message || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error saving extras: ' + error.message);
-    });
-}
-
-// Timer Functions
-function startTimer(name, duration) {
-    if (!currentBatchId) {
-        alert('Batch ID not found');
-        return;
-    }
-    
-    fetch(`/timers/start`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
-        },
-        body: JSON.stringify({
-            batch_id: currentBatchId,
-            name: name,
-            duration: duration
-        })
-    })
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            location.reload();
+            showAlert('Extra items saved successfully', 'success');
+
+            // Clear all extra rows
+            document.querySelectorAll('.extra-row').forEach(row => row.remove());
+
+            // Refresh container display
+            if (typeof refreshContainerDisplay === 'function') {
+                refreshContainerDisplay();
+            }
+
+            // Refresh the page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else {
-            alert('Error starting timer: ' + data.message);
+            const errorMsg = data.errors ? 
+                data.errors.map(err => `${err.item}: ${err.message}`).join('\n') :
+                'Error saving extra items';
+            showAlert(errorMsg, 'error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error starting timer');
+        console.error('Error saving extras:', error);
+        showAlert('Error saving extra items', 'error');
     });
-}
-
-function stopTimer(timerId) {
-    fetch(`/timers/${timerId}/stop`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            location.reload();
-        } else {
-            alert('Error stopping timer: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error stopping timer');
-    });
-}
-
-// Batch action functions
-function cancelBatch() {
-    if (!currentBatchId) {
-        alert('Batch ID not found');
-        return;
-    }
-    
-    if (confirm('Are you sure you want to cancel this batch? This cannot be undone.')) {
-        window.location.href = `/batches/${currentBatchId}/cancel`;
-    }
-}
-
-function markBatchFailed() {
-    if (!currentBatchId) {
-        alert('Batch ID not found');
-        return;
-    }
-    
-    if (confirm('Are you sure you want to mark this batch as failed? This cannot be undone.')) {
-        window.location.href = `/batches/${currentBatchId}/mark-failed`;
-    }
-}
-
-function validateBatchForm() {
-    // Add any validation logic here
-    return true;
 }
 
 function saveBatchNotes() {
-    if (!currentBatchId) {
-        return Promise.reject('Batch ID not found');
-    }
-    
-    const notesTextarea = document.querySelector('textarea[name="notes"]');
-    const tagsInput = document.querySelector('input[name="tags"]');
-    
-    const data = {
-        notes: notesTextarea ? notesTextarea.value : '',
-        tags: tagsInput ? tagsInput.value : ''
+  const batchId = window.location.pathname.split('/').pop();
+  const notes = document.querySelector('textarea[name="notes"]').value;
+  const tags = document.querySelector('input[name="tags"]').value;
+  const csrf = document.querySelector('input[name="csrf_token"]').value;
+
+  return fetch(`/batches/${batchId}/update-notes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrf
+    },
+    body: JSON.stringify({ notes, tags })
+  });
+}
+
+function cancelBatch() {
+  if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
+    const batchId = window.location.pathname.split('/').pop();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/batches/cancel/${batchId}`;
+
+    const csrf = document.querySelector('.csrf-token').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrf;
+
+    form.appendChild(csrfInput);
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function showContainerAdjustModal(containerId, containerName, currentQty) {
+    currentContainerId = containerId;
+    currentQuantity = currentQty;
+    document.getElementById('containerName').textContent = containerName;
+    document.getElementById('currentQuantity').textContent = currentQty;
+
+    // Reset form
+    document.getElementById('adjustmentType').value = 'quantity';
+    document.getElementById('totalQuantity').value = currentQty;
+    document.getElementById('adjustmentNotes').value = '';
+    showAdjustmentOptions();
+
+    const modal = new bootstrap.Modal(document.getElementById('containerAdjustModal'));
+    modal.show();
+}
+
+function showAdjustmentOptions() {
+    const type = document.getElementById('adjustmentType').value;
+
+    document.getElementById('quantityAdjustment').style.display = type === 'quantity' ? 'block' : 'none';
+    document.getElementById('containerReplacement').style.display = type === 'replace' ? 'block' : 'none';
+    document.getElementById('damageReason').style.display = type === 'damage' ? 'block' : 'none';
+}
+
+function saveContainerAdjustment() {
+    const type = document.getElementById('adjustmentType').value;
+    const notes = document.getElementById('adjustmentNotes').value;
+    const batchId = getCurrentBatchId();
+
+    let data = {
+        adjustment_type: type,
+        notes: notes
     };
-    
-    return fetch(`/batches/${currentBatchId}/save-notes`, {
+
+    if (type === 'quantity') {
+        const newTotal = parseInt(document.getElementById('totalQuantity').value);
+        data.new_total_quantity = newTotal;
+    } else if (type === 'replace') {
+        data.new_container_id = document.getElementById('newContainer').value;
+        data.new_quantity = parseInt(document.getElementById('newQuantity').value);
+    } else if (type === 'damage') {
+        data.damage_quantity = parseInt(document.getElementById('damageQuantity').value);
+    }
+
+    fetch(`/api/batches/${batchId}/containers/${currentContainerId}/adjust`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('.csrf-token').value
+            'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to save notes');
+        if (data.success) {
+            showAlert('Container adjusted successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('Error: ' + data.message, 'error');
         }
-        return data;
+    })
+    .catch(error => {
+        console.error('Error adjusting container:', error);
+        showAlert('Failed to adjust container', 'error');
     });
 }
 
-function openBatchInventorySummary(batchId) {
-    window.open(`/batches/${batchId}/inventory-summary`, '_blank');
-}
+// Event listener for adjustment type changes
+document.addEventListener('DOMContentLoaded', function() {
+    const adjustmentSelect = document.getElementById('adjustmentType');
+    if (adjustmentSelect) {
+        adjustmentSelect.addEventListener('change', showAdjustmentOptions);
+    }
+});

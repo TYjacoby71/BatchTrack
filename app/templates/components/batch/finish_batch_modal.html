@@ -101,6 +101,7 @@
                   <tr>
                     <th>Container</th>
                     <th>Used in Batch</th>
+                    <th>Adjust</th>
                     <th>Final Count</th>
                   </tr>
                 </thead>
@@ -109,6 +110,13 @@
                   <tr>
                     <td>{{ item.size_label }}</td>
                     <td><span id="used_{{ item.container.id }}">{{ item.original_used }}</span></td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, -1)">-</button>
+                        <input type="number" id="adjust_{{ item.container.id }}" class="form-control text-center" value="0" style="max-width: 60px;">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, 1)">+</button>
+                      </div>
+                    </td>
                     <td>
                       <span id="final_{{ item.container.id }}">{{ item.original_used }}</span>
                       <input type="hidden" name="container_final_{{ item.container.id }}" id="hidden_{{ item.container.id }}" value="{{ item.original_used }}">
@@ -120,6 +128,7 @@
             </div>
             <div class="form-text">
               <strong>Used in Batch:</strong> Containers already deducted during batch creation<br>
+              <strong>Adjust:</strong> Add (+) or remove (-) containers based on actual usage<br>
               <strong>Final Count:</strong> Number of product units to create in inventory
             </div>
           </div>
@@ -171,6 +180,25 @@ function updateExpirationDate() {
   }
 }
 
+function adjustContainer(containerId, change) {
+  const adjustInput = document.getElementById('adjust_' + containerId);
+  if (!adjustInput) return;
+
+  const currentAdjust = parseInt(adjustInput.value) || 0;
+  const newAdjust = currentAdjust + change;
+  adjustInput.value = newAdjust;
+
+  // Update final count based on used + adjustment
+  const usedElement = document.getElementById('used_' + containerId);
+  const used = usedElement ? parseInt(usedElement.textContent) || 0 : 0;
+  const finalCount = Math.max(0, used + newAdjust);
+
+  const finalElement = document.getElementById('final_' + containerId);
+  const hiddenInput = document.getElementById('hidden_' + containerId);
+  if (finalElement) finalElement.textContent = finalCount;
+  if (hiddenInput) hiddenInput.value = finalCount;
+}
+
 function loadVariants() {
   const productId = document.getElementById('product_id').value;
   const variantSelect = document.getElementById('variant_label');
@@ -219,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Load container summary for finish modal
       loadFinishModalContainerSummary();
-
+      
       // Set up yield validation
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
@@ -233,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadFinishModalContainerSummary() {
   const batchId = {{ batch.id }};
-
+  
   fetch(`/api/batches/${batchId}/containers`)
     .then(response => response.json())
     .then(data => {
@@ -247,7 +275,7 @@ function loadFinishModalContainerSummary() {
 function updateFinishModalContainerSummary(summary) {
   const summaryDiv = document.getElementById('finish-modal-container-summary');
   if (!summaryDiv) return;
-
+  
   summaryDiv.innerHTML = `
     <div class="row">
       <div class="col-md-6">
@@ -265,7 +293,7 @@ function updateFinishModalContainerSummary(summary) {
 function validateFinishModalYield() {
   const finalQuantity = parseFloat(document.getElementById('final_quantity')?.value || 0);
   const batchId = {{ batch.id }};
-
+  
   if (finalQuantity > 0) {
     fetch(`/api/batches/${batchId}/validate-yield`, {
       method: 'POST',
@@ -288,9 +316,9 @@ function validateFinishModalYield() {
 function updateFinishModalValidation(validation) {
   const validationDiv = document.getElementById('finish-modal-yield-validation');
   const messagesDiv = document.getElementById('finish-modal-validation-messages');
-
+  
   if (!validationDiv || !messagesDiv) return;
-
+  
   if (validation.warnings && validation.warnings.length > 0) {
     validationDiv.style.display = 'block';
     messagesDiv.innerHTML = validation.warnings.map(warning => `<div>• ${warning}</div>`).join('');
