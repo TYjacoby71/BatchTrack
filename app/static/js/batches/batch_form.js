@@ -190,7 +190,7 @@ function saveExtras() {
   const batchId = window.location.pathname.split('/').pop();
   const csrfToken = document.querySelector('.csrf-token').value;
 
-  fetch(`/batches/add-extra/${batchId}`, {
+  fetch(`/batches/${batchId}/add-extras`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -203,7 +203,7 @@ function saveExtras() {
   })
   .then(response => response.json())
   .then(data => {
-    if (data.success) {
+    if (data.status === 'success') {
       alert('Extra items saved successfully');
       window.location.reload();
     } else {
