@@ -16,22 +16,63 @@ def add_extra_to_batch(batch_id):
     extra_containers = data.get("extra_containers", [])
     errors = []
 
-    # Handle extra containers
+    # Handle extra containers with reason tracking
     for container in extra_containers:
         container_item = InventoryItem.query.get(container["item_id"])
         if not container_item:
             continue
 
         needed_amount = float(container["quantity"])
-        result = process_inventory_adjustment(
+        reason = container.get("reason", "extra_needed")  # primary_packaging, overflow, broke_container, test_sample, other
+        one_time = container.get("one_time", False)  # For broken containers when inventory is zero
+        
+        # Validate reason
+        valid_reasons = ["primary_packaging", "overflow", "broke_container", "test_sample", "other"]
+        if reason not in valid_reasons:
+            errors.append(f"Invalid reason for container {container_item.name}")
+            continue
+
+        # Handle one-time containers (don't deduct from inventory)
+        if one_time:
+            # Log the container usage without inventory deduction
+            from app.models import BatchContainer
+            batch_container = BatchContainer(
+                batch_id=batch.id,
+                container_name=container_item.name,
+                container_size=container_item.size or 0,
+                quantity_used=needed_amount,
+                reason=reason,
+                one_time_use=True,
+                exclude_from_product=(reason == "broke_container"),
+                created_by=current_user.id
+            )
+            db.session.add(batch_container)
+        else:
+            # Normal inventory deduction
+            result = process_inventory_adjustment(
                 item_id=container_item.id,
                 quantity=-needed_amount,  # Negative for deduction
                 change_type='batch',
                 unit=container_item.unit,
-                notes=f"Extra container for batch {batch.label_code}",
+                notes=f"Extra container for batch {batch.label_code} - Reason: {reason}",
                 batch_id=batch.id,
                 created_by=current_user.id
             )
+            
+            # Track container usage with reason
+            from app.models import BatchContainer
+            batch_container = BatchContainer(
+                batch_id=batch.id,
+                container_item_id=container_item.id,
+                container_name=container_item.name,
+                container_size=container_item.size or 0,
+                quantity_used=needed_amount,
+                reason=reason,
+                one_time_use=False,
+                exclude_from_product=(reason == "broke_container"),
+                created_by=current_user.id
+            )
+            db.session.add(batch_container)
 
         if not result:
             errors.append({

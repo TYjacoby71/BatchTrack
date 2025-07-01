@@ -68,7 +68,30 @@
             </div>
           </div>
 
-          <!-- Container Breakdown Section -->
+          <!-- Container Summary (Read-only) -->
+          <div class="mb-3">
+            <label class="form-label">Container Summary:</label>
+            <div class="alert alert-info">
+              <h6><i class="fas fa-info-circle"></i> Container Usage Review</h6>
+              <div id="container-summary">
+                <!-- Will be populated with container summary -->
+              </div>
+              <small class="text-muted">
+                <i class="fas fa-lock"></i> Container changes must be made in the Batch Progress page.
+              </small>
+            </div>
+          </div>
+
+          <!-- Yield Validation -->
+          <div class="mb-3" id="yield-validation" style="display: none;">
+            <div class="alert alert-warning">
+              <h6><i class="fas fa-exclamation-triangle"></i> Yield vs Container Validation:</h6>
+              <div id="validation-messages">
+                <!-- Validation messages will appear here -->
+              </div>
+            </div>
+          </div>
+
           {% if container_breakdown %}
           <div class="form-group mb-3">
             <label>Container Distribution</label>
