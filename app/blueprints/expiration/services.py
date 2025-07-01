@@ -380,18 +380,24 @@ class ExpirationService:
         """Mark an expired item as spoiled and remove from inventory"""
         from flask_login import current_user
 
+        # Convert item_id to int to ensure proper type
+        try:
+            item_id = int(item_id)
+        except (ValueError, TypeError):
+            raise ValueError("Invalid item ID")
+
         if item_type == 'fifo':
             # Handle FIFO entry spoilage
             entry = InventoryHistory.query.get(item_id)
-            if not entry or entry.remaining_quantity <= 0:
+            if not entry or float(entry.remaining_quantity) <= 0:
                 raise ValueError("FIFO entry not found or has no remaining quantity")
 
             # Use centralized inventory adjustment service
-            from services.inventory_adjustment import process_inventory_adjustment
+            from ...services.inventory_adjustment import process_inventory_adjustment
 
             success = process_inventory_adjustment(
                 item_id=entry.inventory_item_id,
-                quantity=entry.remaining_quantity,
+                quantity=float(entry.remaining_quantity),
                 change_type='spoil',
                 unit=entry.unit,
                 notes=f"Marked as spoiled - expired on {entry.expiration_date}",
@@ -405,13 +411,13 @@ class ExpirationService:
             from ...services.product_inventory_service import ProductInventoryService
             
             history_entry = ProductSKUHistory.query.get(item_id)
-            if not history_entry or history_entry.remaining_quantity <= 0:
+            if not history_entry or float(history_entry.remaining_quantity) <= 0:
                 raise ValueError("Product history entry not found or has no remaining quantity")
 
             # Use product inventory service to deduct the spoiled quantity
             success = ProductInventoryService.deduct_stock(
                 sku_id=history_entry.sku_id,
-                quantity=history_entry.remaining_quantity,
+                quantity=float(history_entry.remaining_quantity),
                 change_type='spoil',
                 notes=f"Marked as spoiled - expired batch"
             )
