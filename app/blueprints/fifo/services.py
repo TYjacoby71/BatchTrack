@@ -53,7 +53,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     Handles recounts with proper FIFO integrity and expiration tracking
     Aligned with inventory_adjustment service standards
     """
-    from models import InventoryItem
+    from ...models import InventoryItem
     from datetime import datetime, timedelta
 
     item = InventoryItem.query.get(inventory_item_id)
