@@ -325,3 +325,4 @@ batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
 
 batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
+```
