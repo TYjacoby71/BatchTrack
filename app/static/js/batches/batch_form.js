@@ -148,6 +148,77 @@ function updateRowCost(selectElement) {
   }
 }
 
+function addExtraItemRow(type) {
+  const container = document.getElementById('extra-ingredients-container');
+  const template = document.getElementById(`extra-${type}-template`);
+  
+  if (!template || !container) {
+    console.error(`Template or container not found for type: ${type}`);
+    return;
+  }
+  
+  const clone = template.content.cloneNode(true);
+  container.appendChild(clone);
+}
+
+function saveExtras() {
+  const extraRows = document.querySelectorAll('.extra-row');
+  const extraIngredients = [];
+  const extraContainers = [];
+  
+  extraRows.forEach(row => {
+    const type = row.dataset.type;
+    const itemSelect = row.querySelector('.item-select');
+    const qtyInput = row.querySelector('.qty');
+    const reasonSelect = row.querySelector('.reason');
+    const costInput = row.querySelector('.cost');
+    
+    if (!itemSelect.value || !qtyInput.value) return;
+    
+    const itemData = {
+      item_id: parseInt(itemSelect.value),
+      quantity: parseFloat(qtyInput.value),
+      reason: reasonSelect.value,
+      cost: parseFloat(costInput.value) || 0
+    };
+    
+    if (type === 'ingredient') {
+      const unitSelect = row.querySelector('.unit');
+      itemData.unit = unitSelect.value;
+      extraIngredients.push(itemData);
+    } else if (type === 'container') {
+      extraContainers.push(itemData);
+    }
+  });
+  
+  const batchId = window.location.pathname.split('/').pop();
+  const csrfToken = document.querySelector('.csrf-token').value;
+  
+  fetch(`/batches/add-extra/${batchId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({
+      extra_ingredients: extraIngredients,
+      extra_containers: extraContainers
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error saving extras: ' + (data.message || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error saving extras');
+  });
+}
+
 function saveExtras() {
   const extraRows = document.querySelectorAll('.extra-row');
   const extra_ingredients = [];
