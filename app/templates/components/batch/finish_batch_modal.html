@@ -82,6 +82,7 @@
                 <thead>
                   <tr>
                     <th>Container</th>
+                    <th>Source</th>
                     <th>Used in Batch</th>
                     <th>Adjust</th>
                     <th>Final Count</th>
@@ -91,6 +92,11 @@
                   {% for item in container_breakdown %}
                   <tr>
                     <td>{{ item.size_label }}</td>
+                    <td>
+                      <span class="badge {% if item.source == 'batch' %}bg-primary{% else %}bg-info{% endif %}">
+                        {{ item.source|title }}
+                      </span>
+                    </td>
                     <td><span id="used_{{ item.container.id }}">{{ item.original_used }}</span></td>
                     <td>
                       <div class="input-group input-group-sm">
@@ -109,6 +115,7 @@
               </table>
             </div>
             <div class="form-text">
+              <strong>Source:</strong> "Batch" = original recipe containers, "Extra" = added during production<br>
               <strong>Used in Batch:</strong> Containers already deducted during batch creation<br>
               <strong>Adjust:</strong> Add (+) or remove (-) containers based on actual usage<br>
               <strong>Final Count:</strong> Number of product units to create in inventory
