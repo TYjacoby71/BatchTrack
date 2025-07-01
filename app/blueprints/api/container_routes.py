@@ -202,42 +202,56 @@ def adjust_batch_container(batch_id, container_id):
         notes = data.get('notes', '')
         
         batch = Batch.query.get_or_404(batch_id)
-        container_record = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+        
+        # Check if it's a regular container or extra container
+        container_record = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first()
+        if not container_record:
+            from ...models import ExtraBatchContainer
+            container_record = ExtraBatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+            is_extra_container = True
+        else:
+            is_extra_container = False
         
         if adjustment_type == 'quantity':
-            quantity_change = data.get('quantity_change', 0)
-            if quantity_change == 0:
-                return jsonify({'success': False, 'message': 'No quantity change specified'})
+            new_total = data.get('new_total_quantity', 0)
+            if new_total < 0:
+                return jsonify({'success': False, 'message': 'Total quantity cannot be negative'})
             
-            new_quantity = container_record.quantity_used + quantity_change
-            if new_quantity < 0:
-                return jsonify({'success': False, 'message': 'Cannot reduce below zero'})
+            current_qty = container_record.quantity_used
+            quantity_difference = new_total - current_qty
             
-            # Adjust inventory
-            from ...services.inventory_adjustment import process_inventory_adjustment
-            process_inventory_adjustment(
-                item_id=container_record.container_id,
-                quantity=-quantity_change,  # Negative for deduction
-                change_type='batch_adjustment',
-                unit='count',
-                notes=f"Container adjustment for batch {batch.label_code}: {notes}",
-                batch_id=batch_id,
-                created_by=current_user.id
-            )
+            if quantity_difference != 0:
+                # Adjust inventory - positive for returns, negative for additional deductions
+                from ...services.inventory_adjustment import process_inventory_adjustment
+                change_type = 'refunded' if quantity_difference > 0 else 'batch_adjustment'
+                
+                process_inventory_adjustment(
+                    item_id=container_record.container_id,
+                    quantity=quantity_difference,  # Positive for return, negative for deduction
+                    change_type=change_type,
+                    unit='count',
+                    notes=f"Container quantity adjustment for batch {batch.label_code}: {notes}",
+                    batch_id=batch_id,
+                    created_by=current_user.id
+                )
             
-            container_record.quantity_used = new_quantity
+            container_record.quantity_used = new_total
             
         elif adjustment_type == 'replace':
             new_container_id = data.get('new_container_id')
             new_quantity = data.get('new_quantity', 1)
             
+            if not new_container_id:
+                return jsonify({'success': False, 'message': 'New container must be selected'})
+            
             # Return old containers to inventory
+            from ...services.inventory_adjustment import process_inventory_adjustment
             process_inventory_adjustment(
                 item_id=container_record.container_id,
                 quantity=container_record.quantity_used,  # Positive to return
-                change_type='batch_adjustment',
+                change_type='refunded',
                 unit='count',
-                notes=f"Container replacement return for batch {batch.label_code}",
+                notes=f"Container replacement return for batch {batch.label_code}: {notes}",
                 batch_id=batch_id,
                 created_by=current_user.id
             )
@@ -264,7 +278,15 @@ def adjust_batch_container(batch_id, container_id):
             if damage_quantity <= 0 or damage_quantity > container_record.quantity_used:
                 return jsonify({'success': False, 'message': 'Invalid damage quantity'})
             
-            # Create extra container record to track the damaged containers
+            # Check if we have stock to replace damaged containers
+            container_item = InventoryItem.query.get(container_record.container_id)
+            if container_item.quantity < damage_quantity:
+                return jsonify({
+                    'success': False, 
+                    'message': f'Not enough {container_item.name} in stock to replace damaged containers. Available: {container_item.quantity}, Need: {damage_quantity}'
+                })
+            
+            # Create extra container record to track the damaged containers  
             from ...models import ExtraBatchContainer
             damaged_record = ExtraBatchContainer(
                 batch_id=batch_id,
@@ -277,10 +299,19 @@ def adjust_batch_container(batch_id, container_id):
             )
             db.session.add(damaged_record)
             
-            # Reduce original container count
-            container_record.quantity_used -= damage_quantity
+            # Deduct replacement containers from inventory
+            from ...services.inventory_adjustment import process_inventory_adjustment
+            process_inventory_adjustment(
+                item_id=container_record.container_id,
+                quantity=-damage_quantity,  # Negative for deduction
+                change_type='damaged',
+                unit='count',
+                notes=f"Replacement containers for damaged units in batch {batch.label_code}: {notes}",
+                batch_id=batch_id,
+                created_by=current_user.id
+            )
             
-            # No inventory adjustment needed - containers were already deducted
+            # The original container count stays the same - we're adding extra containers to replace damaged ones
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Container adjusted successfully'})

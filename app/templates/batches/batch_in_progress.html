@@ -412,9 +412,9 @@
         </div>
 
         <div id="quantityAdjustment" class="mb-3">
-          <label for="quantityChange" class="form-label">Quantity Change</label>
-          <input type="number" class="form-control" id="quantityChange" min="-10" max="10" value="0">
-          <div class="form-text">Use negative numbers to reduce, positive to increase</div>
+          <label for="quantityChange" class="form-label">Total Quantity</label>
+          <input type="number" class="form-control" id="totalQuantity" min="0" value="0">
+          <div class="form-text">Enter the final quantity of this container</div>
         </div>
 
         <div id="containerReplacement" class="mb-3" style="display: none;">
@@ -489,7 +489,7 @@ function showContainerAdjustModal(containerId, containerName, currentQuantity) {
 
   // Reset values
   document.getElementById('adjustmentType').value = 'quantity';
-  document.getElementById('quantityChange').value = 0;
+  document.getElementById('totalQuantity').value = currentQuantity; // Initialize with current quantity
   document.getElementById('newQuantity').value = 1;
   document.getElementById('damageQuantity').value = 1;
   document.getElementById('adjustmentNotes').value = '';
@@ -521,26 +521,62 @@ document.getElementById('adjustmentType').addEventListener('change', function() 
 });
 
 function saveContainerAdjustment() {
-  // Gather the information
-  var adjustmentType = document.getElementById('adjustmentType').value;
-  var quantityChange = document.getElementById('quantityChange').value;
-  var newContainerId = document.getElementById('newContainer').value;
-  var newQuantity = document.getElementById('newQuantity').value;
-  var damageQuantity = document.getElementById('damageQuantity').value;
-  var adjustmentNotes = document.getElementById('adjustmentNotes').value;
-  
-  // Placeholder for sending the data (AJAX request)
-  console.log("Adjustment Type:", adjustmentType);
-  console.log("Quantity Change:", quantityChange);
-  console.log("New Container ID:", newContainerId);
-  console.log("New Quantity:", newQuantity);
-  console.log("Damage Quantity:", damageQuantity);
-  console.log("Adjustment Notes:", adjustmentNotes);
+    var containerId = document.getElementById('containerName').innerText;
+    var adjustmentType = document.getElementById('adjustmentType').value;
+    var totalQuantity = document.getElementById('totalQuantity').value;
+    var newContainerId = document.getElementById('newContainer').value;
+    var newQuantity = document.getElementById('newQuantity').value;
+    var damageQuantity = document.getElementById('damageQuantity').value;
+    var adjustmentNotes = document.getElementById('adjustmentNotes').value;
 
-  // Close modal
-  var myModalEl = document.getElementById('containerAdjustModal')
-  var modal = bootstrap.Modal.getInstance(myModalEl)
-  modal.hide()
+    // Basic validation
+    if (!containerId) {
+        alert('Container ID is missing.');
+        return;
+    }
+
+    let data = {
+        container_id: containerId,
+        adjustment_type: adjustmentType,
+        notes: adjustmentNotes
+    };
+
+    if (adjustmentType === 'quantity') {
+        data.total_quantity = totalQuantity;
+    } else if (adjustmentType === 'replace') {
+        data.new_container_id = newContainerId;
+        data.new_quantity = newQuantity;
+    } else if (adjustmentType === 'damage') {
+        data.damage_quantity = damageQuantity;
+    }
+
+    fetch('/batches/adjust_container/' + containerId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('.csrf-token').value,
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(result => {
+        alert(result.message); // Display success message
+        location.reload(); // Refresh the page
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred: ' + (error.message || 'Unknown error'));
+    })
+    .finally(() => {
+        var myModalEl = document.getElementById('containerAdjustModal');
+        var modal = bootstrap.Modal.getInstance(myModalEl);
+        modal.hide();
+    });
 }
 </script>
 

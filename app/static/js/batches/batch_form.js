@@ -250,15 +250,18 @@ function cancelBatch() {
 }
 
 let currentContainerId = null;
+let currentContainerItemId = null;
+let currentQuantity = 0;
 
 function showContainerAdjustModal(containerId, containerName, currentQty) {
     currentContainerId = containerId;
+    currentQuantity = currentQty;
     document.getElementById('containerName').textContent = containerName;
     document.getElementById('currentQuantity').textContent = currentQty;
 
     // Reset form
     document.getElementById('adjustmentType').value = 'quantity';
-    document.getElementById('quantityChange').value = 0;
+    document.getElementById('totalQuantity').value = currentQty;
     document.getElementById('adjustmentNotes').value = '';
     showAdjustmentOptions();
 
@@ -285,7 +288,8 @@ function saveContainerAdjustment() {
     };
 
     if (type === 'quantity') {
-        data.quantity_change = parseInt(document.getElementById('quantityChange').value);
+        const newTotal = parseInt(document.getElementById('totalQuantity').value);
+        data.new_total_quantity = newTotal;
     } else if (type === 'replace') {
         data.new_container_id = document.getElementById('newContainer').value;
         data.new_quantity = parseInt(document.getElementById('newQuantity').value);
@@ -297,20 +301,22 @@ function saveContainerAdjustment() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            location.reload(); // Refresh to show changes
+            showAlert('Container adjusted successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + data.message);
+            showAlert('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Error adjusting container:', error);
-        alert('Failed to adjust container');
+        showAlert('Failed to adjust container', 'error');
     });
 }
 
