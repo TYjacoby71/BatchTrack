@@ -118,6 +118,7 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     name = db.Column(db.String(64), nullable=False)
     description = db.Column(db.Text)
     color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color
+    default_density = db.Column(db.Float, nullable=True)  # Default density for category in g/ml
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
