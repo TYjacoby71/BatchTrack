@@ -19,10 +19,30 @@ def list_inventory():
     categories = IngredientCategory.query.all()
     total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
 
-    # Calculate freshness for each item
+    # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
+    from datetime import datetime
+    from sqlalchemy import and_
+    
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+        
+        # Calculate expired quantity using temporary attributes instead of properties
+        if item.is_perishable:
+            today = datetime.now().date()
+            expired_entries = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == item.id,
+                    InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.expiration_date != None,
+                    InventoryHistory.expiration_date < today
+                )
+            ).all()
+            item.temp_expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
+            item.temp_available_quantity = item.quantity - item.temp_expired_quantity
+        else:
+            item.temp_expired_quantity = 0
+            item.temp_available_quantity = item.quantity
 
     return render_template('inventory_list.html', 
                          inventory_items=inventory_items,
@@ -57,11 +77,29 @@ def view_inventory(id):
     history = pagination.items
 
     from datetime import datetime
+    
+    # Get expired FIFO entries for display
+    from sqlalchemy import and_
+    expired_entries = []
+    expired_total = 0
+    if item.is_perishable:
+        today = datetime.now().date()
+        expired_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )
+        ).order_by(InventoryHistory.expiration_date.asc()).all()
+        expired_total = sum(entry.remaining_quantity for entry in expired_entries)
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
                          history=history,
                          pagination=pagination,
+                         expired_entries=expired_entries,
+                         expired_total=expired_total,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,

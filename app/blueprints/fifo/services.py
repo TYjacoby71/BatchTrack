@@ -54,6 +54,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     Aligned with inventory_adjustment service standards
     """
     from ...models import InventoryItem
+    from flask_login import current_user
     from datetime import datetime, timedelta
 
     item = InventoryItem.query.get(inventory_item_id)
@@ -89,7 +90,8 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 unit_cost=None,  # Recounts don't track cost
                 note=f"{note} (From FIFO #{entry_id})",
                 created_by=user_id,
-                quantity_used=deduct_amount  # Track amount consumed for recount deductions
+                quantity_used=deduct_amount,  # Track amount consumed for recount deductions
+                organization_id=current_user.organization_id if current_user else item.organization_id
             )
             db.session.add(history)
 
@@ -125,7 +127,8 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                     fifo_reference_id=entry.id,
                     note=f"Recount restored to FIFO entry #{entry.id}",
                     created_by=user_id,
-                    quantity_used=None  # Additions don't consume inventory - always null
+                    quantity_used=None,  # Additions don't consume inventory - always null
+                    organization_id=current_user.organization_id if current_user else item.organization_id
                 )
                 db.session.add(history)
 
@@ -144,7 +147,8 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
                 note=f"New stock from recount after filling existing FIFO entries",
                 created_by=user_id,
                 quantity_used=0.0,  # Restocks don't consume inventory - always 0
-                timestamp=datetime.utcnow()
+                timestamp=datetime.utcnow(),
+                organization_id=current_user.organization_id if current_user else item.organization_id
             )
             db.session.add(history)
 

@@ -321,6 +321,44 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
 
+    @property
+    def available_quantity(self):
+        """Get non-expired quantity available for use"""
+        if not self.is_perishable:
+            return self.quantity
+        
+        from datetime import datetime
+        from sqlalchemy import and_
+        
+        today = datetime.now().date()
+        expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
+            .filter(and_(
+                InventoryHistory.inventory_item_id == self.id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )).scalar() or 0
+        
+        return max(0, self.quantity - expired_total)
+    
+    @property 
+    def expired_quantity(self):
+        """Get expired quantity awaiting physical removal"""
+        if not self.is_perishable:
+            return 0
+            
+        from datetime import datetime
+        from sqlalchemy import and_
+        
+        today = datetime.now().date()
+        return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
+            .filter(and_(
+                InventoryHistory.inventory_item_id == self.id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )).scalar() or 0
+
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
     id = db.Column(db.Integer, primary_key=True)

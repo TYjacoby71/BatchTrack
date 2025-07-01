@@ -231,7 +231,18 @@
               <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
                 <td class="col-name">{{ item.name }}</td>
                 <td class="col-unit">{{ item.unit }}</td>
-                <td class="col-quantity">{{ item.quantity }}</td>
+                <td class="col-quantity">
+                  <div class="d-flex flex-column align-items-end">
+                    <span class="badge bg-{{ 'danger' if item.available_quantity == 0 else 'warning' if item.available_quantity <= item.low_stock_threshold else 'success' }}">
+                      {{ "%.2f"|format(item.available_quantity) }} {{ item.unit or 'count' }} available
+                    </span>
+                    {% if item.expired_quantity > 0 %}
+                      <small class="badge bg-danger mt-1">
+                        +{{ "%.2f"|format(item.expired_quantity) }} expired
+                      </small>
+                    {% endif %}
+                  </div>
+                </td>
                 <td class="col-density">{{ "%.3f"|format(item.density) if item.density else 'N/A' }}</td>
                 <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
                 <td class="col-freshness">
@@ -482,7 +493,18 @@
                 <td class="col-name">{{ item.name }}</td>
                 <td class="col-storage">{{ item.storage_amount or 'N/A' }}</td>
                 <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
-                <td class="col-quantity">{{ item.quantity }}</td>
+                <td class="col-quantity">
+                  <div class="d-flex flex-column align-items-end">
+                    <span class="badge bg-{{ 'danger' if item.available_quantity == 0 else 'warning' if item.available_quantity <= item.low_stock_threshold else 'success' }}">
+                      {{ "%.2f"|format(item.available_quantity) }} {{ item.unit or 'count' }} available
+                    </span>
+                    {% if item.expired_quantity > 0 %}
+                      <small class="badge bg-danger mt-1">
+                        +{{ "%.2f"|format(item.expired_quantity) }} expired
+                      </small>
+                    {% endif %}
+                  </div>
+                </td>
                 <td class="col-cost">${{ "%.2f"|format(item.cost_per_unit or 0) }}</td>
                 <td class="col-freshness">
                   {% if item.freshness_percent is not none %}
@@ -659,8 +681,7 @@ function initTablePagination(tableType) {
     updateTable();
   });
 
-  // Column visibility toggle
-  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
+  // Column visibility toggle  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
   columnCheckboxes.forEach(checkbox => {
     checkbox.addEventListener('change', function() {
       const column = this.dataset.column;

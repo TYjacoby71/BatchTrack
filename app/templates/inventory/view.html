@@ -23,6 +23,56 @@
 
       {% if item.quantity > 0 or history|length > 0 %}
         {% include "inventory/components/item_summary_card.html" %}
+        
+        <!-- Expired Inventory Section -->
+        {% if expired_entries and expired_entries|length > 0 %}
+        <div class="card mb-3 border-warning">
+          <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Expired Inventory (Physically Remove)
+              <span class="badge bg-dark ms-2">{{ expired_total }} {{ item.unit or 'count' }}</span>
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning">
+              <strong>Action Required:</strong> These expired entries are still counted in your digital inventory but should be physically removed from storage and marked as spoiled.
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>FIFO Entry</th>
+                    <th>Quantity</th>
+                    <th>Expired</th>
+                    <th>Days Overdue</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in expired_entries %}
+                  {% set days_overdue = (now.date() - entry.expiration_date.date()).days %}
+                  <tr>
+                    <td>#{{ entry.id }}</td>
+                    <td>{{ entry.remaining_quantity }} {{ entry.unit }}</td>
+                    <td>{{ entry.expiration_date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                      <span class="badge bg-danger">{{ days_overdue }} day{{ 's' if days_overdue != 1 else '' }}</span>
+                    </td>
+                    <td>
+                      <button class="btn btn-outline-danger btn-sm" onclick="markAsSpoiled('fifo', {{ entry.id }})">
+                        <i class="fas fa-trash"></i> Mark Spoiled
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
         {% include "inventory/components/adjustment_form.html" %}
         
         <!-- FIFO Filter Toggle -->
@@ -150,4 +200,50 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/inventory/inventory_view.js') }}"></script>
+
+<script>
+// Function to mark expired items as spoiled
+async function markAsSpoiled(type, id) {
+    if (!confirm('Only mark this item as spoiled if you have physically removed it from your inventory to maintain proper count.\n\nThis action will remove it from the system and cannot be undone.\n\nProceed?')) return;
+
+    try {
+        const response = await fetch('/expiration/api/mark-spoiled', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken() 
+            },
+            body: JSON.stringify({ type: type, id: id })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Marked ${data.spoiled_count} item as spoiled`);
+            location.reload();
+        } else {
+            alert('Error marking item as spoiled: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error marking item as spoiled:', error);
+        alert('Network error occurred');
+    }
+}
+
+// Get CSRF token function
+function getCSRFToken() {
+    const tokenMeta = document.querySelector('meta[name=csrf-token]');
+    if (tokenMeta) {
+        return tokenMeta.getAttribute('content');
+    }
+    
+    // Fallback: try to find it in forms
+    const csrfInput = document.querySelector('input[name=csrf_token]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    return '';
+}
+</script>
 {% endblock %}
