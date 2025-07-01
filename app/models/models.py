@@ -292,7 +292,6 @@ class ExtraBatchIngredient(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float)
     total_cost = db.Column(db.Float)
-    reason = db.Column(db.String(20), nullable=False, default='extra_needed')  # Track why ingredient was added
 
     batch = db.relationship('Batch', backref='extra_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='extra_batch_usages')

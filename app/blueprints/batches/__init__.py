@@ -18,3 +18,7 @@ try:
 except ImportError:
     cancel_batch_bp = None
 
+try:
+    from .add_extra import add_extra_bp
+except ImportError:
+    add_extra_bp = None

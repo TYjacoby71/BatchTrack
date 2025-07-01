@@ -126,6 +126,8 @@
         </div>
     </div>
 
+    <!-- No extra container section needed - using existing extra items system -->
+
     <!-- Section 4: Batch Cost Summary -->
     <div class="batch-summary mb-4">
         <div class="card">
@@ -177,7 +179,12 @@
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
                                 <td>{{ container.container.name }}</td>
-                                <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
+                                <td>
+                                  <span class="container-quantity-display" onclick="showContainerAdjustModal({{ container.id }}, '{{ container.container.name }}', {{ container.quantity_used }})">
+                                    {{ container.quantity_used }}
+                                    <i class="fas fa-edit ms-1 text-muted" style="font-size: 0.8em;"></i>
+                                  </span>
+                                </td>
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
@@ -215,7 +222,12 @@
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
                                 <td>{{ container.container.name }}</td>
-                                <td>{{ container.quantity_used }}</td>
+                                <td>
+                                  <span class="container-quantity-display" onclick="showContainerAdjustModal({{ container.id }}, '{{ container.container.name }}', {{ container.quantity_used }})">
+                                    {{ container.quantity_used }}
+                                    <i class="fas fa-edit ms-1 text-muted" style="font-size: 0.8em;"></i>
+                                  </span>
+                                </td>
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
@@ -308,7 +320,7 @@
 <!-- Templates for extra ingredients/containers -->
 <template id="extra-ingredient-template">
     <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="ingredient">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select ingredient</option>
                 {% for ingredient in all_ingredients %}
@@ -319,22 +331,14 @@
         <div class="col-md-2">
             <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <select class="form-select unit">
                 {% for unit in units %}
                     <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
-            <select class="form-select reason">
-                <option value="extra_needed">Extra Needed</option>
-                <option value="spillage">Spillage</option>
-                <option value="measurement_error">Measurement Error</option>
-                <option value="other">Other</option>
-            </select>
-        </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
         </div>
         <div class="col-md-1">
@@ -351,25 +355,26 @@
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select container</option>
                 {% for container in inventory_items if container.type == 'container' %}
-                    <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}">{{ container.name }}</option>
+                    <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}" data-stock="{{ container.stock_amount or 0 }}">{{ container.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="col-md-2">
-            <input type="number" class="form-control qty" placeholder="Quantity" min="1" />
-        </div>
-        <div class="col-md-2">
-            <select class="form-select reason">
-                <option value="damaged">Damaged</option>
-                <option value="extra_needed">Extra Needed</option>
-                <option value="spillage">Spillage</option>
-                <option value="other">Other</option>
-            </select>
+            <input type="number" class="form-control qty" placeholder="Qty" min="1" />
         </div>
         <div class="col-md-3">
+            <select class="form-select reason">
+                <option value="extra_yield">Extra Yield</option>
+                <option value="damaged">Broken/Damaged</option>
+            </select>
+            <div class="form-text">
+                <small>Reason will be tracked for batch history queries</small>
+            </div>
+        </div>
+        <div class="col-md-2">
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
@@ -383,6 +388,67 @@
 {# FIFO Insight Modal #}
 {% include 'components/batch/fifo_insight_modal.html' %}
 
+<!-- Container Adjustment Modal -->
+<div class="modal fade" id="containerAdjustModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Adjust Container</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Container: <span id="containerName"></span></label>
+          <label class="form-label">Current Quantity: <span id="currentQuantity"></span></label>
+        </div>
+
+        <div class="mb-3">
+          <label for="adjustment" class="form-label">Adjustment</label>
+          <select class="form-select" id="adjustmentType">
+            <option value="quantity">Adjust Quantity</option>
+            <option value="replace">Replace Container Type</option>
+            <option value="damage">Mark as Damaged</option>
+          </select>
+        </div>
+
+        <div id="quantityAdjustment" class="mb-3">
+          <label for="quantityChange" class="form-label">Total Quantity</label>
+          <input type="number" class="form-control" id="totalQuantity" min="0" value="0">
+          <div class="form-text">Enter the final quantity of this container</div>
+        </div>
+
+        <div id="containerReplacement" class="mb-3" style="display: none;">
+          <label for="newContainer" class="form-label">New Container</label>
+          <select class="form-select" id="newContainer">
+            {% for item in inventory_items %}
+              {% if item.type == 'container' %}
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.quantity }} available)</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          <label for="newQuantity" class="form-label mt-2">Quantity</label>
+          <input type="number" class="form-control" id="newQuantity" min="1" value="1">
+        </div>
+
+        <div id="damageReason" class="mb-3" style="display: none;">
+          <label for="damageQuantity" class="form-label">Quantity to Mark as Damaged</label>
+          <input type="number" class="form-control" id="damageQuantity" min="1">
+          <div class="form-text">These containers will be removed from final product count</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="adjustmentNotes" class="form-label">Notes (Optional)</label>
+          <textarea class="form-control" id="adjustmentNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveContainerAdjustment()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -394,20 +460,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle collapse icon rotation
-    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
-    collapseElements.forEach(function(element) {
+    // Handle collapse icons
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(element => {
         const target = document.querySelector(element.getAttribute('data-bs-target'));
         if (target) {
-            target.addEventListener('show.bs.collapse', function() {
+            target.addEventListener('show.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-right');
                     icon.classList.add('fa-chevron-down');
                 }
             });
-
-            target.addEventListener('hide.bs.collapse', function() {
+            target.addEventListener('hide.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-down');
@@ -417,6 +481,109 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+let currentContainerId = null;
+let currentContainerItemId = null;
+let currentQuantity = 0;
+
+function showContainerAdjustModal(containerId, containerName, currentQty) {
+  // Store the container ID properly
+  currentContainerId = containerId;
+  currentQuantity = currentQty;
+
+  // Set modal content
+  document.getElementById('containerName').innerText = containerName;
+  document.getElementById('currentQuantity').innerText = currentQty;
+
+  // Reset values
+  document.getElementById('adjustmentType').value = 'quantity';
+  document.getElementById('totalQuantity').value = currentQty; // Initialize with current quantity
+  document.getElementById('newQuantity').value = 1;
+  document.getElementById('damageQuantity').value = 1;
+  document.getElementById('adjustmentNotes').value = '';
+
+  // Hide/show relevant adjustment options
+  document.getElementById('quantityAdjustment').style.display = 'block';
+  document.getElementById('containerReplacement').style.display = 'none';
+  document.getElementById('damageReason').style.display = 'none';
+
+  // Show the modal
+  var myModal = new bootstrap.Modal(document.getElementById('containerAdjustModal'))
+  myModal.show()
+}
+
+document.getElementById('adjustmentType').addEventListener('change', function() {
+    if (this.value === 'quantity') {
+      document.getElementById('quantityAdjustment').style.display = 'block';
+      document.getElementById('containerReplacement').style.display = 'none';
+      document.getElementById('damageReason').style.display = 'none';
+    } else if (this.value === 'replace') {
+      document.getElementById('quantityAdjustment').style.display = 'none';
+      document.getElementById('containerReplacement').style.display = 'block';
+      document.getElementById('damageReason').style.display = 'none';
+    } else if (this.value === 'damage') {
+      document.getElementById('quantityAdjustment').style.display = 'none';
+      document.getElementById('containerReplacement').style.display = 'none';
+      document.getElementById('damageReason').style.display = 'block';
+    }
+});
+
+function saveContainerAdjustment() {
+    var adjustmentType = document.getElementById('adjustmentType').value;
+    var totalQuantity = document.getElementById('totalQuantity').value;
+    var newContainerId = document.getElementById('newContainer').value;
+    var newQuantity = document.getElementById('newQuantity').value;
+    var damageQuantity = document.getElementById('damageQuantity').value;
+    var adjustmentNotes = document.getElementById('adjustmentNotes').value;
+
+    // Basic validation
+    if (!currentContainerId) {
+        alert('Container ID is missing.');
+        return;
+    }
+
+    let data = {
+        adjustment_type: adjustmentType,
+        notes: adjustmentNotes
+    };
+
+    if (adjustmentType === 'quantity') {
+        data.total_quantity = totalQuantity;
+    } else if (adjustmentType === 'replace') {
+        data.new_container_id = newContainerId;
+        data.new_quantity = newQuantity;
+    } else if (adjustmentType === 'damage') {
+        data.damage_quantity = damageQuantity;
+    }
+
+    fetch(`/api/batches/{{ batch.id }}/containers/${currentContainerId}/adjust`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('.csrf-token').value,
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(result => {
+        alert(result.message); // Display success message
+        location.reload(); // Refresh the page
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred: ' + (error.message || 'Unknown error'));
+    })
+    .finally(() => {
+        var myModalEl = document.getElementById('containerAdjustModal');
+        var modal = bootstrap.Modal.getInstance(myModalEl);
+        modal.hide();
+    });
+}
 </script>
 
 {% endblock %}
