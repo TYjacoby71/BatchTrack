@@ -24,6 +24,11 @@ class BatchContainer(db.Model):
     @property
     def total_capacity(self):
         """Calculate total capacity of this container usage"""
+        if hasattr(self.container_item, 'storage_amount') and self.container_item.storage_amount:
+            try:
+                return float(self.container_item.storage_amount) * self.quantity_used
+            except (ValueError, TypeError):
+                return self.container_size * self.quantity_used
         return self.container_size * self.quantity_used
 
     @property
@@ -32,19 +37,9 @@ class BatchContainer(db.Model):
         return not self.exclude_from_product
 
     @property
-    def total_capacity(self):
-        """Calculate total capacity for this container entry"""
-        if hasattr(self.container_item, 'size') and self.container_item.size:
-            try:
-                return float(self.container_item.size) * self.quantity_used
-            except (ValueError, TypeError):
-                return 0
-        return 0
-
-    @property
-    def container_name(self):
-        """Get the container name"""
-        return self.container_item.name if self.container_item else 'Unknown Container'
+    def display_name(self):
+        """Get the container name for display"""
+        return self.container_item.name if self.container_item else self.container_name
 
     def __repr__(self):
         return f'<BatchContainer {self.container_name} x{self.quantity_used} for Batch {self.batch_id}>'
