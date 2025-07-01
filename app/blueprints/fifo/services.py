@@ -1,13 +1,35 @@
 from ...models import InventoryHistory, db
-from sqlalchemy import and_, desc
+from sqlalchemy import and_, desc, or_
 from datetime import datetime
 
 def get_fifo_entries(inventory_item_id):
-    """Get all FIFO entries for an item with remaining quantity"""
+    """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
+    from datetime import datetime
+    today = datetime.now().date()
+    
     return InventoryHistory.query.filter(
         and_(
             InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0
+            InventoryHistory.remaining_quantity > 0,
+            # Skip expired entries - they can only be spoiled/trashed
+            db.or_(
+                InventoryHistory.expiration_date.is_(None),  # Non-perishable
+                InventoryHistory.expiration_date >= today    # Not expired yet
+            )
+        )
+    ).order_by(InventoryHistory.timestamp.asc()).all()
+
+def get_expired_fifo_entries(inventory_item_id):
+    """Get expired FIFO entries with remaining quantity (for disposal only)"""
+    from datetime import datetime
+    today = datetime.now().date()
+    
+    return InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.expiration_date.isnot(None),
+            InventoryHistory.expiration_date < today
         )
     ).order_by(InventoryHistory.timestamp.asc()).all()
 
