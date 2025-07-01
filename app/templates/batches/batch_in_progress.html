@@ -290,7 +290,7 @@
                                 <td>{{ extra.inventory_item.name }}</td>
                                 <td>{{ "%.3f"|format(extra.quantity_used|float or 0) }}</td>
                                 <td>{{ extra.unit }}</td>
-                                <td>${{ "%.2f"|format(cost_per_unit) }}</td>
+                                <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
                             </tr>
                             {% set ns.extras_total = ns.extras_total + line_cost %}
@@ -483,25 +483,86 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/batches/batch_form.js') }}"></script>
-<script src="{{ url_for('static', filename='js/batches/container_management.js') }}"></script>
 <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
 
 <script>
+// Initialize batch data and functions
+window.currentBatchId = {{ batch.id }};
+window.getCurrentBatchId = function() { return {{ batch.id }}; };
+
+// Minimal container management
+window.showAddContainerModal = function(reason = 'primary_packaging') {
+    document.getElementById('container-reason').value = reason;
+    new bootstrap.Modal(document.getElementById('addContainerModal')).show();
+};
+
+window.addContainer = function() {
+    const formData = {
+        item_id: document.getElementById('container-item').value,
+        quantity: parseInt(document.getElementById('container-quantity').value),
+        reason: document.getElementById('container-reason').value,
+        one_time: document.getElementById('one-time-use')?.checked || false
+    };
+
+    if (!formData.item_id || !formData.quantity || !formData.reason) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    fetch(`/add-extra/{{ batch.id }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify({ extra_containers: [formData] })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Container added successfully');
+            bootstrap.Modal.getInstance(document.getElementById('addContainerModal')).hide();
+            location.reload();
+        } else {
+            alert('Error adding container: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding container');
+    });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle collapse icon rotation
-    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
-    collapseElements.forEach(function(element) {
+    // Load containers
+    fetch('/api/containers/available')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('container-item');
+            if (select) {
+                select.innerHTML = '<option value="">Select Container</option>';
+                data.forEach(container => {
+                    const option = document.createElement('option');
+                    option.value = container.id;
+                    option.textContent = container.name;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.log('Could not load containers'));
+
+    // Handle collapse icons
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(element => {
         const target = document.querySelector(element.getAttribute('data-bs-target'));
         if (target) {
-            target.addEventListener('show.bs.collapse', function() {
+            target.addEventListener('show.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-right');
                     icon.classList.add('fa-chevron-down');
                 }
             });
-
-            target.addEventListener('hide.bs.collapse', function() {
+            target.addEventListener('hide.bs.collapse', () => {
                 const icon = element.querySelector('i');
                 if (icon) {
                     icon.classList.remove('fa-chevron-down');
