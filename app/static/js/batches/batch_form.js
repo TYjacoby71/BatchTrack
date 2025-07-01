@@ -1,3 +1,4 @@
+
 // Timer Functions
 function startTimer(name, duration) {
   const formData = new FormData();
@@ -124,7 +125,7 @@ function saveExtras() {
     const itemData = {
       item_id: parseInt(itemSelect.value),
       quantity: parseFloat(qtyInput.value),
-      reason: reasonSelect.value,
+      reason: reasonSelect ? reasonSelect.value : 'extra_needed',
       cost: parseFloat(costInput.value) || 0
     };
 
@@ -219,19 +220,16 @@ function cancelBatch() {
 function markBatchFailed() {
   if (confirm('Are you sure you want to mark this batch as failed? This action cannot be undone.')) {
     const batchId = window.location.pathname.split('/').pop();
-    // You'll need to create this route
     window.location.href = `/batches/${batchId}/mark-failed`;
   }
 }
 
 // Validation Functions
 function validateBatchForm() {
-  // Add any validation logic here
   return true;
 }
 
 // Batch Inventory Summary
 function openBatchInventorySummary(batchId) {
-  // Open modal or redirect to batch inventory summary
   window.open(`/batches/${batchId}/inventory-summary`, '_blank');
 }
