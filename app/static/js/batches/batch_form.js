@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   const modalForm = document.getElementById('finishBatchModalForm');
   const outputTypeSelect = document.getElementById('output_type');
+  const isPerishableElement = document.getElementById('is_perishable');
+  const shelfLifeElement = document.getElementById('shelf_life_days');
 
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
@@ -23,6 +25,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (outputTypeSelect) {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
+  }
+
+  if (isPerishableElement) {
+    isPerishableElement.addEventListener('change', toggleShelfLife);
+  }
+
+  if (shelfLifeElement) {
+    shelfLifeElement.addEventListener('input', updateExpirationDate);
   }
 
   // Initialize tooltips only if bootstrap is available
