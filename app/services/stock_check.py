@@ -1,6 +1,8 @@
-from ..models import db, Recipe, InventoryItem
+from ..models import db, Recipe, InventoryItem, InventoryHistory
+from sqlalchemy import or_
 from app.services.unit_conversion import ConversionEngine
 from flask_login import current_user
+from datetime import datetime
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""
@@ -30,13 +32,25 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         print(f"  - Ingredient belongs to user, proceeding with stock check")
         needed_amount = recipe_ingredient.quantity * scale
 
-        # Get current inventory details
-        available = ingredient.quantity or 0
+        # Get current inventory details - exclude expired FIFO entries
+        today = datetime.now().date()
+        available_fifo_entries = InventoryHistory.query.filter(
+            InventoryHistory.inventory_item_id == ingredient.id,
+            InventoryHistory.remaining_quantity > 0,
+            or_(
+                InventoryHistory.expiration_date == None,  # Non-perishable items
+                InventoryHistory.expiration_date >= today  # Non-expired perishable items
+            )
+        ).all()
+        
+        # Sum up available quantity from non-expired entries
+        available = sum(entry.remaining_quantity for entry in available_fifo_entries)
+        
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
         density = ingredient.density if ingredient.density else None
         
-        print(f"  - Available: {available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
+        print(f"  - Available (non-expired): {available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
         
         try:
             # Convert available stock to recipe unit using UUCS
