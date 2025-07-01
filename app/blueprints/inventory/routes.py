@@ -19,10 +19,30 @@ def list_inventory():
     categories = IngredientCategory.query.all()
     total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
 
-    # Calculate freshness for each item
+    # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
+    from datetime import datetime
+    from sqlalchemy import and_
+    
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+        
+        # Calculate expired quantity
+        if item.is_perishable:
+            today = datetime.now().date()
+            expired_entries = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == item.id,
+                    InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.expiration_date != None,
+                    InventoryHistory.expiration_date < today
+                )
+            ).all()
+            item.expired_quantity = sum(entry.remaining_quantity for entry in expired_entries)
+            item.available_quantity = item.quantity - item.expired_quantity
+        else:
+            item.expired_quantity = 0
+            item.available_quantity = item.quantity
 
     return render_template('inventory_list.html', 
                          inventory_items=inventory_items,
