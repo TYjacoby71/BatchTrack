@@ -92,3 +92,84 @@ def available_containers(recipe_id):
 
     except Exception as e:
         return jsonify({"error": f"Container API failed: {str(e)}"}), 500
+from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
+from ...models import db, Batch, BatchContainer
+from ...services.batch_container_service import BatchContainerService
+
+container_api_bp = Blueprint('container_api', __name__)
+
+@container_api_bp.route('/batches/<int:batch_id>/containers', methods=['GET'])
+@login_required
+def get_batch_containers(batch_id):
+    """Get all containers for a batch with summary"""
+    batch = Batch.query.get_or_404(batch_id)
+    containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+    
+    container_data = []
+    total_capacity = 0
+    product_capacity = 0
+    
+    for container in containers:
+        container_info = {
+            'id': container.id,
+            'name': container.container_name,
+            'quantity': container.quantity_used,
+            'reason': container.reason,
+            'one_time_use': container.one_time_use,
+            'exclude_from_product': container.exclude_from_product,
+            'capacity': container.total_capacity
+        }
+        container_data.append(container_info)
+        total_capacity += container.total_capacity
+        
+        if container.is_valid_for_product:
+            product_capacity += container.total_capacity
+    
+    summary = {
+        'total_containers': len(containers),
+        'total_capacity': total_capacity,
+        'product_containers': len([c for c in containers if c.is_valid_for_product]),
+        'product_capacity': product_capacity,
+        'capacity_unit': 'fl oz'  # This should come from container units
+    }
+    
+    return jsonify({
+        'containers': container_data,
+        'summary': summary
+    })
+
+@container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>', methods=['DELETE'])
+@login_required
+def remove_batch_container(container_id, batch_id):
+    """Remove a container from a batch"""
+    container = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+    
+    # Restore inventory if not one-time use
+    if not container.one_time_use and container.container_item_id:
+        from ...services.inventory_adjustment import process_inventory_adjustment
+        process_inventory_adjustment(
+            item_id=container.container_item_id,
+            quantity=container.quantity_used,  # Positive to restore
+            change_type='batch_correction',
+            unit='units',
+            notes=f"Restored container from batch {batch_id}",
+            batch_id=batch_id,
+            created_by=current_user.id
+        )
+    
+    db.session.delete(container)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Container removed successfully'})
+
+@container_api_bp.route('/batches/<int:batch_id>/validate-yield', methods=['POST'])
+@login_required
+def validate_batch_yield(batch_id):
+    """Validate yield against container capacity"""
+    data = request.get_json()
+    estimated_yield = float(data.get('estimated_yield', 0))
+    
+    validation = BatchContainerService.validate_yield_vs_capacity(batch_id, estimated_yield)
+    
+    return jsonify(validation)

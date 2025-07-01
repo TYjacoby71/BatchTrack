@@ -431,24 +431,39 @@
 
 <template id="extra-container-template">
     <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="container">
-        <div class="col-md-5">
+        <div class="col-md-3">
             <select class="form-select item-select" onchange="updateRowCost(this)">
                 <option value="">Select container</option>
                 {% for container in inventory_items if container.type == 'container' %}
-                    <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}">{{ container.name }}</option>
+                    <option value="{{ container.id }}" data-cost="{{ container.cost_per_unit or 0 }}" data-stock="{{ container.stock_amount or 0 }}">{{ container.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="col-md-2">
             <input type="number" class="form-control qty" placeholder="Quantity" min="1" />
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <select class="form-select reason">
+                <option value="primary_packaging">Primary Packaging</option>
+                <option value="overflow">Overflow</option>
+                <option value="broke_container">Broke Container</option>
+                <option value="test_sample">Test Sample</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="col-md-2">
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
         <div class="col-md-1">
             <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>
+        </div>
+        <div class="col-md-1">
+            <div class="form-check">
+                <input class="form-check-input one-time" type="checkbox">
+                <label class="form-check-label">One-time</label>
+            </div>
         </div>
     </div>
 </template>

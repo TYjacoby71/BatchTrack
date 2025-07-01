@@ -118,82 +118,89 @@ function addExtraItemRow(type) {
 }
 
 function saveExtras() {
-  const rows = document.querySelectorAll(".extra-row");
-  const extraIngredients = [];
-  const extraContainers = [];
+    const extraRows = document.querySelectorAll('.extra-row');
+    const extraIngredients = [];
+    const extraContainers = [];
 
-  // Separate ingredients and containers
-  rows.forEach(row => {
-    const type = row.dataset.type;
-    const itemSelect = row.querySelector(".item-select");
-    const qtyInput = row.querySelector(".qty");
-    const costInput = row.querySelector(".cost");
+    extraRows.forEach(row => {
+        const type = row.dataset.type;
+        const itemSelect = row.querySelector('.item-select');
+        const qtyInput = row.querySelector('.qty');
 
-    if (!itemSelect.value || !qtyInput.value) {
-      return;
-    }
+        if (!itemSelect.value || !qtyInput.value) {
+            return; // Skip incomplete rows
+        }
 
-    const baseData = {
-      item_id: parseInt(itemSelect.value),
-      quantity: parseFloat(qtyInput.value),
-      cost_per_unit: parseFloat(costInput.value) || 0
-    };
+        if (type === 'ingredient') {
+            const unitSelect = row.querySelector('.unit');
+            extraIngredients.push({
+                item_id: parseInt(itemSelect.value),
+                quantity: parseFloat(qtyInput.value),
+                unit: unitSelect.value
+            });
+        } else if (type === 'container') {
+            const reasonSelect = row.querySelector('.reason');
+            const oneTimeCheck = row.querySelector('.one-time');
 
-    if (type === 'ingredient') {
-      const unitSelect = row.querySelector(".unit");
-      if (!unitSelect.value) {
+            extraContainers.push({
+                item_id: parseInt(itemSelect.value),
+                quantity: parseInt(qtyInput.value),
+                reason: reasonSelect ? reasonSelect.value : 'primary_packaging',
+                one_time: oneTimeCheck ? oneTimeCheck.checked : false
+            });
+        }
+    });
+
+    if (extraIngredients.length === 0 && extraContainers.length === 0) {
+        showAlert('No extra items to save', 'warning');
         return;
-      }
-      baseData.unit = unitSelect.value;
-      extraIngredients.push(baseData);
-    } else if (type === 'container') {
-      extraContainers.push(baseData);
     }
-  });
 
-  const batchId = window.location.pathname.split('/').pop();
-  fetch(`/add-extra/${batchId}`, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
-    },
-    body: JSON.stringify({ 
-      extra_ingredients: extraIngredients,
-      extra_containers: extraContainers 
+    const batchId = getCurrentBatchId();
+    if (!batchId) {
+        showAlert('Batch ID not found', 'error');
+        return;
+    }
+
+    fetch(`/add-extra/${batchId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            extra_ingredients: extraIngredients,
+            extra_containers: extraContainers
+        })
     })
-  })
-  .then(res => {
-    if (!res.ok) {
-      return res.json().then(err => {
-        throw new Error(err.error || 'Failed to save extras');
-      });
-    }
-    return res.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      const errorMsg = data.errors.map(err => 
-        `${err.ingredient}: ${err.message} (Available: ${err.available} ${err.available_unit})`
-      ).join('\n');
-      function displayErrors(errors) {
-        const message = errors.map(err =>
-          `❌ ${err.ingredient}: ${err.message}`
-        ).join("\n\n");
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('Extra items saved successfully', 'success');
 
-        alert("Save failed:\n\n" + message);
-      }
+            // Clear all extra rows
+            document.querySelectorAll('.extra-row').forEach(row => row.remove());
 
-      displayErrors(data.errors);
-    } else {
-      alert("Extra ingredients saved successfully");
-      window.location.reload();
-    }
-  })
-  .catch(err => {
-    alert(err.message);
-    console.error(err);
-  });
+            // Refresh container display
+            if (typeof refreshContainerDisplay === 'function') {
+                refreshContainerDisplay();
+            }
+
+            // Refresh the page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            const errorMsg = data.errors ? 
+                data.errors.map(err => `${err.item}: ${err.message}`).join('\n') :
+                'Error saving extra items';
+            showAlert(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving extras:', error);
+        showAlert('Error saving extra items', 'error');
+    });
 }
 
 function saveBatchNotes() {

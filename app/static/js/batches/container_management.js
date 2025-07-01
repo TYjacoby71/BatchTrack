@@ -53,6 +53,9 @@ function showAddContainerModal(defaultReason = 'primary_packaging') {
     modal.show();
 }
 
+// Make sure this function is globally available
+window.showAddContainerModal = showAddContainerModal;
+
 function loadAvailableContainers() {
     fetch('/api/containers/available')
         .then(response => response.json())
