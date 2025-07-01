@@ -25,9 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
-  // Initialize tooltips
-  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
+  // Initialize tooltips only if bootstrap is available
+  if (typeof bootstrap !== 'undefined') {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
+  }
 });
 
 function updateExpirationDate() {
@@ -49,8 +51,12 @@ function updateExpirationDate() {
 }
 
 function toggleShelfLife() {
-  const isPerishable = document.getElementById('is_perishable').checked;
+  const isPerishableElement = document.getElementById('is_perishable');
   const shelfLifeField = document.getElementById('shelfLifeField');
+  
+  if (!isPerishableElement || !shelfLifeField) return;
+  
+  const isPerishable = isPerishableElement.checked;
 
   if (shelfLifeField) {
     shelfLifeField.style.display = isPerishable ? 'block' : 'none';
@@ -59,15 +65,20 @@ function toggleShelfLife() {
       shelfLifeInput.required = isPerishable;
       if (!isPerishable) {
         shelfLifeInput.value = '';
-        document.getElementById('expiration_date').value = '';
-        document.getElementById('expiration_date_display').value = '';
+        const expDateElement = document.getElementById('expiration_date');
+        const expDateDisplayElement = document.getElementById('expiration_date_display');
+        if (expDateElement) expDateElement.value = '';
+        if (expDateDisplayElement) expDateDisplayElement.value = '';
       }
     }
   }
 }
 
 function toggleOutputFields() {
-  const type = document.getElementById('output_type').value;
+  const outputTypeElement = document.getElementById('output_type');
+  if (!outputTypeElement) return;
+  
+  const type = outputTypeElement.value;
   const productFields = document.getElementById('productFields');
   const productSelect = document.getElementById('product_id');
 
