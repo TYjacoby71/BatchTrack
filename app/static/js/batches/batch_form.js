@@ -3,8 +3,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   const modalForm = document.getElementById('finishBatchModalForm');
   const outputTypeSelect = document.getElementById('output_type');
-  const isPerishableElement = document.getElementById('is_perishable');
-  const shelfLifeElement = document.getElementById('shelf_life_days');
 
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
@@ -27,19 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
     outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
-  if (isPerishableElement) {
-    isPerishableElement.addEventListener('change', toggleShelfLife);
-  }
-
-  if (shelfLifeElement) {
-    shelfLifeElement.addEventListener('input', updateExpirationDate);
-  }
-
-  // Initialize tooltips only if bootstrap is available
-  if (typeof bootstrap !== 'undefined') {
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
-  }
+  // Initialize tooltips
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipTriggerList.forEach(trigger => new bootstrap.Tooltip(trigger));
 });
 
 function updateExpirationDate() {
@@ -61,12 +49,8 @@ function updateExpirationDate() {
 }
 
 function toggleShelfLife() {
-  const isPerishableElement = document.getElementById('is_perishable');
+  const isPerishable = document.getElementById('is_perishable').checked;
   const shelfLifeField = document.getElementById('shelfLifeField');
-  
-  if (!isPerishableElement || !shelfLifeField) return;
-  
-  const isPerishable = isPerishableElement.checked;
 
   if (shelfLifeField) {
     shelfLifeField.style.display = isPerishable ? 'block' : 'none';
@@ -75,20 +59,15 @@ function toggleShelfLife() {
       shelfLifeInput.required = isPerishable;
       if (!isPerishable) {
         shelfLifeInput.value = '';
-        const expDateElement = document.getElementById('expiration_date');
-        const expDateDisplayElement = document.getElementById('expiration_date_display');
-        if (expDateElement) expDateElement.value = '';
-        if (expDateDisplayElement) expDateDisplayElement.value = '';
+        document.getElementById('expiration_date').value = '';
+        document.getElementById('expiration_date_display').value = '';
       }
     }
   }
 }
 
 function toggleOutputFields() {
-  const outputTypeElement = document.getElementById('output_type');
-  if (!outputTypeElement) return;
-  
-  const type = outputTypeElement.value;
+  const type = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
   const productSelect = document.getElementById('product_id');
 
