@@ -98,10 +98,19 @@ function markBatchFailed() {
 }
 
 function updateRowCost(selectElement) {
+  const row = selectElement.closest('.extra-row');
   const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
-  const costInput = selectElement.parentElement.querySelector('.cost');
+  const unit = selectElement.options[selectElement.selectedIndex].dataset.unit;
+  
+  const costInput = row.querySelector('.cost');
+  const unitSelect = row.querySelector('.unit');
+  
   if (costInput) {
-    costInput.value = cost;
+    costInput.value = cost || 0;
+  }
+  
+  if (unitSelect && unit) {
+    unitSelect.value = unit;
   }
 }
 
@@ -265,78 +274,3 @@ function cancelBatch() {
     form.submit();
   }
 }
-
-function showContainerAdjustModal(containerId, containerName, currentQty) {
-    currentContainerId = containerId;
-    currentQuantity = currentQty;
-    document.getElementById('containerName').textContent = containerName;
-    document.getElementById('currentQuantity').textContent = currentQty;
-
-    // Reset form
-    document.getElementById('adjustmentType').value = 'quantity';
-    document.getElementById('totalQuantity').value = currentQty;
-    document.getElementById('adjustmentNotes').value = '';
-    showAdjustmentOptions();
-
-    const modal = new bootstrap.Modal(document.getElementById('containerAdjustModal'));
-    modal.show();
-}
-
-function showAdjustmentOptions() {
-    const type = document.getElementById('adjustmentType').value;
-
-    document.getElementById('quantityAdjustment').style.display = type === 'quantity' ? 'block' : 'none';
-    document.getElementById('containerReplacement').style.display = type === 'replace' ? 'block' : 'none';
-    document.getElementById('damageReason').style.display = type === 'damage' ? 'block' : 'none';
-}
-
-function saveContainerAdjustment() {
-    const type = document.getElementById('adjustmentType').value;
-    const notes = document.getElementById('adjustmentNotes').value;
-    const batchId = getCurrentBatchId();
-
-    let data = {
-        adjustment_type: type,
-        notes: notes
-    };
-
-    if (type === 'quantity') {
-        const newTotal = parseInt(document.getElementById('totalQuantity').value);
-        data.new_total_quantity = newTotal;
-    } else if (type === 'replace') {
-        data.new_container_id = document.getElementById('newContainer').value;
-        data.new_quantity = parseInt(document.getElementById('newQuantity').value);
-    } else if (type === 'damage') {
-        data.damage_quantity = parseInt(document.getElementById('damageQuantity').value);
-    }
-
-    fetch(`/api/batches/${batchId}/containers/${currentContainerId}/adjust`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('Container adjusted successfully', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showAlert('Error: ' + data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error adjusting container:', error);
-        showAlert('Failed to adjust container', 'error');
-    });
-}
-
-// Event listener for adjustment type changes
-document.addEventListener('DOMContentLoaded', function() {
-    const adjustmentSelect = document.getElementById('adjustmentType');
-    if (adjustmentSelect) {
-        adjustmentSelect.addEventListener('change', showAdjustmentOptions);
-    }
-});
