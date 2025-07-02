@@ -159,19 +159,22 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Add to inventory using centralized adjustment
+                # Add to inventory using centralized adjustment with correct change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
-                    change_type='finished_batch',
+                    change_type='restock',  # Use 'restock' not 'finished_batch' for additions
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost,
+                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
+                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
                 )
             else:  # Create new intermediate ingredient
+                # Copy perishable properties from batch to new ingredient
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
@@ -179,22 +182,26 @@ def complete_batch(batch_id):
                     quantity=0,  # Will be set by process_inventory_adjustment
                     unit=output_unit,
                     cost_per_unit=unit_cost,
+                    is_perishable=batch.is_perishable,
+                    shelf_life_days=batch.shelf_life_days if batch.is_perishable else None,
                     organization_id=current_user.organization_id
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
-                # Add initial stock using centralized adjustment
+                # Add initial stock using centralized adjustment with correct change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
-                    change_type='finished_batch',
+                    change_type='restock',  # Use 'restock' not 'finished_batch' for additions
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost,
+                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
+                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
                 )
 
         # Finalize
