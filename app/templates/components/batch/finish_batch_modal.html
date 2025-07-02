@@ -26,12 +26,10 @@
                    min="0.01"
                    step="any"
                    value="{{ batch.projected_yield }}"
-                   required
-                   onchange="validateYield()">
+                   required>
             <div class="form-text">
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
             </div>
-            <div id="yield-validation-alerts" class="mt-2"></div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
 
@@ -233,64 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-
-function validateYield() {
-  const finalQuantity = parseFloat(document.getElementById('final_quantity').value);
-  const alertsContainer = document.getElementById('yield-validation-alerts');
-  
-  if (!finalQuantity || finalQuantity <= 0) {
-    alertsContainer.innerHTML = '';
-    return;
-  }
-
-  // Call the existing validation service
-  fetch(`/api/batches/{{ batch.id }}/validate-yield`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCSRFToken()
-    },
-    body: JSON.stringify({
-      estimated_yield: finalQuantity
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    let alertsHtml = '';
-    
-    if (data.warnings && data.warnings.length > 0) {
-      data.warnings.forEach(warning => {
-        alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
-          <i class="fas fa-exclamation-triangle me-1"></i>${warning}
-        </div>`;
-      });
-    }
-    
-    // Add helpful context for overflow/underfill
-    if (data.overflow_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
-      </div>`;
-    }
-    
-    if (data.underfill_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
-      </div>`;
-    }
-    
-    alertsContainer.innerHTML = alertsHtml;
-  })
-  .catch(error => {
-    console.error('Error validating yield:', error);
-    alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
-      <i class="fas fa-exclamation-triangle me-1"></i>
-      Unable to validate yield against container capacity.
-    </div>`;
-  });
-}
 
 function getCSRFToken() {
   const token = document.querySelector('input[name="csrf_token"]')?.value ||
