@@ -50,15 +50,24 @@
   </div>
 
   <!-- Container Management Card -->
-  <div class="card mb-4" x-show="recipeNeedsContainers">
+  <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="fas fa-box"></i> Container Management
       </h5>
-      <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">
-        <i class="fas fa-plus"></i> Add Container
-      </button>
+      <div class="d-flex align-items-center gap-3">
+        <div class="form-check form-switch">
+          <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
+          <label class="form-check-label" for="requireContainers">
+            Require Containers
+          </label>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer" x-show="requiresContainers">
+          <i class="fas fa-plus"></i> Add Container
+        </button>
+      </div>
     </div>
+    <div class="card-body" x-show="requiresContainers"></div>
     <div class="card-body">
       <!-- Auto-Fill Toggle -->
       <div class="form-check mb-3">
@@ -186,7 +195,6 @@
 function planProduction() {
   return {
       recipeId: {{ recipe.id }},
-      recipeNeedsContainers: {{ 'true' if recipe.requires_containers else 'false' }},
       baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
       unit: '{{ recipe.predicted_yield_unit }}',
       allowedContainers: [],
@@ -194,6 +202,7 @@ function planProduction() {
       autoFill: true,
       scale: 1.0,
       batchType: '',
+      requiresContainers: false,
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -233,14 +242,25 @@ function planProduction() {
 
     get canStartBatch() {
       const batchTypeSelected = this.batchType !== '';
-      if (this.recipeNeedsContainers) {
+      if (this.requiresContainers) {
         return batchTypeSelected && this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
       }
       return batchTypeSelected && this.stockChecked && this.stockCheckPassed;
     },
 
+    onContainerRequirementChange() {
+      if (!this.requiresContainers) {
+        this.containersSelected = [];
+        this.containmentPercent = 0;
+        this.remainingToContain = 0;
+        this.containmentIssue = '';
+      } else {
+        this.fetchContainerPlan();
+      }
+    },
+
     fetchContainerPlan() {
-      if (!this.recipeNeedsContainers) {
+      if (!this.requiresContainers) {
         this.allowedContainers = [];
         this.containersSelected = [];
         return;
@@ -253,7 +273,7 @@ function planProduction() {
           this.allowedContainers = data.available || [];
           console.log('Allowed containers:', this.allowedContainers);
 
-          if (this.autoFill && this.recipeNeedsContainers) {
+          if (this.autoFill && this.requiresContainers) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
@@ -467,6 +487,7 @@ function planProduction() {
             recipe_id: this.recipeId,
             scale: this.scale,
             batch_type: this.batchType,
+            requires_containers: this.requiresContainers,
             notes: '',
             containers: this.containersSelected.map(c => ({
               id: c.id,

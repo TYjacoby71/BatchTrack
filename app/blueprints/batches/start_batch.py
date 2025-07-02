@@ -1,4 +1,3 @@
-# Updating the template path for the start_batch route.
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
@@ -49,45 +48,50 @@ def start_batch():
     db.session.add(batch)
     db.session.commit()
 
-    # Handle container deduction first
-    container_errors = []
-    for container in containers_data:
-        container_id = container.get('id')
-        quantity = container.get('quantity', 0)
+    # Get container requirement from request (now dynamic)
+    requires_containers = data.get('requires_containers', False)
 
-        if container_id and quantity:
-            container_item = InventoryItem.query.get(container_id)
-            if container_item:
-                # Use the inventory adjustment route
-                try:
-                    # Containers always use 'count' as unit since they don't have a proper unit
-                    # Handle both empty string and None cases
-                    container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
-                    result = process_inventory_adjustment(
-                        item_id=container_id,
-                        quantity=-quantity,  # Negative for deduction
-                        change_type='batch',
-                        unit=container_unit,
-                        notes=f"Used in batch {label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
-                    )
+    # Validate containers if batch requires them
+    if requires_containers:
+        # Handle container deduction first
+        container_errors = []
+        for container in containers_data:
+            container_id = container.get('id')
+            quantity = container.get('quantity', 0)
 
-                    if result:
-                        # Create single BatchContainer record
-                        bc = BatchContainer(
+            if container_id and quantity:
+                container_item = InventoryItem.query.get(container_id)
+                if container_item:
+                    # Use the inventory adjustment route
+                    try:
+                        # Containers always use 'count' as unit since they don't have a proper unit
+                        # Handle both empty string and None cases
+                        container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
+                        result = process_inventory_adjustment(
+                            item_id=container_id,
+                            quantity=-quantity,  # Negative for deduction
+                            change_type='batch',
+                            unit=container_unit,
+                            notes=f"Used in batch {label_code}",
                             batch_id=batch.id,
-                            container_id=container_id,
-                            container_quantity=quantity,
-                            quantity_used=quantity,
-                            cost_each=container_item.cost_per_unit or 0.0,
-                            organization_id=current_user.organization_id
+                            created_by=current_user.id
                         )
-                        db.session.add(bc)
-                    else:
-                        container_errors.append(f"Not enough {container_item.name} in stock.")
-                except Exception as e:
-                    container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
+
+                        if result:
+                            # Create single BatchContainer record
+                            bc = BatchContainer(
+                                batch_id=batch.id,
+                                container_id=container_id,
+                                container_quantity=quantity,
+                                quantity_used=quantity,
+                                cost_each=container_item.cost_per_unit or 0.0,
+                                organization_id=current_user.organization_id
+                            )
+                            db.session.add(bc)
+                        else:
+                            container_errors.append(f"Not enough {container_item.name} in stock.")
+                    except Exception as e:
+                        container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
 
     # Deduct ingredient inventory at start of batch
     ingredient_errors = []
