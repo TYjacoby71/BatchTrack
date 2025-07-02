@@ -326,10 +326,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
         """Get non-expired quantity available for use"""
         if not self.is_perishable:
             return self.quantity
-
+        
         from datetime import datetime
         from sqlalchemy import and_
-
+        
         today = datetime.now().date()
         expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
@@ -338,18 +338,18 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.expiration_date != None,
                 InventoryHistory.expiration_date < today
             )).scalar() or 0
-
+        
         return max(0, self.quantity - expired_total)
-
+    
     @property 
     def expired_quantity(self):
         """Get expired quantity awaiting physical removal"""
         if not self.is_perishable:
             return 0
-
+            
         from datetime import datetime
         from sqlalchemy import and_
-
+        
         today = datetime.now().date()
         return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
