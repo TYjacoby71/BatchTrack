@@ -1,3 +1,6 @@
+// Make container data globally accessible for finish modal
+window.containerData = [];
+
 // Batch form functionality
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
