@@ -79,13 +79,13 @@
                     <td>
                       {% if entry.fifo_reference_id %}
                         {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
-                        {% if ref_entry %}
+                        {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {% if ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
-                              {{ ref_entry.batch.label_code }}
-                            {% else %}
-                              {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
-                            {% endif %}
+                            {{ ref_entry.batch.label_code }}
+                          </a>
+                        {% elif ref_entry %}
+                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                            {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                           </a>
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
