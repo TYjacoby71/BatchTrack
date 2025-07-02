@@ -5,7 +5,7 @@
     <select id="product_id" name="sku_id" class="form-select" required onchange="loadVariants()">
             <option value="">Select Product</option>
             {% for product in products %}
-            <option value="{{ product.id }}">{{ product.product_name }}{% if product.variant_name and product.variant_name != 'Base' %} - {{ product.variant_name }}{% endif %}</option>
+            <option value="{{ product.id }}" data-product-name="{{ product.product_name }}">{{ product.product_name }}{% if product.variant_name and product.variant_name != 'Base' %} - {{ product.variant_name }}{% endif %}</option>
             {% endfor %}
           </select>
   </div>

@@ -216,14 +216,22 @@ function loadVariants() {
     return;
   }
 
-  const productId = productSelect.value;
-
-  if (!productId) {
+  const selectedOption = productSelect.options[productSelect.selectedIndex];
+  
+  if (!selectedOption || !selectedOption.value) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
     return;
   }
 
-  fetch(`/products/api/${productId}/variants`)
+  // Get the product name from the selected option's data attribute or text
+  const productName = selectedOption.getAttribute('data-product-name') || selectedOption.textContent.trim();
+
+  if (!productName) {
+    variantSelect.innerHTML = '<option value="">Invalid product selection</option>';
+    return;
+  }
+
+  fetch(`/products/api/${encodeURIComponent(productName)}/variants`)
     .then(response => response.json())
     .then(data => {
       variantSelect.innerHTML = '';
