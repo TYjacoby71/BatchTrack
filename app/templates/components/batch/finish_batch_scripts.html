@@ -2,28 +2,6 @@
 <script>
 let containerData = [];
 
-function toggleOutputFields() {
-  const outputTypeInput = document.getElementById('output_type_hidden');
-  const productFields = document.getElementById('productFields');
-
-  if (!outputTypeInput) {
-    console.log('Missing output_type_hidden element');
-    return;
-  }
-
-  const outputType = outputTypeInput.value;
-  console.log('Batch type from stored data:', outputType);
-
-  if (productFields) {
-    if (outputType === 'product') {
-      productFields.style.display = 'block';
-      loadVariants();
-    } else {
-      productFields.style.display = 'none';
-    }
-  }
-}
-
 function toggleShelfLife() {
   const isPerishableElement = document.getElementById('is_perishable');
   const shelfLifeField = document.getElementById('shelfLifeField');
@@ -288,28 +266,19 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.addEventListener('shown.bs.modal', function () {
       console.log('Modal opened, initializing...');
 
-      // Initialize output fields based on stored batch type (safe for all batch types)
-      try {
-        toggleOutputFields();
-      } catch (error) {
-        console.log('Error in toggleOutputFields:', error);
-      }
-
       // Initialize shelf life toggle (safe for all batch types)
-      try {
-        toggleShelfLife();
-      } catch (error) {
-        console.log('Error in toggleShelfLife:', error);
+      toggleShelfLife();
+
+      // Load variants if product fields exist
+      const productSelect = document.getElementById('product_id');
+      if (productSelect) {
+        loadVariants();
       }
 
       // Only validate yield if the input exists and batch has containers
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
-        try {
-          validateYield(); // Will check for containers internally
-        } catch (error) {
-          console.log('Error in validateYield:', error);
-        }
+        validateYield(); // Will check for containers internally
       }
     });
   }

@@ -1,3 +1,4 @@
+
 <div class="modal fade" id="finishBatchModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -8,19 +9,22 @@
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="output_type" value="{{ batch.batch_type }}" id="output_type_hidden">
 
-          <!-- Basic Information Component -->
+          <!-- Always show basic info -->
           {% include 'components/batch/finish_batch_basic_info.html' %}
 
-          <!-- Product Fields Component (only for product batches) -->
+          <!-- Only show product fields if batch type is 'product' -->
+          {% if batch.batch_type == 'product' %}
           {% include 'components/batch/finish_batch_product_fields.html' %}
+          {% endif %}
 
-          <!-- Perishable Item Component -->
+          <!-- Always show perishable section -->
           {% include 'components/batch/finish_batch_perishable.html' %}
 
-          <!-- Container Distribution Component (only if containers exist) -->
+          <!-- Only show containers if batch has containers -->
+          {% if batch.containers or batch.extra_containers %}
           {% include 'components/batch/finish_batch_containers.html' %}
+          {% endif %}
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -34,3 +38,4 @@
 
 <!-- JavaScript Functions Component -->
 {% include 'components/batch/finish_batch_scripts.html' %}
+</div>
