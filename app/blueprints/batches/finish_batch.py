@@ -59,17 +59,42 @@ def complete_batch(batch_id):
             return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
     try:
-        # Basic required fields
-        output_type = request.form.get('output_type')
+        # Get batch type from batch data (not form - it's already set)
+        output_type = batch.batch_type
+        if not output_type:
+            raise ValueError("Batch type not set. Please set batch type before completing.")
+
+        # Get final quantity from form
         final_quantity_raw = request.form.get('final_quantity', '').strip()
-        output_unit = request.form.get('output_unit') or batch.yield_unit
+        output_unit = request.form.get('output_unit') or batch.yield_unit or batch.projected_yield_unit
 
         final_quantity = float(final_quantity_raw)
-        if not output_type or final_quantity <= 0:
-            raise ValueError("Missing or invalid output type or quantity")
+        if final_quantity <= 0:
+            raise ValueError("Final quantity must be positive")
+
+        # Use container validation service to determine actual quantities
+        from app.services.batch_container_service import BatchContainerService
+        container_validation = BatchContainerService.validate_yield_vs_capacity(batch.id, final_quantity)
+        
+        # Determine contained vs bulk quantities
+        contained_quantity = 0
+        bulk_quantity = 0
+        
+        if container_validation['total_capacity'] > 0:
+            if final_quantity <= container_validation['total_capacity']:
+                # All fits in containers
+                contained_quantity = final_quantity
+                bulk_quantity = 0
+            else:
+                # Some overflow to bulk
+                contained_quantity = container_validation['total_capacity']
+                bulk_quantity = final_quantity - container_validation['total_capacity']
+        else:
+            # No containers, all goes to bulk
+            contained_quantity = 0
+            bulk_quantity = final_quantity
 
         # Core batch updates
-        batch.batch_type = output_type
         batch.final_quantity = final_quantity
         batch.output_unit = output_unit
 
@@ -107,13 +132,28 @@ def complete_batch(batch_id):
             # For actual products (not intermediate ingredients), use ProductService
             if batch.product_id:
                 from app.services.product_service import ProductService
-                inventory_entries = ProductService.add_product_from_batch(
-                    batch_id=batch.id,
-                    product_id=batch.product_id,
-                    variant_label=batch.variant_label,
-                    quantity=batch.final_quantity,
-                    container_overrides=container_overrides
-                )
+                
+                # Create inventory entries for contained products
+                if contained_quantity > 0:
+                    inventory_entries = ProductService.add_product_from_batch(
+                        batch_id=batch.id,
+                        product_id=batch.product_id,
+                        variant_label=batch.variant_label,
+                        quantity=contained_quantity,
+                        container_overrides=container_overrides
+                    )
+                
+                # Create bulk inventory entry for overflow
+                if bulk_quantity > 0:
+                    bulk_inventory = ProductService.add_product_from_batch(
+                        batch_id=batch.id,
+                        product_id=batch.product_id,
+                        variant_label=batch.variant_label or "Bulk",
+                        quantity=bulk_quantity,
+                        container_overrides={},  # No containers for bulk
+                        is_bulk=True
+                    )
+                    flash(f"{bulk_quantity} {output_unit} added as bulk inventory (overflow from containers)", "info")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional, Dict, List, Tuple
 from flask_login import current_user
 from ..utils.fifo_generator import generate_fifo_id
+from ..models import Batch
 
 class ProductService:
     @staticmethod
@@ -165,7 +166,7 @@ class ProductService:
         return groups
 
     @staticmethod
-    def add_product_from_batch(batch_id: int, sku_id: int, quantity: float) -> bool:
+    def add_product_from_batch(batch_id: int, sku_id: int, quantity: float, is_bulk: bool = False) -> bool:
         """Add product inventory from a completed batch"""
         try:
             batch = Batch.query.get_or_404(batch_id)
@@ -333,3 +334,4 @@ class ProductService:
             ProductSKU.current_quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True
         ).all()
+```
