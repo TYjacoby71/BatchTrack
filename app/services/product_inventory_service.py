@@ -75,7 +75,7 @@ class ProductInventoryService:
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=0.0,  # Additions don't consume
             sale_location=sale_location,
-            organization_id=current_user.organization_id if current_user.is_authenticated else None
+            organization_id=current_user.organization_id if current_user.is_authenticated else 1  # Default to org 1 if no user
         )
 
         db.session.add(history)
@@ -149,7 +149,7 @@ class ProductInventoryService:
                 quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
                 sale_location=sale_location,
                 order_id=order_id,
-                organization_id=current_user.organization_id if current_user.is_authenticated else None
+                organization_id=current_user.organization_id if current_user.is_authenticated else 1  # Default to org 1 if no user
             )
             db.session.add(deduction_history)
 
@@ -231,7 +231,7 @@ class ProductInventoryService:
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=quantity if change_type in ['spoil', 'trash', 'damage'] else 0.0,
             sale_location='manual',
-            organization_id=current_user.organization_id if current_user.is_authenticated else None
+            organization_id=current_user.organization_id if current_user.is_authenticated else 1  # Default to org 1 if no user
         )
 
         db.session.add(adjustment_history)

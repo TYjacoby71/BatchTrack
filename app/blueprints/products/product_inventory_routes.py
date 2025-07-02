@@ -35,12 +35,8 @@ def view_sku(sku_id):
             
         notes = request.form.get('notes', '')
         customer = request.form.get('customer', '')
-        enhanced_notes = {
-            'user_notes': notes,
-            'sale_price': sale_price,
-            'customer': customer,
-            'unit_cost': unit_cost
-        }
+        # Convert to string format that the service expects
+        enhanced_notes = f"User notes: {notes}, Sale price: {sale_price}, Customer: {customer}, Unit cost: {unit_cost}"
 
         if quantity <= 0:
             flash('Quantity must be positive', 'error')
