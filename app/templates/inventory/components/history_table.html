@@ -79,13 +79,7 @@
                     <td>
                       {% if entry.fifo_reference_id %}
                         {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
-                        {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
-                          {% if ref_entry.batch.status == 'in_progress' %}
-                            <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
-                          {% else %}
-                            <a href="{{ url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
-                          {% endif %}
-                        {% elif ref_entry %}
+                        {% if ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {% if ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                               {{ ref_entry.batch.label_code }}
