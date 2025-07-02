@@ -103,8 +103,7 @@
                       {% endif %}
                     </td>
                     <td>
-                      <!-- DEBUG: change_type={{ entry.change_type }}, has_batch={{ entry.batch is not none }}, batch_label={{ entry.batch.label_code if entry.batch else 'None' }} -->
-                      {% if entry.change_type == 'finished_batch' and entry.batch %}
+                      {% if entry.batch %}
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}
