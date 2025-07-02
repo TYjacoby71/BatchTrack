@@ -26,10 +26,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)          # Unit for this specific SKU
     sku_code = db.Column(db.String(128), unique=True, nullable=True)  # Optional custom SKU code
     
-    # INVENTORY DATA (from ProductInventory)
-    current_quantity = db.Column(db.Float, default=0.0)  # Current stock level
-    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO tracking
-    original_quantity = db.Column(db.Float, default=0.0)  # Original amount added
+    # INVENTORY DATA (SINGLE SOURCE OF TRUTH)
+    current_quantity = db.Column(db.Float, default=0.0)  # Current stock level - MASTER FIELD
     low_stock_threshold = db.Column(db.Float, default=0)  # Alert threshold for this SKU
     
     # COST AND PRICING
@@ -99,7 +97,6 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     # INVENTORY MANAGEMENT
     reserved_quantity = db.Column(db.Float, default=0.0)  # Reserved for pending orders
-    available_quantity = db.Column(db.Float, default=0.0)  # Available = current - reserved
     last_sold_date = db.Column(db.DateTime, nullable=True)  # Last sale date for analytics
     
     # STATUS FLAGS
@@ -209,6 +206,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.Index('idx_active_skus', 'is_active', 'is_product_active'),
         db.Index('idx_batch_fifo', 'batch_id', 'fifo_id'),
         db.Index('idx_low_stock', 'current_quantity', 'low_stock_threshold'),
+        db.Index('idx_current_reserved_qty', 'current_quantity', 'reserved_quantity'),
         db.Index('idx_category', 'category', 'subcategory'),
         db.Index('idx_supplier', 'supplier_name'),
         db.Index('idx_quality_status', 'quality_status'),

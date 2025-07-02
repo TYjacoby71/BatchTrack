@@ -125,8 +125,10 @@ class ProductInventoryService:
 
             # Track quantities before this deduction for history
             old_qty_for_history = sku.current_quantity
-            sku.current_quantity -= deduct_amount  # Update SKU quantity
             
+            # Update the main SKU quantity (single source of truth)
+            sku.current_quantity = max(0, sku.current_quantity - deduct_amount)
+
             # Create individual deduction history for each FIFO entry used
             deduction_history = ProductSKUHistory(
                 sku_id=sku_id,
@@ -209,9 +211,11 @@ class ProductInventoryService:
             quantity_change = -quantity
             history_entry.remaining_quantity = max(0, original_remaining - quantity)
 
-        # Update SKU total
-        sku.current_quantity += quantity_change
-        sku.last_updated = datetime.utcnow()
+        # Update the ProductSKU master quantity (single source of truth)
+        if change_type == 'increase':
+            sku.current_quantity += quantity
+        else:  # decrease
+            sku.current_quantity = max(0, sku.current_quantity - quantity)
 
         # Create adjustment history entry
         adjustment_history = ProductSKUHistory(
