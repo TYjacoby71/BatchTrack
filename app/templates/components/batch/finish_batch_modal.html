@@ -11,6 +11,16 @@
 
           <input type="hidden" name="output_type" value="{{ batch.batch_type }}" id="output_type_hidden">
 
+          <!-- For intermediate ingredients, show ingredient title -->
+          {% if batch.batch_type == 'ingredient' %}
+          <div class="alert alert-info mb-3">
+            <h6 class="mb-0">
+              <i class="fas fa-flask me-2"></i>
+              Creating Intermediate Ingredient: {{ batch.recipe.name }}
+            </h6>
+          </div>
+          {% endif %}
+
           <div class="form-group mb-3">
             <label for="final_quantity">Final Quantity</label>
             <input type="number" 
@@ -64,8 +74,8 @@
             </div>
           </div>
 
-          <!-- Container Distribution Section -->
-          <div id="containerDistribution" class="form-group mb-3">
+          <!-- Container Distribution Section - Only show if containers were used -->
+          <div id="containerDistribution" class="form-group mb-3" style="display: none;">
             <label>Containers Used in Batch</label>
             <div class="table-responsive">
               <table class="table table-sm">
@@ -222,6 +232,18 @@ function updateContainerTable(containers, finalQuantity) {
   const totalUsed = document.getElementById('totalUsed');
   const totalPassed = document.getElementById('totalPassed');
   const totalCapacity = document.getElementById('totalCapacity');
+  const containerDistribution = document.getElementById('containerDistribution');
+
+  // If no containers or elements don't exist, hide the section
+  if (!containers || containers.length === 0 || !tbody || !containerDistribution) {
+    if (containerDistribution) {
+      containerDistribution.style.display = 'none';
+    }
+    return;
+  }
+
+  // Show container section since we have containers
+  containerDistribution.style.display = 'block';
 
   containerData = containers;
 
@@ -264,21 +286,28 @@ function updateContainerTable(containers, finalQuantity) {
   });
 
   tbody.innerHTML = html;
-  totalUsed.textContent = usedSum;
-  totalCapacity.textContent = capacitySum.toFixed(2);
+  if (totalUsed) totalUsed.textContent = usedSum;
+  if (totalCapacity) totalCapacity.textContent = capacitySum.toFixed(2);
 
   updateTotals();
 }
 
 function updateTotals() {
   const passInputs = document.querySelectorAll('.pass-input');
+  const totalPassedElement = document.getElementById('totalPassed');
+  const submitBtn = document.getElementById('completeBatchBtn');
+  
+  if (!totalPassedElement || !submitBtn) {
+    return; // Elements don't exist, skip validation
+  }
+
   let passedSum = 0;
 
   passInputs.forEach(input => {
     passedSum += parseInt(input.value) || 0;
   });
 
-  document.getElementById('totalPassed').textContent = passedSum;
+  totalPassedElement.textContent = passedSum;
 
   // Validate that passed doesn't exceed used
   let valid = true;
@@ -294,7 +323,6 @@ function updateTotals() {
     }
   });
 
-  const submitBtn = document.getElementById('completeBatchBtn');
   submitBtn.disabled = !valid;
 
   if (!valid) {
@@ -345,6 +373,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Initialize other modal functions
       toggleShelfLife();
+
+      // Check if we need to hide container section initially
+      const containerDistribution = document.getElementById('containerDistribution');
+      if (containerDistribution) {
+        // If no containers in batch, hide the section initially
+        {% if not batch.containers and not batch.extra_containers %}
+        containerDistribution.style.display = 'none';
+        {% endif %}
+      }
 
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
