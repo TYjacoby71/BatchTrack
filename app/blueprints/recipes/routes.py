@@ -20,8 +20,7 @@ def new_recipe():
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
                                      inventory_units=get_global_unit_list(),
-                                     units=units,
-                                     InventoryItem=InventoryItem)
+                                     units=units)
 
             # Check for duplicate label prefixes
             existing_recipe = Recipe.query.filter_by(label_prefix=label_prefix).first()
@@ -33,8 +32,7 @@ def new_recipe():
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
                                      inventory_units=get_global_unit_list(),
-                                     units=units,
-                                     InventoryItem=InventoryItem)
+                                     units=units)
 
             # Create recipe first
             recipe = Recipe(
@@ -186,8 +184,7 @@ def create_variation(recipe_id):
                                      inventory_units=inventory_units,
                                      units=units,
                                      is_variation=True,
-                                     parent_recipe=parent,
-                                     InventoryItem=InventoryItem)
+                                     parent_recipe=parent)
 
             # Check for duplicate label prefixes (excluding current variation)
             existing_recipe = Recipe.query.filter(
@@ -206,8 +203,7 @@ def create_variation(recipe_id):
                                      inventory_units=inventory_units,
                                      units=units,
                                      is_variation=True,
-                                     parent_recipe=parent,
-                                     InventoryItem=InventoryItem)
+                                     parent_recipe=parent)
 
             new_variation.name = request.form['name']
             new_variation.instructions = request.form.get('instructions', '')
@@ -261,8 +257,7 @@ def create_variation(recipe_id):
             inventory_units=inventory_units,
             units=units,
             is_variation=True,
-            parent_recipe=parent,
-            InventoryItem=InventoryItem)
+            parent_recipe=parent)
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         current_app.logger.exception(f"Unexpected error creating variation: {str(e)}")
@@ -417,8 +412,7 @@ def edit_recipe(recipe_id):
                                      inventory_units=inventory_units,
                                      units=units,
                                      edit_mode=True,
-                                     existing_batches=existing_batches,
-                                     InventoryItem=InventoryItem)
+                                     existing_batches=existing_batches)
 
             # Check for duplicate label prefixes (excluding current recipe)
             existing_recipe = Recipe.query.filter(
@@ -433,8 +427,7 @@ def edit_recipe(recipe_id):
                                      inventory_units=inventory_units,
                                      units=units,
                                      edit_mode=True,
-                                     existing_batches=existing_batches,
-                                     InventoryItem=InventoryItem)
+                                     existing_batches=existing_batches)
 
             recipe.name = request.form['name']
             recipe.instructions = request.form.get('instructions', '')
