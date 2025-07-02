@@ -125,25 +125,33 @@ function toggleOutputFields() {
   const outputTypeInput = document.getElementById('output_type_hidden');
   const productFields = document.getElementById('productFields');
 
-  if (!outputTypeInput || !productFields) {
-    console.log('Missing elements:', { outputTypeInput: !!outputTypeInput, productFields: !!productFields });
+  if (!outputTypeInput) {
+    console.log('Missing output_type_hidden element');
     return;
   }
 
   const outputType = outputTypeInput.value;
   console.log('Batch type from stored data:', outputType);
 
-  if (outputType === 'product') {
-    productFields.style.display = 'block';
-    loadVariants();
-  } else {
-    productFields.style.display = 'none';
+  if (productFields) {
+    if (outputType === 'product') {
+      productFields.style.display = 'block';
+      loadVariants();
+    } else {
+      productFields.style.display = 'none';
+    }
   }
 }
 
 function toggleShelfLife() {
-  const isPerishable = document.getElementById('is_perishable').checked;
+  const isPerishableElement = document.getElementById('is_perishable');
   const shelfLifeField = document.getElementById('shelfLifeField');
+
+  if (!isPerishableElement || !shelfLifeField) {
+    return;
+  }
+
+  const isPerishable = isPerishableElement.checked;
 
   if (isPerishable) {
     shelfLifeField.style.display = 'block';
@@ -153,14 +161,27 @@ function toggleShelfLife() {
 }
 
 function updateExpirationDate() {
-  const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
-  if (shelfLifeDays && shelfLifeDays > 0) {
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + shelfLifeDays);
+  const shelfLifeDaysElement = document.getElementById('shelf_life_days');
+  const expirationDateDisplay = document.getElementById('expiration_date_display');
+  const expirationDate = document.getElementById('expiration_date');
 
-    const formattedDate = expirationDate.toISOString().split('T')[0];
-    document.getElementById('expiration_date_display').value = formattedDate;
-    document.getElementById('expiration_date').value = formattedDate;
+  if (!shelfLifeDaysElement) {
+    return;
+  }
+
+  const shelfLifeDays = parseInt(shelfLifeDaysElement.value);
+  if (shelfLifeDays && shelfLifeDays > 0) {
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + shelfLifeDays);
+
+    const formattedDate = expDate.toISOString().split('T')[0];
+    
+    if (expirationDateDisplay) {
+      expirationDateDisplay.value = formattedDate;
+    }
+    if (expirationDate) {
+      expirationDate.value = formattedDate;
+    }
   }
 }
 
@@ -336,6 +357,7 @@ function loadVariants() {
   const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_label');
 
+  // Only proceed if both elements exist (they won't exist for ingredient batches)
   if (!productSelect || !variantSelect) {
     return;
   }
@@ -351,9 +373,13 @@ function loadVariants() {
     .then(response => response.json())
     .then(data => {
       variantSelect.innerHTML = '';
-      data.variants.forEach(variant => {
-        variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
-      });
+      if (data.variants && data.variants.length > 0) {
+        data.variants.forEach(variant => {
+          variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
+        });
+      } else {
+        variantSelect.innerHTML = '<option value="">No variants available</option>';
+      }
     })
     .catch(error => {
       console.error('Error loading variants:', error);
@@ -368,11 +394,19 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.addEventListener('shown.bs.modal', function () {
       console.log('Modal opened, initializing...');
 
-      // Initialize output fields based on stored batch type
-      toggleOutputFields();
+      // Initialize output fields based on stored batch type (safe for all batch types)
+      try {
+        toggleOutputFields();
+      } catch (error) {
+        console.log('Error in toggleOutputFields:', error);
+      }
 
-      // Initialize other modal functions
-      toggleShelfLife();
+      // Initialize shelf life toggle (safe for all batch types)
+      try {
+        toggleShelfLife();
+      } catch (error) {
+        console.log('Error in toggleShelfLife:', error);
+      }
 
       // Check if we need to hide container section initially
       const containerDistribution = document.getElementById('containerDistribution');
@@ -383,9 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
       }
 
+      // Only validate yield if the input exists
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
-        validateYield(); // Load container data on modal open
+        try {
+          validateYield(); // Load container data on modal open
+        } catch (error) {
+          console.log('Error in validateYield:', error);
+        }
       }
     });
   }
