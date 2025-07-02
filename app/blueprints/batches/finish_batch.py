@@ -182,7 +182,7 @@ def complete_batch(batch_id):
                     change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed - {final_quantity} {output_unit} yield",
-                    batch_id=batch.id,
+                    batch_id=batch.id,  # This should populate the batch relationship
                     created_by=current_user.id,
                     cost_override=unit_cost,
                     custom_expiration_date=custom_expiration_date,
@@ -227,7 +227,7 @@ def complete_batch(batch_id):
                     change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
-                    batch_id=batch.id,
+                    batch_id=batch.id,  # This should populate the batch relationship
                     created_by=current_user.id,
                     cost_override=unit_cost,
                     custom_expiration_date=custom_expiration_date,

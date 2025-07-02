@@ -252,6 +252,7 @@ def process_inventory_adjustment(
                 expiration_date=expiration_date,
                 shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
                 is_perishable=item.is_perishable if expiration_date else False,
+                batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
                 used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
                 organization_id=current_user.organization_id
             )
