@@ -318,6 +318,15 @@ class InventoryItem(ScopedModelMixin, db.Model):
     storage_unit = db.Column(db.String(32), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Density for unit conversion (g/mL)
+    density = db.Column(db.Float, nullable=True)
+
+    # Intermediate ingredient flag
+    intermediate = db.Column(db.Boolean, default=False)
+
+    # Organization relationship
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    organization = db.relationship('Organization', backref='inventory_items')
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
 
@@ -326,10 +335,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
         """Get non-expired quantity available for use"""
         if not self.is_perishable:
             return self.quantity
-        
+
         from datetime import datetime
         from sqlalchemy import and_
-        
+
         today = datetime.now().date()
         expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
@@ -338,18 +347,18 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.expiration_date != None,
                 InventoryHistory.expiration_date < today
             )).scalar() or 0
-        
+
         return max(0, self.quantity - expired_total)
-    
+
     @property 
     def expired_quantity(self):
         """Get expired quantity awaiting physical removal"""
         if not self.is_perishable:
             return 0
-            
+
         from datetime import datetime
         from sqlalchemy import and_
-        
+
         today = datetime.now().date()
         return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
