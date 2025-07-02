@@ -144,21 +144,15 @@ The code removes the `requires_containers` toggle and its associated logic from 
             
             <div id="containerSelectionSection">
                 <label class="form-label">Allowed Container Types</label>
-                <div class="row">
+                <select class="form-select" name="allowed_containers[]" multiple size="6">
                     {% for container in containers %}
-                    <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input container-checkbox" id="container_{{ container.id }}" 
-                                   name="allowed_containers[]" value="{{ container.id }}"
-                                   {% if recipe and recipe.allowed_containers and recipe.allowed_containers != 'all' and container.id in recipe.allowed_containers %}checked{% endif %}>
-                            <label class="form-check-label" for="container_{{ container.id }}">
-                                {{ container.name }}
-                                <small class="text-muted">({{ container.storage_amount }} {{ container.storage_unit }})</small>
-                            </label>
-                        </div>
-                    </div>
+                    <option value="{{ container.id }}" 
+                            {% if recipe and recipe.allowed_containers and recipe.allowed_containers != 'all' and container.id in recipe.allowed_containers %}selected{% endif %}>
+                        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
+                    </option>
                     {% endfor %}
-                </div>
+                </select>
+                <div class="form-text">Hold Ctrl/Cmd to select multiple containers</div>
             </div>
             
             <!-- Hidden input for "all" value -->
@@ -560,15 +554,17 @@ function toggleContainerSelection() {
     const allowAllCheckbox = document.getElementById('allowAllContainers');
     const containerSection = document.getElementById('containerSelectionSection');
     const hiddenInput = document.getElementById('allowAllContainersHidden');
-    const containerCheckboxes = document.querySelectorAll('.container-checkbox');
+    const containerSelect = document.querySelector('select[name="allowed_containers[]"]');
     
     if (allowAllCheckbox.checked) {
         // Hide individual container selection
         containerSection.style.display = 'none';
         // Set hidden input to indicate "all"
         hiddenInput.value = 'all';
-        // Uncheck all individual containers
-        containerCheckboxes.forEach(checkbox => checkbox.checked = false);
+        // Clear all selections in dropdown
+        if (containerSelect) {
+            Array.from(containerSelect.options).forEach(option => option.selected = false);
+        }
     } else {
         // Show individual container selection
         containerSection.style.display = 'block';
