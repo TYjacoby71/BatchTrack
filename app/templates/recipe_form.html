@@ -149,6 +149,15 @@
             <h5 class="card-title mb-0">
                 <i class="fas fa-list"></i> Ingredients
             </h5>
+            {% if recipe and recipe.allowed_containers %}
+    <!-- Debug: Show allowed containers -->
+    <script>console.log('Recipe allowed containers:', {{ recipe.allowed_containers|tojson }});</script>
+    {% endif %}
+            {% if recipe and recipe.parent_id or is_variation %}
+    <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
+        <i class="fas fa-plus"></i> Add Ingredient
+    </button>
+{% endif %}
             <div class="btn-group" role="group">
                 <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
                     <i class="fas fa-plus"></i> Add Ingredient
@@ -363,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addIngredient(PRESELECT_INGREDIENT_ID);
     }
 
-    
+
 
     const quickAddContainerForm = document.getElementById('quickAddContainerForm');
     if (quickAddContainerForm) {
