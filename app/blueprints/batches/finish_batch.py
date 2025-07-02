@@ -14,27 +14,27 @@ def mark_batch_failed(batch_id):
     print(f"DEBUG: Request method: {request.method}")
     print(f"DEBUG: Request form data: {dict(request.form)}")
     print(f"DEBUG: Current user: {current_user.username if current_user.is_authenticated else 'Anonymous'}")
-    
+
     try:
         # Use scoped query to ensure user can only access their organization's batches
         batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
         print(f"DEBUG: Found batch: {batch.label_code}, current status: {batch.status}")
-        
+
         # Validate ownership - only the creator or same organization can modify
         if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
             flash("You don't have permission to modify this batch.", "error")
             return redirect(url_for('batches.list_batches'))
-        
+
         batch.status = 'failed'
         batch.failed_at = datetime.utcnow()
         batch.status_reason = request.form.get('reason', '')
-        
+
         db.session.commit()
         print(f"DEBUG: Successfully marked batch {batch.label_code} as failed by user {current_user.id}")
-        
+
         flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
         return redirect(url_for('batches.list_batches'))
-        
+
     except Exception as e:
         print(f"DEBUG: Error in mark_batch_failed: {str(e)}")
         db.session.rollback()
@@ -46,7 +46,7 @@ def mark_batch_failed(batch_id):
 def complete_batch(batch_id):
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-    
+
     # Validate ownership - only the creator or same organization can modify
     if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
         flash("You don't have permission to modify this batch.", "error")
@@ -118,7 +118,7 @@ def complete_batch(batch_id):
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
             # Containers are just production tools, not part of the inventory structure
-            
+
             # Calculate total cost including all inputs
             total_cost = sum(
                 (ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients
@@ -159,12 +159,12 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Add to inventory using centralized adjustment with correct change_type
+                # Add to inventory using centralized adjustment with finished_batch change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
-                    change_type='restock',  # Use 'restock' not 'finished_batch' for additions
+                    change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
@@ -189,12 +189,12 @@ def complete_batch(batch_id):
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
-                # Add initial stock using centralized adjustment with correct change_type
+                # Add initial stock using centralized adjustment with finished_batch change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
-                    change_type='restock',  # Use 'restock' not 'finished_batch' for additions
+                    change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
