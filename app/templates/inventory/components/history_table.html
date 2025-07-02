@@ -56,7 +56,13 @@
                   <tr class="{% if is_expired %}table-danger{% elif is_expiring_soon %}table-warning{% endif %}" 
                       {% if is_expired %}style="background-color: #f8d7da !important; border-color: #f5c6cb !important;"{% elif is_expiring_soon %}style="background-color: #fff3cd !important; border-color: #ffeaa7 !important;"{% endif %}>
                     <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ entry.change_type|title }}</td>
+                    <td>
+                      {% if entry.change_type == 'finished_batch' %}
+                        Finished Batch
+                      {% else %}
+                        {{ entry.change_type|title }}
+                      {% endif %}
+                    </td>
                     <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
                     <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type in ['restock', 'finished_batch'] else 'NA' }}</td>
                     <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
@@ -66,6 +72,8 @@
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
                       {% elif entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                      {% elif entry.change_type == 'finished_batch' %}
+                        NA
                       {% else %}
                         NA
                       {% endif %}
@@ -91,12 +99,6 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                           </a>
-                        {% endif %}
-                      {% elif entry.change_type == 'finished_batch' and entry.batch %}
-                        {% if entry.batch.status == 'in_progress' %}
-                          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% else %}
                         -
