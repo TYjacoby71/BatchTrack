@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 from ...models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
+from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import joinedload
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -23,10 +25,10 @@ def list_inventory():
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
-    
+
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-        
+
         # Calculate expired quantity using temporary attributes instead of properties
         if item.is_perishable:
             today = datetime.now().date()
@@ -66,14 +68,14 @@ def view_inventory(id):
     fifo_filter = request.args.get('fifo') == 'true'
 
     item = InventoryItem.query.get_or_404(id)
-    
+
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
-    
+
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-    
+
     # Calculate expired quantity using temporary attributes
     if item.is_perishable:
         today = datetime.now().date()
@@ -90,7 +92,7 @@ def view_inventory(id):
     else:
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
-    
+
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
 
     # Apply FIFO filter at database level if requested
@@ -102,7 +104,7 @@ def view_inventory(id):
     history = pagination.items
 
     from datetime import datetime
-    
+
     # Get expired FIFO entries for display
     from sqlalchemy import and_
     expired_entries = []
