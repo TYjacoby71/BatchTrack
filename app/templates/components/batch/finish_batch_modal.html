@@ -100,7 +100,8 @@
             <div class="form-text">
               <small><strong>Used in Batch:</strong> Containers deducted during batch creation<br>
               <strong>Pass to Products:</strong> How many product units to create (can be less if containers broke)<br>
-              <strong>Capacity:</strong> Total volume that can be contained</small>
+              <strong>Capacity:</strong> Total volume that can be contained<br>
+              <strong>Highlighted rows:</strong> Extra containers added during batch (with reason shown)</small>
             </div>
           </div>
 
@@ -231,9 +232,15 @@ function updateContainerTable(containers, finalQuantity) {
     usedSum += container.quantity_used;
     capacitySum += container.total_capacity;
     
+    // Create a display label for the container
+    let containerLabel = `${container.container_name} (${container.container_size} units)`;
+    if (container.container_type === 'extra' && container.reason) {
+      containerLabel += ` - ${container.reason.replace('_', ' ')}`;
+    }
+    
     html += `
-      <tr>
-        <td>${container.container_name} (${container.container_size} units)</td>
+      <tr class="${container.container_type === 'extra' ? 'table-warning' : ''}">
+        <td>${containerLabel}</td>
         <td>${container.quantity_used}</td>
         <td>
           <input type="number" 
@@ -247,6 +254,8 @@ function updateContainerTable(containers, finalQuantity) {
                  data-container-id="${index}">
           <input type="hidden" name="container_name_${index}" value="${container.container_name}">
           <input type="hidden" name="container_size_${index}" value="${container.container_size}">
+          <input type="hidden" name="container_type_${index}" value="${container.container_type}">
+          ${container.reason ? `<input type="hidden" name="container_reason_${index}" value="${container.reason}">` : ''}
         </td>
         <td>${container.total_capacity.toFixed(2)}</td>
       </tr>
