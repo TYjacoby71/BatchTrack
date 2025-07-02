@@ -74,7 +74,8 @@ class ProductInventoryService:
             note=notes_str,  # Mirror field
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=0.0,  # Additions don't consume
-            sale_location=sale_location
+            sale_location=sale_location,
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
 
         db.session.add(history)
@@ -143,7 +144,8 @@ class ProductInventoryService:
                 created_by=current_user.id if current_user.is_authenticated else None,
                 quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
                 sale_location=sale_location,
-                order_id=order_id
+                order_id=order_id,
+                organization_id=current_user.organization_id if current_user.is_authenticated else None
             )
             db.session.add(deduction_history)
 
@@ -225,7 +227,8 @@ class ProductInventoryService:
             note=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=quantity if change_type in ['spoil', 'trash', 'damage'] else 0.0,
-            sale_location='manual'
+            sale_location='manual',
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
 
         db.session.add(adjustment_history)
@@ -291,7 +294,8 @@ class ProductInventoryService:
                         note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         created_by=current_user.id if current_user.is_authenticated else None,
                         quantity_used=0.0,
-                        sale_location='manual'
+                        sale_location='manual',
+                        organization_id=current_user.organization_id if current_user.is_authenticated else None
                     )
                     db.session.add(credit_history)
 
@@ -345,7 +349,8 @@ class ProductInventoryService:
             note=f"Reserved {quantity} {sku.unit} for order {order_id}",
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=0.0,
-            sale_location='pos'
+            sale_location='pos',
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
         db.session.add(history)
         return True
