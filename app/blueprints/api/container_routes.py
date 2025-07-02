@@ -44,6 +44,7 @@ def available_containers(recipe_id):
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
+        # Get allowed containers for this recipe
         allowed_container_ids = recipe.allowed_containers or []
         predicted_unit = recipe.predicted_yield_unit
         if not predicted_unit:
@@ -58,10 +59,12 @@ def available_containers(recipe_id):
         )
 
         print(f"Found {containers_query.count()} containers for organization {current_user.organization_id}")
+        print(f"Recipe allowed containers: {allowed_container_ids}")
 
         for container in containers_query:
             print(f"Processing container: {container.name}, storage_amount: {container.storage_amount}, storage_unit: {container.storage_unit}")
 
+            # Only show containers that are in the allowed list if the recipe has allowed containers specified
             if allowed_container_ids and container.id not in allowed_container_ids:
                 print(f"Container {container.name} not in allowed list: {allowed_container_ids}")
                 continue
@@ -200,9 +203,9 @@ def adjust_batch_container(batch_id, container_id):
         data = request.get_json()
         adjustment_type = data.get('adjustment_type')
         notes = data.get('notes', '')
-        
+
         batch = Batch.query.get_or_404(batch_id)
-        
+
         # Check if it's a regular container or extra container
         container_record = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first()
         if not container_record:
@@ -211,20 +214,20 @@ def adjust_batch_container(batch_id, container_id):
             is_extra_container = True
         else:
             is_extra_container = False
-        
+
         if adjustment_type == 'quantity':
             new_total = data.get('new_total_quantity', 0)
             if new_total < 0:
                 return jsonify({'success': False, 'message': 'Total quantity cannot be negative'})
-            
+
             current_qty = container_record.quantity_used
             quantity_difference = new_total - current_qty
-            
+
             if quantity_difference != 0:
                 # Adjust inventory - positive for returns, negative for additional deductions
                 from ...services.inventory_adjustment import process_inventory_adjustment
                 change_type = 'refunded' if quantity_difference > 0 else 'batch_adjustment'
-                
+
                 process_inventory_adjustment(
                     item_id=container_record.container_id,
                     quantity=quantity_difference,  # Positive for return, negative for deduction
@@ -234,16 +237,16 @@ def adjust_batch_container(batch_id, container_id):
                     batch_id=batch_id,
                     created_by=current_user.id
                 )
-            
+
             container_record.quantity_used = new_total
-            
+
         elif adjustment_type == 'replace':
             new_container_id = data.get('new_container_id')
             new_quantity = data.get('new_quantity', 1)
-            
+
             if not new_container_id:
                 return jsonify({'success': False, 'message': 'New container must be selected'})
-            
+
             # Return old containers to inventory
             from ...services.inventory_adjustment import process_inventory_adjustment
             process_inventory_adjustment(
@@ -255,7 +258,7 @@ def adjust_batch_container(batch_id, container_id):
                 batch_id=batch_id,
                 created_by=current_user.id
             )
-            
+
             # Deduct new containers
             new_container = InventoryItem.query.get_or_404(new_container_id)
             process_inventory_adjustment(
@@ -267,17 +270,17 @@ def adjust_batch_container(batch_id, container_id):
                 batch_id=batch_id,
                 created_by=current_user.id
             )
-            
+
             # Update container record
             container_record.container_id = new_container_id
             container_record.quantity_used = new_quantity
             container_record.cost_each = new_container.cost_per_unit or 0.0
-            
+
         elif adjustment_type == 'damage':
             damage_quantity = data.get('damage_quantity', 0)
             if damage_quantity <= 0 or damage_quantity > container_record.quantity_used:
                 return jsonify({'success': False, 'message': 'Invalid damage quantity'})
-            
+
             # Check if we have stock to replace damaged containers
             container_item = InventoryItem.query.get(container_record.container_id)
             if container_item.quantity < damage_quantity:
@@ -285,7 +288,7 @@ def adjust_batch_container(batch_id, container_id):
                     'success': False, 
                     'message': f'Not enough {container_item.name} in stock to replace damaged containers. Available: {container_item.quantity}, Need: {damage_quantity}'
                 })
-            
+
             # Create extra container record to track the damaged containers  
             from ...models import ExtraBatchContainer
             damaged_record = ExtraBatchContainer(
@@ -298,7 +301,7 @@ def adjust_batch_container(batch_id, container_id):
                 organization_id=current_user.organization_id
             )
             db.session.add(damaged_record)
-            
+
             # Deduct replacement containers from inventory
             from ...services.inventory_adjustment import process_inventory_adjustment
             process_inventory_adjustment(
@@ -310,12 +313,12 @@ def adjust_batch_container(batch_id, container_id):
                 batch_id=batch_id,
                 created_by=current_user.id
             )
-            
+
             # The original container count stays the same - we're adding extra containers to replace damaged ones
-        
+
         db.session.commit()
         return jsonify({'success': True, 'message': 'Container adjusted successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

@@ -160,7 +160,6 @@ class Recipe(ScopedModelMixin, db.Model):
     is_locked = db.Column(db.Boolean, default=False)
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
-    requires_containers = db.Column(db.Boolean, default=False)
     allowed_containers = db.Column(db.PickleType, default=list)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')

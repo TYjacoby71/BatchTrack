@@ -19,26 +19,43 @@
       </h5>
     </div>
     <div class="card-body">
-      <div class="row">
-        <div class="col-md-4">
+      <div class="row g-3">
+        <div class="col-md-3">
           <div class="form-group">
-            <label class="form-label">Batch Scale:</label>
-            <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
+            <label class="form-label fw-semibold">Batch Scale</label>
+            <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan" placeholder="1.0">
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="form-group">
-            <label class="form-label">Projected Yield:</label>
-            <div class="form-control-plaintext fw-bold text-primary" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+            <label class="form-label fw-semibold">Projected Yield</label>
+            <div class="form-control bg-light border-0 fw-bold text-primary d-flex align-items-center" style="height: 38px;" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="form-group">
-            <label class="form-label">Batch Type:</label>
-            <select class="form-select" x-model="batchType">
+            <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
+            <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
+              <option value="">Select Type</option>
               <option value="ingredient">Intermediate Ingredient</option>
               <option value="product">Final Product</option>
             </select>
+            <div class="invalid-feedback" x-show="batchType === ''">
+              Please select a batch type
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label class="form-label fw-semibold">Container Options</label>
+            <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
+              <div class="form-check form-switch mb-0">
+                <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
+                <label class="form-check-label fw-normal" for="requireContainers">
+                  <i class="fas fa-box me-1"></i> Require Containers
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -46,14 +63,16 @@
   </div>
 
   <!-- Container Management Card -->
-  <div class="card mb-4" x-show="recipeNeedsContainers">
+  <div class="card mb-4" x-show="requiresContainers">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="fas fa-box"></i> Container Management
       </h5>
-      <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">
-        <i class="fas fa-plus"></i> Add Container
-      </button>
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">
+          <i class="fas fa-plus"></i> Add Container
+        </button>
+      </div>
     </div>
     <div class="card-body">
       <!-- Auto-Fill Toggle -->
@@ -182,14 +201,14 @@
 function planProduction() {
   return {
       recipeId: {{ recipe.id }},
-      recipeNeedsContainers: {{ 'true' if recipe.requires_containers else 'false' }},
       baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
       unit: '{{ recipe.predicted_yield_unit }}',
       allowedContainers: [],
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
-      batchType: 'ingredient',
+      batchType: '',
+      requiresContainers: false,
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -228,14 +247,26 @@ function planProduction() {
     },
 
     get canStartBatch() {
-      if (this.recipeNeedsContainers) {
-        return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
+      const batchTypeSelected = this.batchType !== '';
+      if (this.requiresContainers) {
+        return batchTypeSelected && this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
       }
-      return this.stockChecked && this.stockCheckPassed;
+      return batchTypeSelected && this.stockChecked && this.stockCheckPassed;
+    },
+
+    onContainerRequirementChange() {
+      if (!this.requiresContainers) {
+        this.containersSelected = [];
+        this.containmentPercent = 0;
+        this.remainingToContain = 0;
+        this.containmentIssue = '';
+      } else {
+        this.fetchContainerPlan();
+      }
     },
 
     fetchContainerPlan() {
-      if (!this.recipeNeedsContainers) {
+      if (!this.requiresContainers) {
         this.allowedContainers = [];
         this.containersSelected = [];
         return;
@@ -248,11 +279,11 @@ function planProduction() {
           this.allowedContainers = data.available || [];
           console.log('Allowed containers:', this.allowedContainers);
 
-          if (this.autoFill && this.recipeNeedsContainers) {
+          if (this.autoFill && this.requiresContainers) {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
-            // Sort containers by capacity (largest first)
+            // Sort containers by capacity (largest first) - these are already filtered by the API
             const availableContainers = [...this.allowedContainers]
               .filter(c => c.stock_qty > 0)
               .sort((a, b) => b.storage_amount - a.storage_amount);
@@ -442,6 +473,10 @@ function planProduction() {
 
     async startBatch() {
       if (!this.canStartBatch) {
+        if (this.batchType === '') {
+          alert('Please select a batch type before starting the batch');
+          return;
+        }
         alert('Please check stock and ensure containers are properly allocated before starting batch');
         return;
       }
@@ -458,6 +493,7 @@ function planProduction() {
             recipe_id: this.recipeId,
             scale: this.scale,
             batch_type: this.batchType,
+            requires_containers: this.requiresContainers,
             notes: '',
             containers: this.containersSelected.map(c => ({
               id: c.id,
