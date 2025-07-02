@@ -1,13 +1,13 @@
-
 <!-- Product Selection Fields -->
 <div id="productFields" style="display: none;">
   <div class="mb-3">
     <label for="product_id">Product</label>
-    <select name="product_id" id="product_id" class="form-select">
-      {% for product in products %}
-        <option value="{{ product.id }}">{{ product.name }}</option>
-      {% endfor %}
-    </select>
+    <select id="product_id" name="sku_id" class="form-select" required onchange="loadVariants()">
+            <option value="">Select Product</option>
+            {% for product in products %}
+            <option value="{{ product.id }}">{{ product.product_name }}{% if product.variant_name and product.variant_name != 'Base' %} - {{ product.variant_name }}{% endif %}</option>
+            {% endfor %}
+          </select>
   </div>
 
   <div class="mb-3">
