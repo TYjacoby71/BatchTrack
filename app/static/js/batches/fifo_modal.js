@@ -232,11 +232,4 @@ function showFifoError(message) {
     `;
 }
 
-// Set up the "View Full Inventory" button click handler
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('viewFullInventory').addEventListener('click', function() {
-        if (currentInventoryId) {
-            window.open(`/inventory/view/${currentInventoryId}?fifo=true`, '_blank');
-        }
-    });
-});
+);
