@@ -34,11 +34,15 @@
         </div>
         <div class="col-md-4">
           <div class="form-group">
-            <label class="form-label">Batch Type:</label>
-            <select class="form-select" x-model="batchType">
+            <label class="form-label">Batch Type: <span class="text-danger">*</span></label>
+            <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
+              <option value="">-- Select Batch Type --</option>
               <option value="ingredient">Intermediate Ingredient</option>
               <option value="product">Final Product</option>
             </select>
+            <div class="invalid-feedback" x-show="batchType === ''">
+              Please select a batch type
+            </div>
           </div>
         </div>
       </div>
@@ -189,7 +193,7 @@ function planProduction() {
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
-      batchType: 'ingredient',
+      batchType: '',
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -228,10 +232,11 @@ function planProduction() {
     },
 
     get canStartBatch() {
+      const batchTypeSelected = this.batchType !== '';
       if (this.recipeNeedsContainers) {
-        return this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
+        return batchTypeSelected && this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
       }
-      return this.stockChecked && this.stockCheckPassed;
+      return batchTypeSelected && this.stockChecked && this.stockCheckPassed;
     },
 
     fetchContainerPlan() {
@@ -442,6 +447,10 @@ function planProduction() {
 
     async startBatch() {
       if (!this.canStartBatch) {
+        if (this.batchType === '') {
+          alert('Please select a batch type before starting the batch');
+          return;
+        }
         alert('Please check stock and ensure containers are properly allocated before starting batch');
         return;
       }
