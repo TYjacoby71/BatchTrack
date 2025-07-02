@@ -132,7 +132,7 @@ The code removes the `requires_containers` toggle and its associated logic from 
         <div class="card-body">
             <label class="form-label">Allowed Container Types</label>
             <div class="row">
-                {% for container in containers %}
+                {% for container in InventoryItem.query.filter_by(type='container').all() %}
                 <div class="col-md-4 mb-2">
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" id="container_{{ container.id }}" 
