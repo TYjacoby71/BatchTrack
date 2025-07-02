@@ -12,9 +12,15 @@ start_batch_bp = Blueprint('start_batch', __name__)
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
 def start_batch():
+    # Get request data
     data = request.get_json()
-    recipe = Recipe.query.get_or_404(data['recipe_id'])
-    scale = float(data['scale'])
+    recipe_id = data.get('recipe_id')
+    scale = float(data.get('scale', 1.0))
+    batch_type = data.get('batch_type', 'ingredient')
+    notes = data.get('notes', '')
+    containers_data = data.get('containers', [])
+    recipe = Recipe.query.get_or_404(recipe_id)
+    scale = float(scale)
 
     # Get current year and count of batches for this recipe this year
     current_year = datetime.now().year
@@ -24,26 +30,28 @@ def start_batch():
     ).count()
 
     label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
+    projected_yield = scale * recipe.predicted_yield
 
-    new_batch = Batch(
-        recipe_id=recipe.id,
+    # Create the batch
+    batch = Batch(
+        recipe_id=recipe_id,
         label_code=label_code,
-        batch_type='product',
-        scale=scale,
-        notes=data.get('notes', ''),
-        status='in_progress',
-        projected_yield=scale * recipe.predicted_yield,
+        batch_type=batch_type,
+        projected_yield=projected_yield,
         projected_yield_unit=recipe.predicted_yield_unit,
+        scale=scale,
+        status='in_progress',
+        notes=notes,
         created_by=current_user.id,
         organization_id=current_user.organization_id
     )
 
-    db.session.add(new_batch)
+    db.session.add(batch)
     db.session.commit()
 
     # Handle container deduction first
     container_errors = []
-    for container in data.get('containers', []):
+    for container in containers_data:
         container_id = container.get('id')
         quantity = container.get('quantity', 0)
 
@@ -61,14 +69,14 @@ def start_batch():
                         change_type='batch',
                         unit=container_unit,
                         notes=f"Used in batch {label_code}",
-                        batch_id=new_batch.id,
+                        batch_id=batch.id,
                         created_by=current_user.id
                     )
 
                     if result:
                         # Create single BatchContainer record
                         bc = BatchContainer(
-                            batch_id=new_batch.id,
+                            batch_id=batch.id,
                             container_id=container_id,
                             container_quantity=quantity,
                             quantity_used=quantity,
@@ -108,7 +116,7 @@ def start_batch():
                 change_type='batch',
                 unit=ingredient.unit,
                 notes=f"Used in batch {label_code}",
-                batch_id=new_batch.id,
+                batch_id=batch.id,
                 created_by=current_user.id
             )
 
@@ -118,7 +126,7 @@ def start_batch():
 
             # Create single BatchIngredient record
             batch_ingredient = BatchIngredient(
-                batch_id=new_batch.id,
+                batch_id=batch.id,
                 inventory_item_id=ingredient.id,
                 quantity_used=required_converted,
                 unit=ingredient.unit,
@@ -134,13 +142,13 @@ def start_batch():
     else:
         # Build ingredients summary using the new_batch
         deduction_summary = []
-        for ing in new_batch.batch_ingredients:
+        for ing in batch.batch_ingredients:
             deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
-        for cont in new_batch.containers:
+        for cont in batch.containers:
             deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
 
         deducted_items = ", ".join(deduction_summary)
         flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
 
     db.session.commit()
-    return jsonify({'batch_id': new_batch.id})
+    return jsonify({'batch_id': batch.id})

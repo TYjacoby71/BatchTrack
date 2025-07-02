@@ -4,15 +4,22 @@
 <div x-data="planProduction()" x-init="init()" class="container">
   <h2>Plan Production: {{ recipe.name }}</h2>
 
-  <!-- Scale + Yield -->
+  <!-- Scale + Yield + Batch Type -->
   <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-4">
       <label>Batch Scale:</label>
       <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
     </div>
-    <div class="col-md-6">
+    <div class="col-md-4">
       <label>Projected Yield:</label>
       <div class="form-control-plaintext" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+    </div>
+    <div class="col-md-4">
+      <label>Batch Type:</label>
+      <select class="form-select" x-model="batchType">
+        <option value="ingredient">Intermediate Ingredient</option>
+        <option value="product">Final Product</option>
+      </select>
     </div>
   </div>
 
@@ -100,6 +107,7 @@ function planProduction() {
       containersSelected: [],
       autoFill: true,
       scale: 1.0,
+      batchType: 'ingredient',
       stockChecked: false,
       stockCheckPassed: false,
       stockResults: [],
@@ -367,6 +375,7 @@ function planProduction() {
           body: JSON.stringify({
             recipe_id: this.recipeId,
             scale: this.scale,
+            batch_type: this.batchType,
             notes: '',
             containers: this.containersSelected.map(c => ({
               id: c.id,

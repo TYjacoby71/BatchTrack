@@ -10,13 +10,7 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <div class="form-group mb-3">
-            <label for="output_type">Output Type</label>
-            <select name="output_type" id="output_type" class="form-select" required onchange="toggleOutputFields()">
-              <option value="ingredient">Intermediate Ingredient</option>
-              <option value="product">Final Product</option>
-            </select>
-          </div>
+          <input type="hidden" name="output_type" value="{{ batch.batch_type }}">
 
           <div class="form-group mb-3">
             <label for="final_quantity">Final Quantity</label>
@@ -119,7 +113,7 @@
 let containerData = [];
 
 function toggleOutputFields() {
-  const outputType = document.getElementById('output_type').value;
+  const outputType = '{{ batch.batch_type }}';
   const productFields = document.getElementById('productFields');
 
   if (outputType === 'product') {
@@ -331,24 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      const batchType = '{{ batch.batch_type }}';
-      console.log('Batch type:', batchType);
-
-      const productFields = document.getElementById('productFields');
-
-      if (batchType === 'product') {
-        if (productFields) {
-          productFields.style.display = 'block';
-          console.log('Showing product fields');
-          loadVariants();
-        }
-      } else {
-        if (productFields) {
-          productFields.style.display = 'none';
-          console.log('Hiding product fields');
-        }
-      }
-
+      toggleOutputFields();
       toggleShelfLife();
       validateYield(); // Load container data on modal open
     });
