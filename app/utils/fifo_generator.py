@@ -1,6 +1,9 @@
 # Base-36 FIFO ID Generator
 # Replaces integer auto-increment with structured base-36 codes
 
+import secrets
+import base64
+
 BASE36_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 def get_change_type_prefix(change_type):
@@ -89,14 +92,10 @@ def validate_fifo_id(fifo_id):
     except:
         return False
 
-def generate_fifo_id(prefix="FIFO"):
+def generate_fifo_code(prefix="FIFO"):
     """Generate a unique FIFO identifier using base32 encoding"""
     # Generate 8 random bytes and encode as base32
     random_bytes = secrets.token_bytes(8)
     # Remove padding and make lowercase for readability
     fifo_code = base64.b32encode(random_bytes).decode('ascii').rstrip('=').lower()
     return f"{prefix}_{fifo_code}"
-
-def generate_fifo_code(prefix="FIFO"):
-    """Alias for generate_fifo_id - used in product inventory service"""
-    return generate_fifo_id(prefix)
