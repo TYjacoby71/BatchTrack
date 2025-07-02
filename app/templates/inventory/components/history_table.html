@@ -87,10 +87,12 @@
                               {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                             {% endif %}
                           </a>
+                          <!-- Debug: ref_entry found, change_type: {{ ref_entry.change_type }}, batch: {{ ref_entry.batch.label_code if ref_entry.batch else 'None' }} -->
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                           </a>
+                          <!-- Debug: ref_entry NOT found for fifo_reference_id: {{ entry.fifo_reference_id }} -->
                         {% endif %}
                       {% else %}
                         -

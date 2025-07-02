@@ -93,7 +93,10 @@ def view_inventory(id):
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
 
-    history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
+    history_query = InventoryHistory.query.filter_by(inventory_item_id=id).options(
+        joinedload(InventoryHistory.batch),
+        joinedload(InventoryHistory.used_for_batch)
+    )
 
     # Apply FIFO filter at database level if requested
     if fifo_filter:
