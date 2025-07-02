@@ -44,6 +44,14 @@ class ProductInventoryService:
         else:
             fifo_source = generate_fifo_id(f"SKU{sku_id}")
 
+        # Ensure notes is a string (handle case where dict is passed)
+        notes_str = notes
+        if isinstance(notes, dict):
+            # Convert dict to string representation
+            notes_str = f"User notes: {notes.get('user_notes', '')}, Sale price: {notes.get('sale_price', 0.0)}, Customer: {notes.get('customer', '')}, Unit cost: {notes.get('unit_cost', 0.0)}"
+        elif not isinstance(notes, str):
+            notes_str = str(notes)
+
         # Create FIFO history entry (like InventoryHistory with remaining_quantity)
         history = ProductSKUHistory(
             sku_id=sku_id,
@@ -62,8 +70,8 @@ class ProductInventoryService:
             container_id=container_id,
             fifo_code=generate_fifo_id('refunded'),
             fifo_source=fifo_source,
-            notes=notes,
-            note=notes,  # Mirror field
+            notes=notes_str,
+            note=notes_str,  # Mirror field
             created_by=current_user.id if current_user.is_authenticated else None,
             quantity_used=0.0,  # Additions don't consume
             sale_location=sale_location
@@ -106,6 +114,14 @@ class ProductInventoryService:
             entry.remaining_quantity -= deduct_amount
             remaining_to_deduct -= deduct_amount
 
+            # Ensure notes is a string (handle case where dict is passed)
+            notes_str = notes
+            if isinstance(notes, dict):
+                # Convert dict to string representation
+                notes_str = f"User notes: {notes.get('user_notes', '')}, Sale price: {notes.get('sale_price', 0.0)}, Customer: {notes.get('customer', '')}, Unit cost: {notes.get('unit_cost', 0.0)}"
+            elif not isinstance(notes, str):
+                notes_str = str(notes)
+
             # Create individual deduction history for each FIFO entry used
             deduction_history = ProductSKUHistory(
                 sku_id=sku_id,
@@ -122,8 +138,8 @@ class ProductInventoryService:
                 fifo_code=generate_fifo_id('refunded'),
                 fifo_reference_id=entry.id,  # Reference to source FIFO entry
                 fifo_source=entry.fifo_source,  # Use source from original FIFO entry
-                notes=f"{notes} (From FIFO #{entry.id})",
-                note=f"{notes} (From FIFO #{entry.id})",
+                notes=f"{notes_str} (From FIFO #{entry.id})",
+                note=f"{notes_str} (From FIFO #{entry.id})",
                 created_by=current_user.id if current_user.is_authenticated else None,
                 quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
                 sale_location=sale_location,
