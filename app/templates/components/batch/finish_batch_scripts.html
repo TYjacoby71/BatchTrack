@@ -57,37 +57,48 @@ function validateYield() {
   })
   .then(response => response.json())
   .then(data => {
+    let alertsHtml = '';
+
+    if (data.warnings && data.warnings.length > 0) {
+      data.warnings.forEach(warning => {
+        alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
+          <i class="fas fa-exclamation-triangle me-1"></i>${warning}
+        </div>`;
+      });
+    }
+
+    // Add helpful context for overflow/underfill
+    if (data.overflow_amount > 0) {
+      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
+      </div>`;
+    }
+
+    if (data.underfill_amount > 0) {
+      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
+      </div>`;
+    }
+
     if (alertsContainer) {
-      alertsContainer.innerHTML = '';
+      alertsContainer.innerHTML = alertsHtml;
+    }
 
-      if (data.warnings && data.warnings.length > 0) {
-        data.warnings.forEach(warning => {
-          const alertDiv = document.createElement('div');
-          alertDiv.className = 'alert alert-warning alert-sm mb-2';
-          alertDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${warning}`;
-          alertsContainer.appendChild(alertDiv);
-        });
-      }
-
-      // Show container breakdown
-      if (data.container_breakdown && data.container_breakdown.length > 0) {
-        const breakdownDiv = document.createElement('div');
-        breakdownDiv.className = 'alert alert-info alert-sm mb-2';
-        breakdownDiv.innerHTML = `
-          <strong>Container Breakdown:</strong>
-          <ul class="mb-0 mt-1">
-            ${data.container_breakdown.map(container => 
-              `<li>${container.container_name}: ${container.quantity_used} × ${container.container_size} = ${container.total_capacity} capacity</li>`
-            ).join('')}
-          </ul>
-          <small class="text-muted">Total capacity: ${data.total_capacity} units</small>
-        `;
-        alertsContainer.appendChild(breakdownDiv);
-      }
+    // Update container breakdown if available
+    if (data.container_breakdown) {
+      updateContainerTable(data.container_breakdown, finalQuantity);
     }
   })
   .catch(error => {
     console.error('Error validating yield:', error);
+    if (alertsContainer) {
+      alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Unable to validate yield against container capacity.
+      </div>`;
+    }
   });
 }
 

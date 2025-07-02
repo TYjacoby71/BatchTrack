@@ -1,53 +1,36 @@
 
-<!-- Container Confirmation Section -->
+<!-- Container Distribution Section -->
 {% if batch.containers or batch.extra_containers %}
-<div id="containerConfirmation" class="form-group mb-3">
+<div id="containerDistribution" class="form-group mb-3">
   <label>Containers Used in Batch</label>
   <div class="table-responsive">
     <table class="table table-sm">
       <thead>
         <tr>
-          <th>Container Type</th>
-          <th>Quantity Used</th>
+          <th>Container Size</th>
+          <th>Used in Batch</th>
           <th>Pass to Products</th>
+          <th>Capacity</th>
         </tr>
       </thead>
-      <tbody>
-        {% for container_usage in batch.containers %}
-        <tr>
-          <td>{{ container_usage.container.name }}</td>
-          <td>{{ container_usage.quantity_used }}</td>
-          <td>
-            <input type="number" 
-                   name="container_{{ container_usage.id }}_pass_quantity" 
-                   value="{{ container_usage.quantity_used }}" 
-                   min="0" 
-                   max="{{ container_usage.quantity_used }}"
-                   class="form-control form-control-sm">
-          </td>
-        </tr>
-        {% endfor %}
-        
-        {% for extra_container in batch.extra_containers %}
-        <tr class="table-warning">
-          <td>{{ extra_container.container.name }} <small>({{ extra_container.reason }})</small></td>
-          <td>{{ extra_container.quantity_used }}</td>
-          <td>
-            <input type="number" 
-                   name="extra_container_{{ extra_container.id }}_pass_quantity" 
-                   value="{{ extra_container.quantity_used }}" 
-                   min="0" 
-                   max="{{ extra_container.quantity_used }}"
-                   class="form-control form-control-sm">
-          </td>
-        </tr>
-        {% endfor %}
+      <tbody id="containerTableBody">
+        <!-- Will be populated by JavaScript -->
       </tbody>
+      <tfoot>
+        <tr class="table-info">
+          <td><strong>Total</strong></td>
+          <td id="totalUsed">-</td>
+          <td id="totalPassed">-</td>
+          <td id="totalCapacity">-</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
   <div class="form-text">
-    <small><strong>Pass to Products:</strong> Number of containers to create as product units (reduce if any containers broke)<br>
-    <strong>Highlighted rows:</strong> Extra containers added during batch</small>
+    <small><strong>Used in Batch:</strong> Containers deducted during batch creation<br>
+    <strong>Pass to Products:</strong> How many product units to create (can be less if containers broke)<br>
+    <strong>Capacity:</strong> Total volume that can be contained<br>
+    <strong>Highlighted rows:</strong> Extra containers added during batch (with reason shown)</small>
   </div>
 </div>
 {% endif %}
