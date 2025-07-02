@@ -231,5 +231,3 @@ function showFifoError(message) {
         </div>
     `;
 }
-
-);
