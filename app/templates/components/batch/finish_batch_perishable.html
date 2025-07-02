@@ -1,0 +1,20 @@
+
+<!-- Perishable Item Fields -->
+<div class="perishable-section">
+  <div class="form-group mb-3">
+    <div class="form-check">
+      <input type="checkbox" id="is_perishable" name="is_perishable" class="form-check-input" onchange="toggleShelfLife()">
+      <label for="is_perishable" class="form-check-label">Perishable Item</label>
+    </div>
+  </div>
+
+  <div id="shelfLifeField" class="form-group mb-3" style="display: none;">
+    <label for="shelf_life_days">Shelf Life (days)</label>
+    <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" onchange="updateExpirationDate()">
+    <div class="mt-2">
+      <label for="expiration_date_display">Expiration Date</label>
+      <input type="date" id="expiration_date_display" class="form-control" readonly>
+      <input type="hidden" id="expiration_date" name="expiration_date">
+    </div>
+  </div>
+</div>
