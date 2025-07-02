@@ -1,5 +1,6 @@
+
 <div class="modal fade" id="finishBatchModal" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Finish Batch</h5>
@@ -26,10 +27,12 @@
                    min="0.01"
                    step="any"
                    value="{{ batch.projected_yield }}"
-                   required>
+                   required
+                   onchange="validateYield()">
             <div class="form-text">
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
             </div>
+            <div id="yield-validation-alerts" class="mt-2"></div>
             <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
 
@@ -68,53 +71,42 @@
             </div>
           </div>
 
-          
-
-          {% if container_breakdown %}
-          <div class="form-group mb-3">
-            <label>Container Distribution</label>
+          <!-- Container Distribution Section -->
+          <div id="containerDistribution" class="form-group mb-3">
+            <label>Containers Used in Batch</label>
             <div class="table-responsive">
               <table class="table table-sm">
                 <thead>
                   <tr>
-                    <th>Container</th>
+                    <th>Container Size</th>
                     <th>Used in Batch</th>
-                    <th>Adjust</th>
-                    <th>Final Count</th>
+                    <th>Pass to Products</th>
+                    <th>Capacity</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {% for item in container_breakdown %}
-                  <tr>
-                    <td>{{ item.size_label }}</td>
-                    <td><span id="used_{{ item.container.id }}">{{ item.original_used }}</span></td>
-                    <td>
-                      <div class="input-group input-group-sm">
-                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, -1)">-</button>
-                        <input type="number" id="adjust_{{ item.container.id }}" class="form-control text-center" value="0" style="max-width: 60px;">
-                        <button type="button" class="btn btn-outline-secondary" onclick="adjustContainer({{ item.container.id }}, 1)">+</button>
-                      </div>
-                    </td>
-                    <td>
-                      <span id="final_{{ item.container.id }}">{{ item.original_used }}</span>
-                      <input type="hidden" name="container_final_{{ item.container.id }}" id="hidden_{{ item.container.id }}" value="{{ item.original_used }}">
-                    </td>
-                  </tr>
-                  {% endfor %}
+                <tbody id="containerTableBody">
+                  <!-- Will be populated by JavaScript -->
                 </tbody>
+                <tfoot>
+                  <tr class="table-info">
+                    <td><strong>Total</strong></td>
+                    <td id="totalUsed">-</td>
+                    <td id="totalPassed">-</td>
+                    <td id="totalCapacity">-</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
             <div class="form-text">
-              <strong>Used in Batch:</strong> Containers already deducted during batch creation<br>
-              <strong>Adjust:</strong> Add (+) or remove (-) containers based on actual usage<br>
-              <strong>Final Count:</strong> Number of product units to create in inventory
+              <small><strong>Used in Batch:</strong> Containers deducted during batch creation<br>
+              <strong>Pass to Products:</strong> How many product units to create (can be less if containers broke)<br>
+              <strong>Capacity:</strong> Total volume that can be contained</small>
             </div>
           </div>
-          {% endif %}
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-success">Complete Batch</button>
+            <button type="submit" class="btn btn-success" id="completeBatchBtn">Complete Batch</button>
           </div>
         </form>
       </div>
@@ -123,6 +115,8 @@
 </div>
 
 <script>
+let containerData = [];
+
 function toggleOutputFields() {
   const outputType = document.getElementById('output_type').value;
   const productFields = document.getElementById('productFields');
@@ -158,23 +152,146 @@ function updateExpirationDate() {
   }
 }
 
-function adjustContainer(containerId, change) {
-  const adjustInput = document.getElementById('adjust_' + containerId);
-  if (!adjustInput) return;
+function validateYield() {
+  const finalQuantity = parseFloat(document.getElementById('final_quantity').value);
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  
+  if (!finalQuantity || finalQuantity <= 0) {
+    alertsContainer.innerHTML = '';
+    return;
+  }
 
-  const currentAdjust = parseInt(adjustInput.value) || 0;
-  const newAdjust = currentAdjust + change;
-  adjustInput.value = newAdjust;
+  // Call the validation service
+  fetch(`/api/batches/{{ batch.id }}/validate-yield`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({
+      estimated_yield: finalQuantity
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    let alertsHtml = '';
+    
+    if (data.warnings && data.warnings.length > 0) {
+      data.warnings.forEach(warning => {
+        alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
+          <i class="fas fa-exclamation-triangle me-1"></i>${warning}
+        </div>`;
+      });
+    }
+    
+    // Add helpful context for overflow/underfill
+    if (data.overflow_amount > 0) {
+      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
+      </div>`;
+    }
+    
+    if (data.underfill_amount > 0) {
+      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
+      </div>`;
+    }
+    
+    alertsContainer.innerHTML = alertsHtml;
+    
+    // Update container breakdown if available
+    if (data.container_breakdown) {
+      updateContainerTable(data.container_breakdown, finalQuantity);
+    }
+  })
+  .catch(error => {
+    console.error('Error validating yield:', error);
+    alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
+      <i class="fas fa-exclamation-triangle me-1"></i>
+      Unable to validate yield against container capacity.
+    </div>`;
+  });
+}
 
-  // Update final count based on used + adjustment
-  const usedElement = document.getElementById('used_' + containerId);
-  const used = usedElement ? parseInt(usedElement.textContent) || 0 : 0;
-  const finalCount = Math.max(0, used + newAdjust);
+function updateContainerTable(containers, finalQuantity) {
+  const tbody = document.getElementById('containerTableBody');
+  const totalUsed = document.getElementById('totalUsed');
+  const totalPassed = document.getElementById('totalPassed');
+  const totalCapacity = document.getElementById('totalCapacity');
+  
+  containerData = containers;
+  
+  let html = '';
+  let usedSum = 0;
+  let capacitySum = 0;
+  
+  containers.forEach((container, index) => {
+    usedSum += container.quantity_used;
+    capacitySum += container.total_capacity;
+    
+    html += `
+      <tr>
+        <td>${container.container_name} (${container.container_size} units)</td>
+        <td>${container.quantity_used}</td>
+        <td>
+          <input type="number" 
+                 class="form-control form-control-sm pass-input" 
+                 id="pass_${index}"
+                 name="container_pass_${index}" 
+                 min="0" 
+                 max="${container.quantity_used}"
+                 value="${container.quantity_used}"
+                 onchange="updateTotals()"
+                 data-container-id="${index}">
+          <input type="hidden" name="container_name_${index}" value="${container.container_name}">
+          <input type="hidden" name="container_size_${index}" value="${container.container_size}">
+        </td>
+        <td>${container.total_capacity.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+  totalUsed.textContent = usedSum;
+  totalCapacity.textContent = capacitySum.toFixed(2);
+  
+  updateTotals();
+}
 
-  const finalElement = document.getElementById('final_' + containerId);
-  const hiddenInput = document.getElementById('hidden_' + containerId);
-  if (finalElement) finalElement.textContent = finalCount;
-  if (hiddenInput) hiddenInput.value = finalCount;
+function updateTotals() {
+  const passInputs = document.querySelectorAll('.pass-input');
+  let passedSum = 0;
+  
+  passInputs.forEach(input => {
+    passedSum += parseInt(input.value) || 0;
+  });
+  
+  document.getElementById('totalPassed').textContent = passedSum;
+  
+  // Validate that passed doesn't exceed used
+  let valid = true;
+  passInputs.forEach(input => {
+    const max = parseInt(input.getAttribute('max'));
+    const value = parseInt(input.value) || 0;
+    
+    if (value > max) {
+      input.classList.add('is-invalid');
+      valid = false;
+    } else {
+      input.classList.remove('is-invalid');
+    }
+  });
+  
+  const submitBtn = document.getElementById('completeBatchBtn');
+  submitBtn.disabled = !valid;
+  
+  if (!valid) {
+    submitBtn.textContent = 'Cannot pass more containers than used';
+  } else {
+    submitBtn.textContent = 'Complete Batch';
+  }
 }
 
 function loadVariants() {
@@ -223,14 +340,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-      
-
       toggleShelfLife();
+      validateYield(); // Load container data on modal open
     });
   }
 });
-
-
 
 function getCSRFToken() {
   const token = document.querySelector('input[name="csrf_token"]')?.value ||
@@ -238,3 +352,4 @@ function getCSRFToken() {
   return token || '';
 }
 </script>
+</div>
