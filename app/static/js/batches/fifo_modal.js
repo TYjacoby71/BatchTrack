@@ -157,45 +157,31 @@ function renderBatchSummary(data) {
 
     if (ingredient_summary && ingredient_summary.length > 0) {
         html += `
-            <div class="accordion" id="batchSummaryAccordion">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th>Total Used</th>
+                        <th>FIFO Entry</th>
+                        <th>Used</th>
+                        <th>Age</th>
+                        <th>Life Remaining</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
 
-        ingredient_summary.forEach((ingredient, index) => {
-            const collapseId = `collapse${index}`;
-            const headingId = `heading${index}`;
-
-            html += `
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="${headingId}">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                            ${ingredient.name} 
-                            <span class="ms-2 badge bg-primary">${ingredient.total_used} ${ingredient.unit}</span>
-                        </button>
-                    </h2>
-                    <div id="${collapseId}" class="accordion-collapse collapse" 
-                         aria-labelledby="${headingId}" data-bs-parent="#batchSummaryAccordion">
-                        <div class="accordion-body">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>FIFO Entry</th>
-                                        <th>Used</th>
-                                        <th>Age</th>
-                                        <th>Life Remaining</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-            `;
-
+        ingredient_summary.forEach(ingredient => {
             ingredient.fifo_usage.forEach(usage => {
                 const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
-                const lifeRemainingDisplay = usage.life_remaining_percent !== null 
+                const lifeRemainingDisplay = usage.life_remaining_percent !== null
                     ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}% remaining</span>`
                     : '<span class="text-muted">Non-perishable</span>';
 
                 html += `
                     <tr>
+                        <td>${ingredient.name}</td>
+                        <td>${ingredient.total_used} ${ingredient.unit}</td>
                         <td><small class="text-muted">#${usage.fifo_id}</small></td>
                         <td>${usage.quantity_used} ${usage.unit}</td>
                         <td>${ageText}</td>
@@ -204,17 +190,11 @@ function renderBatchSummary(data) {
                 `;
             });
 
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
         });
 
         html += `
-            </div>
+                </tbody>
+            </table>
         `;
     } else {
         html += '<div class="alert alert-info">No ingredient usage data available for this batch.</div>';
@@ -251,12 +231,3 @@ function showFifoError(message) {
         </div>
     `;
 }
-
-// Set up the "View Full Inventory" button click handler
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('viewFullInventory').addEventListener('click', function() {
-        if (currentInventoryId) {
-            window.open(`/inventory/view/${currentInventoryId}?fifo=true`, '_blank');
-        }
-    });
-});

@@ -115,22 +115,28 @@ def complete_batch(batch_id):
             )
 
         elif output_type == 'ingredient':
+            # For intermediate ingredients, always use batch output units regardless of containers
+            # Containers are just production tools, not part of the inventory structure
+            
+            # Calculate total cost including all inputs
             total_cost = sum(
-                (ing.amount_used or 0) * (ing.cost_per_unit or 0) for ing in batch.ingredients
+                (ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients
             ) + sum(
                 (c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers
             ) + sum(
-                (e.quantity or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients
+                (e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients
             ) + sum(
                 (e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers
             )
             unit_cost = total_cost / final_quantity if final_quantity > 0 else 0
 
+            # Find or create intermediate ingredient
             ingredient = InventoryItem.query.filter_by(
-                name=batch.recipe.name, type='ingredient', intermediate=True
+                name=batch.recipe.name, type='ingredient', intermediate=True,
+                organization_id=current_user.organization_id
             ).first()
 
-            if ingredient:  # update existing - convert units if needed
+            if ingredient:  # Update existing ingredient
                 if output_unit != ingredient.unit:
                     # Convert new yield to match existing ingredient's unit
                     from services.unit_conversion import ConversionEngine
@@ -152,41 +158,42 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Use centralized inventory adjustment with weighted average
+                # Add to inventory using centralized adjustment
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
                     change_type='finished_batch',
                     unit=ingredient.unit,
-                    notes=f"Batch {batch.label_code} completed",
+                    notes=f"Batch {batch.label_code} completed - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost  # This will trigger weighted average in the service
+                    cost_override=unit_cost
                 )
-            else:  # create new
+            else:  # Create new intermediate ingredient
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
                     intermediate=True,
                     quantity=0,  # Will be set by process_inventory_adjustment
                     unit=output_unit,
-                    cost_per_unit=unit_cost
+                    cost_per_unit=unit_cost,
+                    organization_id=current_user.organization_id
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
-                # Use centralized inventory adjustment with weighted average
+                # Add initial stock using centralized adjustment
                 from services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
                     change_type='finished_batch',
                     unit=output_unit,
-                    notes=f"Initial stock from batch {batch.label_code}",
+                    notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost  # This will trigger weighted average in the service
+                    cost_override=unit_cost
                 )
 
         # Finalize

@@ -49,6 +49,7 @@
                         <p><strong>Label Code:</strong> {{ batch.label_code }}</p>
                         <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
                         <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
+                        <p><strong>Batch Type:</strong> {{ batch.batch_type|title if batch.batch_type else 'Not Set' }}</p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>

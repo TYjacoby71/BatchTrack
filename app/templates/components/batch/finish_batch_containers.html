@@ -1,0 +1,36 @@
+
+<!-- Container Distribution Section -->
+{% if batch.containers or batch.extra_containers %}
+<div id="containerDistribution" class="form-group mb-3">
+  <label>Containers Used in Batch</label>
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Container Size</th>
+          <th>Used in Batch</th>
+          <th>Pass to Products</th>
+          <th>Capacity</th>
+        </tr>
+      </thead>
+      <tbody id="containerTableBody">
+        <!-- Will be populated by JavaScript -->
+      </tbody>
+      <tfoot>
+        <tr class="table-info">
+          <td><strong>Total</strong></td>
+          <td id="totalUsed">-</td>
+          <td id="totalPassed">-</td>
+          <td id="totalCapacity">-</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="form-text">
+    <small><strong>Used in Batch:</strong> Containers deducted during batch creation<br>
+    <strong>Pass to Products:</strong> How many product units to create (can be less if containers broke)<br>
+    <strong>Capacity:</strong> Total volume that can be contained<br>
+    <strong>Highlighted rows:</strong> Extra containers added during batch (with reason shown)</small>
+  </div>
+</div>
+{% endif %}
