@@ -113,8 +113,14 @@
 let containerData = [];
 
 function toggleOutputFields() {
-  const outputType = '{{ batch.batch_type }}';
+  const outputTypeInput = document.querySelector('input[name="output_type"]');
   const productFields = document.getElementById('productFields');
+  
+  if (!outputTypeInput || !productFields) {
+    return;
+  }
+  
+  const outputType = outputTypeInput.value;
 
   if (outputType === 'product') {
     productFields.style.display = 'block';
@@ -298,8 +304,14 @@ function updateTotals() {
 }
 
 function loadVariants() {
-  const productId = document.getElementById('product_id').value;
+  const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_label');
+  
+  if (!productSelect || !variantSelect) {
+    return;
+  }
+  
+  const productId = productSelect.value;
 
   if (!productId) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
@@ -325,9 +337,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      toggleOutputFields();
+      // Only call functions if required elements exist
+      const outputTypeInput = document.querySelector('input[name="output_type"]');
+      const finalQuantityInput = document.getElementById('final_quantity');
+      
+      if (outputTypeInput) {
+        toggleOutputFields();
+      }
+      
       toggleShelfLife();
-      validateYield(); // Load container data on modal open
+      
+      if (finalQuantityInput) {
+        validateYield(); // Load container data on modal open
+      }
     });
   }
 });
