@@ -1,3 +1,4 @@
+
 <div class="modal fade" id="finishBatchModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -32,40 +33,25 @@
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
             </div>
             <div id="yield-validation-alerts" class="mt-2"></div>
-            <select name="output_unit" id="output_unit" class="form-select mt-2" required>
-              {% for unit in units %}
-                <option value="{{ unit.name }}" {% if unit.name == batch.projected_yield_unit %}selected{% endif %}>{{ unit.name }}</option>
-              {% endfor %}
-            </select>
+            <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
           </div>
 
           <div id="productFields" style="display: none;">
             <div class="mb-3">
-                <label class="form-label">Product</label>
-                <div class="input-group">
-                  <select class="form-select" id="finishProductSelect" required>
-                    <option value="">Select a product...</option>
-                    {% for product in products %}
-                      <option value="{{ product.name }}" data-unit="{{ product.base_unit }}">{{ product.name }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddProductModal">
-                    <i class="fas fa-plus"></i>
-                  </button>
-                </div>
-              </div>
+              <label for="product_id">Product</label>
+              <select name="product_id" id="product_id" class="form-select">
+                {% for product in products %}
+                  <option value="{{ product.id }}">{{ product.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
 
-              <div class="mb-3">
-                <label class="form-label">Variant</label>
-                <div class="input-group">
-                  <select class="form-select" id="finishVariantSelect" required>
-                    <option value="">Select product first</option>
-                  </select>
-                  <button type="button" class="btn btn-outline-secondary" id="addVariantBtn" data-bs-toggle="modal" data-bs-target="#quickAddVariantModal" disabled>
-                    <i class="fas fa-plus"></i>
-                  </button>
-                </div>
-              </div>
+            <div class="mb-3">
+              <label for="variant_label">Variant</label>
+              <select name="variant_label" id="variant_label" class="form-select">
+                <option value="">No variants available</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group mb-3">
@@ -129,10 +115,6 @@
   </div>
 </div>
 
-<!-- Quick Add Modals -->
-{% include 'components/modals/quick_add_product_modal.html' %}
-{% include 'components/modals/quick_add_variant_modal.html' %}
-
 <script>
 let containerData = [];
 
@@ -174,7 +156,7 @@ function updateExpirationDate() {
 function validateYield() {
   const finalQuantity = parseFloat(document.getElementById('final_quantity').value);
   const alertsContainer = document.getElementById('yield-validation-alerts');
-
+  
   if (!finalQuantity || finalQuantity <= 0) {
     alertsContainer.innerHTML = '';
     return;
@@ -194,7 +176,7 @@ function validateYield() {
   .then(response => response.json())
   .then(data => {
     let alertsHtml = '';
-
+    
     if (data.warnings && data.warnings.length > 0) {
       data.warnings.forEach(warning => {
         alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
@@ -202,7 +184,7 @@ function validateYield() {
         </div>`;
       });
     }
-
+    
     // Add helpful context for overflow/underfill
     if (data.overflow_amount > 0) {
       alertsHtml += `<div class="alert alert-info alert-sm mb-1">
@@ -210,16 +192,16 @@ function validateYield() {
         Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
       </div>`;
     }
-
+    
     if (data.underfill_amount > 0) {
       alertsHtml += `<div class="alert alert-info alert-sm mb-1">
         <i class="fas fa-info-circle me-1"></i>
         Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
       </div>`;
     }
-
+    
     alertsContainer.innerHTML = alertsHtml;
-
+    
     // Update container breakdown if available
     if (data.container_breakdown) {
       updateContainerTable(data.container_breakdown, finalQuantity);
@@ -239,23 +221,23 @@ function updateContainerTable(containers, finalQuantity) {
   const totalUsed = document.getElementById('totalUsed');
   const totalPassed = document.getElementById('totalPassed');
   const totalCapacity = document.getElementById('totalCapacity');
-
+  
   containerData = containers;
-
+  
   let html = '';
   let usedSum = 0;
   let capacitySum = 0;
-
+  
   containers.forEach((container, index) => {
     usedSum += container.quantity_used;
     capacitySum += container.total_capacity;
-
+    
     // Create a display label for the container
     let containerLabel = `${container.container_name} (${container.container_size} units)`;
     if (container.container_type === 'extra' && container.reason) {
       containerLabel += ` - ${container.reason.replace('_', ' ')}`;
     }
-
+    
     html += `
       <tr>
         <td>${containerLabel}</td>
@@ -279,30 +261,30 @@ function updateContainerTable(containers, finalQuantity) {
       </tr>
     `;
   });
-
+  
   tbody.innerHTML = html;
   totalUsed.textContent = usedSum;
   totalCapacity.textContent = capacitySum.toFixed(2);
-
+  
   updateTotals();
 }
 
 function updateTotals() {
   const passInputs = document.querySelectorAll('.pass-input');
   let passedSum = 0;
-
+  
   passInputs.forEach(input => {
     passedSum += parseInt(input.value) || 0;
   });
-
+  
   document.getElementById('totalPassed').textContent = passedSum;
-
+  
   // Validate that passed doesn't exceed used
   let valid = true;
   passInputs.forEach(input => {
     const max = parseInt(input.getAttribute('max'));
     const value = parseInt(input.value) || 0;
-
+    
     if (value > max) {
       input.classList.add('is-invalid');
       valid = false;
@@ -310,10 +292,10 @@ function updateTotals() {
       input.classList.remove('is-invalid');
     }
   });
-
+  
   const submitBtn = document.getElementById('completeBatchBtn');
   submitBtn.disabled = !valid;
-
+  
   if (!valid) {
     submitBtn.textContent = 'Cannot pass more containers than used';
   } else {
@@ -322,35 +304,25 @@ function updateTotals() {
 }
 
 function loadVariants() {
-  const productSelect = document.getElementById('finishProductSelect');
-  const variantSelect = document.getElementById('finishVariantSelect');
+  const productId = document.getElementById('product_id').value;
+  const variantSelect = document.getElementById('variant_label');
 
-  if (!productSelect || !productSelect.value) {
-    if (variantSelect) {
-      variantSelect.innerHTML = '<option value="">Select product first...</option>';
-    }
+  if (!productId) {
+    variantSelect.innerHTML = '<option value="">Select product first...</option>';
     return;
   }
 
-  const productName = productSelect.value;
-
-  fetch(`/products/api/variants-by-name/${encodeURIComponent(productName)}`)
+  fetch(`/products/api/${productId}/variants`)
     .then(response => response.json())
     .then(data => {
-      if (variantSelect) {
-        variantSelect.innerHTML = '<option value="">Select variant...</option>';
-        if (data.variants) {
-          data.variants.forEach(variant => {
-            variantSelect.innerHTML += `<option value="${variant.id}">${variant.name}</option>`;
-          });
-        }
-      }
+      variantSelect.innerHTML = '';
+      data.variants.forEach(variant => {
+        variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
+      });
     })
     .catch(error => {
       console.error('Error loading variants:', error);
-      if (variantSelect) {
-        variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-      }
+      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
     });
 }
 
@@ -388,132 +360,5 @@ function getCSRFToken() {
                 document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
   return token || '';
 }
-
-// Quick Add Product functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const saveQuickProductBtn = document.getElementById('saveQuickProduct');
-  if (saveQuickProductBtn) {
-    saveQuickProductBtn.addEventListener('click', function() {
-      const productName = document.getElementById('new-product-name').value;
-      const baseUnit = document.getElementById('new-product-base-unit').value;
-
-      if (!productName) {
-        alert('Product name is required');
-        return;
-      }
-
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-      fetch('/products/api/quick-add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({
-          product_name: productName,
-          product_base_unit: baseUnit
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Add the new product to the dropdown
-          const productSelect = document.getElementById('finishProductSelect');
-          const option = document.createElement('option');
-          option.value = data.product.name;
-          option.setAttribute('data-unit', data.product.base_unit);
-          option.textContent = data.product.name;
-          productSelect.appendChild(option);
-
-          // Select the new product
-          productSelect.value = data.product.name;
-          productSelect.dispatchEvent(new Event('change'));
-
-          // Close modal and reset form
-          const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddProductModal'));
-          if (modal) modal.hide();
-          document.getElementById('quickAddProductForm').reset();
-        } else {
-          alert('Error: ' + (data.message || data.error));
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while adding the product');
-      });
-    });
-  }
-});
-
-// Quick Add Variant functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const saveQuickVariantBtn = document.getElementById('saveQuickVariant');
-  if (saveQuickVariantBtn) {
-    saveQuickVariantBtn.addEventListener('click', function() {
-      const productName = document.getElementById('variant-product-name').value;
-      const variantName = document.getElementById('new-variant-name').value;
-
-      if (!variantName) {
-        alert('Variant name is required');
-        return;
-      }
-
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-      fetch('/products/api/quick-add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({
-          product_name: productName,
-          variant_name: variantName
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Add the new variant to the dropdown
-          const variantSelect = document.getElementById('finishVariantSelect');
-          const option = document.createElement('option');
-          option.value = data.variant.id;
-          option.textContent = data.variant.name;
-          variantSelect.appendChild(option);
-
-          // Select the new variant
-          variantSelect.value = data.variant.id;
-          variantSelect.dispatchEvent(new Event('change'));
-
-          // Close modal and reset form
-          const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddVariantModal'));
-          if (modal) modal.hide();
-          document.getElementById('quickAddVariantForm').reset();
-        } else {
-          alert('Error: ' + (data.message || data.error));
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while adding the variant');
-      });
-    });
-  }
-});
-
-// Enable/disable variant add button and populate product name
-document.getElementById('finishProductSelect').addEventListener('change', function() {
-  const addVariantBtn = document.getElementById('addVariantBtn');
-  const variantProductName = document.getElementById('variant-product-name');
-
-  if (this.value) {
-    addVariantBtn.disabled = false;
-    variantProductName.value = this.value;
-  } else {
-    addVariantBtn.disabled = true;
-    variantProductName.value = '';
-  }
-});
 </script>
 </div>
