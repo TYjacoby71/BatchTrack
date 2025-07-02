@@ -104,15 +104,16 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # Use unified ProductService with container overrides
-            from app.services.product_service import ProductService
-            inventory_entries = ProductService.add_product_from_batch(
-                batch_id=batch.id,
-                product_id=batch.product_id,
-                variant_label=batch.variant_label,
-                quantity=batch.final_quantity,
-                container_overrides=container_overrides
-            )
+            # For actual products (not intermediate ingredients), use ProductService
+            if batch.product_id:
+                from app.services.product_service import ProductService
+                inventory_entries = ProductService.add_product_from_batch(
+                    batch_id=batch.id,
+                    product_id=batch.product_id,
+                    variant_label=batch.variant_label,
+                    quantity=batch.final_quantity,
+                    container_overrides=container_overrides
+                )
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
