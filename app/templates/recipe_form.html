@@ -130,7 +130,7 @@
                 <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
                 <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
                     {% for container in all_ingredients if container.type == 'container' %}
-                    <option value="{{ container.id }}" {% if recipe and container.id in recipe.allowed_containers %}selected{% endif %}>
+                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
                         {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
                     </option>
                     {% endfor %}

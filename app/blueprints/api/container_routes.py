@@ -44,9 +44,7 @@ def available_containers(recipe_id):
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
-        # Always return available containers for flexibility
-        # Container requirement is now determined at batch planning time
-
+        # Get allowed containers for this recipe
         allowed_container_ids = recipe.allowed_containers or []
         predicted_unit = recipe.predicted_yield_unit
         if not predicted_unit:
@@ -61,10 +59,12 @@ def available_containers(recipe_id):
         )
 
         print(f"Found {containers_query.count()} containers for organization {current_user.organization_id}")
+        print(f"Recipe allowed containers: {allowed_container_ids}")
 
         for container in containers_query:
             print(f"Processing container: {container.name}, storage_amount: {container.storage_amount}, storage_unit: {container.storage_unit}")
 
+            # Only show containers that are in the allowed list if the recipe has allowed containers specified
             if allowed_container_ids and container.id not in allowed_container_ids:
                 print(f"Container {container.name} not in allowed list: {allowed_container_ids}")
                 continue

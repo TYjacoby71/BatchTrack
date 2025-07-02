@@ -283,7 +283,7 @@ function planProduction() {
             const projected = this.baseYield * this.scale;
             let remainingVolume = projected;
 
-            // Sort containers by capacity (largest first)
+            // Sort containers by capacity (largest first) - these are already filtered by the API
             const availableContainers = [...this.allowedContainers]
               .filter(c => c.stock_qty > 0)
               .sort((a, b) => b.storage_amount - a.storage_amount);
