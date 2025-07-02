@@ -73,8 +73,12 @@ def process_inventory_adjustment(
     expiration_date = None
     shelf_life_to_use = None
 
-    if change_type == 'restock' and item.is_perishable and item.shelf_life_days:
-        # Use ingredient's default shelf life for perishable restocks
+    # Handle custom expiration date (from batch completion)
+    if custom_expiration_date:
+        expiration_date = custom_expiration_date
+        shelf_life_to_use = custom_shelf_life_days
+    elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+        # Use ingredient's default shelf life for regular perishable restocks
         expiration_date = ExpirationService.calculate_expiration_date(
             datetime.utcnow(), item.shelf_life_days
         )

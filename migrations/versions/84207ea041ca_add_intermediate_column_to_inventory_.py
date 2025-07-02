@@ -1,4 +1,4 @@
-"""add_intermediate_column_to_inventory_item
+"""Add intermediate ingredient support to inventory items
 
 Revision ID: 84207ea041ca
 Revises: 8b7120014eb3

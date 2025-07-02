@@ -14,27 +14,27 @@ def mark_batch_failed(batch_id):
     print(f"DEBUG: Request method: {request.method}")
     print(f"DEBUG: Request form data: {dict(request.form)}")
     print(f"DEBUG: Current user: {current_user.username if current_user.is_authenticated else 'Anonymous'}")
-    
+
     try:
         # Use scoped query to ensure user can only access their organization's batches
         batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
         print(f"DEBUG: Found batch: {batch.label_code}, current status: {batch.status}")
-        
+
         # Validate ownership - only the creator or same organization can modify
         if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
             flash("You don't have permission to modify this batch.", "error")
             return redirect(url_for('batches.list_batches'))
-        
+
         batch.status = 'failed'
         batch.failed_at = datetime.utcnow()
         batch.status_reason = request.form.get('reason', '')
-        
+
         db.session.commit()
         print(f"DEBUG: Successfully marked batch {batch.label_code} as failed by user {current_user.id}")
-        
+
         flash("⚠️ Batch marked as failed. Inventory remains deducted.", "warning")
         return redirect(url_for('batches.list_batches'))
-        
+
     except Exception as e:
         print(f"DEBUG: Error in mark_batch_failed: {str(e)}")
         db.session.rollback()
@@ -46,7 +46,7 @@ def mark_batch_failed(batch_id):
 def complete_batch(batch_id):
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-    
+
     # Validate ownership - only the creator or same organization can modify
     if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
         flash("You don't have permission to modify this batch.", "error")
@@ -104,20 +104,21 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # Use unified ProductService with container overrides
-            from services.product_service import ProductService
-            inventory_entries = ProductService.add_product_from_batch(
-                batch_id=batch.id,
-                product_id=batch.product_id,
-                variant_label=batch.variant_label,
-                quantity=batch.final_quantity,
-                container_overrides=container_overrides
-            )
+            # For actual products (not intermediate ingredients), use ProductService
+            if batch.product_id:
+                from app.services.product_service import ProductService
+                inventory_entries = ProductService.add_product_from_batch(
+                    batch_id=batch.id,
+                    product_id=batch.product_id,
+                    variant_label=batch.variant_label,
+                    quantity=batch.final_quantity,
+                    container_overrides=container_overrides
+                )
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
             # Containers are just production tools, not part of the inventory structure
-            
+
             # Calculate total cost including all inputs
             total_cost = sum(
                 (ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients
@@ -139,7 +140,7 @@ def complete_batch(batch_id):
             if ingredient:  # Update existing ingredient
                 if output_unit != ingredient.unit:
                     # Convert new yield to match existing ingredient's unit
-                    from services.unit_conversion import ConversionEngine
+                    from app.services.unit_conversion import ConversionEngine
                     try:
                         conversion = ConversionEngine.convert_units(
                             final_quantity,
@@ -158,19 +159,22 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
-                # Add to inventory using centralized adjustment
-                from services.inventory_adjustment import process_inventory_adjustment
+                # Add to inventory using centralized adjustment with finished_batch change_type
+                from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
-                    change_type='finished_batch',
+                    change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=ingredient.unit,
                     notes=f"Batch {batch.label_code} completed - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost,
+                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
+                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
                 )
             else:  # Create new intermediate ingredient
+                # Copy perishable properties from batch to new ingredient
                 ingredient = InventoryItem(
                     name=batch.recipe.name,
                     type='ingredient',
@@ -178,22 +182,26 @@ def complete_batch(batch_id):
                     quantity=0,  # Will be set by process_inventory_adjustment
                     unit=output_unit,
                     cost_per_unit=unit_cost,
+                    is_perishable=batch.is_perishable,
+                    shelf_life_days=batch.shelf_life_days if batch.is_perishable else None,
                     organization_id=current_user.organization_id
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
-                # Add initial stock using centralized adjustment
-                from services.inventory_adjustment import process_inventory_adjustment
+                # Add initial stock using centralized adjustment with finished_batch change_type
+                from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
-                    change_type='finished_batch',
+                    change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,
                     created_by=current_user.id,
-                    cost_override=unit_cost
+                    cost_override=unit_cost,
+                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
+                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
                 )
 
         # Finalize
