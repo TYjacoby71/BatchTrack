@@ -73,7 +73,8 @@ def new_product():
             size_label='Bulk',
             unit=product_base_unit,
             low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
-            variant_description='Default base variant'
+            variant_description='Default base variant',
+            organization_id=current_user.organization_id
         )
         db.session.add(sku)
         db.session.commit()
