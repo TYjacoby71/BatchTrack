@@ -326,6 +326,12 @@ def clone_recipe(recipe_id):
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
 
+        # Handle container selection
+        if request.form.get('allowed_containers_all') == 'all':
+            new_recipe.allowed_containers = 'all'
+        else:
+            new_recipe.allowed_containers = [int(id) for id in request.form.getlist('allowed_containers[]')] if request.form.getlist('allowed_containers[]') else []
+
         # Get all units for dropdowns
         units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
 

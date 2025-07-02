@@ -130,23 +130,41 @@ The code removes the `requires_containers` toggle and its associated logic from 
             </h5>
         </div>
         <div class="card-body">
-            <label class="form-label">Allowed Container Types</label>
-            <div class="row">
-                {% for container in InventoryItem.query.filter_by(type='container').all() %}
-                <div class="col-md-4 mb-2">
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="container_{{ container.id }}" 
-                               name="allowed_containers[]" value="{{ container.id }}"
-                               {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}checked{% endif %}>
-                        <label class="form-check-label" for="container_{{ container.id }}">
-                            {{ container.name }}
-                            <small class="text-muted">({{ container.storage_amount }} {{ container.storage_unit }})</small>
-                        </label>
-                    </div>
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input type="checkbox" class="form-check-input" id="allowAllContainers" 
+                           onchange="toggleContainerSelection()"
+                           {% if recipe and recipe.allowed_containers and recipe.allowed_containers == 'all' %}checked{% endif %}>
+                    <label class="form-check-label" for="allowAllContainers">
+                        <strong>Allow all containers</strong>
+                    </label>
+                    <div class="form-text">When enabled, all available containers will be allowed for this recipe.</div>
                 </div>
-                {% endfor %}
             </div>
-            <div class="form-text">Select which container types are compatible with this recipe. This helps filter container options during batch planning. The decision to use containers will be made during batch planning.</div>
+            
+            <div id="containerSelectionSection">
+                <label class="form-label">Allowed Container Types</label>
+                <div class="row">
+                    {% for container in InventoryItem.query.filter_by(type='container').all() %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input container-checkbox" id="container_{{ container.id }}" 
+                                   name="allowed_containers[]" value="{{ container.id }}"
+                                   {% if recipe and recipe.allowed_containers and recipe.allowed_containers != 'all' and container.id in recipe.allowed_containers %}checked{% endif %}>
+                            <label class="form-check-label" for="container_{{ container.id }}">
+                                {{ container.name }}
+                                <small class="text-muted">({{ container.storage_amount }} {{ container.storage_unit }})</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Hidden input for "all" value -->
+            <input type="hidden" id="allowAllContainersHidden" name="allowed_containers_all" value="">
+            
+            <div class="form-text mt-2">Select which container types are compatible with this recipe. This helps filter container options during batch planning. The decision to use containers will be made during batch planning.</div>
         </div>
     </div>
 
@@ -448,6 +466,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     {% endif %}
+
+    // Initialize container selection state
+    toggleContainerSelection();
 });
 
 function addIngredient(preselectId = null, presetUnit = null) {
@@ -533,6 +554,27 @@ function confirmDelete(recipeId, isVariation, variationCount) {
 
 function setIngredientReturnContext(context) {
     ingredientReturnContext = context;
+}
+
+function toggleContainerSelection() {
+    const allowAllCheckbox = document.getElementById('allowAllContainers');
+    const containerSection = document.getElementById('containerSelectionSection');
+    const hiddenInput = document.getElementById('allowAllContainersHidden');
+    const containerCheckboxes = document.querySelectorAll('.container-checkbox');
+    
+    if (allowAllCheckbox.checked) {
+        // Hide individual container selection
+        containerSection.style.display = 'none';
+        // Set hidden input to indicate "all"
+        hiddenInput.value = 'all';
+        // Uncheck all individual containers
+        containerCheckboxes.forEach(checkbox => checkbox.checked = false);
+    } else {
+        // Show individual container selection
+        containerSection.style.display = 'block';
+        // Clear hidden input
+        hiddenInput.value = '';
+    }
 }
 </script>
 
