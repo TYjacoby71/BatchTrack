@@ -105,7 +105,7 @@ def complete_batch(batch_id):
                     container_overrides[container_id] = int(value)
 
             # Use unified ProductService with container overrides
-            from services.product_service import ProductService
+            from app.services.product_service import ProductService
             inventory_entries = ProductService.add_product_from_batch(
                 batch_id=batch.id,
                 product_id=batch.product_id,
@@ -139,7 +139,7 @@ def complete_batch(batch_id):
             if ingredient:  # Update existing ingredient
                 if output_unit != ingredient.unit:
                     # Convert new yield to match existing ingredient's unit
-                    from services.unit_conversion import ConversionEngine
+                    from app.services.unit_conversion import ConversionEngine
                     try:
                         conversion = ConversionEngine.convert_units(
                             final_quantity,
@@ -159,7 +159,7 @@ def complete_batch(batch_id):
                     converted_quantity = final_quantity
 
                 # Add to inventory using centralized adjustment
-                from services.inventory_adjustment import process_inventory_adjustment
+                from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=converted_quantity,
@@ -184,7 +184,7 @@ def complete_batch(batch_id):
                 db.session.flush()  # Get the ID
 
                 # Add initial stock using centralized adjustment
-                from services.inventory_adjustment import process_inventory_adjustment
+                from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
