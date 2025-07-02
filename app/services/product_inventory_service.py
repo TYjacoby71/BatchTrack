@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from typing import Optional, List, Dict
 from flask_login import current_user
@@ -41,9 +40,9 @@ class ProductInventoryService:
         if batch_id and change_type == 'batch_addition':
             from ..models import Batch
             batch = Batch.query.get(batch_id)
-            fifo_source = batch.label_code if batch else generate_fifo_code(f"SKU{sku_id}")
+            fifo_source = batch.label_code if batch else generate_fifo_id(f"SKU{sku_id}")
         else:
-            fifo_source = generate_fifo_code(f"SKU{sku_id}")
+            fifo_source = generate_fifo_id(f"SKU{sku_id}")
 
         # Create FIFO history entry (like InventoryHistory with remaining_quantity)
         history = ProductSKUHistory(
@@ -61,7 +60,7 @@ class ProductInventoryService:
             customer=customer,
             batch_id=batch_id,
             container_id=container_id,
-            fifo_code=generate_fifo_code(f"SKU{sku_id}"),
+            fifo_code=generate_fifo_id('refunded'),
             fifo_source=fifo_source,
             notes=notes,
             note=notes,  # Mirror field
@@ -120,7 +119,7 @@ class ProductInventoryService:
                 unit_cost=entry.unit_cost,  # Use cost from original FIFO entry
                 sale_price=sale_price,
                 customer=customer,
-                fifo_code=generate_fifo_code(f"SKU{sku_id}"),
+                fifo_code=generate_fifo_id('refunded'),
                 fifo_reference_id=entry.id,  # Reference to source FIFO entry
                 fifo_source=entry.fifo_source,  # Use source from original FIFO entry
                 notes=f"{notes} (From FIFO #{entry.id})",
@@ -204,7 +203,7 @@ class ProductInventoryService:
             remaining_quantity=0,
             unit=sku.unit,
             unit_cost=history_entry.unit_cost,  # Use cost from original entry
-            fifo_code=generate_fifo_code(f"SKU{history_entry.sku_id}"),
+            fifo_code=generate_fifo_id('refunded'),
             fifo_reference_id=history_entry.id,
             notes=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
             note=f"FIFO entry #{history_id} adjustment: {original_remaining} → {history_entry.remaining_quantity}. {notes}",
@@ -220,15 +219,15 @@ class ProductInventoryService:
     def process_return_credit(sku_id: int, quantity: float, original_batch_id: Optional[int] = None,
                             notes: str = '', sale_price: Optional[float] = None) -> bool:
         """Process returns by crediting back to original FIFO entries"""
-        
+
         sku = ProductSKU.query.get_or_404(sku_id)
-        
+
         if original_batch_id:
             # Find original deductions for this batch by looking for sales with specific batch reference
             from ..models import Batch
             batch = Batch.query.get(original_batch_id)
             batch_label = batch.label_code if batch else f"BATCH{original_batch_id}"
-            
+
             # Find deductions that reference this batch's label as fifo_source
             original_deductions = ProductSKUHistory.query.filter(
                 ProductSKUHistory.sku_id == sku_id,
@@ -243,7 +242,7 @@ class ProductInventoryService:
             ).order_by(ProductSKUHistory.timestamp.desc()).all()
 
             remaining_to_credit = quantity
-            
+
             # Credit back to original FIFO entries
             for deduction in original_deductions:
                 if remaining_to_credit <= 0:
@@ -252,7 +251,7 @@ class ProductInventoryService:
                 original_fifo_entry = ProductSKUHistory.query.get(deduction.fifo_reference_id)
                 if original_fifo_entry:
                     credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
-                    
+
                     # Credit back to original FIFO entry
                     original_fifo_entry.remaining_quantity += credit_amount
                     remaining_to_credit -= credit_amount
@@ -269,7 +268,7 @@ class ProductInventoryService:
                         unit=sku.unit,
                         unit_cost=original_fifo_entry.unit_cost,
                         sale_price=sale_price,
-                        fifo_code=generate_fifo_code(f"SKU{sku_id}"),  
+                        fifo_code=generate_fifo_id('refunded'),  
                         fifo_reference_id=original_fifo_entry.id,
                         fifo_source=original_fifo_entry.fifo_source,
                         notes=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
@@ -306,12 +305,12 @@ class ProductInventoryService:
     def reserve_stock(sku_id: int, quantity: float, order_id: str, reservation_id: str) -> bool:
         """Reserve stock for pending orders"""
         sku = ProductSKU.query.get_or_404(sku_id)
-        
+
         if sku.available_for_sale < quantity:
             return False
-            
+
         sku.reserved_quantity = (sku.reserved_quantity or 0) + quantity
-        
+
         # Create reservation history
         history = ProductSKUHistory(
             sku_id=sku_id,
