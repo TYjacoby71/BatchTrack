@@ -2,15 +2,11 @@
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   const modalForm = document.getElementById('finishBatchModalForm');
-  const outputTypeSelect = document.getElementById('output_type');
 
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      const form = document.getElementById('finishBatchModalForm');
-      if (form && outputTypeSelect) {
-        toggleOutputFields();
-        toggleShelfLife();
-      }
+      // Modal initialization is now handled in finish_batch_scripts.html
+      console.log('Batch form modal opened');
     });
   }
 
@@ -19,10 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Form validation can be added here
       return true;
     });
-  }
-
-  if (outputTypeSelect) {
-    outputTypeSelect.addEventListener('change', toggleOutputFields);
   }
 
   // Initialize tooltips
@@ -66,17 +58,7 @@ function toggleShelfLife() {
   }
 }
 
-function toggleOutputFields() {
-  const type = document.getElementById('output_type').value;
-  const productFields = document.getElementById('productFields');
-  const productSelect = document.getElementById('product_id');
-
-  if (productFields && productSelect) {
-    const isProduct = type === 'product';
-    productFields.style.display = isProduct ? 'block' : 'none';
-    productSelect.required = isProduct;
-  }
-}
+// toggleOutputFields function removed - now handled by conditional template rendering
 
 function markBatchFailed() {
   if (confirm('Mark this batch as failed? This action cannot be undone.')) {

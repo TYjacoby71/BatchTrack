@@ -50,7 +50,7 @@ class ProductService:
 
         if sku:
             # If SKU exists but doesn't have a code, generate one
-            if not sku.sku_code:
+            if not sku.sku_code or sku.sku_code.strip() == '':
                 sku.sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
                 db.session.flush()
             return sku
@@ -85,7 +85,7 @@ class ProductService:
             product_name=product_name,
             is_active=True
         ).all()
-        
+
         if not existing_skus:
             # No variants exist, create a Base variant
             base_sku = ProductService.get_or_create_sku(
@@ -103,14 +103,14 @@ class ProductService:
             ProductSKU.sku_code.is_(None),
             ProductSKU.is_active == True
         ).all()
-        
+
         for sku in skus_without_codes:
             sku.sku_code = ProductService.generate_sku_code(
                 sku.product_name, 
                 sku.variant_name, 
                 sku.size_label
             )
-        
+
         if skus_without_codes:
             db.session.commit()
             return len(skus_without_codes)
@@ -123,21 +123,21 @@ class ProductService:
         product_part = ''.join(c for c in product_name[:3].upper() if c.isalnum())
         variant_part = ''.join(c for c in variant_name[:2].upper() if c.isalnum())  
         size_part = ''.join(c for c in size_label[:3].upper() if c.isalnum())
-        
+
         # Ensure we have at least some characters from each part
         product_part = product_part[:3].ljust(2, 'X')
         variant_part = variant_part[:2].ljust(2, 'X')
         size_part = size_part[:3].ljust(2, 'X')
-        
+
         base_sku = f"{product_part}-{variant_part}-{size_part}"
-        
+
         # Check for uniqueness by querying for existing SKUs with the same base
         count = 1
         unique_sku_code = base_sku
         while ProductSKU.query.filter(ProductSKU.sku_code == unique_sku_code).first():
             unique_sku_code = f"{base_sku}-{count}"
             count += 1
-            
+
         return unique_sku_code
 
     @staticmethod

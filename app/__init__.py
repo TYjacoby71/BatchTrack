@@ -46,6 +46,7 @@ def create_app():
     from .blueprints.batches.cancel_batch import cancel_batch_bp
     from .blueprints.batches.start_batch import start_batch_bp
     from .blueprints.products import products_bp
+    from .blueprints.products.product_api import product_api_bp
     from .blueprints.products.product_inventory_routes import product_inventory_bp
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
@@ -78,6 +79,7 @@ def create_app():
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
+    app.register_blueprint(product_api_bp)
     # API blueprints are registered via register_api_routes() function below
 
     app.register_blueprint(conversion_bp, url_prefix='/conversion')

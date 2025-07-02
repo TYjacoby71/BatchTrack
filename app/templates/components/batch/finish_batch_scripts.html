@@ -1,74 +1,36 @@
-
 <script>
-let containerData = [];
-
-function toggleOutputFields() {
-  const outputTypeInput = document.getElementById('output_type_hidden');
-  const productFields = document.getElementById('productFields');
-
-  if (!outputTypeInput) {
-    console.log('Missing output_type_hidden element');
-    return;
-  }
-
-  const outputType = outputTypeInput.value;
-  console.log('Batch type from stored data:', outputType);
-
-  if (productFields) {
-    if (outputType === 'product') {
-      productFields.style.display = 'block';
-      loadVariants();
-    } else {
-      productFields.style.display = 'none';
-    }
-  }
-}
-
 function toggleShelfLife() {
-  const isPerishableElement = document.getElementById('is_perishable');
+  const isPerishable = document.getElementById('is_perishable');
   const shelfLifeField = document.getElementById('shelfLifeField');
 
-  if (!isPerishableElement || !shelfLifeField) {
-    return;
-  }
+  if (isPerishable && shelfLifeField) {
+    const showShelfLife = isPerishable.checked;
+    shelfLifeField.style.display = showShelfLife ? 'block' : 'none';
 
-  const isPerishable = isPerishableElement.checked;
-
-  if (isPerishable) {
-    shelfLifeField.style.display = 'block';
-  } else {
-    shelfLifeField.style.display = 'none';
-  }
-}
-
-function updateExpirationDate() {
-  const shelfLifeDaysElement = document.getElementById('shelf_life_days');
-  const expirationDateDisplay = document.getElementById('expiration_date_display');
-  const expirationDate = document.getElementById('expiration_date');
-
-  if (!shelfLifeDaysElement) {
-    return;
-  }
-
-  const shelfLifeDays = parseInt(shelfLifeDaysElement.value);
-  if (shelfLifeDays && shelfLifeDays > 0) {
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + shelfLifeDays);
-
-    const formattedDate = expDate.toISOString().split('T')[0];
-    
-    if (expirationDateDisplay) {
-      expirationDateDisplay.value = formattedDate;
-    }
-    if (expirationDate) {
-      expirationDate.value = formattedDate;
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = showShelfLife;
+      if (!showShelfLife) {
+        shelfLifeInput.value = '';
+        const expDateInput = document.getElementById('expiration_date');
+        const expDateDisplay = document.getElementById('expiration_date_display');
+        if (expDateInput) expDateInput.value = '';
+        if (expDateDisplay) expDateDisplay.value = '';
+      }
     }
   }
 }
 
 function validateYield() {
-  const finalQuantity = parseFloat(document.getElementById('final_quantity').value);
+  const finalQuantityInput = document.getElementById('final_quantity');
   const alertsContainer = document.getElementById('yield-validation-alerts');
+  const hasContainers = {{ 'true' if batch.containers or batch.extra_containers else 'false' }};
+
+  if (!finalQuantityInput) {
+    return;
+  }
+
+  const finalQuantity = parseFloat(finalQuantityInput.value);
 
   if (!finalQuantity || finalQuantity <= 0) {
     if (alertsContainer) {
@@ -77,8 +39,6 @@ function validateYield() {
     return;
   }
 
-  // Only run validation if batch has containers
-  const hasContainers = {{ 'true' if batch.containers or batch.extra_containers else 'false' }};
   if (!hasContainers) {
     console.log('No containers in batch - skipping yield validation');
     return;
@@ -160,7 +120,7 @@ function updateContainerTable(containers, finalQuantity) {
   // Show container section since we have containers
   containerDistribution.style.display = 'block';
 
-  containerData = containers;
+  window.containerData = containers;
 
   let html = '';
   let usedSum = 0;
@@ -211,7 +171,7 @@ function updateTotals() {
   const passInputs = document.querySelectorAll('.pass-input');
   const totalPassedElement = document.getElementById('totalPassed');
   const submitBtn = document.getElementById('completeBatchBtn');
-  
+
   if (!totalPassedElement || !submitBtn) {
     return; // Elements don't exist, skip validation
   }
@@ -256,14 +216,22 @@ function loadVariants() {
     return;
   }
 
-  const productId = productSelect.value;
+  const selectedOption = productSelect.options[productSelect.selectedIndex];
 
-  if (!productId) {
+  if (!selectedOption || !selectedOption.value) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
     return;
   }
 
-  fetch(`/products/api/${productId}/variants`)
+  // Get the product name from the selected option's data attribute or text
+  const productName = selectedOption.getAttribute('data-product-name') || selectedOption.textContent.trim();
+
+  if (!productName) {
+    variantSelect.innerHTML = '<option value="">Invalid product selection</option>';
+    return;
+  }
+
+  fetch(`/products/api/${encodeURIComponent(productName)}/variants`)
     .then(response => response.json())
     .then(data => {
       variantSelect.innerHTML = '';
@@ -288,28 +256,24 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.addEventListener('shown.bs.modal', function () {
       console.log('Modal opened, initializing...');
 
-      // Initialize output fields based on stored batch type (safe for all batch types)
-      try {
-        toggleOutputFields();
-      } catch (error) {
-        console.log('Error in toggleOutputFields:', error);
-      }
-
       // Initialize shelf life toggle (safe for all batch types)
-      try {
-        toggleShelfLife();
-      } catch (error) {
-        console.log('Error in toggleShelfLife:', error);
+      toggleShelfLife();
+
+      // Load variants if product fields exist
+      const productSelect = document.getElementById('product_id');
+      if (productSelect) {
+        loadVariants();
       }
 
       // Only validate yield if the input exists and batch has containers
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
-        try {
-          validateYield(); // Will check for containers internally
-        } catch (error) {
-          console.log('Error in validateYield:', error);
-        }
+        validateYield();
+      }
+
+      // Update container table if containers exist
+      if (window.containerData && window.containerData.length > 0) {
+        updateContainerTable();
       }
     });
   }
