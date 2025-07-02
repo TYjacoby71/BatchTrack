@@ -14,7 +14,7 @@ def setup_logging(app):
     file_handler.setLevel(logging.INFO)
     app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
-    app.logger.info('BatchTrack - Intermediate ingredient work')
+    app.logger.info('BatchTrack startup')
 
 def get_global_unit_list():
     try:
