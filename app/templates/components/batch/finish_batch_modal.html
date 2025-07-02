@@ -32,7 +32,11 @@
               Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
             </div>
             <div id="yield-validation-alerts" class="mt-2"></div>
-            <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
+            <select name="output_unit" id="output_unit" class="form-select mt-2" required>
+              {% for unit in units %}
+                <option value="{{ unit.name }}" {% if unit.name == batch.projected_yield_unit %}selected{% endif %}>{{ unit.name }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <div id="productFields" style="display: none;">
@@ -318,25 +322,35 @@ function updateTotals() {
 }
 
 function loadVariants() {
-  const productId = document.getElementById('product_id').value;
-  const variantSelect = document.getElementById('variant_label');
+  const productSelect = document.getElementById('finishProductSelect');
+  const variantSelect = document.getElementById('finishVariantSelect');
 
-  if (!productId) {
-    variantSelect.innerHTML = '<option value="">Select product first...</option>';
+  if (!productSelect || !productSelect.value) {
+    if (variantSelect) {
+      variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    }
     return;
   }
 
-  fetch(`/products/api/${productId}/variants`)
+  const productName = productSelect.value;
+
+  fetch(`/products/api/variants-by-name/${encodeURIComponent(productName)}`)
     .then(response => response.json())
     .then(data => {
-      variantSelect.innerHTML = '';
-      data.variants.forEach(variant => {
-        variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
-      });
+      if (variantSelect) {
+        variantSelect.innerHTML = '<option value="">Select variant...</option>';
+        if (data.variants) {
+          data.variants.forEach(variant => {
+            variantSelect.innerHTML += `<option value="${variant.id}">${variant.name}</option>`;
+          });
+        }
+      }
     })
     .catch(error => {
       console.error('Error loading variants:', error);
-      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+      if (variantSelect) {
+        variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+      }
     });
 }
 
@@ -376,104 +390,116 @@ function getCSRFToken() {
 }
 
 // Quick Add Product functionality
-document.getElementById('saveQuickProduct').addEventListener('click', function() {
-  const productName = document.getElementById('new-product-name').value;
-  const baseUnit = document.getElementById('new-product-base-unit').value;
+document.addEventListener('DOMContentLoaded', function() {
+  const saveQuickProductBtn = document.getElementById('saveQuickProduct');
+  if (saveQuickProductBtn) {
+    saveQuickProductBtn.addEventListener('click', function() {
+      const productName = document.getElementById('new-product-name').value;
+      const baseUnit = document.getElementById('new-product-base-unit').value;
 
-  if (!productName) {
-    alert('Product name is required');
-    return;
+      if (!productName) {
+        alert('Product name is required');
+        return;
+      }
+
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+      fetch('/products/api/quick-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          product_name: productName,
+          product_base_unit: baseUnit
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Add the new product to the dropdown
+          const productSelect = document.getElementById('finishProductSelect');
+          const option = document.createElement('option');
+          option.value = data.product.name;
+          option.setAttribute('data-unit', data.product.base_unit);
+          option.textContent = data.product.name;
+          productSelect.appendChild(option);
+
+          // Select the new product
+          productSelect.value = data.product.name;
+          productSelect.dispatchEvent(new Event('change'));
+
+          // Close modal and reset form
+          const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddProductModal'));
+          if (modal) modal.hide();
+          document.getElementById('quickAddProductForm').reset();
+        } else {
+          alert('Error: ' + (data.message || data.error));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while adding the product');
+      });
+    });
   }
-
-  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-  fetch('/api/products/quick-add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify({
-      product_name: productName,
-      product_base_unit: baseUnit
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Add the new product to the dropdown
-      const productSelect = document.getElementById('finishProductSelect');
-      const option = document.createElement('option');
-      option.value = data.product.name;
-      option.setAttribute('data-unit', data.product.product_base_unit);
-      option.textContent = data.product.name;
-      productSelect.appendChild(option);
-
-      // Select the new product
-      productSelect.value = data.product.name;
-      productSelect.dispatchEvent(new Event('change'));
-
-      // Close modal and reset form
-      bootstrap.Modal.getInstance(document.getElementById('quickAddProductModal')).hide();
-      document.getElementById('quickAddProductForm').reset();
-    } else {
-      alert('Error: ' + (data.message || data.error));
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while adding the product');
-  });
 });
 
 // Quick Add Variant functionality
-document.getElementById('saveQuickVariant').addEventListener('click', function() {
-  const productName = document.getElementById('variant-product-name').value;
-  const variantName = document.getElementById('new-variant-name').value;
+document.addEventListener('DOMContentLoaded', function() {
+  const saveQuickVariantBtn = document.getElementById('saveQuickVariant');
+  if (saveQuickVariantBtn) {
+    saveQuickVariantBtn.addEventListener('click', function() {
+      const productName = document.getElementById('variant-product-name').value;
+      const variantName = document.getElementById('new-variant-name').value;
 
-  if (!variantName) {
-    alert('Variant name is required');
-    return;
+      if (!variantName) {
+        alert('Variant name is required');
+        return;
+      }
+
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+      fetch('/products/api/quick-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          product_name: productName,
+          variant_name: variantName
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Add the new variant to the dropdown
+          const variantSelect = document.getElementById('finishVariantSelect');
+          const option = document.createElement('option');
+          option.value = data.variant.id;
+          option.textContent = data.variant.name;
+          variantSelect.appendChild(option);
+
+          // Select the new variant
+          variantSelect.value = data.variant.id;
+          variantSelect.dispatchEvent(new Event('change'));
+
+          // Close modal and reset form
+          const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddVariantModal'));
+          if (modal) modal.hide();
+          document.getElementById('quickAddVariantForm').reset();
+        } else {
+          alert('Error: ' + (data.message || data.error));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while adding the variant');
+      });
+    });
   }
-
-  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-  fetch('/api/products/quick-add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify({
-      product_name: productName,
-      variant_name: variantName
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Add the new variant to the dropdown
-      const variantSelect = document.getElementById('finishVariantSelect');
-      const option = document.createElement('option');
-      option.value = data.variant.id;
-      option.textContent = data.variant.name;
-      variantSelect.appendChild(option);
-
-      // Select the new variant
-      variantSelect.value = data.variant.id;
-      variantSelect.dispatchEvent(new Event('change'));
-
-      // Close modal and reset form
-      bootstrap.Modal.getInstance(document.getElementById('quickAddVariantModal')).hide();
-      document.getElementById('quickAddVariantForm').reset();
-    } else {
-      alert('Error: ' + (data.message || data.error));
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while adding the variant');
-  });
 });
 
 // Enable/disable variant add button and populate product name
