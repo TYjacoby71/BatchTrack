@@ -43,7 +43,7 @@ function validateYield() {
     console.log('No containers in batch - skipping yield validation');
     return;
   }
-  
+
   // Call the validation service
   fetch(`/api/batches/{{ batch.id }}/validate-yield`, {
     method: 'POST',
@@ -217,7 +217,7 @@ function loadVariants() {
   }
 
   const selectedOption = productSelect.options[productSelect.selectedIndex];
-  
+
   if (!selectedOption || !selectedOption.value) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
     return;
