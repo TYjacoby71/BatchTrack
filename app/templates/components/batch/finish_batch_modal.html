@@ -159,9 +159,6 @@ function validateYield() {
   
   if (!finalQuantity || finalQuantity <= 0) {
     alertsContainer.innerHTML = '';
-    // Clear container table if no valid quantity
-    document.getElementById('containerTableBody').innerHTML = '';
-    updateTotals();
     return;
   }
 
@@ -176,18 +173,11 @@ function validateYield() {
       estimated_yield: finalQuantity
     })
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
-  })
+  .then(response => response.json())
   .then(data => {
-    console.log('Validation response:', data);
-    
     let alertsHtml = '';
     
-    if (data && data.warnings && data.warnings.length > 0) {
+    if (data.warnings && data.warnings.length > 0) {
       data.warnings.forEach(warning => {
         alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
           <i class="fas fa-exclamation-triangle me-1"></i>${warning}
@@ -196,14 +186,14 @@ function validateYield() {
     }
     
     // Add helpful context for overflow/underfill
-    if (data && data.overflow_amount > 0) {
+    if (data.overflow_amount > 0) {
       alertsHtml += `<div class="alert alert-info alert-sm mb-1">
         <i class="fas fa-info-circle me-1"></i>
         Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
       </div>`;
     }
     
-    if (data && data.underfill_amount > 0) {
+    if (data.underfill_amount > 0) {
       alertsHtml += `<div class="alert alert-info alert-sm mb-1">
         <i class="fas fa-info-circle me-1"></i>
         Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
@@ -213,89 +203,17 @@ function validateYield() {
     alertsContainer.innerHTML = alertsHtml;
     
     // Update container breakdown if available
-    if (data && data.container_breakdown && Array.isArray(data.container_breakdown)) {
+    if (data.container_breakdown) {
       updateContainerTable(data.container_breakdown, finalQuantity);
-    } else {
-      console.warn('No container breakdown data received');
-      // Clear container table if no data
-      document.getElementById('containerTableBody').innerHTML = '';
-      updateTotals();
     }
   })
   .catch(error => {
     console.error('Error validating yield:', error);
     alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
       <i class="fas fa-exclamation-triangle me-1"></i>
-      Unable to validate yield against container capacity: ${error.message}
+      Unable to validate yield against container capacity.
     </div>`;
-    
-    // Clear container table on error
-    document.getElementById('containerTableBody').innerHTML = '';
-    updateTotals();
   });
-}
-
-// Make validation reactive to form changes
-function setupReactiveValidation() {
-  const finalQuantityInput = document.getElementById('final_quantity');
-  const outputTypeSelect = document.getElementById('output_type');
-  const productSelect = document.getElementById('product_id');
-  const variantSelect = document.getElementById('variant_label');
-  const perishableCheck = document.getElementById('is_perishable');
-  const shelfLifeInput = document.getElementById('shelf_life_days');
-  
-  // Debounce function to avoid too many API calls
-  function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  }
-  
-  const debouncedValidate = debounce(validateYield, 300);
-  
-  // Add event listeners for reactive updates - check if elements exist first
-  if (finalQuantityInput) {
-    finalQuantityInput.addEventListener('input', debouncedValidate);
-    finalQuantityInput.addEventListener('change', validateYield);
-  }
-  
-  if (outputTypeSelect) {
-    outputTypeSelect.addEventListener('change', () => {
-      toggleOutputFields();
-      validateYield();
-    });
-  }
-  
-  if (productSelect) {
-    productSelect.addEventListener('change', () => {
-      loadVariants();
-      validateYield();
-    });
-  }
-  
-  if (variantSelect) {
-    variantSelect.addEventListener('change', validateYield);
-  }
-  
-  if (perishableCheck) {
-    perishableCheck.addEventListener('change', () => {
-      toggleShelfLife();
-      validateYield();
-    });
-  }
-  
-  if (shelfLifeInput) {
-    shelfLifeInput.addEventListener('change', () => {
-      updateExpirationDate();
-      validateYield();
-    });
-  }
 }
 
 function updateContainerTable(containers, finalQuantity) {
@@ -332,7 +250,6 @@ function updateContainerTable(containers, finalQuantity) {
                  min="0" 
                  max="${container.quantity_used}"
                  value="${container.quantity_used}"
-                 oninput="updateTotals()"
                  onchange="updateTotals()"
                  data-container-id="${index}">
           <input type="hidden" name="container_name_${index}" value="${container.container_name}">
@@ -360,10 +277,7 @@ function updateTotals() {
     passedSum += parseInt(input.value) || 0;
   });
   
-  const totalPassedElement = document.getElementById('totalPassed');
-  if (totalPassedElement) {
-    totalPassedElement.textContent = passedSum;
-  }
+  document.getElementById('totalPassed').textContent = passedSum;
   
   // Validate that passed doesn't exceed used
   let valid = true;
@@ -380,62 +294,12 @@ function updateTotals() {
   });
   
   const submitBtn = document.getElementById('completeBatchBtn');
-  if (submitBtn) {
-    submitBtn.disabled = !valid;
-    
-    if (!valid) {
-      submitBtn.textContent = 'Cannot pass more containers than used';
-    } else {
-      submitBtn.textContent = 'Complete Batch';
-    }
-  }
+  submitBtn.disabled = !valid;
   
-  // Show real-time feedback about container distribution
-  updateContainerFeedback();
-}
-
-function updateContainerFeedback() {
-  const finalQuantity = parseFloat(document.getElementById('final_quantity')?.value) || 0;
-  const passInputs = document.querySelectorAll('.pass-input');
-  
-  if (finalQuantity <= 0 || passInputs.length === 0) return;
-  
-  let totalContainerCapacity = 0;
-  passInputs.forEach((input, index) => {
-    const quantity = parseInt(input.value) || 0;
-    const containerData = window.containerData?.[index];
-    if (containerData && quantity > 0) {
-      totalContainerCapacity += (containerData.container_size || 0) * quantity;
-    }
-  });
-  
-  const alertsContainer = document.getElementById('yield-validation-alerts');
-  if (!alertsContainer) return;
-  
-  // Remove existing container feedback alerts
-  const existingFeedback = alertsContainer.querySelectorAll('.container-feedback-alert');
-  existingFeedback.forEach(alert => alert.remove());
-  
-  if (totalContainerCapacity > finalQuantity) {
-    const overflow = totalContainerCapacity - finalQuantity;
-    const feedbackAlert = document.createElement('div');
-    feedbackAlert.className = 'alert alert-info alert-sm mb-1 container-feedback-alert';
-    feedbackAlert.innerHTML = `
-      <i class="fas fa-info-circle me-1"></i>
-      Selected containers can hold ${totalContainerCapacity.toFixed(2)} units, but you only have ${finalQuantity.toFixed(2)} units. 
-      Containers will be underfilled by ${overflow.toFixed(2)} units.
-    `;
-    alertsContainer.appendChild(feedbackAlert);
-  } else if (totalContainerCapacity < finalQuantity) {
-    const shortage = finalQuantity - totalContainerCapacity;
-    const feedbackAlert = document.createElement('div');
-    feedbackAlert.className = 'alert alert-warning alert-sm mb-1 container-feedback-alert';
-    feedbackAlert.innerHTML = `
-      <i class="fas fa-exclamation-triangle me-1"></i>
-      You have ${finalQuantity.toFixed(2)} units but selected containers can only hold ${totalContainerCapacity.toFixed(2)} units.
-      ${shortage.toFixed(2)} units will remain as bulk product.
-    `;
-    alertsContainer.appendChild(feedbackAlert);
+  if (!valid) {
+    submitBtn.textContent = 'Cannot pass more containers than used';
+  } else {
+    submitBtn.textContent = 'Complete Batch';
   }
 }
 
@@ -486,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       toggleShelfLife();
-      setupReactiveValidation(); // Setup all reactive listeners
       validateYield(); // Load container data on modal open
     });
   }

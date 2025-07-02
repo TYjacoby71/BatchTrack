@@ -1,6 +1,3 @@
-// Make container data globally accessible for finish modal
-window.containerData = [];
-
 // Batch form functionality
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
@@ -119,26 +116,12 @@ function updateRowCost(selectElement) {
 
 function addExtraItemRow(type) {
   const template = document.getElementById(`extra-${type}-template`);
-  const container = document.getElementById('extra-ingredients-container');
-  
-  if (!template) {
-    console.error(`Template extra-${type}-template not found`);
-    showAlert(`Cannot add ${type} - template missing`, 'error');
-    return;
-  }
-  
-  if (!container) {
-    console.error('Extra ingredients container not found');
-    showAlert('Cannot add extra items - container missing', 'error');
-    return;
-  }
-  
   const clone = template.content.cloneNode(true);
-  container.appendChild(clone);
+  document.getElementById('extra-ingredients-container').appendChild(clone);
 
-  const newRow = container.lastElementChild;
+  const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
   const select = newRow.querySelector('.item-select');
-  if (select && typeof updateRowCost === 'function') {
+  if (select) {
     updateRowCost(select);
   }
 }
