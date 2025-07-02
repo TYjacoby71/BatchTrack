@@ -23,10 +23,10 @@ def list_inventory():
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
-
+    
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-
+        
         # Calculate expired quantity using temporary attributes instead of properties
         if item.is_perishable:
             today = datetime.now().date()
@@ -66,14 +66,14 @@ def view_inventory(id):
     fifo_filter = request.args.get('fifo') == 'true'
 
     item = InventoryItem.query.get_or_404(id)
-
+    
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
-
+    
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-
+    
     # Calculate expired quantity using temporary attributes
     if item.is_perishable:
         today = datetime.now().date()
@@ -90,7 +90,7 @@ def view_inventory(id):
     else:
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
-
+    
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id)
 
     # Apply FIFO filter at database level if requested
@@ -102,7 +102,7 @@ def view_inventory(id):
     history = pagination.items
 
     from datetime import datetime
-
+    
     # Get expired FIFO entries for display
     from sqlalchemy import and_
     expired_entries = []
@@ -118,32 +118,6 @@ def view_inventory(id):
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
-
-    # Get item details
-    item = InventoryItem.query.get_or_404(id)
-
-    # Get history with organization scoping
-    history = InventoryHistory.query.filter_by(
-        inventory_item_id=id,
-        organization_id=current_user.organization_id
-    ).order_by(InventoryHistory.timestamp.desc()).all()
-
-    # Get unique batch IDs from history to fetch batch data
-    batch_ids = set()
-    for entry in history:
-        if entry.used_for_batch_id:
-            batch_ids.add(entry.used_for_batch_id)
-        if entry.batch_id:
-            batch_ids.add(entry.batch_id)
-
-    # Fetch batch data for label codes
-    from ...models import Batch
-    batches = []
-    if batch_ids:
-        batches = Batch.query.filter(
-            Batch.id.in_(batch_ids),
-            Batch.organization_id == current_user.organization_id
-        ).all()
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
@@ -159,8 +133,7 @@ def view_inventory(id):
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,
-                         fifo_filter=fifo_filter,
-                         batches=batches)
+                         fifo_filter=fifo_filter)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
