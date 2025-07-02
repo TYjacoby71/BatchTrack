@@ -41,11 +41,11 @@ class ProductService:
     @staticmethod
     def get_or_create_sku(product_name, variant_name, size_label, unit=None, sku_code=None, variant_description=None):
         """Get existing SKU or create new one with automatic SKU generation"""
-        # Check if SKU already exists (case-insensitive for robustness)
-        sku = ProductSKU.query.filter(
-            func.lower(ProductSKU.product_name) == func.lower(product_name),
-            func.lower(ProductSKU.variant_name) == func.lower(variant_name),
-            func.lower(ProductSKU.size_label) == func.lower(size_label)
+        # Check if SKU already exists
+        sku = ProductSKU.query.filter_by(
+            product_name=product_name,
+            variant_name=variant_name,
+            size_label=size_label
         ).first()
 
         if sku:
@@ -60,12 +60,10 @@ class ProductService:
             sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
 
         # Get product base unit from existing SKUs
-        existing_sku = ProductSKU.query.filter(
-            func.lower(ProductSKU.product_name) == func.lower(product_name)
-        ).first()
+        existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
         product_base_unit = existing_sku.product_base_unit if existing_sku else (unit or 'g')
 
-        # Create new SKU with proper defaults
+        # Create new SKU
         sku = ProductSKU(
             product_name=product_name,
             product_base_unit=product_base_unit,
@@ -73,14 +71,7 @@ class ProductService:
             size_label=size_label,
             unit=unit or product_base_unit,
             sku_code=sku_code,
-            variant_description=variant_description,
-            current_quantity=0.0,
-            reserved_quantity=0.0,
-            unit_cost=0.0,
-            low_stock_threshold=1.0,
-            is_active=True,
-            is_product_active=True,
-            organization_id=current_user.organization_id if current_user.is_authenticated else 1
+            variant_description=variant_description
         )
 
         db.session.add(sku)

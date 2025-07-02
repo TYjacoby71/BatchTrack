@@ -1,19 +1,9 @@
 
 <!-- Basic Batch Information Section -->
 <div class="basic-info-section">
-  <!-- Output Type Selection -->
-  <div class="form-group mb-3">
-    <label for="output_type">Output Type</label>
-    <select id="output_type" name="output_type" class="form-select" required onchange="toggleOutputFields()">
-      <option value="">Select output type...</option>
-      <option value="ingredient" {% if batch.batch_type == 'ingredient' %}selected{% endif %}>Intermediate Ingredient</option>
-      <option value="product" {% if batch.batch_type == 'product' %}selected{% endif %}>Finished Product</option>
-    </select>
-  </div>
-
   <!-- For intermediate ingredients, show ingredient title -->
   {% if batch.batch_type == 'ingredient' %}
-  <div class="alert alert-info mb-3" id="ingredient-info">
+  <div class="alert alert-info mb-3">
     <h6 class="mb-0">
       <i class="fas fa-flask me-2"></i>
       Creating Intermediate Ingredient: {{ batch.recipe.name }}

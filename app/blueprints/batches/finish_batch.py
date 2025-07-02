@@ -104,83 +104,16 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products, create SKUs and add to product inventory
+            # For actual products (not intermediate ingredients), use ProductService
             if batch.product_id:
                 from app.services.product_service import ProductService
-                from app.services.product_inventory_service import ProductInventoryService
-                
-                # Get the selected product name
-                selected_product = request.form.get('product_select')
-                if not selected_product:
-                    raise ValueError("Product selection required for product output")
-                
-                variant_name = batch.variant_label or 'Base'
-                
-                # Calculate total cost per unit
-                total_batch_cost = sum(
-                    (ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients
-                ) + sum(
-                    (c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers
-                ) + sum(
-                    (e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients
-                ) + sum(
-                    (e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers
+                inventory_entries = ProductService.add_product_from_batch(
+                    batch_id=batch.id,
+                    product_id=batch.product_id,
+                    variant_label=batch.variant_label,
+                    quantity=batch.final_quantity,
+                    container_overrides=container_overrides
                 )
-                unit_cost = total_batch_cost / final_quantity if final_quantity > 0 else 0
-                
-                # Handle containers - create SKUs for each container size used
-                total_containerized = 0
-                for container in batch.containers:
-                    if container.quantity_used and container.quantity_used > 0:
-                        # Get container info
-                        container_item = InventoryItem.query.get(container.inventory_item_id)
-                        if container_item:
-                            size_label = f"{container_item.storage_amount}{container_item.storage_unit}"
-                            container_quantity = container.quantity_used * container_item.storage_amount
-                            
-                            # Create or get SKU for this container size
-                            sku = ProductService.get_or_create_sku(
-                                product_name=selected_product,
-                                variant_name=variant_name,
-                                size_label=size_label,
-                                unit=container_item.storage_unit
-                            )
-                            
-                            # Add stock using product inventory service
-                            ProductInventoryService.add_stock(
-                                sku_id=sku.id,
-                                quantity=container_quantity,
-                                unit_cost=unit_cost,
-                                batch_id=batch.id,
-                                container_id=container.inventory_item_id,
-                                change_type='batch_addition',
-                                notes=f'Added from batch {batch.label_code} - {container.quantity_used} containers'
-                            )
-                            
-                            total_containerized += container_quantity
-                
-                # Handle uncontained product - goes to bulk SKU
-                uncontained_quantity = final_quantity - total_containerized
-                if uncontained_quantity > 0:
-                    # Create or get bulk SKU
-                    bulk_sku = ProductService.get_or_create_sku(
-                        product_name=selected_product,
-                        variant_name=variant_name,
-                        size_label='Bulk',
-                        unit=output_unit
-                    )
-                    
-                    # Add bulk stock
-                    ProductInventoryService.add_stock(
-                        sku_id=bulk_sku.id,
-                        quantity=uncontained_quantity,
-                        unit_cost=unit_cost,
-                        batch_id=batch.id,
-                        change_type='batch_addition',
-                        notes=f'Bulk product from batch {batch.label_code} - uncontained yield'
-                    )
-                
-                flash(f"Product inventory created: {total_containerized + uncontained_quantity} {output_unit} total", "success")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
