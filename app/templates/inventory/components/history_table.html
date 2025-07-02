@@ -72,6 +72,8 @@
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
                       {% elif entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                      {% elif entry.change_type == 'finished_batch' %}
+                        NA
                       {% else %}
                         NA
                       {% endif %}
@@ -97,12 +99,6 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                           </a>
-                        {% endif %}
-                      {% elif entry.change_type == 'finished_batch' and entry.batch %}
-                        {% if entry.batch.status == 'in_progress' %}
-                          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% else %}
                         -
