@@ -65,13 +65,16 @@ def new_product():
             flash('Product with this name already exists', 'error')
             return redirect(url_for('products.new_product'))
 
-        # Create the Base variant SKU automatically
+        # Create the base SKU with auto-generated SKU code
+        from ...services.product_service import ProductService
+        sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
         sku = ProductSKU(
             product_name=name,
             product_base_unit=product_base_unit,
             variant_name='Base',
             size_label='Bulk',
             unit=product_base_unit,
+            sku_code=sku_code,
             low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
             variant_description='Default base variant',
             organization_id=current_user.organization_id
