@@ -68,12 +68,10 @@
                     <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
                     <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
                     <td>
-                      {% if entry.used_for_batch %}
+                      {% if entry.quantity_change < 0 and entry.used_for_batch %}
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
-                      {% elif entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
+                      {% elif entry.quantity_change < 0 and entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
                         <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                      {% elif entry.change_type == 'finished_batch' %}
-                        NA
                       {% else %}
                         NA
                       {% endif %}
@@ -81,13 +79,7 @@
                     <td>
                       {% if entry.fifo_reference_id %}
                         {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
-                        {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
-                          {% if ref_entry.batch.status == 'in_progress' %}
-                            <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
-                          {% else %}
-                            <a href="{{ url_for('batches.view_batch', batch_identifier=ref_entry.batch.id) }}">{{ ref_entry.batch.label_code }}</a>
-                          {% endif %}
-                        {% elif ref_entry %}
+                        {% if ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {% if ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                               {{ ref_entry.batch.label_code }}
@@ -105,7 +97,7 @@
                       {% endif %}
                     </td>
                     <td>
-                      {% if entry.change_type == 'finished_batch' and entry.batch %}
+                      {% if entry.batch %}
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}

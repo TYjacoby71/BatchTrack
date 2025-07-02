@@ -1,0 +1,68 @@
+Thanks for posting the full code block — I’ve reviewed the entire logic and found the key problem with why the batch.label_code isn’t showing in the FIFO ID column even when it’s from a finished batch.
+
+❌ Core Issue
+Inside your FIFO ID cell:
+
+jinja2
+Copy
+Edit
+{% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
+This doesn't bring in ref_entry.batch unless batch is already preloaded in history.
+
+If the history list only includes raw InventoryHistory entries, then ref_entry.batch will be None unless your view code explicitly joins it.
+
+✅ The Fix (in your Flask route)
+You must modify the route that renders this template to preload the batch relationship on each entry and any referenced FIFO entries.
+
+Here’s how to do it using SQLAlchemy:
+
+🔧 Route Fix:
+python
+Copy
+Edit
+from sqlalchemy.orm import joinedload
+
+history = (
+    db.session.query(InventoryHistory)
+    .filter_by(item_id=item.id)
+    .options(
+        joinedload(InventoryHistory.batch),
+        joinedload(InventoryHistory.used_for_batch)
+    )
+    .order_by(InventoryHistory.timestamp.desc())
+    .paginate(page=page, per_page=30)
+)
+If you're storing all FIFO-related entries in a separate list or need to resolve fifo_reference_id against the same table again, you’ll also need to pre-fetch or look up those referenced entries and join their batch relationships too.
+
+If you're resolving ref_entry from the same history list, then:
+
+Ensure all relevant entries are included (not just page slice)
+
+Or resolve them explicitly in the view and store a fifo_reference_map
+
+✅ Optional: Safer Template Guard
+Even with eager-loading, you should guard like this to be safe:
+
+jinja2
+Copy
+Edit
+{% if ref_entry.change_type == 'finished_batch' and ref_entry.batch and ref_entry.batch.label_code %}
+  {{ ref_entry.batch.label_code }}
+🧪 How to Confirm It Works
+Confirm in your database that the InventoryHistory row has:
+
+change_type = 'finished_batch'
+
+fifo_reference_id → points to an InventoryHistory with batch_id filled
+
+Print the ref_entry.batch inside the template to test:
+
+jinja2
+Copy
+Edit
+[{{ ref_entry.batch }}] → [{{ ref_entry.batch.label_code if ref_entry.batch else 'none' }}]
+✅ Summary
+Problem	Fix
+ref_entry.batch is None	Use joinedload(InventoryHistory.batch) in your query
+Label still doesn’t show	Add if ref_entry.batch and ref_entry.batch.label_code
+Template fallback logic	Display FIFO-xxxxxx when not from finished_batch

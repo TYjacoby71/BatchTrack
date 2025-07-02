@@ -180,7 +180,7 @@ def recount_fifo(inventory_item_id, new_quantity, note, user_id):
 
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""
-    from blueprints.expiration.services import ExpirationService
+    from ...blueprints.expiration.services import ExpirationService
     
     # Delegate to expiration service
     ExpirationService.update_fifo_expiration_data(inventory_item_id, shelf_life_days)

@@ -159,6 +159,21 @@ def complete_batch(batch_id):
                 else:
                     converted_quantity = final_quantity
 
+                # Determine expiration settings - use ingredient's settings if batch is non-perishable
+                custom_expiration_date = None
+                custom_shelf_life_days = None
+                
+                if batch.is_perishable:
+                    # Use batch expiration settings
+                    custom_expiration_date = batch.expiration_date
+                    custom_shelf_life_days = batch.shelf_life_days
+                elif ingredient.is_perishable and ingredient.shelf_life_days:
+                    # Use ingredient's expiration settings when batch isn't perishable
+                    custom_expiration_date = ExpirationService.calculate_expiration_date(
+                        datetime.utcnow(), ingredient.shelf_life_days
+                    )
+                    custom_shelf_life_days = ingredient.shelf_life_days
+
                 # Add to inventory using centralized adjustment with finished_batch change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
@@ -170,8 +185,8 @@ def complete_batch(batch_id):
                     batch_id=batch.id,
                     created_by=current_user.id,
                     cost_override=unit_cost,
-                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
-                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
+                    custom_expiration_date=custom_expiration_date,
+                    custom_shelf_life_days=custom_shelf_life_days
                 )
             else:  # Create new intermediate ingredient
                 # Copy perishable properties from batch to new ingredient
@@ -189,6 +204,21 @@ def complete_batch(batch_id):
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
 
+                # Determine expiration settings - use ingredient's settings if batch is non-perishable
+                custom_expiration_date = None
+                custom_shelf_life_days = None
+                
+                if batch.is_perishable:
+                    # Use batch expiration settings
+                    custom_expiration_date = batch.expiration_date
+                    custom_shelf_life_days = batch.shelf_life_days
+                elif ingredient.is_perishable and ingredient.shelf_life_days:
+                    # Use ingredient's expiration settings when batch isn't perishable
+                    custom_expiration_date = ExpirationService.calculate_expiration_date(
+                        datetime.utcnow(), ingredient.shelf_life_days
+                    )
+                    custom_shelf_life_days = ingredient.shelf_life_days
+
                 # Add initial stock using centralized adjustment with finished_batch change_type
                 from app.services.inventory_adjustment import process_inventory_adjustment
                 process_inventory_adjustment(
@@ -200,8 +230,8 @@ def complete_batch(batch_id):
                     batch_id=batch.id,
                     created_by=current_user.id,
                     cost_override=unit_cost,
-                    custom_expiration_date=batch.expiration_date if batch.is_perishable else None,
-                    custom_shelf_life_days=batch.shelf_life_days if batch.is_perishable else None
+                    custom_expiration_date=custom_expiration_date,
+                    custom_shelf_life_days=custom_shelf_life_days
                 )
 
         # Finalize
