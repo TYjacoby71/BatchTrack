@@ -10,7 +10,7 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <input type="hidden" name="output_type" value="{{ batch.batch_type }}">
+          <input type="hidden" name="output_type" value="{{ batch.batch_type }}" id="output_type_hidden">
 
           <div class="form-group mb-3">
             <label for="final_quantity">Final Quantity</label>
@@ -113,14 +113,16 @@
 let containerData = [];
 
 function toggleOutputFields() {
-  const outputTypeInput = document.querySelector('input[name="output_type"]');
+  const outputTypeInput = document.getElementById('output_type_hidden');
   const productFields = document.getElementById('productFields');
   
   if (!outputTypeInput || !productFields) {
+    console.log('Missing elements:', { outputTypeInput: !!outputTypeInput, productFields: !!productFields });
     return;
   }
   
   const outputType = outputTypeInput.value;
+  console.log('Batch type from stored data:', outputType);
 
   if (outputType === 'product') {
     productFields.style.display = 'block';
@@ -337,16 +339,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
-      // Only call functions if required elements exist
-      const outputTypeInput = document.querySelector('input[name="output_type"]');
-      const finalQuantityInput = document.getElementById('final_quantity');
+      console.log('Modal opened, initializing...');
       
-      if (outputTypeInput) {
-        toggleOutputFields();
-      }
+      // Initialize output fields based on stored batch type
+      toggleOutputFields();
       
+      // Initialize other modal functions
       toggleShelfLife();
       
+      const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
         validateYield(); // Load container data on modal open
       }
