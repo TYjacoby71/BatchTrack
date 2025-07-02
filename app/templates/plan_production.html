@@ -1,98 +1,180 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div x-data="planProduction()" x-init="init()" class="container">
-  <h2>Plan Production: {{ recipe.name }}</h2>
-
-  <!-- Scale + Yield + Batch Type -->
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <label>Batch Scale:</label>
-      <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
-    </div>
-    <div class="col-md-4">
-      <label>Projected Yield:</label>
-      <div class="form-control-plaintext" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
-    </div>
-    <div class="col-md-4">
-      <label>Batch Type:</label>
-      <select class="form-select" x-model="batchType">
-        <option value="ingredient">Intermediate Ingredient</option>
-        <option value="product">Final Product</option>
-      </select>
-    </div>
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Plan Production: {{ recipe.name }}</h2>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Recipes
+    </a>
   </div>
 
-  <!-- Auto-Fill Toggle -->
-  <div class="row mb-4" x-show="recipeNeedsContainers">
-    <div class="col-md-6">
-      <input type="checkbox" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
-      <label for="autoFill">Auto-Fill Containers</label>
-    </div>
-  </div>
-
-  <!-- Container Selection -->
-  <div class="card mb-4" x-show="recipeNeedsContainers">
-    <div class="card-header d-flex justify-content-between">
-      <h5>Selected Containers</h5>
-      <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">Add Container</button>
+  <!-- Batch Configuration Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-cogs"></i> Batch Configuration
+      </h5>
     </div>
     <div class="card-body">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Batch Scale:</label>
+            <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Projected Yield:</label>
+            <div class="form-control-plaintext fw-bold text-primary" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Batch Type:</label>
+            <select class="form-select" x-model="batchType">
+              <option value="ingredient">Intermediate Ingredient</option>
+              <option value="product">Final Product</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Container Management Card -->
+  <div class="card mb-4" x-show="recipeNeedsContainers">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">
+        <i class="fas fa-box"></i> Container Management
+      </h5>
+      <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">
+        <i class="fas fa-plus"></i> Add Container
+      </button>
+    </div>
+    <div class="card-body">
+      <!-- Auto-Fill Toggle -->
+      <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
+        <label class="form-check-label" for="autoFill">
+          <i class="fas fa-magic"></i> Auto-Fill Containers
+        </label>
+      </div>
+
+      <!-- Container Selection -->
       <template x-for="(container, index) in containersSelected" :key="index">
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <select class="form-select" x-model="container.id" :disabled="autoFill" 
-            @change="updateContainer(index)"
-            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
-            <option value="">Select Container</option>
-            <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
-              <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
-            </template>
-          </select>
-          <input type="number" min="1" class="form-control" 
-            x-model.number="container.quantity" 
-            :disabled="autoFill || getRemainingStock(container.id, index) <= 0" 
-            @input="updateProgress"
-            @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
-          <div class="small text-muted px-2" x-text="'Available: ' + getRemainingStock(container.id, index)"></div>
-          <button type="button" class="btn btn-danger btn-sm" 
-            @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(index)" 
-            :disabled="autoFill">&times;</button>
+        <div class="row align-items-center mb-3 p-3 border rounded bg-light">
+          <div class="col-md-5">
+            <label class="form-label small">Container Type</label>
+            <select class="form-select form-select-sm" x-model="container.id" :disabled="autoFill" 
+              @change="updateContainer(index)"
+              @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
+              <option value="">Select Container</option>
+              <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
+                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
+              </template>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Quantity</label>
+            <input type="number" min="1" class="form-control form-control-sm" 
+              x-model.number="container.quantity" 
+              :disabled="autoFill || getRemainingStock(container.id, index) <= 0" 
+              @input="updateProgress"
+              @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Available Stock</label>
+            <div class="badge bg-info fs-6" x-text="getRemainingStock(container.id, index)"></div>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small">&nbsp;</label>
+            <button type="button" class="btn btn-danger btn-sm d-block" 
+              @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(index)" 
+              :disabled="autoFill">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
       </template>
 
       <!-- Containment Progress -->
-      <div class="mt-3">
-        <label>Containment Progress:</label>
-        <div class="progress" style="height: 20px;">
-          <div class="progress-bar" role="progressbar" :style="'width: ' + containmentPercent + '%'" x-text="containmentPercent + '%'"></div>
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label mb-0">Containment Progress:</label>
+          <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
         </div>
-        <small class="form-text text-muted" x-text="liveContainmentMessage"></small>
+        <div class="progress" style="height: 25px;">
+          <div class="progress-bar" role="progressbar" 
+            :style="'width: ' + containmentPercent + '%'" 
+            :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
+            x-text="containmentPercent + '%'"></div>
+        </div>
+        <small class="form-text text-muted mt-1" x-text="liveContainmentMessage"></small>
       </div>
 
       <!-- Warnings -->
-      <div class="alert alert-warning mt-2" x-show="containmentIssue">
+      <div class="alert alert-warning mt-3" x-show="containmentIssue">
+        <i class="fas fa-exclamation-triangle"></i>
         <span x-text="containmentIssue"></span>
       </div>
 
-      <div class="alert alert-danger mt-2" x-show="containersSelected.length === 0">
+      <div class="alert alert-danger mt-3" x-show="containersSelected.length === 0">
+        <i class="fas fa-exclamation-circle"></i>
         No containers selected. Please add containers or enable Auto-Fill.
       </div>
     </div>
   </div>
 
-  <!-- Check Ingredients -->
-  <h4>Check Ingredients</h4>
-  <div class="mb-4">
-    <div class="d-flex gap-2">
-      <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">Check Stock</button>
-      <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">Cancel</a>
+  <!-- Stock Check Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
+      </h5>
     </div>
-    {% include 'partials/plan_production_stock_check.html' %}
+    <div class="card-body">
+      <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">
+          <i class="fas fa-search"></i> Check Stock
+        </button>
+        <div class="ms-auto" x-show="stockChecked">
+          <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
+            <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
+            <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
+          </span>
+        </div>
+      </div>
+      {% include 'partials/plan_production_stock_check.html' %}
+    </div>
   </div>
 
-  <!-- Start Batch -->
-  <div class="d-flex justify-content-end">
-    <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">Start Batch</button>
+  <!-- Action Buttons Card -->
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <p class="mb-0 text-muted">
+            <i class="fas fa-info-circle"></i>
+            Ready to start batch when all requirements are met
+          </p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+          <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">
+            <i class="fas fa-play"></i> Start Batch
+          </button>
+          <button type="button" class="btn btn-outline-success" x-show="!canStartBatch" disabled>
+            <i class="fas fa-clock"></i> Requirements Not Met
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

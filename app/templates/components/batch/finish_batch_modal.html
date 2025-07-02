@@ -10,7 +10,7 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <input type="hidden" name="output_type" value="{{ batch.batch_type }}">
+          <input type="hidden" name="output_type" value="{{ batch.batch_type }}" id="output_type_hidden">
 
           <div class="form-group mb-3">
             <label for="final_quantity">Final Quantity</label>
@@ -113,8 +113,16 @@
 let containerData = [];
 
 function toggleOutputFields() {
-  const outputType = '{{ batch.batch_type }}';
+  const outputTypeInput = document.getElementById('output_type_hidden');
   const productFields = document.getElementById('productFields');
+  
+  if (!outputTypeInput || !productFields) {
+    console.log('Missing elements:', { outputTypeInput: !!outputTypeInput, productFields: !!productFields });
+    return;
+  }
+  
+  const outputType = outputTypeInput.value;
+  console.log('Batch type from stored data:', outputType);
 
   if (outputType === 'product') {
     productFields.style.display = 'block';
@@ -298,8 +306,14 @@ function updateTotals() {
 }
 
 function loadVariants() {
-  const productId = document.getElementById('product_id').value;
+  const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_label');
+  
+  if (!productSelect || !variantSelect) {
+    return;
+  }
+  
+  const productId = productSelect.value;
 
   if (!productId) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
@@ -325,9 +339,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
+      console.log('Modal opened, initializing...');
+      
+      // Initialize output fields based on stored batch type
       toggleOutputFields();
+      
+      // Initialize other modal functions
       toggleShelfLife();
-      validateYield(); // Load container data on modal open
+      
+      const finalQuantityInput = document.getElementById('final_quantity');
+      if (finalQuantityInput) {
+        validateYield(); // Load container data on modal open
+      }
     });
   }
 });
