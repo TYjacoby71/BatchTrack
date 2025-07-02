@@ -119,12 +119,26 @@ function updateRowCost(selectElement) {
 
 function addExtraItemRow(type) {
   const template = document.getElementById(`extra-${type}-template`);
+  const container = document.getElementById('extra-ingredients-container');
+  
+  if (!template) {
+    console.error(`Template extra-${type}-template not found`);
+    showAlert(`Cannot add ${type} - template missing`, 'error');
+    return;
+  }
+  
+  if (!container) {
+    console.error('Extra ingredients container not found');
+    showAlert('Cannot add extra items - container missing', 'error');
+    return;
+  }
+  
   const clone = template.content.cloneNode(true);
-  document.getElementById('extra-ingredients-container').appendChild(clone);
+  container.appendChild(clone);
 
-  const newRow = document.getElementById('extra-ingredients-container').lastElementChild;
+  const newRow = container.lastElementChild;
   const select = newRow.querySelector('.item-select');
-  if (select) {
+  if (select && typeof updateRowCost === 'function') {
     updateRowCost(select);
   }
 }
