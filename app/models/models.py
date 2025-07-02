@@ -316,6 +316,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Container-specific fields
     storage_amount = db.Column(db.Float, nullable=True)
     storage_unit = db.Column(db.String(32), nullable=True)
+    # Intermediate ingredient flag
+    intermediate = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
