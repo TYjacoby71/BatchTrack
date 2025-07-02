@@ -41,8 +41,7 @@ def new_recipe():
                 label_prefix=label_prefix,
                 predicted_yield=float(request.form.get('predicted_yield') or 0.0),
                 predicted_yield_unit=request.form.get('predicted_yield_unit') or "",
-                requires_containers=True if request.form.get('requires_containers') else False,
-                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers')] if request.form.get('requires_containers') else [],
+                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
@@ -131,7 +130,7 @@ def plan_production(recipe_id):
             'storage_unit': c.storage_unit
         }
         for c in InventoryItem.query.filter_by(type='container').all()
-    ] if recipe.requires_containers else []
+    ]
 
     inventory_units = get_global_unit_list()
 
@@ -324,7 +323,6 @@ def clone_recipe(recipe_id):
             label_prefix=original.label_prefix,
             predicted_yield=original.predicted_yield,
             predicted_yield_unit=original.predicted_yield_unit,
-            requires_containers=original.requires_containers,
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
 
@@ -436,7 +434,6 @@ def edit_recipe(recipe_id):
             recipe.label_prefix = label_prefix
             recipe.predicted_yield = float(request.form.get('predicted_yield') or 0.0)
             recipe.predicted_yield_unit = request.form.get('predicted_yield_unit') or ""
-            recipe.requires_containers = True if request.form.get('requires_containers') else False
             recipe.allowed_containers = [int(id) for id in request.form.getlist('allowed_containers[]') if id] or []
 
             # Clear existing ingredient links

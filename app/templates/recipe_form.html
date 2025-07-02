@@ -1,3 +1,7 @@
+The code removes the `requires_containers` toggle and its associated logic from the recipe form, ensuring the container selection is always visible and managed solely through the allowed containers list.
+```
+
+```replit_final_file
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -120,26 +124,29 @@
 
     <!-- Allowed Containers Card -->
     <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-box"></i> Allowed Containers
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-box"></i> Container Options
             </h5>
         </div>
         <div class="card-body">
-            <div class="form-group">
-                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
-                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
-                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
-                        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
-                    </option>
-                    {% endfor %}
-                </select>
-                <small class="form-text text-muted">
-                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
-                    <strong>Note:</strong> Container requirement is now determined during batch planning.
-                </small>
+            <label class="form-label">Allowed Container Types</label>
+            <div class="row">
+                {% for container in InventoryItem.query.filter_by(type='container').all() %}
+                <div class="col-md-4 mb-2">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="container_{{ container.id }}" 
+                               name="allowed_containers[]" value="{{ container.id }}"
+                               {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}checked{% endif %}>
+                        <label class="form-check-label" for="container_{{ container.id }}">
+                            {{ container.name }}
+                            <small class="text-muted">({{ container.storage_amount }} {{ container.storage_unit }})</small>
+                        </label>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
+            <div class="form-text">Select which container types are compatible with this recipe. This helps filter container options during batch planning. The decision to use containers will be made during batch planning.</div>
         </div>
     </div>
 
