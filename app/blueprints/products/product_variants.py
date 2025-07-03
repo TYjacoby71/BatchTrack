@@ -17,25 +17,30 @@ def add_variant(product_name):
         description = data.get('description')
         size_label = data.get('size_label', 'Bulk')
 
-        if not variant_name:
+        if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
 
-        # Check if SKU already exists
+        # Check if variant already exists for this product (regardless of size_label)
         existing_sku = ProductSKU.query.filter_by(
             product_name=product_name, 
-            variant_name=variant_name,
-            size_label=size_label
+            variant_name=variant_name.strip()
         ).first()
         
         if existing_sku:
-            return jsonify({'error': 'Variant already exists'}), 400
+            return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
 
         try:
-            # Create new SKU
+            # Get the base product unit from existing SKUs
+            existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
+            if not existing_product_sku:
+                return jsonify({'error': 'Product not found'}), 404
+
+            # Create new SKU using the product service
             sku = ProductService.get_or_create_sku(
                 product_name=product_name,
-                variant_name=variant_name,
+                variant_name=variant_name.strip(),
                 size_label=size_label,
+                unit=existing_product_sku.unit,
                 sku_code=sku_code,
                 variant_description=description
             )
@@ -53,9 +58,55 @@ def add_variant(product_name):
 
         except Exception as e:
             db.session.rollback()
-            return jsonify({'error': str(e)}), 400
+            return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
-    return jsonify({'error': 'Invalid request'}), 400
+    # Handle form data (non-JSON) requests as well
+    variant_name = request.form.get('name')
+    sku_code = request.form.get('sku')
+    description = request.form.get('description')
+    
+    if not variant_name or variant_name.strip() == '':
+        return jsonify({'error': 'Variant name is required'}), 400
+
+    try:
+        # Get the base product unit from existing SKUs
+        existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
+        if not existing_product_sku:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Check if variant already exists
+        existing_sku = ProductSKU.query.filter_by(
+            product_name=product_name, 
+            variant_name=variant_name.strip()
+        ).first()
+        
+        if existing_sku:
+            return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
+
+        # Create new SKU
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name.strip(),
+            size_label='Bulk',
+            unit=existing_product_sku.unit,
+            sku_code=sku_code,
+            variant_description=description
+        )
+        
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'variant': {
+                'id': sku.id,
+                'name': sku.variant_name,
+                'sku': sku.sku_code
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
 @products_bp.route('/<product_name>/variant/<variant_name>')
 @login_required
