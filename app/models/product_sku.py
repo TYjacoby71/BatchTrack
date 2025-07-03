@@ -1,5 +1,4 @@
-on identifier
-    location_name = db.Column(db.String(128), nullable=True)  # Human-readable location
+location_name = db.Column(db.String(128), nullable=True)  # Human-readable location
     temperature_at_time = db.Column(db.Float, nullable=True)  # Storage temperature when last recorded
     
     # MARKETPLACE INTEGRATION
