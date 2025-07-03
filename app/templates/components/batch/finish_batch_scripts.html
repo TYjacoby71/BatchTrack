@@ -162,63 +162,67 @@ function updateTotals() {
   }
 }
 
-async function loadVariants() {
-    const productDropdown = document.getElementById('productDropdown');
-    const variantDropdown = document.getElementById('variantDropdown');
+function loadVariants() {
+  const productSelect = document.getElementById('productDropdown');
+  const variantSelect = document.getElementById('variant_id');
 
-    if (!productDropdown || !variantDropdown) {
-        console.error('Product or variant dropdown not found');
-        return;
-    }
+  if (!productSelect || !variantSelect) {
+    console.log('Product or variant dropdown not found');
+    return;
+  }
 
-    // Clear existing options
-    variantDropdown.innerHTML = '<option value="">Select variant...</option>';
-    variantDropdown.disabled = true;
+  const productId = productSelect.value;
+  if (!productId) {
+    variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    return;
+  }
 
-    const selectedProductId = productDropdown.value;
-    if (!selectedProductId) return;
+  // Show loading state
+  variantSelect.innerHTML = '<option value="">Loading variants...</option>';
 
-    try {
-        // Updated API endpoint to use product ID instead of name
-        const response = await fetch(`/products/api/${selectedProductId}/variants`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+  // Fetch variants for the selected product using the correct API endpoint
+  fetch(`/products/api/${productId}/variants`)
+    .then(response => {
+      if (!response.ok) {
+        console.error('Error loading variants:', response.status, response.statusText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      variantSelect.innerHTML = '<option value="">Select variant...</option>';
+
+      // The API returns an array of variants
+      if (data && Array.isArray(data) && data.length > 0) {
+        data.forEach(variant => {
+          const option = document.createElement('option');
+          option.value = variant.id;  // Use variant ID, not name
+          option.textContent = variant.name;
+          variantSelect.appendChild(option);
+        });
+
+        // Auto-select first variant (usually Base)
+        if (data.length > 0) {
+          variantSelect.value = data[0].id;
         }
-        
-        const data = await response.json();
-
-        if (data.variants && data.variants.length > 0) {
-            variantDropdown.disabled = false;
-            data.variants.forEach(variant => {
-                const option = document.createElement('option');
-                option.value = variant.id;
-                option.textContent = variant.name;
-                option.dataset.variantName = variant.name;
-                variantDropdown.appendChild(option);
-            });
-            
-            // Auto-select Base variant if it exists
-            const baseVariant = data.variants.find(v => v.name === 'Base');
-            if (baseVariant) {
-                variantDropdown.value = baseVariant.id;
-            }
-        } else {
-            // No variants found, add a default option
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'No variants available';
-            variantDropdown.appendChild(option);
-        }
-    } catch (error) {
-        console.error('Error loading variants:', error);
-        // Fallback: add a manual entry option
+      } else {
+        // Show message if no variants found
         const option = document.createElement('option');
-        option.value = 'manual';
-        option.textContent = 'Create new variant';
-        variantDropdown.appendChild(option);
-        variantDropdown.disabled = false;
-    }
+        option.value = '';
+        option.textContent = 'No variants available';
+        variantSelect.appendChild(option);
+      }
+
+      // Enable the variant select
+      variantSelect.disabled = false;
+    })
+    .catch(error => {
+      console.error('Error loading variants:', error);
+      
+      // Fallback: Show error message
+      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+      variantSelect.disabled = false;
+    });
 }
 
 function updateContainerSummary() {

@@ -1,4 +1,4 @@
-2025-07-03 21:55:47,463 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-03 21:58:58,693 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -34,8 +34,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/products/view_product.html", line 191, in block 'content'
-    <form method="POST" action="{{ url_for('products.edit_product', product_name=product.name) }}">
+  File "/home/runner/workspace/app/templates/products/view_product.html", line 329, in block 'content'
+    fetch("{{ url_for('products.add_variant', product_name=product.name) }}", {
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -45,9 +45,9 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.edit_product' with values ['product_name']. Did you forget to specify values ['product_id']?
-2025-07-03 21:58:00,382 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 21:58:05,544 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.add_variant' with values ['product_name']. Did you forget to specify values ['product_id']?
+2025-07-03 22:11:28,211 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 22:12:29,905 ERROR: Exception on /products/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -83,8 +83,8 @@ Traceback (most recent call last):
   File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/products/view_product.html", line 191, in block 'content'
-    <form method="POST" action="{{ url_for('products.edit_product', product_name=product.name) }}">
+  File "/home/runner/workspace/app/templates/products/view_product.html", line 157, in block 'content'
+    <a href="{{ url_for('products.view_variant', product_name=product.name, variant_name=variation.name) }}"
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
     return self.handle_url_build_error(error, endpoint, values)
@@ -94,5 +94,5 @@ Traceback (most recent call last):
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.edit_product' with values ['product_name']. Did you forget to specify values ['product_id']?
-2025-07-03 21:58:49,143 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.view_variant' with values ['product_name', 'variant_name']. Did you forget to specify values ['product_id']?
+2025-07-03 22:14:10,284 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]

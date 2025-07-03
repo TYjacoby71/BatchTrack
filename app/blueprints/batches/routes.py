@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
 from ...utils import get_setting
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from ...services.unit_conversion import ConversionEngine
 from ..inventory.routes import adjust_inventory
 import uuid, os
@@ -293,21 +293,14 @@ def view_batch_in_progress(batch_identifier):
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
-    # Get products for finish batch modal - use proper Product model with organization scoping
-    from ...models import Product, ProductSKU
+    # Get products for finish batch modal - use Product model
+    from ...models import Product
     
-    # Get unique products that have active SKUs
-    products_query = db.session.query(ProductSKU).filter_by(
+    # Get active products for the organization
+    products = Product.query.filter_by(
         is_active=True,
         organization_id=current_user.organization_id
-    )
-    
-    # If we have the new Product model relationships, use them
-    if hasattr(ProductSKU, 'product') and ProductSKU.product:
-        products = products_query.join(Product).filter(Product.is_active == True).all()
-    else:
-        # Fallback to legacy approach
-        products = products_query.all()
+    ).all()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []

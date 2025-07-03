@@ -95,8 +95,8 @@ def complete_batch(batch_id):
         # Output-type specific logic
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
-            batch.variant_label = request.form.get('variant_label')
-
+            batch.variant_id = request.form.get('variant_id')
+            
             # Get container count overrides from form
             container_overrides = {}
             for key, value in request.form.items():
@@ -104,26 +104,50 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products (not intermediate ingredients), use product inventory routes
-            if batch.product_id:
-                import requests
-                from flask import current_app
+            # For actual products, create or get the target SKU
+            if batch.product_id and batch.variant_id:
+                from ...models import Product, ProductVariant
                 
-                # Call product inventory route
-                response = requests.post(
-                    f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/products/inventory/add-from-batch",
-                    json={
-                        'batch_id': batch.id,
-                        'product_id': batch.product_id,
-                        'variant_label': batch.variant_label,
-                        'quantity': batch.final_quantity,
-                        'container_overrides': container_overrides
-                    },
-                    headers={'Authorization': f'Bearer {current_user.get_id()}'}
+                # Get the product and variant
+                product = Product.query.filter_by(
+                    id=batch.product_id,
+                    organization_id=current_user.organization_id
+                ).first()
+                
+                variant = ProductVariant.query.filter_by(
+                    id=batch.variant_id,
+                    product_id=batch.product_id
+                ).first()
+                
+                if not product or not variant:
+                    raise Exception("Selected product or variant not found")
+                
+                # Get or create the bulk SKU for this product/variant combination
+                from ...services.product_service import ProductService
+                target_sku = ProductService.get_or_create_sku_by_ids(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    size_label='Bulk'
                 )
                 
-                if not response.ok:
-                    raise Exception(f"Failed to add product inventory: {response.json().get('error', 'Unknown error')}")
+                # Store the SKU reference in the batch
+                batch.sku_id = target_sku.id
+                
+                # Add inventory using the centralized service
+                from ...services.inventory_adjustment import process_inventory_adjustment
+                success = process_inventory_adjustment(
+                    item_id=target_sku.id,
+                    quantity=batch.final_quantity,
+                    change_type='finished_batch',
+                    unit=target_sku.unit,
+                    notes=f"Added from batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id,
+                    item_type='sku'
+                )
+                
+                if not success:
+                    raise Exception("Failed to add product inventory")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
@@ -209,7 +233,9 @@ def complete_batch(batch_id):
                     cost_per_unit=unit_cost,
                     is_perishable=batch.is_perishable,
                     shelf_life_days=batch.shelf_life_days if batch.is_perishable else None,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id,
+                    is_active=True,
+                    is_archived=False
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID

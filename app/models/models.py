@@ -173,7 +173,9 @@ class Batch(ScopedModelMixin, db.Model):
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
     projected_yield = db.Column(db.Float)
     projected_yield_unit = db.Column(db.String(50))
-    # Remove product_id and variant_id references - use SKU directly
+    # Product assignment for finish batch
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=True)
     sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=True)
     final_quantity = db.Column(db.Float)
     output_unit = db.Column(db.String(50))
@@ -196,6 +198,8 @@ class Batch(ScopedModelMixin, db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)
 
     recipe = db.relationship('Recipe', backref='batches')
+    product = db.relationship('Product', foreign_keys=[product_id], backref='batches')
+    variant = db.relationship('ProductVariant', foreign_keys=[variant_id], backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
 class BatchIngredient(ScopedModelMixin, db.Model):
