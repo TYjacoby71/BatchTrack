@@ -111,13 +111,11 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     # Change tracking
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     change_type = db.Column(db.String(32), nullable=False)  # batch_addition, recount, spoil, sale, trash, damage, gift/tester, manual_add
-    quantity_change = db.Column(db.Float, nullable=False)  # +/- amount
-    old_quantity = db.Column(db.Float, nullable=False)  # Quantity before change
-    new_quantity = db.Column(db.Float, nullable=False)  # Quantity after change
+    quantity_change = db.Column(db.Float, nullable=False)  # +/- amount - THIS IS THE DELTA
     
-    # FIFO tracking (like InventoryHistory)
-    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO entries
-    original_quantity = db.Column(db.Float, nullable=True)  # Original amount added
+    # FIFO tracking - ESSENTIAL FIELDS ONLY
+    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO tracking on deductions
+    original_quantity = db.Column(db.Float, nullable=True)  # Only set for additions - starting FIFO amount
     unit = db.Column(db.String(32), nullable=False)  # Unit for this entry
     
     # Transaction details
@@ -169,10 +167,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     marketplace_order_id = db.Column(db.String(128), nullable=True)  # Order ID from marketplace
     marketplace_source = db.Column(db.String(32), nullable=True)  # shopify, etsy, amazon, etc.
     
-    # RESERVED QUANTITY TRACKING
-    reserved_quantity_change = db.Column(db.Float, nullable=True)  # Change in reserved quantity
-    old_reserved_quantity = db.Column(db.Float, nullable=True)  # Reserved quantity before change
-    new_reserved_quantity = db.Column(db.Float, nullable=True)  # Reserved quantity after change
+    # Reserved quantity changes are tracked in the main SKU table only
     
     # Relationships
     sku = db.relationship('ProductSKU', backref='history_entries')
