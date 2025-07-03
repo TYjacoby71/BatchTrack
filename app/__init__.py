@@ -47,7 +47,7 @@ def create_app():
     from .blueprints.batches.start_batch import start_batch_bp
     from .blueprints.products import products_bp
     from .blueprints.products.product_api import product_api_bp
-    
+
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp
