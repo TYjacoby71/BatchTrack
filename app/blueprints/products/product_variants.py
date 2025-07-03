@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from ...models import db, ProductSKU, InventoryItem
@@ -15,36 +14,42 @@ def add_variant(product_name):
         variant_name = data.get('name')
         sku_code = data.get('sku')
         description = data.get('description')
-        size_label = data.get('size_label', 'Bulk')
 
         if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
 
-        # Check if variant already exists for this product (regardless of size_label)
-        existing_sku = ProductSKU.query.filter_by(
+        # Get the parent product's base unit from existing SKUs
+        existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
+        if not existing_product_sku:
+            return jsonify({'error': 'Parent product not found'}), 404
+
+        parent_unit = existing_product_sku.unit
+
+        # Check if variant already exists for this product
+        existing_variant = ProductSKU.query.filter_by(
             product_name=product_name, 
             variant_name=variant_name.strip()
         ).first()
-        
-        if existing_sku:
+
+        if existing_variant:
             return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
 
         try:
-            # Get the base product unit from existing SKUs
-            existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-            if not existing_product_sku:
-                return jsonify({'error': 'Product not found'}), 404
-
-            # Create new SKU using the product service
+            # Create new SKU with inherited unit and default Bulk size
             sku = ProductService.get_or_create_sku(
                 product_name=product_name,
                 variant_name=variant_name.strip(),
-                size_label=size_label,
-                unit=existing_product_sku.unit,
+                size_label='Bulk',  # Always create Bulk size for new variants
+                unit=parent_unit,   # Inherit parent product's unit
                 sku_code=sku_code,
                 variant_description=description
             )
-            
+
+            # Set additional properties
+            sku.description = description
+            sku.organization_id = existing_product_sku.organization_id
+            sku.low_stock_threshold = existing_product_sku.low_stock_threshold
+
             db.session.commit()
 
             return jsonify({
@@ -52,7 +57,9 @@ def add_variant(product_name):
                 'variant': {
                     'id': sku.id,
                     'name': sku.variant_name,
-                    'sku': sku.sku_code
+                    'sku': sku.sku_code,
+                    'unit': sku.unit,
+                    'size_label': sku.size_label
                 }
             })
 
@@ -60,39 +67,46 @@ def add_variant(product_name):
             db.session.rollback()
             return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
-    # Handle form data (non-JSON) requests as well
+    # Handle form data as well
     variant_name = request.form.get('name')
     sku_code = request.form.get('sku')
     description = request.form.get('description')
-    
+
     if not variant_name or variant_name.strip() == '':
         return jsonify({'error': 'Variant name is required'}), 400
 
     try:
-        # Get the base product unit from existing SKUs
+        # Get the parent product's base unit from existing SKUs
         existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
         if not existing_product_sku:
-            return jsonify({'error': 'Product not found'}), 404
+            return jsonify({'error': 'Parent product not found'}), 404
+
+        parent_unit = existing_product_sku.unit
 
         # Check if variant already exists
-        existing_sku = ProductSKU.query.filter_by(
+        existing_variant = ProductSKU.query.filter_by(
             product_name=product_name, 
             variant_name=variant_name.strip()
         ).first()
-        
-        if existing_sku:
+
+        if existing_variant:
             return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
 
-        # Create new SKU
+        # Create new SKU with inherited unit
         sku = ProductService.get_or_create_sku(
             product_name=product_name,
             variant_name=variant_name.strip(),
             size_label='Bulk',
-            unit=existing_product_sku.unit,
+            unit=parent_unit,
             sku_code=sku_code,
             variant_description=description
         )
-        
+
+        # Set additional properties
+        sku.description = description
+        sku.organization_id = existing_product_sku.organization_id
+        sku.low_stock_threshold = existing_product_sku.low_stock_threshold
+
         db.session.commit()
 
         return jsonify({
@@ -100,7 +114,9 @@ def add_variant(product_name):
             'variant': {
                 'id': sku.id,
                 'name': sku.variant_name,
-                'sku': sku.sku_code
+                'sku': sku.sku_code,
+                'unit': sku.unit,
+                'size_label': sku.size_label
             }
         })
 
@@ -128,7 +144,7 @@ def view_variant(product_name, variant_name):
     for sku in skus:
         display_size_label = sku.size_label or "Bulk"
         key = f"{display_size_label}_{sku.unit}"
-        
+
         if key not in size_groups:
             size_groups[key] = {
                 'size_label': display_size_label,
@@ -137,10 +153,10 @@ def view_variant(product_name, variant_name):
                 'skus': [],
                 'batches': []  # Add batches for cost calculations
             }
-        
+
         size_groups[key]['total_quantity'] += sku.current_quantity
         size_groups[key]['skus'].append(sku)
-        
+
         # Add batch information for cost calculations
         for batch in sku.batches:
             if batch.quantity > 0:
@@ -196,7 +212,7 @@ def edit_variant(product_name, variant_name):
         ProductSKU.product_name == product_name,
         ProductSKU.variant_name != variant_name
     ).first()
-    
+
     if existing:
         flash('Another variant with this name already exists for this product', 'error')
         return redirect(url_for('products.view_variant', 
@@ -208,14 +224,14 @@ def edit_variant(product_name, variant_name):
         product_name=product_name,
         variant_name=variant_name
     ).all()
-    
+
     for sku in skus:
         sku.variant_name = name
         sku.variant_description = description if description else None
 
     db.session.commit()
     flash('Variant updated successfully', 'success')
-    
+
     return redirect(url_for('products.view_variant', 
                            product_name=product_name, 
                            variant_name=name))
@@ -229,11 +245,11 @@ def delete_variant(product_name, variant_name):
         product_name=product_name,
         variant_name=variant_name
     ).all()
-    
+
     if not skus:
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_name=product_name))
-    
+
     # Check if any SKUs have inventory
     has_inventory = any(sku.current_quantity > 0 for sku in skus)
     if has_inventory:
@@ -241,19 +257,19 @@ def delete_variant(product_name, variant_name):
         return redirect(url_for('products.view_variant', 
                                product_name=product_name, 
                                variant_name=variant_name))
-    
+
     # Delete all SKUs for this variant
     for sku in skus:
         sku.is_active = False
-    
+
     db.session.commit()
-    
+
     # Check if this was the last variant for the product
     remaining_variants = ProductSKU.query.filter_by(
         product_name=product_name,
         is_active=True
     ).count()
-    
+
     if remaining_variants == 0:
         # Auto-create Base variant
         ProductService.ensure_base_variant_if_needed(product_name)
@@ -261,5 +277,5 @@ def delete_variant(product_name, variant_name):
         flash(f'Variant "{variant_name}" deleted. Created default "Base" variant.', 'success')
     else:
         flash(f'Variant "{variant_name}" deleted successfully', 'success')
-    
+
     return redirect(url_for('products.view_product', product_name=product_name))
