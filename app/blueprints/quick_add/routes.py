@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
 from ...models import db, InventoryItem, Unit
 
-quick_add_bp = Blueprint("quick_add", __name__, template_folder='templates')
+quick_add_bp = Blueprint("quick_add", __name__, url_prefix='/quick-add', template_folder='templates')
 
 @quick_add_bp.route('/container', methods=['POST'])
 def quick_add_container():
