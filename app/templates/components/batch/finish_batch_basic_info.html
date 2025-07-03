@@ -9,6 +9,7 @@
       Creating Intermediate Ingredient: {{ batch.recipe.name }}
     </h6>
   </div>
+  <input type="hidden" name="output_type" value="ingredient">
   {% endif %}
 
   <div class="form-group mb-3">
@@ -28,4 +29,11 @@
     <div id="yield-validation-alerts" class="mt-2"></div>
     <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
   </div>
+
+  <!-- Ensure output_type is set -->
+  {% if not batch.batch_type or batch.batch_type == 'ingredient' %}
+  <input type="hidden" name="output_type" value="ingredient">
+  {% else %}
+  <input type="hidden" name="output_type" value="{{ batch.batch_type }}">
+  {% endif %}
 </div>

@@ -209,7 +209,9 @@ def complete_batch(batch_id):
                     cost_per_unit=unit_cost,
                     is_perishable=batch.is_perishable,
                     shelf_life_days=batch.shelf_life_days if batch.is_perishable else None,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id,
+                    is_active=True,
+                    is_archived=False
                 )
                 db.session.add(ingredient)
                 db.session.flush()  # Get the ID
