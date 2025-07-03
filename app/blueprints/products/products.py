@@ -135,14 +135,30 @@ def view_product(product_name):
         })() for variant_name, variant_data in variants.items()]
     })()
 
-    return render_template('products/view_product.html', 
+    return render_template('products/view_product.html',
                          product=product,
-                         product_name=product_name,
-                         product_base_unit=skus[0].unit if skus else None,
                          variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
                          inventory_groups={})
+
+@products_bp.route('/sku/<int:sku_id>')
+@login_required
+def view_sku(sku_id):
+    """View individual SKU details"""
+    sku = ProductSKU.query.get_or_404(sku_id)
+
+    # Get SKU history for this specific SKU
+    history = ProductSKUHistory.query.filter_by(sku_id=sku_id).order_by(ProductSKUHistory.timestamp.desc()).all()
+
+    # Calculate total quantity from current_quantity
+    total_quantity = sku.current_quantity or 0
+
+    return render_template('products/view_sku.html',
+                         sku=sku,
+                         history=history,
+                         total_quantity=total_quantity,
+                         get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<product_name>/edit', methods=['POST'])
 @login_required
