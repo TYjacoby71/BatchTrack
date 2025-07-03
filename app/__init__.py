@@ -46,7 +46,7 @@ def create_app():
     from .blueprints.batches.cancel_batch import cancel_batch_bp
     from .blueprints.batches.start_batch import start_batch_bp
     from .blueprints.products import products_bp
-    from .blueprints.products.product_api import product_api_bp
+    from .blueprints.products.api import products_api_bp
 
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
@@ -75,7 +75,7 @@ def create_app():
     try:
         from .blueprints.products import products_bp, product_api_bp
         app.register_blueprint(products_bp, url_prefix='/products')
-        app.register_blueprint(product_api_bp)
+        app.register_blueprint(products_api_bp)
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
