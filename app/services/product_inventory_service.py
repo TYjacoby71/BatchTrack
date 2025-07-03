@@ -60,7 +60,7 @@ class ProductInventoryService:
             quantity_change=quantity,
             old_quantity=old_quantity,
             new_quantity=new_quantity,
-            remaining_quantity=quantity if change_type in ['batch_addition', 'restock', 'returned'] else 0,
+            remaining_quantity=quantity if change_type in ['batch_addition', 'manual_addition', 'restock', 'overflow_restock'] else 0,
             original_quantity=quantity,
             unit=sku.unit,
             unit_cost=unit_cost or sku.unit_cost,
@@ -146,7 +146,7 @@ class ProductInventoryService:
                 notes=f"{notes_str} (From FIFO #{entry.id})",
                 note=f"{notes_str} (From FIFO #{entry.id})",
                 created_by=current_user.id if current_user.is_authenticated else None,
-                quantity_used=deduct_amount if change_type in ['expired', 'trash', 'damaged', 'sale', 'sample'] else 0.0,
+                quantity_used=deduct_amount if change_type in ['spoil', 'trash', 'damage', 'sale'] else 0.0,
                 sale_location=sale_location,
                 order_id=order_id,
                 organization_id=current_user.organization_id if current_user.is_authenticated else 1  # Default to org 1 if no user

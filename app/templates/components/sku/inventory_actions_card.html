@@ -1,7 +1,3 @@
-Applying the changes to update inventory actions, add order ID field, and include JavaScript for conditional fields.
-```
-
-```html
 <div class="card mb-4">
     <div class="card-header">
         <h5 class="card-title mb-0">Inventory Actions</h5>
@@ -23,109 +19,21 @@ Applying the changes to update inventory actions, add order ID field, and includ
 
         <!-- Dynamic Action Forms -->
         <div id="actionFormContainer" style="display: none;">
-            <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" class="mb-3">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form method="POST" action="{{ url_for('product_inventory.view_sku', sku_id=sku.id) }}" id="inventoryActionForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="change_type" id="hiddenChangeType">
 
-          <div class="row">
-            <div class="col-md-3">
-              <div class="form-group">
-                <label>Action</label>
-                <select class="form-control" name="change_type" id="changeType" required>
-                  <option value="">Select Action</option>
-                  <optgroup label="Sales & Orders">
-                    <option value="sale">Sale</option>
-                    <option value="reserved">Reserve Stock</option>
-                    <option value="returned">Return/Refund</option>
-                  </optgroup>
-                  <optgroup label="Stock Adjustments">
-                    <option value="damaged">Damaged</option>
-                    <option value="expired">Expired</option>
-                    <option value="trash">Trash</option>
-                    <option value="sample">Sample/Gift</option>
-                  </optgroup>
-                  <optgroup label="Replenishment">
-                    <option value="restock">Restock</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="form-group">
-                <label>Quantity</label>
-                <input type="number" class="form-control" name="quantity" value="1" required>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="form-group">
-                <label>Notes</label>
-                <input type="text" class="form-control" name="notes" placeholder="Optional notes">
-              </div>
-            </div>
-          </div>
+                <div class="row g-3" id="dynamicFormFields">
+                    <!-- Fields will be populated by JavaScript -->
+                </div>
 
-          <!-- Conditional fields based on action type -->
-          <div class="row" id="conditionalFields" style="display: none;">
-            <div class="col-md-3" id="orderIdField">
-              <div class="form-group">
-                <label>Order ID</label>
-                <input type="text" class="form-control" name="order_id" placeholder="Order/Reference ID">
-              </div>
-            </div>
-            <div class="col-md-3" id="customerField">
-              <div class="form-group">
-                <label>Customer</label>
-                <input type="text" class="form-control" name="customer" placeholder="Customer name">
-              </div>
-            </div>
-            <div class="col-md-3" id="salePriceField">
-              <div class="form-group">
-                <label>Sale Price</label>
-                <input type="number" step="0.01" class="form-control" name="sale_price" placeholder="0.00">
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary">Submit Action</button>
-</form>
-      </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Record Transaction</button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetActionForm()">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const changeTypeSelect = document.getElementById('changeType');
-    const conditionalFields = document.getElementById('conditionalFields');
-    const orderIdField = document.getElementById('orderIdField');
-    const customerField = document.getElementById('customerField');
-    const salePriceField = document.getElementById('salePriceField');
-
-    if (changeTypeSelect) {
-        changeTypeSelect.addEventListener('change', function() {
-            const value = this.value;
-
-            // Reset visibility
-            conditionalFields.style.display = 'none';
-            orderIdField.style.display = 'none';
-            customerField.style.display = 'none';
-            salePriceField.style.display = 'none';
-
-            if (value === 'sale') {
-                conditionalFields.style.display = 'block';
-                orderIdField.style.display = 'block';
-                customerField.style.display = 'block';
-                salePriceField.style.display = 'block';
-            } else if (value === 'reserved') {
-                conditionalFields.style.display = 'block';
-                orderIdField.style.display = 'block';
-                customerField.style.display = 'block';
-            } else if (value === 'returned') {
-                conditionalFields.style.display = 'block';
-                orderIdField.style.display = 'block';
-                customerField.style.display = 'block';
-                salePriceField.style.display = 'block';
-            }
-        });
-    }
-});
-</script>

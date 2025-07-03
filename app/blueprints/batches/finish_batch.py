@@ -162,7 +162,7 @@ def complete_batch(batch_id):
                 # Determine expiration settings - use ingredient's settings if batch is non-perishable
                 custom_expiration_date = None
                 custom_shelf_life_days = None
-
+                
                 if batch.is_perishable:
                     # Use batch expiration settings
                     custom_expiration_date = batch.expiration_date
@@ -207,7 +207,7 @@ def complete_batch(batch_id):
                 # Determine expiration settings - use ingredient's settings if batch is non-perishable
                 custom_expiration_date = None
                 custom_shelf_life_days = None
-
+                
                 if batch.is_perishable:
                     # Use batch expiration settings
                     custom_expiration_date = batch.expiration_date
@@ -224,7 +224,7 @@ def complete_batch(batch_id):
                 process_inventory_adjustment(
                     item_id=ingredient.id,
                     quantity=final_quantity,
-                    change_type='batch_addition',  # Use 'finished_batch' for batch completion additions
+                    change_type='finished_batch',  # Use 'finished_batch' for batch completion additions
                     unit=output_unit,
                     notes=f"Initial stock from batch {batch.label_code} - {final_quantity} {output_unit} yield",
                     batch_id=batch.id,  # This should populate the batch relationship
