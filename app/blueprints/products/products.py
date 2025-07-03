@@ -151,9 +151,13 @@ def view_sku(sku_id):
     # Get SKU history for this specific SKU
     history = ProductSKUHistory.query.filter_by(sku_id=sku_id).order_by(ProductSKUHistory.timestamp.desc()).all()
 
+    # Calculate total quantity from current_quantity
+    total_quantity = sku.current_quantity or 0
+
     return render_template('products/view_sku.html',
                          sku=sku,
                          history=history,
+                         total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list)
 
 @products_bp.route('/<product_name>/edit', methods=['POST'])
