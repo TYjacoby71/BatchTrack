@@ -105,14 +105,14 @@ def view_variant(product_name, variant_name):
     product = type('Product', (), {
         'name': product_name,
         'id': skus[0].id if skus else None,
-        'product_base_unit': skus[0].product_base_unit if skus else None,
+        'product_base_unit': skus[0].unit if skus else None,
         'low_stock_threshold': skus[0].low_stock_threshold if skus else 0
     })()
 
     # Create a variation object for the template  
     variation = type('Variation', (), {
         'name': variant_name,
-        'description': skus[0].variant_description if skus else None,
+        'description': skus[0].description if skus else None,
         'id': skus[0].id if skus else None
     })()
 
@@ -121,7 +121,7 @@ def view_variant(product_name, variant_name):
                          product_name=product_name,
                          variant_name=variant_name,
                          variation=variation,
-                         variant_description=skus[0].variant_description if skus else None,
+                         variant_description=skus[0].description if skus else None,
                          size_groups=size_groups,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
