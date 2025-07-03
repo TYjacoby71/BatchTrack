@@ -1,8 +1,9 @@
-# This file has been deprecated and replaced by the modular structure:
-# - products.py (main product routes)
-# - product_variants.py (variant management)
-# - product_inventory.py (inventory operations)
-# - product_api.py (API endpoints)
-# - product_log_routes.py (logging routes)
 
-# All routes are now imported directly in __init__.py
+# This file has been REMOVED and consolidated into:
+# - products.py (main web routes)
+# - product_variants.py (variant management routes)  
+# - api.py (all API endpoints)
+# - product_alerts.py (alert routes)
+
+# All functionality has been moved to the appropriate specialized files.
+# This file should be deleted after confirming no imports reference it.

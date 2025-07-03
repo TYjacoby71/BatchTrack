@@ -1,26 +1,24 @@
+
 from flask import Blueprint
 
-# Create the main products blueprint
-products_bp = Blueprint('products', __name__, template_folder='templates')
+# Create the main products blueprint for web routes
+products_bp = Blueprint('products', __name__, url_prefix='/products', template_folder='templates')
 
-# Import the main products routes first
+# Create separate API blueprint for all product APIs
+products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products')
+
+# Import web routes
 from .products import *
+from .product_variants import *
+from .product_alerts import *
 
-# Import additional route modules to register them with the blueprint
-from .product_variants import *  
-from .product_log_routes import *
+# Import API routes - consolidate all APIs here
+from .api import *
 
-# Import the new product_inventory blueprint (SKU-based)
-# from .product_inventory_routes import product_inventory_bp
-
-# Import the product API blueprint
-from .product_api import product_api_bp
-
-# Register the API blueprint with the main app
 def register_product_blueprints(app):
     """Register all product-related blueprints"""
     app.register_blueprint(products_bp)
-    app.register_blueprint(product_api_bp)
+    app.register_blueprint(products_api_bp)
 
-# Make both blueprints available for registration
-__all__ = ['products_bp', 'product_api_bp', 'register_product_blueprints']
+# Make blueprints available for registration
+__all__ = ['products_bp', 'products_api_bp', 'register_product_blueprints']
