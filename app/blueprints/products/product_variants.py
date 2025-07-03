@@ -45,7 +45,7 @@ def add_variant(product_name):
                 variant_description=description
             )
 
-            # Set additional properties
+            # Set additional properties BEFORE committing
             sku.description = description
             sku.organization_id = existing_product_sku.organization_id
             sku.low_stock_threshold = existing_product_sku.low_stock_threshold
@@ -102,7 +102,7 @@ def add_variant(product_name):
             variant_description=description
         )
 
-        # Set additional properties
+        # Set additional properties BEFORE committing
         sku.description = description
         sku.organization_id = existing_product_sku.organization_id
         sku.low_stock_threshold = existing_product_sku.low_stock_threshold

@@ -74,7 +74,8 @@ class ProductService:
             description=variant_description,
             current_quantity=0.0,  # New variants start with 0 inventory
             is_active=True,
-            is_product_active=True
+            is_product_active=True,
+            organization_id=existing_sku.organization_id if existing_sku else None
         )
 
         db.session.add(sku)
