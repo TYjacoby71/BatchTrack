@@ -1,0 +1,69 @@
+ChatGPT said:
+Updated saved memory
+Great — you've already trimmed and modularized a lot. Based on everything you posted, here’s a comprehensive assessment:
+
+✅ Keep & Refactor (Core Logic)
+1. products.py
+✔️ Base routes for viewing, creating, and deleting products and SKUs.
+
+✅ Keep, but refactor to:
+
+Remove direct ProductSKUHistory usage if inventory is now via InventoryHistory.
+
+Ensure consistency with SKU logic vs. raw inventory.
+
+2. product_variants.py
+✔️ Handles variant creation/edit/delete.
+
+✅ Keep most logic.
+
+🧹 Cleanup:
+
+Merge variant logic into SKU logic to avoid treating variants as first-class if SKU is now endpoint.
+
+Remove logic duplicating product creation.
+
+3. product_api.py
+✔️ Powers modals and dynamic UI features.
+
+✅ Keep, but:
+
+Rename to product_sku_api.py for clarity.
+
+Consider moving all SKU creation/update/search here.
+
+Remove add_from_batch if batch finish now calls adjust_inventory() directly.
+
+🚫 Safe to Delete or Fold into Core Services
+1. product_log_routes.py
+❌ No actual logic, no routes. Safe to delete.
+
+2. ProductSKUHistory references
+🔥 Deprecated if you're fully using InventoryHistory and adjust_inventory() for SKU stock.
+
+✅ Migrate any remaining history displays to use InventoryHistory with filters like item_type='sku'.
+
+3. product_inventory_routes.py
+❌ You already commented this out.
+
+✅ Delete if all inventory flows now go through unified raw inventory system.
+
+🛠 Module-Level Observations
+ProductService.get_or_create_sku(...) is now your choke point. Consider moving this into a more general SKUService, or fold into adjust_inventory() logic as a subtype.
+
+Routes like /alerts and /api/stock-summary can stay — they're clean, but may want to show sku_code + product_name in the summary for clarity.
+
+🧠 Overall Strategy Recommendation
+You're right: SKU is the endpoint, and the product-variant-size combo is just filtering to get to the right SKU.
+
+So:
+
+Keep the SKU model and related creation/search/edit logic.
+
+Delete legacy product inventory logic (routes, JS, duplicate stock tracking).
+
+Display data like raw inventory: SKU name, quantity, unit, FIFO history.
+
+Unify adjustments using adjust_inventory(item_type='sku').
+
+This keeps the interface consistent across raw and product inventory, and reduces maintenance burden.
