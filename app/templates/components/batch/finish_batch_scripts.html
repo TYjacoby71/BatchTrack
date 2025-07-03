@@ -175,24 +175,49 @@ async function loadVariants() {
     variantDropdown.innerHTML = '<option value="">Select variant...</option>';
     variantDropdown.disabled = true;
 
-    const selectedProduct = productDropdown.value;
-    if (!selectedProduct) return;
+    const selectedProductId = productDropdown.value;
+    if (!selectedProductId) return;
 
     try {
-        const response = await fetch(`/api/products/${encodeURIComponent(selectedProduct)}/variants`);
+        // Updated API endpoint to use product ID instead of name
+        const response = await fetch(`/products/api/${selectedProductId}/variants`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
 
         if (data.variants && data.variants.length > 0) {
             variantDropdown.disabled = false;
             data.variants.forEach(variant => {
                 const option = document.createElement('option');
-                option.value = variant.name;
+                option.value = variant.id;
                 option.textContent = variant.name;
+                option.dataset.variantName = variant.name;
                 variantDropdown.appendChild(option);
             });
+            
+            // Auto-select Base variant if it exists
+            const baseVariant = data.variants.find(v => v.name === 'Base');
+            if (baseVariant) {
+                variantDropdown.value = baseVariant.id;
+            }
+        } else {
+            // No variants found, add a default option
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No variants available';
+            variantDropdown.appendChild(option);
         }
     } catch (error) {
         console.error('Error loading variants:', error);
+        // Fallback: add a manual entry option
+        const option = document.createElement('option');
+        option.value = 'manual';
+        option.textContent = 'Create new variant';
+        variantDropdown.appendChild(option);
+        variantDropdown.disabled = false;
     }
 }
 

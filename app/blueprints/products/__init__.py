@@ -1,4 +1,3 @@
-
 from flask import Blueprint
 
 # Create the main products blueprint for web routes
@@ -11,6 +10,7 @@ products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products'
 from .products import *
 from .product_variants import *
 from .product_alerts import *
+from .sku import *
 
 # Import API routes - consolidate all APIs here
 from .api import *

@@ -25,46 +25,55 @@
           <tr>
             <td>{{ container.container.name }}</td>
             <td>{{ container.container.storage_amount or 0 }} {{ container.container.storage_unit or 'count' }}</td>
-            <td>{{ container.quantity_used }}</td>
+            <td>{{ container.quantity_used or container.container_quantity }}</td>
             <td>
               <input type="number" 
                      name="container_final_{{ container.container_id }}" 
                      class="form-control form-control-sm container-final-input"
-                     value="{{ container.quantity_used }}" 
+                     value="{{ container.quantity_used or container.container_quantity }}" 
                      min="0" 
-                     max="{{ container.quantity_used }}"
+                     max="{{ container.quantity_used or container.container_quantity }}"
                      data-container-id="{{ container.container_id }}"
                      data-container-size="{{ container.container.storage_amount or 0 }}"
-                     data-used-quantity="{{ container.quantity_used }}">
+                     data-used-quantity="{{ container.quantity_used or container.container_quantity }}"
+                     onchange="updateContainerSummary()">
+              <input type="hidden" name="container_type_{{ container.container_id }}" value="regular">
             </td>
             <td class="container-capacity">
-              {{ (container.container.storage_amount or 0) * container.quantity_used }} {{ container.container.storage_unit or 'count' }}
+              {{ (container.container.storage_amount or 0) * (container.quantity_used or container.container_quantity) }} {{ container.container.storage_unit or 'count' }}
             </td>
           </tr>
           {% endfor %}
 
-          <!-- Extra containers -->
+          <!-- Extra containers (if they exist in the model) -->
+          {% if batch.extra_containers %}
           {% for extra_container in batch.extra_containers %}
           <tr class="table-warning">
-            <td>{{ extra_container.container.name }} <small class="text-muted">(Extra)</small></td>
+            <td>{{ extra_container.container.name }} <small class="text-muted">(Extra - {{ extra_container.reason or 'Additional' }})</small></td>
             <td>{{ extra_container.container.storage_amount or 0 }} {{ extra_container.container.storage_unit or 'count' }}</td>
-            <td>{{ extra_container.quantity_used }}</td>
+            <td>{{ extra_container.quantity_used or extra_container.container_quantity }}</td>
             <td>
               <input type="number" 
                      name="container_final_{{ extra_container.container_id }}" 
                      class="form-control form-control-sm container-final-input"
-                     value="{{ extra_container.quantity_used }}" 
+                     value="{{ extra_container.quantity_used or extra_container.container_quantity }}" 
                      min="0" 
-                     max="{{ extra_container.quantity_used }}"
+                     max="{{ extra_container.quantity_used or extra_container.container_quantity }}"
                      data-container-id="{{ extra_container.container_id }}"
                      data-container-size="{{ extra_container.container.storage_amount or 0 }}"
-                     data-used-quantity="{{ extra_container.quantity_used }}">
+                     data-used-quantity="{{ extra_container.quantity_used or extra_container.container_quantity }}"
+                     onchange="updateContainerSummary()">
+              <input type="hidden" name="container_type_{{ extra_container.container_id }}" value="extra">
+              {% if extra_container.reason %}
+              <input type="hidden" name="container_reason_{{ extra_container.container_id }}" value="{{ extra_container.reason }}">
+              {% endif %}
             </td>
             <td class="container-capacity">
-              {{ (extra_container.container.storage_amount or 0) * extra_container.quantity_used }} {{ extra_container.container.storage_unit or 'count' }}
+              {{ (extra_container.container.storage_amount or 0) * (extra_container.quantity_used or extra_container.container_quantity) }} {{ extra_container.container.storage_unit or 'count' }}
             </td>
           </tr>
           {% endfor %}
+          {% endif %}
         </tbody>
       </table>
     </div>
