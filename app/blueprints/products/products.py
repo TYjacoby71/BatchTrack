@@ -109,7 +109,7 @@ def view_product(product_name):
         if variant_key not in variants:
             variants[variant_key] = {
                 'name': sku.variant_name,
-                'description': sku.variant_description,
+                'description': sku.description,
                 'skus': []
             }
         variants[variant_key]['skus'].append(sku)
