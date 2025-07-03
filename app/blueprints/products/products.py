@@ -278,3 +278,4 @@ def adjust_sku(sku_id):
         db.session.rollback()
         flash(f'Error adjusting inventory: {str(e)}', 'error')
         return redirect(url_for('products.view_sku', sku_id=sku_id))
+
