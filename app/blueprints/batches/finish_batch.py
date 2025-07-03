@@ -104,26 +104,42 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products (not intermediate ingredients), use product inventory routes
+            # For actual products (not intermediate ingredients), use product inventory service
             if batch.product_id:
-                import requests
-                from flask import current_app
+                from ...services.product_service import ProductService
                 
-                # Call product inventory route
-                response = requests.post(
-                    f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/products/inventory/add-from-batch",
-                    json={
-                        'batch_id': batch.id,
-                        'product_id': batch.product_id,
-                        'variant_label': batch.variant_label,
-                        'quantity': batch.final_quantity,
-                        'container_overrides': container_overrides
-                    },
-                    headers={'Authorization': f'Bearer {current_user.get_id()}'}
+                # Get the product name from the product_id (which is actually a SKU ID)
+                base_sku = ProductSKU.query.filter_by(
+                    id=batch.product_id,
+                    organization_id=current_user.organization_id
+                ).first()
+                
+                if not base_sku:
+                    raise Exception("Selected product not found")
+                
+                # Get or create the SKU for this product/variant combination
+                target_sku = ProductService.get_or_create_sku(
+                    product_name=base_sku.product_name,
+                    variant_name=batch.variant_label or 'Base',
+                    size_label='Bulk',
+                    unit=base_sku.unit
                 )
                 
-                if not response.ok:
-                    raise Exception(f"Failed to add product inventory: {response.json().get('error', 'Unknown error')}")
+                # Add inventory using the centralized service
+                from ...services.inventory_adjustment import process_inventory_adjustment
+                success = process_inventory_adjustment(
+                    item_id=target_sku.id,
+                    quantity=batch.final_quantity,
+                    change_type='finished_batch',
+                    unit=target_sku.unit,
+                    notes=f"Added from batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id,
+                    item_type='sku'
+                )
+                
+                if not success:
+                    raise Exception("Failed to add product inventory")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers

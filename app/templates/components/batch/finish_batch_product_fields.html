@@ -5,16 +5,9 @@
     <select id="productDropdown" name="product_id" class="form-select" required onchange="loadVariants()">
       <option value="">Select Product</option>
       {% for sku in products %}
-        {% if sku.product %}
-          <option value="{{ sku.product.id }}" data-product-name="{{ sku.product.name }}">
-            {{ sku.product.name }}
-          </option>
-        {% else %}
-          <!-- Fallback for legacy SKUs without proper product relationship -->
-          <option value="{{ sku.id }}" data-product-name="{{ sku.product_name }}">
-            {{ sku.product_name }}
-          </option>
-        {% endif %}
+        <option value="{{ sku.id }}" data-product-name="{{ sku.product_name }}">
+          {{ sku.product_name }}
+        </option>
       {% endfor %}
     </select>
   </div>

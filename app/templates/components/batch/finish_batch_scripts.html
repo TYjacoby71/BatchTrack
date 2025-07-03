@@ -184,6 +184,7 @@ function loadVariants() {
   fetch(`/products/api/${productId}/variants`)
     .then(response => {
       if (!response.ok) {
+        console.error('Error loading variants:', response.status, response.statusText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       return response.json();
@@ -214,7 +215,22 @@ function loadVariants() {
         variantSelect.value = 'Base';
       }
 
-      // Enable the dropdown
+      // Enable the variant select
+      variantSelect.disabled = false;
+    })
+    .catch(error => {
+      console.error('Error loading variants:', error);
+      
+      // Fallback: Add Base variant on error
+      variantSelect.innerHTML = '<option value="">Select variant...</option>';
+      const option = document.createElement('option');
+      option.value = 'Base';
+      option.textContent = 'Base';
+      variantSelect.appendChild(option);
+      variantSelect.value = 'Base';
+      variantSelect.disabled = false;
+    });
+}he dropdown
       variantSelect.disabled = false;
     })
     .catch(error => {
