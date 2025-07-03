@@ -182,30 +182,9 @@ function loadVariants() {
     return;
   }
 
-  // Get the product name from the selected option's data attribute or text
-  const productName = selectedOption.getAttribute('data-product-name') || selectedOption.textContent.trim();
-
-  if (!productName) {
-    variantSelect.innerHTML = '<option value="">Invalid product selection</option>';
-    return;
-  }
-
-  fetch(`/products/api/${encodeURIComponent(productName)}/variants`)
-    .then(response => response.json())
-    .then(data => {
-      variantSelect.innerHTML = '';
-      if (data.variants && data.variants.length > 0) {
-        data.variants.forEach(variant => {
-          variantSelect.innerHTML += `<option value="${variant.name}">${variant.name}</option>`;
-        });
-      } else {
-        variantSelect.innerHTML = '<option value="">No variants available</option>';
-      }
-    })
-    .catch(error => {
-      console.error('Error loading variants:', error);
-      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-    });
+  // Since we're using the add from batch route, we don't need to fetch variants dynamically
+  // The variants will be handled by the product inventory system
+  variantSelect.innerHTML = '<option value="Base">Base</option>';
 }
 
 // Initialize on modal show
@@ -246,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateContainerSummary() {
   const finalQuantityInput = document.getElementById('final_quantity');
   const finalQuantity = parseFloat(finalQuantityInput?.value || 0);
-  
+
   if (finalQuantity <= 0) {
     return;
   }
@@ -254,7 +233,7 @@ function updateContainerSummary() {
   // Calculate total container capacity being used for products
   let totalContainerCapacity = 0;
   const containerInputs = document.querySelectorAll('.container-final-input');
-  
+
   containerInputs.forEach(input => {
     const quantity = parseInt(input.value || 0);
     const containerSize = parseFloat(input.dataset.containerSize || 0);
@@ -264,11 +243,11 @@ function updateContainerSummary() {
   // Update displays
   const totalCapacitySpan = document.getElementById('totalCapacity');
   const uncontainedYieldSpan = document.getElementById('uncontainedYield');
-  
+
   if (totalCapacitySpan) {
     totalCapacitySpan.textContent = totalContainerCapacity.toFixed(2);
   }
-  
+
   const uncontainedYield = Math.max(0, finalQuantity - totalContainerCapacity);
   if (uncontainedYieldSpan) {
     uncontainedYieldSpan.textContent = uncontainedYield.toFixed(2);
