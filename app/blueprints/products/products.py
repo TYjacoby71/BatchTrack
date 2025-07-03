@@ -1,7 +1,5 @@
-Updated SKU adjustment logic to use the universal inventory adjustment service.
-```
+# Updated SKU adjustment logic to use the universal inventory adjustment service.
 
-```python
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem
@@ -280,4 +278,4 @@ def adjust_sku(sku_id):
         db.session.rollback()
         flash(f'Error adjusting inventory: {str(e)}', 'error')
         return redirect(url_for('products.view_sku', sku_id=sku_id))
-`
+
