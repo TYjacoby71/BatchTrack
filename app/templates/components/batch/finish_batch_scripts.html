@@ -1,3 +1,4 @@
+
 <script>
 function toggleShelfLife() {
   const isPerishable = document.getElementById('is_perishable');
@@ -52,13 +53,8 @@ function validateYield() {
     return;
   }
 
-  // Simple container capacity calculation
-  updateContainerSummary();<div class="alert alert-warning alert-sm">
-        <i class="fas fa-exclamation-triangle me-1"></i>
-        Unable to validate yield against container capacity.
-      </div>`;
-    }
-  });
+  // Update container summary
+  updateContainerSummary();
 }
 
 function updateContainerTable(containers, finalQuantity) {
@@ -101,14 +97,15 @@ function updateContainerTable(containers, finalQuantity) {
         <td>${container.quantity_used}</td>
         <td>
           <input type="number" 
-                 class="form-control form-control-sm pass-input" 
+                 class="form-control form-control-sm container-final-input" 
                  id="pass_${index}"
                  name="container_pass_${index}" 
                  min="0" 
                  max="${container.quantity_used}"
                  value="${container.quantity_used}"
                  onchange="updateTotals()"
-                 data-container-id="${index}">
+                 data-container-id="${index}"
+                 data-container-size="${container.container_size}">
           <input type="hidden" name="container_name_${index}" value="${container.container_name}">
           <input type="hidden" name="container_size_${index}" value="${container.container_size}">
           <input type="hidden" name="container_type_${index}" value="${container.container_type}">
@@ -127,7 +124,7 @@ function updateContainerTable(containers, finalQuantity) {
 }
 
 function updateTotals() {
-  const passInputs = document.querySelectorAll('.pass-input');
+  const containerInputs = document.querySelectorAll('.container-final-input');
   const totalPassedElement = document.getElementById('totalPassed');
   const submitBtn = document.getElementById('completeBatchBtn');
 
@@ -137,7 +134,7 @@ function updateTotals() {
 
   let passedSum = 0;
 
-  passInputs.forEach(input => {
+  containerInputs.forEach(input => {
     passedSum += parseInt(input.value) || 0;
   });
 
@@ -145,7 +142,7 @@ function updateTotals() {
 
   // Validate that passed doesn't exceed used
   let valid = true;
-  passInputs.forEach(input => {
+  containerInputs.forEach(input => {
     const max = parseInt(input.getAttribute('max'));
     const value = parseInt(input.value) || 0;
 
@@ -186,41 +183,6 @@ function loadVariants() {
   // The variants will be handled by the product inventory system
   variantSelect.innerHTML = '<option value="Base">Base</option>';
 }
-
-// Initialize on modal show
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('finishBatchModal');
-  if (modal) {
-    modal.addEventListener('shown.bs.modal', function () {
-      console.log('Modal opened, initializing...');
-
-      // Initialize shelf life toggle (safe for all batch types)
-      toggleShelfLife();
-
-      // Load variants if product fields exist
-      const productSelect = document.getElementById('product_id');
-      if (productSelect) {
-        loadVariants();
-      }
-
-      // Only validate yield if the input exists and batch has containers
-      const finalQuantityInput = document.getElementById('final_quantity');
-      if (finalQuantityInput) {
-        finalQuantityInput.addEventListener('input', validateYield);
-        validateYield();
-      }
-
-      // Add event listeners to container inputs
-      const containerInputs = document.querySelectorAll('.container-final-input');
-      containerInputs.forEach(input => {
-        input.addEventListener('input', updateContainerSummary);
-      });
-
-      // Initial container summary update
-      updateContainerSummary();
-    });
-  }
-});
 
 function updateContainerSummary() {
   const finalQuantityInput = document.getElementById('final_quantity');
@@ -275,20 +237,6 @@ function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
     alertHtml += `
       <div class="alert alert-warning alert-sm mb-1">
         <i class="fas fa-exclamation-triangle me-1"></i>
-        Your containers can hold ${excess.toFixed(2)} units more than your yield.
-      </div>`;
-  } else if (finalQuantity > totalContainerCapacity) {
-    const bulk = finalQuantity - totalContainerCapacity;
-    alertHtml += `
-      <div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        ${bulk.toFixed(2)} units will be stored as bulk product.
-      </div>`;
-  }
-
-  alertsContainer.innerHTML = alertHtml;
-      <div class="alert alert-warning alert-sm">
-        <i class="fas fa-exclamation-triangle"></i>
         <strong>Overfill Warning:</strong> Container allocation (${totalContainerCapacity.toFixed(2)}) exceeds final yield (${finalQuantity.toFixed(2)}) by ${excess.toFixed(2)} units.
       </div>`;
   }
@@ -296,8 +244,8 @@ function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
   if (finalQuantity > totalContainerCapacity) {
     const bulk = finalQuantity - totalContainerCapacity;
     alertHtml += `
-      <div class="alert alert-info alert-sm">
-        <i class="fas fa-info-circle"></i>
+      <div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
         <strong>Bulk Product:</strong> ${bulk.toFixed(2)} units will be stored as bulk product.
       </div>`;
   }
@@ -310,4 +258,39 @@ function getCSRFToken() {
                 document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
   return token || '';
 }
+
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('finishBatchModal');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      console.log('Modal opened, initializing...');
+
+      // Initialize shelf life toggle (safe for all batch types)
+      toggleShelfLife();
+
+      // Load variants if product fields exist
+      const productSelect = document.getElementById('product_id');
+      if (productSelect) {
+        loadVariants();
+      }
+
+      // Only validate yield if the input exists and batch has containers
+      const finalQuantityInput = document.getElementById('final_quantity');
+      if (finalQuantityInput) {
+        finalQuantityInput.addEventListener('input', validateYield);
+        validateYield();
+      }
+
+      // Add event listeners to container inputs
+      const containerInputs = document.querySelectorAll('.container-final-input');
+      containerInputs.forEach(input => {
+        input.addEventListener('input', updateContainerSummary);
+      });
+
+      // Initial container summary update
+      updateContainerSummary();
+    });
+  }
+});
 </script>
