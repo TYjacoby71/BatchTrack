@@ -251,7 +251,7 @@ def adjust_sku(sku_id):
             except (ValueError, TypeError):
                 pass
 
-        # Use universal inventory adjustment service
+        # Use centralized inventory adjustment service
         from app.services.inventory_adjustment import process_inventory_adjustment
 
         success = process_inventory_adjustment(
