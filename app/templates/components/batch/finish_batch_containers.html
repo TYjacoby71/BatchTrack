@@ -1,36 +1,96 @@
-
-<!-- Container Distribution Section -->
-{% if batch.containers or batch.extra_containers %}
-<div id="containerDistribution" class="form-group mb-3">
-  <label>Containers Used in Batch</label>
-  <div class="table-responsive">
-    <table class="table table-sm">
-      <thead>
-        <tr>
-          <th>Container Size</th>
-          <th>Used in Batch</th>
-          <th>Pass to Products</th>
-          <th>Capacity</th>
-        </tr>
-      </thead>
-      <tbody id="containerTableBody">
-        <!-- Will be populated by JavaScript -->
-      </tbody>
-      <tfoot>
-        <tr class="table-info">
-          <td><strong>Total</strong></td>
-          <td id="totalUsed">-</td>
-          <td id="totalPassed">-</td>
-          <td id="totalCapacity">-</td>
-        </tr>
-      </tfoot>
-    </table>
+<!-- Container Management Section -->
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="mb-0">Container Distribution</h6>
   </div>
-  <div class="form-text">
-    <small><strong>Used in Batch:</strong> Containers deducted during batch creation<br>
-    <strong>Pass to Products:</strong> How many product units to create (can be less if containers broke)<br>
-    <strong>Capacity:</strong> Total volume that can be contained<br>
-    <strong>Highlighted rows:</strong> Extra containers added during batch (with reason shown)</small>
+  <div class="card-body">
+    <!-- Yield Validation Alerts -->
+    <div id="yield-validation-alerts"></div>
+
+    <!-- Container Table -->
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Container</th>
+            <th>Size</th>
+            <th>Used in Batch</th>
+            <th>Pass to Product</th>
+            <th>Total Capacity</th>
+          </tr>
+        </thead>
+        <tbody id="containerTableBody">
+          <!-- Regular containers -->
+          {% for container in batch.containers %}
+          <tr>
+            <td>{{ container.container.name }}</td>
+            <td>{{ container.container.storage_amount or 0 }} {{ container.container.storage_unit or 'count' }}</td>
+            <td>{{ container.quantity_used }}</td>
+            <td>
+              <input type="number" 
+                     name="container_final_{{ container.container_id }}" 
+                     class="form-control form-control-sm container-final-input"
+                     value="{{ container.quantity_used }}" 
+                     min="0" 
+                     max="{{ container.quantity_used }}"
+                     data-container-id="{{ container.container_id }}"
+                     data-container-size="{{ container.container.storage_amount or 0 }}"
+                     data-used-quantity="{{ container.quantity_used }}">
+            </td>
+            <td class="container-capacity">
+              {{ (container.container.storage_amount or 0) * container.quantity_used }} {{ container.container.storage_unit or 'count' }}
+            </td>
+          </tr>
+          {% endfor %}
+
+          <!-- Extra containers -->
+          {% for extra_container in batch.extra_containers %}
+          <tr class="table-warning">
+            <td>{{ extra_container.container.name }} <small class="text-muted">(Extra)</small></td>
+            <td>{{ extra_container.container.storage_amount or 0 }} {{ extra_container.container.storage_unit or 'count' }}</td>
+            <td>{{ extra_container.quantity_used }}</td>
+            <td>
+              <input type="number" 
+                     name="container_final_{{ extra_container.container_id }}" 
+                     class="form-control form-control-sm container-final-input"
+                     value="{{ extra_container.quantity_used }}" 
+                     min="0" 
+                     max="{{ extra_container.quantity_used }}"
+                     data-container-id="{{ extra_container.container_id }}"
+                     data-container-size="{{ extra_container.container.storage_amount or 0 }}"
+                     data-used-quantity="{{ extra_container.quantity_used }}">
+            </td>
+            <td class="container-capacity">
+              {{ (extra_container.container.storage_amount or 0) * extra_container.quantity_used }} {{ extra_container.container.storage_unit or 'count' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary Row -->
+    <div class="row mt-3">
+      <div class="col-sm-4">
+        <strong>Total Container Capacity:</strong>
+        <span id="totalCapacity">{{ batch.total_container_capacity or 0 }}</span> {{ batch.yield_unit or 'floz' }}
+      </div>
+      <div class="col-sm-4">
+        <strong>Final Yield:</strong>
+        <span id="finalYieldDisplay">{{ batch.projected_yield or 0 }}</span> {{ batch.yield_unit or 'floz' }}
+      </div>
+      <div class="col-sm-4">
+        <strong>Bulk (Uncontained):</strong>
+        <span id="uncontainedYield">0</span> {{ batch.yield_unit or 'floz' }}
+      </div>
+    </div>
+
+    <div class="mt-2">
+      <small class="text-muted">
+        Pass to Product: Number of containers that will become individual SKUs with size labels.
+        Remaining yield goes to bulk product.
+      </small>
+    </div>
   </div>
 </div>
-{% endif %}
+</div>
