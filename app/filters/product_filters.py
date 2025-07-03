@@ -1,7 +1,6 @@
 
 import re
 from flask import current_app
-from ..services.product_service import ProductService
 
 def register_product_filters(app):
     """Register product-related template filters"""
@@ -42,12 +41,5 @@ def register_filters(app):
     
     @app.template_filter('get_fifo_summary')
     def get_fifo_summary_filter(inventory_id):
-        """Template filter to get FIFO summary"""
-        return get_fifo_summary_helper(inventory_id)
-
-def get_fifo_summary_helper(inventory_id):
-    """Helper function to get FIFO summary for template"""
-    try:
-        return ProductService.get_fifo_summary(inventory_id)
-    except:
+        """Template filter to get FIFO summary - removed as method no longer exists"""
         return None
