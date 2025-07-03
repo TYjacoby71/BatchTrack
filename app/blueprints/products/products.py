@@ -1,5 +1,3 @@
-# Updated SKU adjustment logic to use the universal inventory adjustment service.
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem
@@ -102,7 +100,7 @@ def view_product(product_name):
 
     if not skus:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     # Group SKUs by variant
     variants = {}
@@ -204,7 +202,7 @@ def delete_product(product_name):
 
         if not skus:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products.list_products'))
 
         # Check if any SKU has inventory
         total_inventory = sum(sku.current_quantity for sku in skus)
@@ -221,7 +219,7 @@ def delete_product(product_name):
         db.session.commit()
 
         flash(f'Product "{product_name}" deleted successfully', 'success')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products.list_products'))
 
     except Exception as e:
         db.session.rollback()
