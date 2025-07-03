@@ -1,4 +1,4 @@
-Updated SKU adjustment logic to use the universal inventory adjustment service.
+# Updated SKU adjustment logic to use the universal inventory adjustment service.
 ```
 
 ```python
