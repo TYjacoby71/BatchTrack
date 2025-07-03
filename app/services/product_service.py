@@ -57,17 +57,24 @@ class ProductService:
         if not sku_code:
             sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
 
-        # Get product base unit from existing SKUs
+        # Get product base unit from existing SKUs - this should always inherit from parent
         existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-        product_base_unit = existing_sku.unit if existing_sku else (unit or 'g')
+        if existing_sku:
+            product_base_unit = existing_sku.unit
+        else:
+            product_base_unit = unit or 'g'
 
-        # Create new SKU
+        # Create new SKU - variants always inherit parent product unit
         sku = ProductSKU(
             product_name=product_name,
             variant_name=variant_name,
             size_label=size_label,
-            unit=unit or product_base_unit,
-            sku_code=sku_code
+            unit=product_base_unit,  # Always use parent product unit
+            sku_code=sku_code,
+            description=variant_description,
+            current_quantity=0.0,  # New variants start with 0 inventory
+            is_active=True,
+            is_product_active=True
         )
 
         db.session.add(sku)
