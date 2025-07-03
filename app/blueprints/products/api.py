@@ -14,15 +14,20 @@ from . import products_api_bp
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
-        # Get distinct product names from ProductSKU
-        products = db.session.query(ProductSKU.product_name, ProductSKU.unit).distinct().filter_by(
+        # Get distinct products with their first SKU ID as product identifier
+        products = db.session.query(
+            func.min(ProductSKU.id).label('product_id'),
+            ProductSKU.product_name, 
+            ProductSKU.unit
+        ).filter_by(
             is_active=True,
             organization_id=current_user.organization_id
-        ).all()
+        ).group_by(ProductSKU.product_name, ProductSKU.unit).all()
 
         product_list = []
-        for product_name, base_unit in products:
+        for product_id, product_name, base_unit in products:
             product_list.append({
+                'id': product_id,
                 'name': product_name,
                 'product_base_unit': base_unit
             })
@@ -32,11 +37,22 @@ def get_products():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@products_api_bp.route('/<product_name>/variants')
+@products_api_bp.route('/<int:product_id>/variants')
 @login_required
-def get_product_variants(product_name):
-    """Get variants for a specific product"""
+def get_product_variants(product_id):
+    """Get variants for a specific product by ID"""
     try:
+        # Get the product name from the product_id (first SKU) - with org scoping
+        base_sku = ProductSKU.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not base_sku:
+            return jsonify({'error': 'Product not found'}), 404
+            
+        product_name = base_sku.product_name
+        
         variants = db.session.query(
             ProductSKU.variant_name,
             func.min(ProductSKU.id).label('id')
@@ -67,8 +83,9 @@ def search_products():
     if len(query) < 2:
         return jsonify({'products': []})
 
-    # Search for unique product names only
+    # Search for unique product names with their base SKU ID
     products = db.session.query(
+        func.min(ProductSKU.id).label('product_id'),
         ProductSKU.product_name,
         ProductSKU.unit.label('product_base_unit')
     ).filter(
@@ -76,11 +93,12 @@ def search_products():
         ProductSKU.is_product_active == True,
         ProductSKU.is_active == True,
         ProductSKU.organization_id == current_user.organization_id
-    ).distinct(ProductSKU.product_name).limit(10).all()
+    ).group_by(ProductSKU.product_name, ProductSKU.unit).limit(10).all()
 
     result = []
-    for product_name, product_base_unit in products:
+    for product_id, product_name, product_base_unit in products:
         result.append({
+            'id': product_id,
             'name': product_name,
             'default_unit': product_base_unit
         })
@@ -101,19 +119,30 @@ def quick_add_product():
         return jsonify({'error': 'Product name is required'}), 400
 
     try:
-        # Get or create the SKU
+        # Get or create the SKU with organization scoping
         sku = ProductService.get_or_create_sku(
             product_name=product_name,
             variant_name=variant_name or 'Base',
             size_label='Bulk',
             unit=product_base_unit
         )
+        
+        # Ensure the SKU belongs to the current user's organization
+        if not sku.organization_id:
+            sku.organization_id = current_user.organization_id
 
         db.session.commit()
+
+        # Find the base product ID (first SKU for this product)
+        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
+            product_name=sku.product_name,
+            organization_id=current_user.organization_id
+        ).scalar()
 
         return jsonify({
             'success': True,
             'product': {
+                'id': base_sku,
                 'name': sku.product_name,
                 'product_base_unit': sku.unit
             },
@@ -135,15 +164,26 @@ def add_inventory_from_batch():
     data = request.get_json()
 
     batch_id = data.get('batch_id')
-    product_name = data.get('product_name')
+    product_id = data.get('product_id')  # Changed from product_name
+    product_name = data.get('product_name')  # Keep as fallback
     variant_name = data.get('variant_name')
     size_label = data.get('size_label')
     quantity = data.get('quantity')
 
-    if not batch_id or not product_name:
-        return jsonify({'error': 'Batch ID and Product Name are required'}), 400
+    if not batch_id or (not product_id and not product_name):
+        return jsonify({'error': 'Batch ID and Product ID or Name are required'}), 400
 
     try:
+        # Get product name from ID if provided - with org scoping
+        if product_id:
+            base_sku = ProductSKU.query.filter_by(
+                id=product_id,
+                organization_id=current_user.organization_id
+            ).first()
+            if not base_sku:
+                return jsonify({'error': 'Product not found'}), 404
+            product_name = base_sku.product_name
+
         # Get or create the SKU
         sku = ProductService.get_or_create_sku(
             product_name=product_name,
@@ -179,9 +219,16 @@ def add_inventory_from_batch():
 
 @products_api_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
-def adjust_sku_inventory():
+def adjust_sku_inventory(sku_id):
     """Adjust SKU inventory via API"""
-    sku = ProductSKU.query.get_or_404(sku_id)
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+        
     data = request.get_json()
     
     quantity = data.get('quantity')

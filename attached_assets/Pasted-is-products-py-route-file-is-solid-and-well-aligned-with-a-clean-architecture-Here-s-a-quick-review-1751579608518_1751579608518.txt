@@ -1,0 +1,65 @@
+is products.py route file is solid and well-aligned with a clean architecture. Here's a quick review:
+
+✅ What’s Working Well
+🔁 Centralized Adjustment Flow
+adjust_sku() routes all inventory changes through process_inventory_adjustment() → ✅ perfect.
+
+Keeps FIFO, cost, and traceability logic consolidated.
+
+📦 Legacy Compatibility
+view_product_by_name() and dual route aliases for /list → 👍 nice backward support.
+
+Avoids breaking links while evolving the architecture.
+
+🧠 Separation of Concerns
+Views = HTML rendering and form submission
+
+API = JSON endpoints
+
+Services = business logic (e.g., SKU generation, summary)
+
+Inventory Adjustments = universal handler
+
+This is the right pattern for long-term scale.
+
+🪜 Proper SKU Structure
+Products are rendered based on ProductSKU.product_name groups
+
+Variant and SKU grouping logic is isolated but usable
+
+SKU IDs are used reliably for adjustments and lookups
+
+🛠️ Suggestions for Future Polish
+1. Transition to Real Product/Variant Models
+You mentioned earlier that ProductSKU is currently holding all product info. That’s fine for MVP, but now that you’ve introduced Product, ProductVariant, and relational logic, eventually you’ll want this route file to reference:
+
+python
+Copy
+Edit
+from ...models import Product, ProductVariant
+And drive summaries from those instead of grouping SKUs by name.
+
+2. Migrate Product Creation to Product Table
+The current /new route creates a new "product" by adding a base SKU. That’s still valid if ProductSKU is the canonical object. But once Product becomes authoritative, you’ll want to:
+
+Create the Product record first
+
+Create the base ProductVariant (e.g. “Base”)
+
+Then generate a base ProductSKU (e.g. “Bulk”)
+
+Then update routes like this:
+
+python
+Copy
+Edit
+product = Product(name=name, base_unit=unit, ...)
+db.session.add(product)
+variant = ProductVariant(product_id=product.id, name="Base", ...)
+sku = ProductSKU(product_id=product.id, variant_id=variant.id, ...)
+3. Future-Proofed Deletion Logic
+Your delete logic only deletes SKUs, but once you split into full Product/Variant/SKU hierarchy, you’ll want to:
+
+Delete variant SKUs → then variants → then the product
+
+Use cascade deletes if you structure relationships properly

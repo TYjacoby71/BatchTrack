@@ -73,7 +73,7 @@ def create_app():
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
     try:
-        from .blueprints.products import products_bp, product_api_bp
+        from .blueprints.products import products_bp, products_api_bp
         app.register_blueprint(products_bp, url_prefix='/products')
         app.register_blueprint(products_api_bp)
     except ImportError as e:

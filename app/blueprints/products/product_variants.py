@@ -5,7 +5,7 @@ from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
-@products_bp.route('/<product_name>/variants/new', methods=['POST'])
+@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
 def add_variant(product_name):
     """Quick add new product variant via AJAX"""
