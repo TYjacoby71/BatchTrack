@@ -1,19 +1,34 @@
 <!-- Product Selection Fields -->
 <div id="productFields">
   <div class="mb-3">
-    <label for="product_id">Product</label>
-    <select id="product_id" name="sku_id" class="form-select" required onchange="loadVariants()">
-            <option value="">Select Product</option>
-            {% for product in products %}
-            <option value="{{ product.id }}" data-product-name="{{ product.product_name }}">{{ product.product_name }}{% if product.variant_name and product.variant_name != 'Base' %} - {{ product.variant_name }}{% endif %}</option>
-            {% endfor %}
-          </select>
+    <label for="productDropdown">Product</label>
+    <select id="productDropdown" name="product_id" class="form-select" required onchange="loadVariants()">
+      <option value="">Select Product</option>
+      {% for sku in products %}
+        {% if sku.product %}
+          <option value="{{ sku.product.id }}" data-product-name="{{ sku.product.name }}">
+            {{ sku.product.name }}
+          </option>
+        {% else %}
+          <!-- Fallback for legacy SKUs without proper product relationship -->
+          <option value="{{ sku.id }}" data-product-name="{{ sku.product_name }}">
+            {{ sku.product_name }}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
   </div>
 
   <div class="mb-3">
-    <label for="variant_label">Variant</label>
-    <select name="variant_label" id="variant_label" class="form-select">
-      <option value="">No variants available</option>
+    <label for="variantDropdown">Variant</label>
+    <select name="variant_id" id="variantDropdown" class="form-select" disabled>
+      <option value="">Select product first...</option>
     </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="sizeLabel">Size Label</label>
+    <input type="text" id="sizeLabel" name="size_label" class="form-control" placeholder="e.g., 4oz, 8oz, Bulk" value="Bulk">
+    <div class="form-text">This will create a new SKU with this size label if it doesn't exist</div>
   </div>
 </div>

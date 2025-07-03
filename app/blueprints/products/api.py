@@ -275,3 +275,77 @@ def adjust_sku_inventory(sku_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
+from ...models import db, Product, ProductVariant, ProductSKU
+
+products_api_bp = Blueprint('products_api', __name__, url_prefix='/products/api')
+
+@products_api_bp.route('/<int:product_id>/variants')
+@login_required
+def get_product_variants(product_id):
+    """Get all variants for a specific product"""
+    try:
+        # Get the product with organization scoping
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get all variants for this product
+        variants = ProductVariant.query.filter_by(
+            product_id=product_id,
+            is_active=True,
+            organization_id=current_user.organization_id
+        ).all()
+        
+        variant_data = []
+        for variant in variants:
+            variant_data.append({
+                'id': variant.id,
+                'name': variant.name,
+                'description': variant.description,
+                'is_active': variant.is_active
+            })
+        
+        return jsonify({
+            'variants': variant_data,
+            'product_name': product.name
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@products_api_bp.route('/<int:product_id>/skus')
+@login_required 
+def get_product_skus(product_id):
+    """Get all SKUs for a specific product"""
+    try:
+        # Get all SKUs for this product with organization scoping
+        skus = ProductSKU.query.filter_by(
+            product_id=product_id,
+            is_active=True,
+            organization_id=current_user.organization_id
+        ).all()
+        
+        sku_data = []
+        for sku in skus:
+            sku_data.append({
+                'id': sku.id,
+                'sku_code': sku.sku_code,
+                'size_label': sku.size_label,
+                'variant_id': sku.variant_id,
+                'variant_name': sku.variant.name if sku.variant else sku.variant_name,
+                'current_quantity': sku.current_quantity,
+                'unit': sku.unit
+            })
+        
+        return jsonify({
+            'skus': sku_data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

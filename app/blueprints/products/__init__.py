@@ -1,4 +1,3 @@
-
 from flask import Blueprint
 
 # Create the main products blueprint for web routes
