@@ -1,3 +1,5 @@
+# Updated SKU adjustment logic to use the universal inventory adjustment service.
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem
@@ -43,6 +45,9 @@ def product_list():
         products.sort(key=lambda p: p.name.lower())
 
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
+
+# Add alias for backward compatibility
+list_products = product_list
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
