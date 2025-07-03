@@ -1,4 +1,4 @@
-2025-07-02 20:49:28,409 ERROR: Exception on /products/new [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-02 21:03:49,656 ERROR: Exception on /products/new [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -82,10 +82,15 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: product_sku.organization_id
 [SQL: INSERT INTO product_sku (product_name, product_id, product_base_unit, variant_name, variant_id, variant_description, sku_name, size_label, unit, sku_code, current_quantity, remaining_quantity, original_quantity, low_stock_threshold, unit_cost, retail_price, batch_id, fifo_id, change_type, container_id, container_size, container_line_cost, is_perishable, shelf_life_days, expiration_date, batch_completed_at, customer, is_active, is_product_active, created_by, created_at, last_updated, notes, description, image_url, image_path, weight, length, width, height, barcode, upc, supplier_name, supplier_sku, supplier_contact, tags, category, subcategory, minimum_order_quantity, maximum_order_quantity, profit_margin_target, reserved_quantity, available_quantity, last_sold_date, is_discontinued, is_hazardous, requires_refrigeration, quality_status, quality_checked_at, quality_checked_by, lot_number, batch_number, compliance_status, regulatory_notes, location_id, location_name, temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id, amazon_asin, marketplace_sync_status, marketplace_last_sync, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('Admin Apple Sauce', None, 'floz', 'Base', None, 'Default base variant', None, 'Bulk', 'floz', None, 0.0, 0.0, 0.0, 0.0, None, None, None, None, 'batch_addition', None, None, None, 0, None, None, None, None, 1, 1, None, '2025-07-02 20:49:28.409021', '2025-07-02 20:49:28.409023', None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0.0, 0.0, None, 0, 0, 0, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)]
+[parameters: ('Admin Apple Sauce', None, 'floz', 'Base', None, 'Default base variant', None, 'Bulk', 'floz', None, 0.0, 0.0, 0.0, 0.0, None, None, None, None, 'batch_addition', None, None, None, 0, None, None, None, None, 1, 1, None, '2025-07-02 21:03:49.655721', '2025-07-02 21:03:49.655722', None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0.0, 0.0, None, 0, 0, 0, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
-2025-07-02 20:49:53,139 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 20:51:56,179 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 20:56:02,230 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 20:56:53,626 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 21:00:52,661 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:05:24,782 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:11:19,836 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:12:20,980 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:12:20,992 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:12:53,275 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:14:14,953 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:19:37,904 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:26:16,440 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:30:11,248 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 21:33:39,516 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
