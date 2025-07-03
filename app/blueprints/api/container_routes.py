@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...models import Recipe, InventoryItem, db, Batch, BatchContainer
+from ...models import Recipe, InventoryItem, db, Batch, BatchContainer, ExtraBatchContainer
 from app.services.unit_conversion import ConversionEngine
-from ...services.batch_container_service import BatchContainerService
 
 container_api_bp = Blueprint('container_api', __name__, url_prefix='/api')
 
@@ -133,6 +132,17 @@ def get_batch_containers(batch_id):
         container_data = []
         total_capacity = 0
         product_capacity = 0
+
+        # Calculate total container capacity (inline instead of service)
+        def calculate_container_capacity(batch_id):
+            regular_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+            extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
+            total = 0
+            for container in regular_containers:
+                total += (container.container.storage_amount or 0) * container.quantity_used
+            for extra_container in extra_containers:
+                total += (extra_container.container.storage_amount or 0) * extra_container.quantity_used
+            return total
 
         for container in containers:
             container_info = {
