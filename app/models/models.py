@@ -198,8 +198,9 @@ class Batch(ScopedModelMixin, db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)
 
     recipe = db.relationship('Recipe', backref='batches')
-    product = db.relationship('Product', foreign_keys=[product_id], backref='batches')
-    variant = db.relationship('ProductVariant', foreign_keys=[variant_id], backref='batches')
+    # Note: Product and ProductVariant models don't exist yet, so these relationships are commented out
+    # product = db.relationship('Product', foreign_keys=[product_id], backref='batches')
+    # variant = db.relationship('ProductVariant', foreign_keys=[variant_id], backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
 class BatchIngredient(ScopedModelMixin, db.Model):
