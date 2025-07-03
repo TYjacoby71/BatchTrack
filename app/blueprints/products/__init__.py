@@ -9,7 +9,4 @@ from . import product_alerts
 from . import product_variants
 from . import product_inventory_routes
 from . import product_log_routes
-
-# Import and register the API blueprint
-from .product_api import product_api_bp
-products_bp.register_blueprint(product_api_bp)
+from . import product_api
