@@ -16,23 +16,23 @@ def view_sku(sku_id):
     if request.method == 'POST':
         # Handle standard inventory adjustment
         change_type = request.form.get('change_type')
-        
+
         # Safe float parsing
         try:
             quantity = float(request.form.get('quantity', '0'))
         except ValueError:
             quantity = 0
-            
+
         try:
             sale_price = float(request.form.get('sale_price', '0'))
         except ValueError:
             sale_price = 0
-            
+
         try:
             unit_cost = float(request.form.get('unit_cost', '0'))
         except ValueError:
             unit_cost = 0
-            
+
         notes = request.form.get('notes', '')
         customer = request.form.get('customer', '')
         # Convert to string format that the service expects
@@ -45,7 +45,7 @@ def view_sku(sku_id):
         try:
             if change_type == 'recount':
                 success = ProductInventoryService.recount_sku(sku_id, quantity, enhanced_notes)
-            elif change_type in ['sale', 'gift', 'spoil', 'damaged', 'trash', 'sample']:
+            elif change_type in ['sale', 'damaged', 'expired', 'trash', 'sample']:
                 success = ProductInventoryService.deduct_stock(
                     sku_id=sku_id,
                     quantity=quantity,
@@ -54,7 +54,7 @@ def view_sku(sku_id):
                     sale_price=sale_price,
                     customer=customer
                 )
-            else:  # restock, adjustment, return, manual_addition
+            elif change_type in ['restock', 'returned', 'batch_addition']:
                 ProductInventoryService.add_stock(
                     sku_id=sku_id,
                     quantity=quantity,
@@ -65,6 +65,18 @@ def view_sku(sku_id):
                     customer=customer
                 )
                 success = True
+            elif change_type == 'reserved':
+                # Handle reservation differently
+                order_id = request.form.get('order_id', f"MANUAL-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+                success = ProductInventoryService.reserve_stock(
+                    sku_id=sku_id,
+                    quantity=quantity,
+                    order_id=order_id,
+                    reservation_id=f"RES-{order_id}"
+                )
+            else:
+                flash(f'Unknown change type: {change_type}', 'error')
+                return redirect(url_for('product_inventory.view_sku', sku_id=sku_id))
 
             if success:
                 db.session.commit()
@@ -123,17 +135,17 @@ def edit_sku_basic(sku_id):
         # Update basic fields with safe string handling
         sku_code = request.form.get('sku_code', '').strip()
         sku.sku_code = sku_code if sku_code else None
-        
+
         size_label = request.form.get('size_label', '').strip()
         sku.size_label = size_label if size_label else sku.size_label
-        
+
         # Safe float parsing
         try:
             retail_price_str = request.form.get('retail_price', '').strip()
             sku.retail_price = float(retail_price_str) if retail_price_str else None
         except ValueError:
             sku.retail_price = None
-            
+
         try:
             threshold_str = request.form.get('low_stock_threshold', '0').strip()
             sku.low_stock_threshold = float(threshold_str) if threshold_str else 0
@@ -143,10 +155,10 @@ def edit_sku_basic(sku_id):
         sku.unit = request.form.get('unit') or sku.unit
         sku.is_active = bool(request.form.get('is_active'))
         sku.track_expiration = bool(request.form.get('track_expiration'))
-        
+
         description = request.form.get('description', '').strip()
         sku.description = description if description else None
-        
+
         barcode = request.form.get('barcode', '').strip()
         sku.barcode = barcode if barcode else None
 
@@ -182,13 +194,13 @@ def edit_sku_basic(sku_id):
 def adjust_fifo_entry(inventory_id):
     """Adjust specific FIFO entry"""
     change_type = request.form.get('change_type')
-    
+
     # Safe float parsing
     try:
         quantity = float(request.form.get('quantity', '0'))
     except ValueError:
         quantity = 0
-        
+
     notes = request.form.get('notes', '')
 
     if quantity <= 0:
