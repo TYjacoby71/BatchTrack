@@ -1,9 +1,9 @@
-
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from ...models import db, ProductSKU
 from ...services.product_service import ProductService
 from . import products_bp
+from sqlalchemy import func
 
 product_api_bp = Blueprint('product_api', __name__, url_prefix='/products/api')
 
@@ -13,13 +13,13 @@ def get_product_variants(product_name):
     """API endpoint to get variants for a specific product"""
     # Get all SKUs for this product name
     skus = ProductSKU.query.filter_by(product_name=product_name, is_product_active=True).all()
-    
+
     if not skus:
         return jsonify({'error': 'Product not found'}), 404
 
     variants = []
     seen_variants = set()
-    
+
     for sku in skus:
         if sku.variant_name not in seen_variants:
             variants.append({
@@ -39,51 +39,32 @@ def get_product_variants(product_name):
 
     return jsonify({'variants': variants})
 
-@product_api_bp.route('/search', methods=['GET'])
+@product_api_bp.route('/search')
 @login_required
 def search_products():
-    """API endpoint for product/variant search in finish batch modal"""
+    """API endpoint for product search in finish batch modal - returns only parent products"""
     query = request.args.get('q', '').strip()
 
     if len(query) < 2:
         return jsonify({'products': []})
 
-    # Search SKUs by product name
-    skus = ProductSKU.query.filter(
+    # Search for unique product names only
+    products = db.session.query(
+        ProductSKU.product_name,
+        ProductSKU.unit.label('product_base_unit')
+    ).filter(
         ProductSKU.product_name.ilike(f'%{query}%'),
         ProductSKU.is_product_active == True,
-        ProductSKU.is_active == True
-    ).limit(10).all()
+        ProductSKU.is_active == True,
+        ProductSKU.organization_id == current_user.organization_id
+    ).distinct(ProductSKU.product_name).limit(10).all()
 
-    # Group by product name
-    products_dict = {}
-    for sku in skus:
-        if sku.product_name not in products_dict:
-            products_dict[sku.product_name] = {
-                'name': sku.product_name,
-                'default_unit': sku.product_base_unit,
-                'variants': []
-            }
-        
-        # Add variant if not already present
-        variant_exists = any(v['name'] == sku.variant_name for v in products_dict[sku.product_name]['variants'])
-        if not variant_exists:
-            products_dict[sku.product_name]['variants'].append({
-                'id': sku.id,
-                'name': sku.variant_name,
-                'sku': sku.sku_code
-            })
-
-    result = list(products_dict.values())
-    
-    # Add Base variant if no variants exist for each product
-    for product in result:
-        if not product['variants']:
-            product['variants'].append({
-                'id': None,
-                'name': 'Base',
-                'sku': None
-            })
+    result = []
+    for product in products:
+        result.append({
+            'name': product.product_name,
+            'default_unit': product.product_base_unit
+        })
 
     return jsonify({'products': result})
 
@@ -109,7 +90,7 @@ def add_from_batch():
             variant_name=variant_name or 'Base',
             size_label=size_label or 'Bulk'
         )
-        
+
         # Add inventory to the SKU
         inventory = ProductService.add_product_from_batch(
             batch_id=batch_id,
@@ -167,4 +148,108 @@ def quick_add_product():
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@products_bp.route('/api/products')
+@login_required
+def get_products():
+    """Get all products for dropdowns and autocomplete"""
+    try:
+        # Try new Product model first, fall back to legacy ProductSKU method
+        try:
+            from ...models import Product
+            products = Product.query.filter_by(
+                is_active=True,
+                organization_id=current_user.organization_id
+            ).all()
+
+            product_list = []
+            for product in products:
+                product_list.append({
+                    'id': product.id,
+                    'name': product.name,
+                    'product_base_unit': product.base_unit
+                })
+
+            if product_list:  # If we have products in the new model, use those
+                return jsonify(product_list)
+        except:
+            pass  # Fall back to legacy method
+
+        # Legacy method - Get distinct product names from ProductSKU
+        products = db.session.query(ProductSKU.product_name).distinct().filter_by(
+            is_active=True,
+            organization_id=current_user.organization_id
+        ).all()
+
+        product_list = []
+        for product_row in products:
+            product_name = product_row[0]
+
+            # Get base unit from any SKU of this product
+            sample_sku = ProductSKU.query.filter_by(
+                product_name=product_name,
+                organization_id=current_user.organization_id
+            ).first()
+
+            product_list.append({
+                'name': product_name,
+                'product_base_unit': sample_sku.unit if sample_sku else 'g'
+            })
+
+        return jsonify(product_list)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@products_bp.route('/api/products/<product_name>/variants')
+@login_required
+def get_product_variants(product_name):
+    """Get variants for a specific product"""
+    try:
+        # Try new model structure first
+        try:
+            from ...models import Product, ProductVariant
+            product = Product.query.filter_by(
+                name=product_name,
+                organization_id=current_user.organization_id
+            ).first()
+
+            if product:
+                variants = product.variants.filter_by(is_active=True).all()
+                variant_list = []
+                for variant in variants:
+                    # Get the bulk SKU ID for this variant
+                    bulk_sku = variant.bulk_sku
+                    variant_list.append({
+                        'id': bulk_sku.id if bulk_sku else variant.id,
+                        'name': variant.name
+                    })
+                return jsonify(variant_list)
+        except:
+            pass  # Fall back to legacy method
+
+        # Legacy method - Get all distinct variants for this product
+        variants = db.session.query(
+            ProductSKU.variant_name,
+            func.min(ProductSKU.id).label('id')
+        ).filter_by(
+            product_name=product_name,
+            is_active=True,
+            organization_id=current_user.organization_id
+        ).group_by(ProductSKU.variant_name).all()
+
+        variant_list = []
+        for variant_row in variants:
+            variant_name = variant_row[0]
+            sku_id = variant_row[1]
+
+            variant_list.append({
+                'id': sku_id,
+                'name': variant_name
+            })
+
+        return jsonify(variant_list)
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
