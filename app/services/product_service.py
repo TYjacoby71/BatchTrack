@@ -192,7 +192,7 @@ class ProductService:
     @staticmethod
     def add_product_from_batch(batch_id, product_id, variant_label, quantity, container_overrides=None):
         """
-        Add product inventory from a completed batch, handling both contained and bulk products
+        Add product inventory from a completed batch using centralized inventory adjustment service
         
         Args:
             batch_id: The batch ID
@@ -204,7 +204,7 @@ class ProductService:
         Returns:
             List of inventory entries created
         """
-        from app.models import Batch, ProductSKU, BatchContainer, ExtraBatchContainer
+        from app.models import Batch, ProductSKU
         from app.services.inventory_adjustment import process_inventory_adjustment
         from flask_login import current_user
         
@@ -240,26 +240,29 @@ class ProductService:
                     unit=batch.output_unit or target_sku.unit
                 )
                 
-                # Add inventory for each container as individual units
-                for i in range(final_quantity):
-                    container_fill = container.container.storage_amount or 1
-                    process_inventory_adjustment(
-                        item_id=container_sku.id,
-                        quantity=container_fill,
-                        change_type='finished_batch',
-                        unit=batch.output_unit or target_sku.unit,
-                        notes=f"From batch {batch.label_code} - Container {i+1}",
-                        batch_id=batch_id,
-                        created_by=current_user.id,
-                        item_type='sku',
-                        custom_expiration_date=batch.expiration_date,
-                        custom_shelf_life_days=batch.shelf_life_days
-                    )
-                    
+                # Add inventory for each container count using centralized service
+                container_fill = container.container.storage_amount or 1
+                total_container_volume = container_fill * final_quantity
+                
+                success = process_inventory_adjustment(
+                    item_id=container_sku.id,
+                    quantity=total_container_volume,
+                    change_type='finished_batch',
+                    unit=batch.output_unit or target_sku.unit,
+                    notes=f"From batch {batch.label_code} - {final_quantity} containers",
+                    batch_id=batch_id,
+                    created_by=current_user.id,
+                    item_type='sku',
+                    custom_expiration_date=batch.expiration_date,
+                    custom_shelf_life_days=batch.shelf_life_days
+                )
+                
+                if success:
                     inventory_entries.append({
                         'sku_id': container_sku.id,
-                        'quantity': container_fill,
+                        'quantity': total_container_volume,
                         'container_name': container.container.name,
+                        'container_count': final_quantity,
                         'type': 'container'
                     })
         
@@ -281,26 +284,29 @@ class ProductService:
                     unit=batch.output_unit or target_sku.unit
                 )
                 
-                # Add inventory for each container as individual units
-                for i in range(final_quantity):
-                    container_fill = extra_container.container.storage_amount or 1
-                    process_inventory_adjustment(
-                        item_id=container_sku.id,
-                        quantity=container_fill,
-                        change_type='finished_batch',
-                        unit=batch.output_unit or target_sku.unit,
-                        notes=f"From batch {batch.label_code} - Extra Container {i+1}",
-                        batch_id=batch_id,
-                        created_by=current_user.id,
-                        item_type='sku',
-                        custom_expiration_date=batch.expiration_date,
-                        custom_shelf_life_days=batch.shelf_life_days
-                    )
-                    
+                # Add inventory for each container count using centralized service
+                container_fill = extra_container.container.storage_amount or 1
+                total_container_volume = container_fill * final_quantity
+                
+                success = process_inventory_adjustment(
+                    item_id=container_sku.id,
+                    quantity=total_container_volume,
+                    change_type='finished_batch',
+                    unit=batch.output_unit or target_sku.unit,
+                    notes=f"From batch {batch.label_code} - {final_quantity} extra containers",
+                    batch_id=batch_id,
+                    created_by=current_user.id,
+                    item_type='sku',
+                    custom_expiration_date=batch.expiration_date,
+                    custom_shelf_life_days=batch.shelf_life_days
+                )
+                
+                if success:
                     inventory_entries.append({
                         'sku_id': container_sku.id,
-                        'quantity': container_fill,
+                        'quantity': total_container_volume,
                         'container_name': extra_container.container.name,
+                        'container_count': final_quantity,
                         'type': 'extra_container'
                     })
         
@@ -318,7 +324,7 @@ class ProductService:
                     unit=batch.output_unit or target_sku.unit
                 )
             
-            process_inventory_adjustment(
+            success = process_inventory_adjustment(
                 item_id=bulk_sku.id,
                 quantity=bulk_quantity,
                 change_type='finished_batch',
@@ -331,10 +337,11 @@ class ProductService:
                 custom_shelf_life_days=batch.shelf_life_days
             )
             
-            inventory_entries.append({
-                'sku_id': bulk_sku.id,
-                'quantity': bulk_quantity,
-                'type': 'bulk'
-            })
+            if success:
+                inventory_entries.append({
+                    'sku_id': bulk_sku.id,
+                    'quantity': bulk_quantity,
+                    'type': 'bulk'
+                })
         
         return inventory_entries
