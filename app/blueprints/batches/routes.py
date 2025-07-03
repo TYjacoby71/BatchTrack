@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
 from datetime import datetime
 from ...utils import get_setting
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from ...services.unit_conversion import ConversionEngine
 from ..inventory.routes import adjust_inventory
 import uuid, os
@@ -293,21 +293,24 @@ def view_batch_in_progress(batch_identifier):
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
-    # Get products for finish batch modal - use proper Product model with organization scoping
-    from ...models import Product, ProductSKU
+    # Get products for finish batch modal - use ProductSKU with organization scoping
+    from ...models import ProductSKU
     
-    # Get unique products that have active SKUs
-    products_query = db.session.query(ProductSKU).filter_by(
+    # Get unique products that have active SKUs (grouped by product_name)
+    products_subquery = db.session.query(
+        ProductSKU.product_name,
+        func.min(ProductSKU.id).label('min_id')
+    ).filter_by(
         is_active=True,
+        is_product_active=True,
         organization_id=current_user.organization_id
-    )
+    ).group_by(ProductSKU.product_name).subquery()
     
-    # If we have the new Product model relationships, use them
-    if hasattr(ProductSKU, 'product') and ProductSKU.product:
-        products = products_query.join(Product).filter(Product.is_active == True).all()
-    else:
-        # Fallback to legacy approach
-        products = products_query.all()
+    # Get the actual SKU records for the products
+    products = db.session.query(ProductSKU).join(
+        products_subquery,
+        ProductSKU.id == products_subquery.c.min_id
+    ).all()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []
