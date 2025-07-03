@@ -20,15 +20,12 @@
   </div>
 
   <div class="mb-3">
-    <label for="variantDropdown">Variant</label>
-    <select name="variant_id" id="variantDropdown" class="form-select" disabled>
+    <label for="variant_label">Variant</label>
+    <select name="variant_label" id="variant_label" class="form-select" disabled>
       <option value="">Select product first...</option>
     </select>
   </div>
 
-  <div class="mb-3">
-    <label for="sizeLabel">Size Label</label>
-    <input type="text" id="sizeLabel" name="size_label" class="form-control" placeholder="e.g., 4oz, 8oz, Bulk" value="Bulk">
-    <div class="form-text">This will create a new SKU with this size label if it doesn't exist</div>
-  </div>
+  <!-- Size is automatically determined from containers used in batch -->
+  <input type="hidden" name="size_label" value="Bulk">
 </div>
