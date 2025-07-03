@@ -23,10 +23,10 @@ def product_list():
         def __init__(self, data):
             self.name = data.get('product_name', '')
             self.product_base_unit = data.get('product_base_unit', '')
-            self.variant_count = data.get('variant_count', 0)
-            self.created_at = data.get('created_at')
-            self.variations = data.get('variations', [])
-            self.inventory = data.get('inventory', [])
+            self.variant_count = data.get('sku_count', 0)
+            self.created_at = data.get('last_updated')
+            self.variations = []
+            self.inventory = []
             # Calculate total quantity from inventory
             self.total_quantity = data.get('total_quantity', 0)
 
@@ -52,10 +52,10 @@ list_products = product_list
 def new_product():
     if request.method == 'POST':
         name = request.form.get('name')
-        product_base_unit = request.form.get('product_base_unit')
+        unit = request.form.get('product_base_unit')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-        if not name or not product_base_unit:
+        if not name or not unit:
             flash('Name and product base unit are required', 'error')
             return redirect(url_for('products.new_product'))
 
@@ -70,13 +70,11 @@ def new_product():
         sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
         sku = ProductSKU(
             product_name=name,
-            product_base_unit=product_base_unit,
             variant_name='Base',
             size_label='Bulk',
-            unit=product_base_unit,
+            unit=unit,
             sku_code=sku_code,
             low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
-            variant_description='Default base variant',
             organization_id=current_user.organization_id
         )
         db.session.add(sku)
@@ -125,7 +123,7 @@ def view_product(product_name):
     # Create a product object for the template
     product = type('Product', (), {
         'name': product_name,
-        'product_base_unit': skus[0].product_base_unit if skus else None,
+        'product_base_unit': skus[0].unit if skus else None,
         'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
         'created_at': skus[0].created_at if skus else None,
         'id': skus[0].id if skus else None,
@@ -140,7 +138,7 @@ def view_product(product_name):
     return render_template('products/view_product.html', 
                          product=product,
                          product_name=product_name,
-                         product_base_unit=skus[0].product_base_unit if skus else None,
+                         product_base_unit=skus[0].unit if skus else None,
                          variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
@@ -151,10 +149,10 @@ def view_product(product_name):
 def edit_product(product_name):
     """Edit product details"""
     name = request.form.get('name')
-    product_base_unit = request.form.get('product_base_unit')
+    unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-    if not name or not product_base_unit:
+    if not name or not unit:
         flash('Name and product base unit are required', 'error')
         return redirect(url_for('products.view_product', product_name=product_name))
 
@@ -171,7 +169,7 @@ def edit_product(product_name):
     skus = ProductSKU.query.filter_by(product_name=product_name).all()
     for sku in skus:
         sku.product_name = name
-        sku.product_base_unit = product_base_unit
+        sku.unit = unit
         sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
     db.session.commit()

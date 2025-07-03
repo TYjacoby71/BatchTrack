@@ -10,24 +10,24 @@ class ProductService:
         # Group by product_name and aggregate quantities
         product_summaries = db.session.query(
             ProductSKU.product_name,
-            ProductSKU.product_base_unit,
+            ProductSKU.unit,
             func.sum(ProductSKU.current_quantity).label('total_quantity'),
             func.count(ProductSKU.id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
-            func.max(ProductSKU.last_updated).label('last_updated')
+            func.max(ProductSKU.updated_at).label('last_updated')
         ).filter(
             ProductSKU.is_active == True,
             ProductSKU.is_product_active == True
         ).group_by(
             ProductSKU.product_name,
-            ProductSKU.product_base_unit
+            ProductSKU.unit
         ).all()
 
         products = []
         for summary in product_summaries:
             products.append({
                 'product_name': summary.product_name,
-                'product_base_unit': summary.product_base_unit,
+                'product_base_unit': summary.unit,
                 'total_quantity': float(summary.total_quantity or 0),
                 'sku_count': summary.sku_count,
                 'low_stock_threshold': float(summary.low_stock_threshold or 0),
@@ -59,17 +59,15 @@ class ProductService:
 
         # Get product base unit from existing SKUs
         existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-        product_base_unit = existing_sku.product_base_unit if existing_sku else (unit or 'g')
+        product_base_unit = existing_sku.unit if existing_sku else (unit or 'g')
 
         # Create new SKU
         sku = ProductSKU(
             product_name=product_name,
-            product_base_unit=product_base_unit,
             variant_name=variant_name,
             size_label=size_label,
             unit=unit or product_base_unit,
-            sku_code=sku_code,
-            variant_description=variant_description
+            sku_code=sku_code
         )
 
         db.session.add(sku)
