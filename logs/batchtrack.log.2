@@ -1,4 +1,4 @@
-2025-07-03 21:11:02,466 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-03 21:13:32,815 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -77,5 +77,6 @@ FROM product_sku
 WHERE product_sku.low_stock_threshold > ? AND product_sku.current_quantity <= product_sku.low_stock_threshold AND product_sku.is_active = 1]
 [parameters: (0,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-07-03 21:13:05,089 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 21:13:32,389 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 21:14:46,139 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 21:14:54,568 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 21:23:54,956 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
