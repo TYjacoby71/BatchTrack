@@ -1,12 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
-
-products_bp = Blueprint('products', __name__, url_prefix='/products')
+from . import products_bp
 
 @products_bp.route('/')
 @products_bp.route('/list')
