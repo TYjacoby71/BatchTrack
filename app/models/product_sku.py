@@ -10,12 +10,16 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     
-    # CORE PRODUCT IDENTIFICATION
-    product_name = db.Column(db.String(128), nullable=False)
-    variant_name = db.Column(db.String(128), nullable=False)
-    size_label = db.Column(db.String(64), nullable=False)
+    # CORE PRODUCT IDENTIFICATION - Now using foreign keys
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=False)
+    size_label = db.Column(db.String(64), nullable=False, default='Bulk')
     sku_code = db.Column(db.String(64), unique=True, nullable=False)
     sku_name = db.Column(db.String(128), nullable=True)  # Optional human-readable name override
+    
+    # LEGACY FIELDS - Keep for backward compatibility during migration
+    product_name = db.Column(db.String(128), nullable=True)  # Will be removed after migration
+    variant_name = db.Column(db.String(128), nullable=True)  # Will be removed after migration
     
     # INVENTORY TRACKING - SINGLE SOURCE OF TRUTH
     current_quantity = db.Column(db.Float, default=0.0)  # Sum of all history entries
@@ -87,7 +91,15 @@ class ProductSKU(ScopedModelMixin, db.Model):
         """Human-readable SKU name"""
         if self.sku_name:
             return self.sku_name
-        return f"{self.product_name} - {self.variant_name} - {self.size_label}"
+        # Use relationships if available, fall back to legacy fields
+        product_name = self.product.name if self.product else self.product_name
+        variant_name = self.variant.name if self.variant else self.variant_name
+        return f"{product_name} - {variant_name} - {self.size_label}"
+    
+    @property
+    def product_base_unit(self):
+        """Get the base unit from the parent product"""
+        return self.product.base_unit if self.product else self.unit
     
     @property
     def is_low_stock(self):
@@ -151,11 +163,10 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     # Table constraints
     __table_args__ = (
-        db.UniqueConstraint('product_name', 'variant_name', 'size_label', 'fifo_id', name='unique_sku_fifo_combination'),
+        db.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_fifo_combination'),
         db.UniqueConstraint('barcode', name='unique_barcode'),
         db.UniqueConstraint('upc', name='unique_upc'),
-        db.Index('idx_product_name', 'product_name'),
-        db.Index('idx_variant_name', 'variant_name'),
+        db.Index('idx_product_variant', 'product_id', 'variant_id'),
         db.Index('idx_active_skus', 'is_active', 'is_product_active'),
         db.Index('idx_batch_fifo', 'batch_id', 'fifo_id'),
         db.Index('idx_low_stock', 'current_quantity', 'low_stock_threshold'),
@@ -167,6 +178,9 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.Index('idx_marketplace_sync', 'marketplace_sync_status'),
         db.Index('idx_location', 'location_id'),
         db.Index('idx_discontinued', 'is_discontinued'),
+        # Legacy indexes for backward compatibility
+        db.Index('idx_legacy_product_name', 'product_name'),
+        db.Index('idx_legacy_variant_name', 'variant_name'),
     )
     
     def __repr__(self):
