@@ -64,17 +64,9 @@ def get_product_variants(product_id):
 
         variant_list = []
         for variant_name, sku_id in variants:
-            if variant_name:  # Only add non-null variant names
-                variant_list.append({
-                    'id': sku_id,
-                    'name': variant_name
-                })
-        
-        # If no variants found, add a default Base variant
-        if not variant_list:
             variant_list.append({
-                'id': base_sku.id,
-                'name': 'Base'
+                'id': sku_id,
+                'name': variant_name
             })
 
         return jsonify(variant_list)
