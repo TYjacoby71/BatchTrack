@@ -106,6 +106,17 @@ class ProductInventoryService:
         remaining_to_deduct = quantity
         old_quantity = sku.current_quantity
 
+        # Ensure notes is a string (handle case where dict is passed)
+        notes_str = notes
+        if isinstance(notes, dict):
+            # Convert dict to string representation
+            notes_str = f"User notes: {notes.get('user_notes', '')}, Sale price: {notes.get('sale_price', 0.0)}, Customer: {notes.get('customer', '')}, Unit cost: {notes.get('unit_cost', 0.0)}"
+        elif not isinstance(notes, str):
+            notes_str = str(notes)
+
+        # Track total deducted so far for progressive quantity tracking
+        total_deducted_so_far = 0
+
         # Execute FIFO deductions
         for entry in fifo_entries:
             if remaining_to_deduct <= 0:
@@ -114,20 +125,7 @@ class ProductInventoryService:
             deduct_amount = min(entry.remaining_quantity, remaining_to_deduct)
             entry.remaining_quantity -= deduct_amount
             remaining_to_deduct -= deduct_amount
-
-            # Ensure notes is a string (handle case where dict is passed)
-            notes_str = notes
-            if isinstance(notes, dict):
-                # Convert dict to string representation
-                notes_str = f"User notes: {notes.get('user_notes', '')}, Sale price: {notes.get('sale_price', 0.0)}, Customer: {notes.get('customer', '')}, Unit cost: {notes.get('unit_cost', 0.0)}"
-            elif not isinstance(notes, str):
-                notes_str = str(notes)
-
-            # Track quantities before this deduction for history
-            old_qty_for_history = sku.current_quantity
-            
-            # Update the main SKU quantity (single source of truth)
-            sku.current_quantity = max(0, sku.current_quantity - deduct_amount)
+            total_deducted_so_far += deduct_amount
 
             # Create individual deduction history for each FIFO entry used
             deduction_history = ProductSKUHistory(
@@ -135,8 +133,8 @@ class ProductInventoryService:
                 timestamp=datetime.utcnow(),
                 change_type=change_type,
                 quantity_change=-deduct_amount,
-                old_quantity=old_qty_for_history,
-                new_quantity=sku.current_quantity,
+                old_quantity=old_quantity - (total_deducted_so_far - deduct_amount),  # Quantity before this specific deduction
+                new_quantity=old_quantity - total_deducted_so_far,  # Quantity after this specific deduction
                 remaining_quantity=0,  # Deductions don't have remaining
                 unit=sku.unit,
                 unit_cost=entry.unit_cost,  # Use cost from original FIFO entry
@@ -155,7 +153,10 @@ class ProductInventoryService:
             )
             db.session.add(deduction_history)
 
-        # Update timestamp (quantity already updated in loop)
+        # Update the main SKU quantity ONCE after all FIFO deductions (single source of truth)
+        sku.current_quantity = max(0, old_quantity - quantity)
+
+        # Update timestamp
         sku.last_updated = datetime.utcnow()
 
         return True

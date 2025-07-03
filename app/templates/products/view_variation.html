@@ -29,7 +29,7 @@
               {% for group_key, group in size_groups.items() %}
                 {% if group.size_label and group.size_label != 'Bulk' %}
                   {% set total_packaged = total_packaged + group.total_quantity %}
-                {% else %}
+                {% elif group.size_label == 'Bulk' or not group.size_label %}
                   {% set total_bulk = total_bulk + group.total_quantity %}
                 {% endif %}
               {% endfor %}
@@ -84,7 +84,7 @@
                   <tr>
                     <th>Size Label</th>
                     <th>Unit</th>
-                    <th>Quantity Remaining</th>
+                    <th>Total Available</th>
                     <th>Total Cost</th>
                     <th>Total Value</th>
                     <th>Actions</th>

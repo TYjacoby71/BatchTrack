@@ -173,10 +173,10 @@ function generateFormFields(actionType) {
 
     // Common quantity field
     fields += `
-        <div class="col-md-4">
+        <div class="col-md-6">
             <label class="form-label">Quantity</label>
             <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
-            <small class="text-muted">${skuData.unit}</small>
+            <small class="text-muted">${skuData.unit} (Available: ${skuData.availableQuantity})</small>
         </div>
     `;
 
@@ -184,161 +184,52 @@ function generateFormFields(actionType) {
     switch(actionType) {
         case 'sale':
             fields += `
-                <div class="col-md-4">
-                    <label class="form-label">Sale Price</label>
-                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
-                    <small class="text-muted">Per ${skuData.unit}</small>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Customer</label>
-                    <input type="text" class="form-control" name="customer" placeholder="Customer name">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Order ID, payment method, etc.">
-                </div>
-            `;
-            break;
-
-        case 'gift':
-            fields += `
-                <div class="col-md-4">
-                    <label class="form-label">Sale Price</label>
-                    <input type="number" class="form-control" name="sale_price" value="0.00" readonly>
-                    <small class="text-muted">Gifts have $0 sale price</small>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Recipient</label>
-                    <input type="text" class="form-control" name="customer" placeholder="Gift recipient">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Reason for gift, event, etc.">
+                <div class="col-md-6">
+                    <label class="form-label">Order ID (Optional)</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Shopify order #1234">
                 </div>
             `;
             break;
 
         case 'restock':
             fields += `
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Unit Cost</label>
                     <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
                     <small class="text-muted">Cost per ${skuData.unit}</small>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Supplier</label>
-                    <input type="text" class="form-control" name="supplier" placeholder="Supplier name">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Purchase order, batch info, etc.">
-                </div>
-            `;
-            break;
-
-        case 'damaged':
-            fields += `
-                <div class="col-md-4">
-                    <label class="form-label">Damage Type</label>
-                    <select class="form-select" name="damage_type">
-                        <option value="broken">Broken/Cracked</option>
-                        <option value="contaminated">Contaminated</option>
-                        <option value="expired">Expired</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Unit Cost</label>
-                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
-                    <small class="text-muted">Original cost tracked</small>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Damage Description</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Describe what happened..." required>
-                </div>
-            `;
-            break;
-
-        case 'return':
-            fields += `
-                <div class="col-md-4">
-                    <label class="form-label">Return Credit</label>
-                    <input type="number" class="form-control" name="sale_price" step="0.01" min="0" value="${skuData.retailPrice}">
-                    <small class="text-muted">Credit amount</small>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Customer</label>
-                    <input type="text" class="form-control" name="customer" placeholder="Returning customer">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Return Reason</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Reason for return..." required>
-                </div>
-            `;
-            break;
-
-        case 'spoil':
-            fields += `
-                <div class="col-md-4">
-                    <label class="form-label">Spoilage Type</label>
-                    <select class="form-select" name="spoil_type">
-                        <option value="expired">Expired</option>
-                        <option value="contaminated">Contaminated</option>
-                        <option value="temperature">Temperature Issue</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Unit Cost</label>
-                    <input type="number" class="form-control" name="unit_cost" value="${skuData.unitCost}" readonly>
-                    <small class="text-muted">Loss tracked at cost</small>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Spoilage Details</label>
-                    <input type="text" class="form-control" name="notes" placeholder="What caused the spoilage?" required>
-                </div>
-            `;
-            break;
-
-        case 'recount':
-            fields += `
-                <div class="col-md-4">
-                    <label class="form-label">New Total Quantity</label>
-                    <input type="number" class="form-control" name="quantity" step="0.01" min="0" placeholder="Enter actual count">
-                    <small class="text-muted">Current: ${skuData.currentQuantity} ${skuData.unit}</small>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Count Method</label>
-                    <select class="form-select" name="count_method">
-                        <option value="physical">Physical Count</option>
-                        <option value="system">System Adjustment</option>
-                        <option value="audit">Audit Count</option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Recount Reason</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Why was this recount needed?" required>
                 </div>
             `;
             break;
 
         case 'adjustment':
             fields += `
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Adjustment Type</label>
-                    <select class="form-select" name="adjustment_type">
-                        <option value="increase">Increase Stock</option>
-                        <option value="decrease">Decrease Stock</option>
+                    <select class="form-select" name="adjustment_type" required>
+                        <option value="increase">Increase Stock (+)</option>
+                        <option value="decrease">Decrease Stock (-)</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Unit Cost</label>
-                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
-                    <small class="text-muted">Cost per ${skuData.unit}</small>
+                <div class="col-12">
+                    <label class="form-label">Reason</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Reason for adjustment..." required>
+                </div>
+            `;
+            break;
+
+        case 'return':
+            fields += `
+                <div class="col-md-6">
+                    <label class="form-label">Return Source</label>
+                    <select class="form-select" name="return_source">
+                        <option value="shopify">Shopify Return</option>
+                        <option value="manual">Manual Return</option>
+                        <option value="damaged">Damaged Return</option>
+                    </select>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Adjustment Reason</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Reason for manual adjustment..." required>
+                    <label class="form-label">Return Details</label>
+                    <input type="text" class="form-control" name="notes" placeholder="Return reason, order ID, etc.">
                 </div>
             `;
             break;
