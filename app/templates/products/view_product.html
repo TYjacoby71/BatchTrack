@@ -37,7 +37,7 @@
                 <i class="fas fa-edit"></i> Edit Product
               </a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct('{{ product.name }}', '{{ product.name }}')">
+              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteProduct('{{ product.id }}', '{{ product.name }}')">
                 <i class="fas fa-trash"></i> Delete Product
               </a></li>
             </ul>
@@ -188,7 +188,7 @@
         <h5 class="modal-title">Edit Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_product', product_name=product.name) }}">
+      <form method="POST" action="{{ url_for('products.edit_product', product_id=product.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="main_csrf_token">
         <div class="modal-body">
           <div class="mb-3">
@@ -348,11 +348,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    window.confirmDeleteProduct = function(productName, displayName) {
+    window.confirmDeleteProduct = function(productId, displayName) {
         if (confirm(`Are you sure you want to delete "${displayName}"? This cannot be undone.`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/products/${encodeURIComponent(productName)}/delete`;
+            form.action = `/products/${productId}/delete`;
 
             const csrfToken = document.querySelector('input[name="csrf_token"]');
             if (csrfToken) {
