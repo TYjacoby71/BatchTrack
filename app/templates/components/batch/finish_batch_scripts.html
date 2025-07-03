@@ -162,12 +162,39 @@ function updateTotals() {
   }
 }
 
+async function loadProducts() {
+    const productDropdown = document.getElementById('productDropdown');
+    
+    if (!productDropdown) {
+        console.log('Product dropdown not found');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/products');
+        const products = await response.json();
+
+        // Clear existing options except the first
+        productDropdown.innerHTML = '<option value="">Select Product...</option>';
+
+        products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.id;
+            option.textContent = product.name;
+            option.dataset.baseUnit = product.product_base_unit;
+            productDropdown.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading products:', error);
+    }
+}
+
 async function loadVariants() {
     const productDropdown = document.getElementById('productDropdown');
     const variantDropdown = document.getElementById('variantDropdown');
 
     if (!productDropdown || !variantDropdown) {
-        console.error('Product or variant dropdown not found');
+        console.log('Product or variant dropdown not found');
         return;
     }
 
@@ -175,18 +202,18 @@ async function loadVariants() {
     variantDropdown.innerHTML = '<option value="">Select variant...</option>';
     variantDropdown.disabled = true;
 
-    const selectedProduct = productDropdown.value;
-    if (!selectedProduct) return;
+    const selectedProductId = productDropdown.value;
+    if (!selectedProductId) return;
 
     try {
-        const response = await fetch(`/api/products/${encodeURIComponent(selectedProduct)}/variants`);
-        const data = await response.json();
+        const response = await fetch(`/api/products/${selectedProductId}/variants`);
+        const variants = await response.json();
 
-        if (data.variants && data.variants.length > 0) {
+        if (variants && variants.length > 0) {
             variantDropdown.disabled = false;
-            data.variants.forEach(variant => {
+            variants.forEach(variant => {
                 const option = document.createElement('option');
-                option.value = variant.name;
+                option.value = variant.id;
                 option.textContent = variant.name;
                 variantDropdown.appendChild(option);
             });
@@ -281,10 +308,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // Initialize shelf life toggle (safe for all batch types)
       toggleShelfLife();
 
-      // Load variants if product fields exist
-      const productSelect = document.getElementById('product_id');
-      if (productSelect) {
-        loadVariants();
+      // Load products if product fields exist
+      const productDropdown = document.getElementById('productDropdown');
+      if (productDropdown) {
+        loadProducts();
       }
 
       // Only validate yield if the input exists and batch has containers
