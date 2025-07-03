@@ -1,4 +1,3 @@
-
 <script>
 function toggleShelfLife() {
   const isPerishable = document.getElementById('is_perishable');
@@ -163,25 +162,38 @@ function updateTotals() {
   }
 }
 
-function loadVariants() {
-  const productSelect = document.getElementById('product_id');
-  const variantSelect = document.getElementById('variant_label');
+async function loadVariants() {
+    const productDropdown = document.getElementById('productDropdown');
+    const variantDropdown = document.getElementById('variantDropdown');
 
-  // Only proceed if both elements exist (they won't exist for ingredient batches)
-  if (!productSelect || !variantSelect) {
-    return;
-  }
+    if (!productDropdown || !variantDropdown) {
+        console.error('Product or variant dropdown not found');
+        return;
+    }
 
-  const selectedOption = productSelect.options[productSelect.selectedIndex];
+    // Clear existing options
+    variantDropdown.innerHTML = '<option value="">Select variant...</option>';
+    variantDropdown.disabled = true;
 
-  if (!selectedOption || !selectedOption.value) {
-    variantSelect.innerHTML = '<option value="">Select product first...</option>';
-    return;
-  }
+    const selectedProduct = productDropdown.value;
+    if (!selectedProduct) return;
 
-  // Since we're using the add from batch route, we don't need to fetch variants dynamically
-  // The variants will be handled by the product inventory system
-  variantSelect.innerHTML = '<option value="Base">Base</option>';
+    try {
+        const response = await fetch(`/api/products/${encodeURIComponent(selectedProduct)}/variants`);
+        const data = await response.json();
+
+        if (data.variants && data.variants.length > 0) {
+            variantDropdown.disabled = false;
+            data.variants.forEach(variant => {
+                const option = document.createElement('option');
+                option.value = variant.name;
+                option.textContent = variant.name;
+                variantDropdown.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading variants:', error);
+    }
 }
 
 function updateContainerSummary() {
