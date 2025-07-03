@@ -46,6 +46,10 @@ def process_inventory_adjustment(
     cost_override=None,
     custom_expiration_date=None,
     custom_shelf_life_days=None,
+    item_type=None,  # 'ingredient', 'container', 'sku'
+    customer=None,  # For sales tracking
+    sale_price=None,  # For sales tracking
+    order_id=None,  # For marketplace integration
 ):
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
@@ -59,11 +63,23 @@ def process_inventory_adjustment(
             raise ValueError(conversion['error'])
         quantity = conversion['result']['converted_value']
 
-    # Determine quantity change
+    # Determine quantity change and special handling
     if change_type == 'recount':
         qty_change = quantity - item.quantity
-    elif change_type in ['spoil', 'trash']:
+    elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
         qty_change = -abs(quantity)
+    elif change_type == 'reserved':
+        # Special handling: move from current to reserved, don't change total
+        if hasattr(item, 'reserved_quantity'):
+            item.reserved_quantity = (item.reserved_quantity or 0) + quantity
+            item.current_quantity = (item.current_quantity or 0) - quantity
+            # Create history entry but don't change total inventory
+            qty_change = 0
+        else:
+            raise ValueError("Item type doesn't support reservations")
+    elif change_type == 'returned':
+        # Return from sale - add back to inventory
+        qty_change = quantity
     else:
         qty_change = quantity
 
@@ -109,8 +125,8 @@ def process_inventory_adjustment(
 
     # Deductions
     if qty_change < 0:
-        # For spoil/trash operations, allow targeting expired lots specifically
-        if change_type in ['spoil', 'trash']:
+        # For spoil/trash/expired_disposal operations, allow targeting expired lots specifically
+        if change_type in ['spoil', 'trash', 'expired_disposal']:
             from app.blueprints.fifo.services import get_expired_fifo_entries
             expired_entries = get_expired_fifo_entries(item.id)
             
@@ -152,20 +168,39 @@ def process_inventory_adjustment(
             # Only set quantity_used for actual consumption (spoil, trash, batch usage)
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type=change_type,
-                quantity_change=-deduction_amount,
-                unit=history_unit,  # Record original unit used, default to 'count' for containers
-                remaining_quantity=0,
-                fifo_reference_id=entry_id,
-                unit_cost=cost_per_unit,
-                note=f"{used_for_note} (From FIFO #{entry_id})",
-                created_by=created_by,
-                quantity_used=quantity_used_value,  # Only set for actual consumption
-                used_for_batch_id=batch_id,
-                organization_id=current_user.organization_id
-            )
+            # Create appropriate history entry based on item type
+            if item_type == 'sku':
+                from app.models.product_sku import ProductSKUHistory
+                history = ProductSKUHistory(
+                    sku_id=item.id,
+                    change_type=change_type,
+                    quantity_change=-deduction_amount,
+                    unit=history_unit,
+                    remaining_quantity=0,
+                    fifo_reference_id=entry_id,
+                    unit_cost=cost_per_unit,
+                    notes=f"{used_for_note} (From FIFO #{entry_id})",
+                    created_by=created_by,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id,
+                    organization_id=current_user.organization_id
+                )
+            else:
+                history = InventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=-deduction_amount,
+                    unit=history_unit,  # Record original unit used, default to 'count' for containers
+                    remaining_quantity=0,
+                    fifo_reference_id=entry_id,
+                    unit_cost=cost_per_unit,
+                    note=f"{used_for_note} (From FIFO #{entry_id})",
+                    created_by=created_by,
+                    quantity_used=quantity_used_value,  # Only set for actual consumption
+                    used_for_batch_id=batch_id,
+                    organization_id=current_user.organization_id
+                )
             db.session.add(history)
         item.quantity += qty_change
 
