@@ -180,7 +180,7 @@
         <h5 class="modal-title">Edit Variation</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_variant', product_name=product.name, variant_name=variation.name) }}">
+      <form method="POST" action="{{ url_for('products.edit_variant', product_id=product.id, variant_name=variation.name) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
@@ -194,7 +194,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-danger" onclick="confirmDeleteVariant('{{ product.name }}', '{{ variation.name }}')">
+          <button type="button" class="btn btn-danger" onclick="confirmDeleteVariant('{{ product.id }}', '{{ variation.name }}')">
             <i class="fas fa-trash"></i> Delete Variant
           </button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -249,11 +249,11 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
     // Global functions
-    window.confirmDeleteVariant = function(productName, variantName) {
+    window.confirmDeleteVariant = function(productId, variantName) {
         if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/products/${encodeURIComponent(productName)}/variant/${encodeURIComponent(variantName)}/delete`;
+            form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
 
             const csrfToken = document.querySelector('input[name="csrf_token"]');
             if (csrfToken) {

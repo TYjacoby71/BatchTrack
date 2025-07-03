@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
@@ -7,8 +7,19 @@ from . import products_bp
 
 @products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
-def add_variant(product_name):
+def add_variant(product_id):
     """Quick add new product variant via AJAX"""
+    # Get the product name from product_id
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        return jsonify({'error': 'Product not found'}), 404
+        
+    product_name = base_sku.product_name
+    
     if request.is_json:
         data = request.get_json()
         variant_name = data.get('name')
@@ -124,15 +135,28 @@ def add_variant(product_name):
         db.session.rollback()
         return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
-@products_bp.route('/<product_name>/variant/<variant_name>')
+@products_bp.route('/<int:product_id>/variant/<variant_name>')
 @login_required
-def view_variant(product_name, variant_name):
+def view_variant(product_id, variant_name):
     """View individual product variation details"""
+    # Get the product name from product_id
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+        
+    product_name = base_sku.product_name
+    
     # Get all SKUs for this product/variant combination
     skus = ProductSKU.query.filter_by(
         product_name=product_name,
         variant_name=variant_name,
-        is_active=True
+        is_active=True,
+        organization_id=current_user.organization_id
     ).all()
 
     if not skus:
@@ -193,36 +217,50 @@ def view_variant(product_name, variant_name):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<product_name>/variant/<variant_name>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
-def edit_variant(product_name, variant_name):
+def edit_variant(product_id, variant_name):
     """Edit product variation details"""
+    # Get the product name from product_id
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+        
+    product_name = base_sku.product_name
+    
     name = request.form.get('name')
     description = request.form.get('description')
 
     if not name:
         flash('Variant name is required', 'error')
         return redirect(url_for('products.view_variant', 
-                               product_name=product_name, 
+                               product_id=product_id, 
                                variant_name=variant_name))
 
     # Check if another variant has this name for the same product
     existing = ProductSKU.query.filter(
         ProductSKU.variant_name == name,
         ProductSKU.product_name == product_name,
-        ProductSKU.variant_name != variant_name
+        ProductSKU.variant_name != variant_name,
+        ProductSKU.organization_id == current_user.organization_id
     ).first()
 
     if existing:
         flash('Another variant with this name already exists for this product', 'error')
         return redirect(url_for('products.view_variant', 
-                               product_name=product_name, 
+                               product_id=product_id, 
                                variant_name=variant_name))
 
     # Update all SKUs with this variant name
     skus = ProductSKU.query.filter_by(
         product_name=product_name,
-        variant_name=variant_name
+        variant_name=variant_name,
+        organization_id=current_user.organization_id
     ).all()
 
     for sku in skus:
@@ -233,29 +271,42 @@ def edit_variant(product_name, variant_name):
     flash('Variant updated successfully', 'success')
 
     return redirect(url_for('products.view_variant', 
-                           product_name=product_name, 
+                           product_id=product_id, 
                            variant_name=name))
 
-@products_bp.route('/<product_name>/variant/<variant_name>/delete', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<variant_name>/delete', methods=['POST'])
 @login_required
-def delete_variant(product_name, variant_name):
+def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
+    # Get the product name from product_id
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+        
+    product_name = base_sku.product_name
+    
     # Get all SKUs for this variant
     skus = ProductSKU.query.filter_by(
         product_name=product_name,
-        variant_name=variant_name
+        variant_name=variant_name,
+        organization_id=current_user.organization_id
     ).all()
 
     if not skus:
         flash('Variant not found', 'error')
-        return redirect(url_for('products.view_product', product_name=product_name))
+        return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if any SKUs have inventory
     has_inventory = any(sku.current_quantity > 0 for sku in skus)
     if has_inventory:
         flash('Cannot delete variant with existing inventory', 'error')
         return redirect(url_for('products.view_variant', 
-                               product_name=product_name, 
+                               product_id=product_id, 
                                variant_name=variant_name))
 
     # Delete all SKUs for this variant
@@ -267,7 +318,8 @@ def delete_variant(product_name, variant_name):
     # Check if this was the last variant for the product
     remaining_variants = ProductSKU.query.filter_by(
         product_name=product_name,
-        is_active=True
+        is_active=True,
+        organization_id=current_user.organization_id
     ).count()
 
     if remaining_variants == 0:
@@ -278,4 +330,4 @@ def delete_variant(product_name, variant_name):
     else:
         flash(f'Variant "{variant_name}" deleted successfully', 'success')
 
-    return redirect(url_for('products.view_product', product_name=product_name))
+    return redirect(url_for('products.view_product', product_id=product_id))
