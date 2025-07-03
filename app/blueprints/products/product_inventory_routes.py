@@ -1,11 +1,251 @@
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 
 product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products/inventory')
+
+@product_inventory_bp.route('/adjust/<int:sku_id>', methods=['POST'])
+@login_required
+def adjust_sku_inventory(sku_id):
+    """Comprehensive SKU inventory adjustment endpoint"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        if request.is_json:
+            return jsonify({'error': 'SKU not found'}), 404
+        flash('SKU not found', 'error')
+        return redirect(url_for('products.product_list'))
+    
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.get_json()
+        quantity = data.get('quantity')
+        change_type = data.get('change_type')
+        notes = data.get('notes')
+        unit = data.get('unit', sku.unit)
+        customer = data.get('customer')
+        sale_price = data.get('sale_price')
+        order_id = data.get('order_id')
+        cost_override = data.get('cost_override')
+    else:
+        quantity = request.form.get('quantity')
+        change_type = request.form.get('change_type')
+        notes = request.form.get('notes')
+        unit = request.form.get('unit', sku.unit)
+        customer = request.form.get('customer')
+        sale_price = request.form.get('sale_price')
+        order_id = request.form.get('order_id')
+        cost_override = request.form.get('cost_override')
+
+    # Validate required fields
+    if not quantity or not change_type:
+        error_msg = 'Quantity and change type are required'
+        if request.is_json:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return redirect(url_for('products.view_sku', sku_id=sku_id))
+
+    try:
+        # Convert numeric values
+        quantity = float(quantity)
+        sale_price_float = float(sale_price) if sale_price else None
+        cost_override_float = float(cost_override) if cost_override else None
+
+        # Use centralized inventory adjustment service
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='sku',
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id,
+            cost_override=cost_override_float
+        )
+
+        if success:
+            message = f'SKU inventory adjusted successfully'
+            if request.is_json:
+                return jsonify({
+                    'success': True,
+                    'message': message,
+                    'new_quantity': sku.current_quantity
+                })
+            flash(message, 'success')
+        else:
+            error_msg = 'Error adjusting inventory'
+            if request.is_json:
+                return jsonify({'error': error_msg}), 500
+            flash(error_msg, 'error')
+
+    except ValueError as e:
+        error_msg = str(e)
+        if request.is_json:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f'Error adjusting inventory: {str(e)}'
+        if request.is_json:
+            return jsonify({'error': error_msg}), 500
+        flash(error_msg, 'error')
+
+    # Redirect for form submissions
+    if not request.is_json:
+        return redirect(url_for('products.view_sku', sku_id=sku_id))
+
+@product_inventory_bp.route('/webhook/sale', methods=['POST'])
+@login_required
+def process_sale_webhook():
+    """Process sales from external systems (Shopify, Etsy, etc.)"""
+    if not request.is_json:
+        return jsonify({'error': 'JSON data required'}), 400
+    
+    data = request.get_json()
+    
+    # Validate webhook data
+    required_fields = ['sku_code', 'quantity', 'sale_price']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Find SKU by code
+    sku = ProductSKU.query.filter_by(
+        sku_code=data['sku_code'],
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+    
+    try:
+        success = process_inventory_adjustment(
+            item_id=sku.id,
+            quantity=float(data['quantity']),
+            change_type='sold',
+            unit=sku.unit,
+            notes=f"Sale from {data.get('source', 'external system')}",
+            created_by=current_user.id,
+            item_type='sku',
+            customer=data.get('customer'),
+            sale_price=float(data['sale_price']),
+            order_id=data.get('order_id')
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Sale processed successfully',
+                'remaining_quantity': sku.current_quantity
+            })
+        else:
+            return jsonify({'error': 'Failed to process sale'}), 500
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@product_inventory_bp.route('/webhook/return', methods=['POST'])
+@login_required
+def process_return_webhook():
+    """Process returns from external systems"""
+    if not request.is_json:
+        return jsonify({'error': 'JSON data required'}), 400
+    
+    data = request.get_json()
+    
+    # Validate webhook data
+    required_fields = ['sku_code', 'quantity']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Find SKU by code
+    sku = ProductSKU.query.filter_by(
+        sku_code=data['sku_code'],
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+    
+    try:
+        success = process_inventory_adjustment(
+            item_id=sku.id,
+            quantity=float(data['quantity']),
+            change_type='returned',
+            unit=sku.unit,
+            notes=f"Return from {data.get('source', 'external system')}",
+            created_by=current_user.id,
+            item_type='sku',
+            customer=data.get('customer'),
+            order_id=data.get('original_order_id')
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Return processed successfully',
+                'new_quantity': sku.current_quantity
+            })
+        else:
+            return jsonify({'error': 'Failed to process return'}), 500
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@product_inventory_bp.route('/reserve/<int:sku_id>', methods=['POST'])
+@login_required
+def reserve_inventory(sku_id):
+    """Reserve inventory for pending orders"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+    
+    data = request.get_json() if request.is_json else request.form
+    quantity = data.get('quantity')
+    notes = data.get('notes', 'Inventory reservation')
+    
+    if not quantity:
+        return jsonify({'error': 'Quantity is required'}), 400
+    
+    try:
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=float(quantity),
+            change_type='reserved',
+            unit=sku.unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='sku',
+            order_id=data.get('order_id')
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Inventory reserved successfully',
+                'available_quantity': sku.current_quantity,
+                'reserved_quantity': getattr(sku, 'reserved_quantity', 0)
+            })
+        else:
+            return jsonify({'error': 'Failed to reserve inventory'}), 500
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @product_inventory_bp.route('/add-from-batch', methods=['POST'])
 @login_required
