@@ -42,8 +42,15 @@ def get_products():
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
-        # Get the product name from the product_id (first SKU)
-        base_sku = ProductSKU.query.get_or_404(product_id)
+        # Get the product name from the product_id (first SKU) - with org scoping
+        base_sku = ProductSKU.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not base_sku:
+            return jsonify({'error': 'Product not found'}), 404
+            
         product_name = base_sku.product_name
         
         variants = db.session.query(
@@ -112,13 +119,17 @@ def quick_add_product():
         return jsonify({'error': 'Product name is required'}), 400
 
     try:
-        # Get or create the SKU
+        # Get or create the SKU with organization scoping
         sku = ProductService.get_or_create_sku(
             product_name=product_name,
             variant_name=variant_name or 'Base',
             size_label='Bulk',
             unit=product_base_unit
         )
+        
+        # Ensure the SKU belongs to the current user's organization
+        if not sku.organization_id:
+            sku.organization_id = current_user.organization_id
 
         db.session.commit()
 
@@ -163,9 +174,12 @@ def add_inventory_from_batch():
         return jsonify({'error': 'Batch ID and Product ID or Name are required'}), 400
 
     try:
-        # Get product name from ID if provided
+        # Get product name from ID if provided - with org scoping
         if product_id:
-            base_sku = ProductSKU.query.get(product_id)
+            base_sku = ProductSKU.query.filter_by(
+                id=product_id,
+                organization_id=current_user.organization_id
+            ).first()
             if not base_sku:
                 return jsonify({'error': 'Product not found'}), 404
             product_name = base_sku.product_name
@@ -205,9 +219,16 @@ def add_inventory_from_batch():
 
 @products_api_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
-def adjust_sku_inventory():
+def adjust_sku_inventory(sku_id):
     """Adjust SKU inventory via API"""
-    sku = ProductSKU.query.get_or_404(sku_id)
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+        
     data = request.get_json()
     
     quantity = data.get('quantity')

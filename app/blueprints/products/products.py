@@ -109,14 +109,23 @@ def view_product(product_id):
     """View product details with all SKUs by product ID"""
     from ...services.product_service import ProductService
 
-    # Get the base SKU to find the product name
-    base_sku = ProductSKU.query.get_or_404(product_id)
+    # Get the base SKU to find the product name - with org scoping
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+        
     product_name = base_sku.product_name
 
-    # Get all SKUs for this product
+    # Get all SKUs for this product - with org scoping
     skus = ProductSKU.query.filter_by(
         product_name=product_name,
-        is_active=True
+        is_active=True,
+        organization_id=current_user.organization_id
     ).all()
 
     if not skus:
@@ -202,8 +211,16 @@ def view_sku(sku_id):
 @login_required
 def edit_product(product_id):
     """Edit product details by product ID"""
-    # Get the base SKU to find the product name
-    base_sku = ProductSKU.query.get_or_404(product_id)
+    # Get the base SKU to find the product name - with org scoping
+    base_sku = ProductSKU.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not base_sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+        
     current_product_name = base_sku.product_name
     
     name = request.form.get('name')
@@ -239,12 +256,23 @@ def edit_product(product_id):
 def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
-        # Get the base SKU to find the product name
-        base_sku = ProductSKU.query.get_or_404(product_id)
+        # Get the base SKU to find the product name - with org scoping
+        base_sku = ProductSKU.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not base_sku:
+            flash('Product not found', 'error')
+            return redirect(url_for('products.product_list'))
+            
         product_name = base_sku.product_name
         
-        # Get all SKUs for this product
-        skus = ProductSKU.query.filter_by(product_name=product_name).all()
+        # Get all SKUs for this product - with org scoping
+        skus = ProductSKU.query.filter_by(
+            product_name=product_name,
+            organization_id=current_user.organization_id
+        ).all()
 
         if not skus:
             flash('Product not found', 'error')
@@ -276,7 +304,14 @@ def delete_product(product_id):
 @login_required
 def adjust_sku(sku_id):
     """Adjust SKU inventory"""
-    sku = ProductSKU.query.get_or_404(sku_id)
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        flash('SKU not found', 'error')
+        return redirect(url_for('products.product_list'))
     quantity = int(request.form.get('quantity'))
     change_type = request.form.get('change_type')
     notes = request.form.get('notes')
