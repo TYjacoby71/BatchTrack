@@ -52,57 +52,8 @@ function validateYield() {
     return;
   }
 
-  // Call the validation service
-  fetch(`/api/batches/{{ batch.id }}/validate-yield`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCSRFToken()
-    },
-    body: JSON.stringify({
-      estimated_yield: finalQuantity
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    let alertsHtml = '';
-
-    if (data.warnings && data.warnings.length > 0) {
-      data.warnings.forEach(warning => {
-        alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
-          <i class="fas fa-exclamation-triangle me-1"></i>${warning}
-        </div>`;
-      });
-    }
-
-    // Add helpful context for overflow/underfill
-    if (data.overflow_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
-      </div>`;
-    }
-
-    if (data.underfill_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
-      </div>`;
-    }
-
-    if (alertsContainer) {
-      alertsContainer.innerHTML = alertsHtml;
-    }
-
-    // Update container breakdown if available
-    if (data.container_breakdown) {
-      updateContainerTable(data.container_breakdown, finalQuantity);
-    }
-  })
-  .catch(error => {
-    console.error('Error validating yield:', error);
-    if (alertsContainer) {
-      alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
+  // Simple container capacity calculation
+  updateContainerSummary();<div class="alert alert-warning alert-sm">
         <i class="fas fa-exclamation-triangle me-1"></i>
         Unable to validate yield against container capacity.
       </div>`;
@@ -343,6 +294,20 @@ function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
   if (totalContainerCapacity > finalQuantity) {
     const excess = totalContainerCapacity - finalQuantity;
     alertHtml += `
+      <div class="alert alert-warning alert-sm mb-1">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Your containers can hold ${excess.toFixed(2)} units more than your yield.
+      </div>`;
+  } else if (finalQuantity > totalContainerCapacity) {
+    const bulk = finalQuantity - totalContainerCapacity;
+    alertHtml += `
+      <div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        ${bulk.toFixed(2)} units will be stored as bulk product.
+      </div>`;
+  }
+
+  alertsContainer.innerHTML = alertHtml;
       <div class="alert alert-warning alert-sm">
         <i class="fas fa-exclamation-triangle"></i>
         <strong>Overfill Warning:</strong> Container allocation (${totalContainerCapacity.toFixed(2)}) exceeds final yield (${finalQuantity.toFixed(2)}) by ${excess.toFixed(2)} units.

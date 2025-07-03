@@ -323,17 +323,3 @@ def adjust_batch_container(batch_id, container_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@container_api_bp.route('/batches/<int:batch_id>/validate-yield', methods=['POST'])
-@login_required
-def validate_batch_yield(batch_id):
-    """Validate yield against container capacity"""
-    try:
-        data = request.get_json()
-        estimated_yield = float(data.get('estimated_yield', 0))
-
-        validation = BatchContainerService.validate_yield_vs_capacity(batch_id, estimated_yield)
-
-        return jsonify(validation)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
