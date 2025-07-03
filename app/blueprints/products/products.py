@@ -279,3 +279,4 @@ def adjust_sku(sku_id):
         flash(f'Error adjusting inventory: {str(e)}', 'error')
         return redirect(url_for('products.view_sku', sku_id=sku_id))
 
+# API routes moved to product_api.py for better organization

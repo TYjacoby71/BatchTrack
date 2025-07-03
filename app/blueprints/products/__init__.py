@@ -16,5 +16,11 @@ from .product_log_routes import *
 # Import the product API blueprint
 from .product_api import product_api_bp
 
+# Register the API blueprint with the main app
+def register_product_blueprints(app):
+    """Register all product-related blueprints"""
+    app.register_blueprint(products_bp)
+    app.register_blueprint(product_api_bp)
+
 # Make both blueprints available for registration
-__all__ = ['products_bp', 'product_api_bp']
+__all__ = ['products_bp', 'product_api_bp', 'register_product_blueprints']
