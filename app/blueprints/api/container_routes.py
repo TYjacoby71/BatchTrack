@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...models import Recipe, InventoryItem, db, Batch, BatchContainer
+from ...models import Recipe, InventoryItem, db, Batch, BatchContainer, ExtraBatchContainer
 from app.services.unit_conversion import ConversionEngine
-from ...services.batch_container_service import BatchContainerService
 
 container_api_bp = Blueprint('container_api', __name__, url_prefix='/api')
 
@@ -133,6 +132,17 @@ def get_batch_containers(batch_id):
         container_data = []
         total_capacity = 0
         product_capacity = 0
+
+        # Calculate total container capacity (inline instead of service)
+        def calculate_container_capacity(batch_id):
+            regular_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+            extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
+            total = 0
+            for container in regular_containers:
+                total += (container.container.storage_amount or 0) * container.quantity_used
+            for extra_container in extra_containers:
+                total += (extra_container.container.storage_amount or 0) * extra_container.quantity_used
+            return total
 
         for container in containers:
             container_info = {
@@ -323,17 +333,3 @@ def adjust_batch_container(batch_id, container_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@container_api_bp.route('/batches/<int:batch_id>/validate-yield', methods=['POST'])
-@login_required
-def validate_batch_yield(batch_id):
-    """Validate yield against container capacity"""
-    try:
-        data = request.get_json()
-        estimated_yield = float(data.get('estimated_yield', 0))
-
-        validation = BatchContainerService.validate_yield_vs_capacity(batch_id, estimated_yield)
-
-        return jsonify(validation)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500

@@ -36,65 +36,24 @@ function validateYield() {
     if (alertsContainer) {
       alertsContainer.innerHTML = '';
     }
+    updateContainerSummary();
     return;
+  }
+
+  // Update display with current yield
+  const finalYieldDisplay = document.getElementById('finalYieldDisplay');
+  if (finalYieldDisplay) {
+    finalYieldDisplay.textContent = finalQuantity.toFixed(2);
   }
 
   if (!hasContainers) {
-    console.log('No containers in batch - skipping yield validation');
+    console.log('No containers in batch - all yield goes to bulk');
+    updateUncontainedYield(finalQuantity);
     return;
   }
 
-  // Call the validation service
-  fetch(`/api/batches/{{ batch.id }}/validate-yield`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCSRFToken()
-    },
-    body: JSON.stringify({
-      estimated_yield: finalQuantity
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    let alertsHtml = '';
-
-    if (data.warnings && data.warnings.length > 0) {
-      data.warnings.forEach(warning => {
-        alertsHtml += `<div class="alert alert-warning alert-sm mb-1">
-          <i class="fas fa-exclamation-triangle me-1"></i>${warning}
-        </div>`;
-      });
-    }
-
-    // Add helpful context for overflow/underfill
-    if (data.overflow_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Overflow (${data.overflow_amount.toFixed(2)} units) will be stored as bulk product.
-      </div>`;
-    }
-
-    if (data.underfill_amount > 0) {
-      alertsHtml += `<div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        Containers will be underfilled by ${data.underfill_amount.toFixed(2)} units.
-      </div>`;
-    }
-
-    if (alertsContainer) {
-      alertsContainer.innerHTML = alertsHtml;
-    }
-
-    // Update container breakdown if available
-    if (data.container_breakdown) {
-      updateContainerTable(data.container_breakdown, finalQuantity);
-    }
-  })
-  .catch(error => {
-    console.error('Error validating yield:', error);
-    if (alertsContainer) {
-      alertsContainer.innerHTML = `<div class="alert alert-warning alert-sm">
+  // Simple container capacity calculation
+  updateContainerSummary();<div class="alert alert-warning alert-sm">
         <i class="fas fa-exclamation-triangle me-1"></i>
         Unable to validate yield against container capacity.
       </div>`;
@@ -268,16 +227,104 @@ document.addEventListener('DOMContentLoaded', function() {
       // Only validate yield if the input exists and batch has containers
       const finalQuantityInput = document.getElementById('final_quantity');
       if (finalQuantityInput) {
+        finalQuantityInput.addEventListener('input', validateYield);
         validateYield();
       }
 
-      // Update container table if containers exist
-      if (window.containerData && window.containerData.length > 0) {
-        updateContainerTable();
-      }
+      // Add event listeners to container inputs
+      const containerInputs = document.querySelectorAll('.container-final-input');
+      containerInputs.forEach(input => {
+        input.addEventListener('input', updateContainerSummary);
+      });
+
+      // Initial container summary update
+      updateContainerSummary();
     });
   }
 });
+
+function updateContainerSummary() {
+  const finalQuantityInput = document.getElementById('final_quantity');
+  const finalQuantity = parseFloat(finalQuantityInput?.value || 0);
+  
+  if (finalQuantity <= 0) {
+    return;
+  }
+
+  // Calculate total container capacity being used for products
+  let totalContainerCapacity = 0;
+  const containerInputs = document.querySelectorAll('.container-final-input');
+  
+  containerInputs.forEach(input => {
+    const quantity = parseInt(input.value || 0);
+    const containerSize = parseFloat(input.dataset.containerSize || 0);
+    totalContainerCapacity += quantity * containerSize;
+  });
+
+  // Update displays
+  const totalCapacitySpan = document.getElementById('totalCapacity');
+  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
+  
+  if (totalCapacitySpan) {
+    totalCapacitySpan.textContent = totalContainerCapacity.toFixed(2);
+  }
+  
+  const uncontainedYield = Math.max(0, finalQuantity - totalContainerCapacity);
+  if (uncontainedYieldSpan) {
+    uncontainedYieldSpan.textContent = uncontainedYield.toFixed(2);
+  }
+
+  // Validate and show alerts
+  validateContainerAllocation(finalQuantity, totalContainerCapacity);
+}
+
+function updateUncontainedYield(finalQuantity) {
+  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
+  if (uncontainedYieldSpan) {
+    uncontainedYieldSpan.textContent = finalQuantity.toFixed(2);
+  }
+}
+
+function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  if (!alertsContainer) return;
+
+  let alertHtml = '';
+
+  if (totalContainerCapacity > finalQuantity) {
+    const excess = totalContainerCapacity - finalQuantity;
+    alertHtml += `
+      <div class="alert alert-warning alert-sm mb-1">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Your containers can hold ${excess.toFixed(2)} units more than your yield.
+      </div>`;
+  } else if (finalQuantity > totalContainerCapacity) {
+    const bulk = finalQuantity - totalContainerCapacity;
+    alertHtml += `
+      <div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        ${bulk.toFixed(2)} units will be stored as bulk product.
+      </div>`;
+  }
+
+  alertsContainer.innerHTML = alertHtml;
+      <div class="alert alert-warning alert-sm">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Overfill Warning:</strong> Container allocation (${totalContainerCapacity.toFixed(2)}) exceeds final yield (${finalQuantity.toFixed(2)}) by ${excess.toFixed(2)} units.
+      </div>`;
+  }
+
+  if (finalQuantity > totalContainerCapacity) {
+    const bulk = finalQuantity - totalContainerCapacity;
+    alertHtml += `
+      <div class="alert alert-info alert-sm">
+        <i class="fas fa-info-circle"></i>
+        <strong>Bulk Product:</strong> ${bulk.toFixed(2)} units will be stored as bulk product.
+      </div>`;
+  }
+
+  alertsContainer.innerHTML = alertHtml;
+}
 
 function getCSRFToken() {
   const token = document.querySelector('input[name="csrf_token"]')?.value ||

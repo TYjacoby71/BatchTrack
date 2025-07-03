@@ -188,3 +188,5 @@ class ProductService:
             ProductSKU.current_quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True
         ).all()
+
+    

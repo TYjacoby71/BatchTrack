@@ -104,16 +104,26 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products (not intermediate ingredients), use ProductService
+            # For actual products (not intermediate ingredients), use product inventory routes
             if batch.product_id:
-                from app.services.product_service import ProductService
-                inventory_entries = ProductService.add_product_from_batch(
-                    batch_id=batch.id,
-                    product_id=batch.product_id,
-                    variant_label=batch.variant_label,
-                    quantity=batch.final_quantity,
-                    container_overrides=container_overrides
+                import requests
+                from flask import current_app
+                
+                # Call product inventory route
+                response = requests.post(
+                    f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/products/inventory/add-from-batch",
+                    json={
+                        'batch_id': batch.id,
+                        'product_id': batch.product_id,
+                        'variant_label': batch.variant_label,
+                        'quantity': batch.final_quantity,
+                        'container_overrides': container_overrides
+                    },
+                    headers={'Authorization': f'Bearer {current_user.get_id()}'}
                 )
+                
+                if not response.ok:
+                    raise Exception(f"Failed to add product inventory: {response.json().get('error', 'Unknown error')}")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers

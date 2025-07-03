@@ -391,7 +391,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ name, storage_amount: amount, storage_unit: unit })
             })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                }
+                return r.json();
+            })
             .then(data => {
                 if (data.error) throw new Error(data.error);
 
