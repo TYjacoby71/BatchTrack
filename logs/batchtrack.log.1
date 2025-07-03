@@ -1,10 +1,10 @@
-2025-07-03 22:48:11,655 ERROR: Exception on /batches/in-progress/3 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-03 23:12:58,032 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such table: product
+sqlite3.OperationalError: no such column: batch.product_id
 
 The above exception was the direct cause of the following exception:
 
@@ -24,12 +24,12 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/routes.py", line 307, in view_batch_in_progress
-    products = products_query.join(Product).filter(Product.is_active == True).all()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
-    return self._iter().all()  # type: ignore
-           ^^^^^^^^^^^^
+  File "/home/runner/workspace/app/routes/app_routes.py", line 30, in dashboard
+    active_batch = Batch.query.filter_by(status='in_progress').first()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
     result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
                                                   ^^^^^^^^^^^^^^^^^^^^^
@@ -62,16 +62,12 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: product
-[SQL: SELECT product_sku.id AS product_sku_id, product_sku.product_id AS product_sku_product_id, product_sku.variant_id AS product_sku_variant_id, product_sku.size_label AS product_sku_size_label, product_sku.sku_code AS product_sku_sku_code, product_sku.sku_name AS product_sku_sku_name, product_sku.product_name AS product_sku_product_name, product_sku.variant_name AS product_sku_variant_name, product_sku.current_quantity AS product_sku_current_quantity, product_sku.reserved_quantity AS product_sku_reserved_quantity, product_sku.unit AS product_sku_unit, product_sku.low_stock_threshold AS product_sku_low_stock_threshold, product_sku.fifo_id AS product_sku_fifo_id, product_sku.batch_id AS product_sku_batch_id, product_sku.container_id AS product_sku_container_id, product_sku.unit_cost AS product_sku_unit_cost, product_sku.retail_price AS product_sku_retail_price, product_sku.wholesale_price AS product_sku_wholesale_price, product_sku.profit_margin_target AS product_sku_profit_margin_target, product_sku.category AS product_sku_category, product_sku.subcategory AS product_sku_subcategory, product_sku.tags AS product_sku_tags, product_sku.description AS product_sku_description, product_sku.is_active AS product_sku_is_active, product_sku.is_product_active AS product_sku_is_product_active, product_sku.is_discontinued AS product_sku_is_discontinued, product_sku.created_at AS product_sku_created_at, product_sku.updated_at AS product_sku_updated_at, product_sku.created_by AS product_sku_created_by, product_sku.supplier_name AS product_sku_supplier_name, product_sku.supplier_sku AS product_sku_supplier_sku, product_sku.supplier_cost AS product_sku_supplier_cost, product_sku.weight AS product_sku_weight, product_sku.weight_unit AS product_sku_weight_unit, product_sku.dimensions AS product_sku_dimensions, product_sku.barcode AS product_sku_barcode, product_sku.upc AS product_sku_upc, product_sku.quality_status AS product_sku_quality_status, product_sku.compliance_status AS product_sku_compliance_status, product_sku.quality_checked_by AS product_sku_quality_checked_by, product_sku.quality_checked_at AS product_sku_quality_checked_at, product_sku.location_id AS product_sku_location_id, product_sku.location_name AS product_sku_location_name, product_sku.temperature_at_time AS product_sku_temperature_at_time, product_sku.shopify_product_id AS product_sku_shopify_product_id, product_sku.shopify_variant_id AS product_sku_shopify_variant_id, product_sku.etsy_listing_id AS product_sku_etsy_listing_id, product_sku.amazon_asin AS product_sku_amazon_asin, product_sku.marketplace_sync_status AS product_sku_marketplace_sync_status, product_sku.marketplace_last_sync AS product_sku_marketplace_last_sync, product_sku.organization_id AS product_sku_organization_id 
-FROM product_sku JOIN product ON product.id = product_sku.product_id 
-WHERE product_sku.is_active = 1 AND product_sku.organization_id = ? AND product.is_active = 1]
-[parameters: (1,)]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: batch.product_id
+[SQL: SELECT batch.id AS batch_id, batch.recipe_id AS batch_recipe_id, batch.label_code AS batch_label_code, batch.batch_type AS batch_batch_type, batch.projected_yield AS batch_projected_yield, batch.projected_yield_unit AS batch_projected_yield_unit, batch.product_id AS batch_product_id, batch.variant_id AS batch_variant_id, batch.sku_id AS batch_sku_id, batch.final_quantity AS batch_final_quantity, batch.output_unit AS batch_output_unit, batch.scale AS batch_scale, batch.status AS batch_status, batch.status_reason AS batch_status_reason, batch.notes AS batch_notes, batch.tags AS batch_tags, batch.total_cost AS batch_total_cost, batch.created_by AS batch_created_by, batch.organization_id AS batch_organization_id, batch.started_at AS batch_started_at, batch.completed_at AS batch_completed_at, batch.failed_at AS batch_failed_at, batch.cancelled_at AS batch_cancelled_at, batch.inventory_credited AS batch_inventory_credited, batch.is_perishable AS batch_is_perishable, batch.shelf_life_days AS batch_shelf_life_days, batch.expiration_date AS batch_expiration_date, batch.remaining_quantity AS batch_remaining_quantity 
+FROM batch 
+WHERE batch.status = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('in_progress', 1, 0)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-07-03 22:49:10,416 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 22:51:34,282 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 22:53:50,356 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 22:54:40,618 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 22:56:37,961 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 23:01:16,123 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-03 23:12:57,585 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 23:14:28,249 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-03 23:14:36,428 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
