@@ -42,31 +42,28 @@ def get_products():
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
-        # Get the product name from the product_id (first SKU) - with org scoping
-        base_sku = ProductSKU.query.filter_by(
+        from ...models import Product, ProductVariant
+        
+        # Get the product with org scoping
+        product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
         
-        if not base_sku:
+        if not product:
             return jsonify({'error': 'Product not found'}), 404
-            
-        product_name = base_sku.product_name
         
-        variants = db.session.query(
-            ProductSKU.variant_name,
-            func.min(ProductSKU.id).label('id')
-        ).filter_by(
-            product_name=product_name,
-            is_active=True,
-            organization_id=current_user.organization_id
-        ).group_by(ProductSKU.variant_name).all()
+        # Get active variants for this product
+        variants = ProductVariant.query.filter_by(
+            product_id=product_id,
+            is_active=True
+        ).all()
 
         variant_list = []
-        for variant_name, sku_id in variants:
+        for variant in variants:
             variant_list.append({
-                'id': sku_id,
-                'name': variant_name
+                'id': variant.id,
+                'name': variant.name
             })
 
         return jsonify(variant_list)

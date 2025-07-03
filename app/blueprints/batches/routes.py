@@ -293,23 +293,13 @@ def view_batch_in_progress(batch_identifier):
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
-    # Get products for finish batch modal - use ProductSKU with organization scoping
-    from ...models import ProductSKU
+    # Get products for finish batch modal - use Product model
+    from ...models import Product
     
-    # Get unique products that have active SKUs (grouped by product_name)
-    products_subquery = db.session.query(
-        ProductSKU.product_name,
-        func.min(ProductSKU.id).label('min_id')
-    ).filter_by(
+    # Get active products for the organization
+    products = Product.query.filter_by(
         is_active=True,
-        is_product_active=True,
         organization_id=current_user.organization_id
-    ).group_by(ProductSKU.product_name).subquery()
-    
-    # Get the actual SKU records for the products
-    products = db.session.query(ProductSKU).join(
-        products_subquery,
-        ProductSKU.id == products_subquery.c.min_id
     ).all()
 
     # Calculate container breakdown for finish modal

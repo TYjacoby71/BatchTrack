@@ -95,8 +95,8 @@ def complete_batch(batch_id):
         # Output-type specific logic
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
-            batch.variant_label = request.form.get('variant_label')
-
+            batch.variant_id = request.form.get('variant_id')
+            
             # Get container count overrides from form
             container_overrides = {}
             for key, value in request.form.items():
@@ -104,26 +104,34 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products (not intermediate ingredients), use product inventory service
-            if batch.product_id:
-                from ...services.product_service import ProductService
+            # For actual products, create or get the target SKU
+            if batch.product_id and batch.variant_id:
+                from ...models import Product, ProductVariant
                 
-                # Get the product name from the product_id (which is actually a SKU ID)
-                base_sku = ProductSKU.query.filter_by(
+                # Get the product and variant
+                product = Product.query.filter_by(
                     id=batch.product_id,
                     organization_id=current_user.organization_id
                 ).first()
                 
-                if not base_sku:
-                    raise Exception("Selected product not found")
+                variant = ProductVariant.query.filter_by(
+                    id=batch.variant_id,
+                    product_id=batch.product_id
+                ).first()
                 
-                # Get or create the SKU for this product/variant combination
-                target_sku = ProductService.get_or_create_sku(
-                    product_name=base_sku.product_name,
-                    variant_name=batch.variant_label or 'Base',
-                    size_label='Bulk',
-                    unit=base_sku.unit
+                if not product or not variant:
+                    raise Exception("Selected product or variant not found")
+                
+                # Get or create the bulk SKU for this product/variant combination
+                from ...services.product_service import ProductService
+                target_sku = ProductService.get_or_create_sku_by_ids(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    size_label='Bulk'
                 )
+                
+                # Store the SKU reference in the batch
+                batch.sku_id = target_sku.id
                 
                 # Add inventory using the centralized service
                 from ...services.inventory_adjustment import process_inventory_adjustment

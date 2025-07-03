@@ -164,7 +164,7 @@ function updateTotals() {
 
 function loadVariants() {
   const productSelect = document.getElementById('productDropdown');
-  const variantSelect = document.getElementById('variant_label');
+  const variantSelect = document.getElementById('variant_id');
 
   if (!productSelect || !variantSelect) {
     console.log('Product or variant dropdown not found');
@@ -196,23 +196,21 @@ function loadVariants() {
       if (data && Array.isArray(data) && data.length > 0) {
         data.forEach(variant => {
           const option = document.createElement('option');
-          option.value = variant.name;
+          option.value = variant.id;  // Use variant ID, not name
           option.textContent = variant.name;
           variantSelect.appendChild(option);
         });
 
-        // Auto-select Base variant if it exists
-        const baseOption = Array.from(variantSelect.options).find(opt => opt.value === 'Base');
-        if (baseOption) {
-          variantSelect.value = 'Base';
+        // Auto-select first variant (usually Base)
+        if (data.length > 0) {
+          variantSelect.value = data[0].id;
         }
       } else {
-        // Add default variant if none found
+        // Show message if no variants found
         const option = document.createElement('option');
-        option.value = 'Base';
-        option.textContent = 'Base';
+        option.value = '';
+        option.textContent = 'No variants available';
         variantSelect.appendChild(option);
-        variantSelect.value = 'Base';
       }
 
       // Enable the variant select
@@ -221,27 +219,8 @@ function loadVariants() {
     .catch(error => {
       console.error('Error loading variants:', error);
       
-      // Fallback: Add Base variant on error
-      variantSelect.innerHTML = '<option value="">Select variant...</option>';
-      const option = document.createElement('option');
-      option.value = 'Base';
-      option.textContent = 'Base';
-      variantSelect.appendChild(option);
-      variantSelect.value = 'Base';
-      variantSelect.disabled = false;
-    });
-}he dropdown
-      variantSelect.disabled = false;
-    })
-    .catch(error => {
-      console.error('Error loading variants:', error);
+      // Fallback: Show error message
       variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-
-      // Add fallback option
-      const fallbackOption = document.createElement('option');
-      fallbackOption.value = 'Base';
-      fallbackOption.textContent = 'Base (Fallback)';
-      variantSelect.appendChild(fallbackOption);
       variantSelect.disabled = false;
     });
 }
