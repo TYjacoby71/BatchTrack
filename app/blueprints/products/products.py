@@ -31,8 +31,23 @@ def product_list():
             self.inventory = []
             # Calculate total quantity from inventory
             self.total_quantity = data.get('total_quantity', 0)
+            # Add product ID for URL generation
+            self.id = data.get('product_id', None)
 
-    products = [ProductSummary(data) for data in product_data]
+    # Get product IDs for the summary objects
+    enhanced_product_data = []
+    for data in product_data:
+        # Get the first SKU ID for this product to use as product_id
+        first_sku = ProductSKU.query.filter_by(
+            product_name=data['product_name'],
+            organization_id=current_user.organization_id,
+            is_active=True
+        ).first()
+        if first_sku:
+            data['product_id'] = first_sku.id
+            enhanced_product_data.append(data)
+
+    products = [ProductSummary(data) for data in enhanced_product_data]
 
     # Sort products based on the requested sort type
     if sort_type == 'popular':
@@ -88,11 +103,15 @@ def new_product():
     units = get_global_unit_list()
     return render_template('products/new_product.html', units=units)
 
-@products_bp.route('/<product_name>')
+@products_bp.route('/<int:product_id>')
 @login_required
-def view_product(product_name):
-    """View product details with all SKUs"""
+def view_product(product_id):
+    """View product details with all SKUs by product ID"""
     from ...services.product_service import ProductService
+
+    # Get the base SKU to find the product name
+    base_sku = ProductSKU.query.get_or_404(product_id)
+    product_name = base_sku.product_name
 
     # Get all SKUs for this product
     skus = ProductSKU.query.filter_by(
@@ -124,11 +143,11 @@ def view_product(product_name):
 
     # Create a product object for the template
     product = type('Product', (), {
+        'id': product_id,
         'name': product_name,
         'product_base_unit': skus[0].unit if skus else None,
         'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
         'created_at': skus[0].created_at if skus else None,
-        'id': skus[0].id if skus else None,
         'variations': [type('Variation', (), {
             'name': variant_name,
             'description': variant_data['description'],
@@ -143,6 +162,23 @@ def view_product(product_name):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
                          inventory_groups={})
+
+# Keep the old route for backward compatibility
+@products_bp.route('/<product_name>')
+@login_required
+def view_product_by_name(product_name):
+    """Redirect to product by ID for backward compatibility"""
+    # Find the first SKU for this product to get the ID
+    sku = ProductSKU.query.filter_by(
+        product_name=product_name,
+        is_active=True
+    ).first()
+    
+    if not sku:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+    
+    return redirect(url_for('products.view_product', product_id=sku.id))
 
 @products_bp.route('/sku/<int:sku_id>')
 @login_required
@@ -162,29 +198,33 @@ def view_sku(sku_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<product_name>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/edit', methods=['POST'])
 @login_required
-def edit_product(product_name):
-    """Edit product details"""
+def edit_product(product_id):
+    """Edit product details by product ID"""
+    # Get the base SKU to find the product name
+    base_sku = ProductSKU.query.get_or_404(product_id)
+    current_product_name = base_sku.product_name
+    
     name = request.form.get('name')
     unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
     if not name or not unit:
         flash('Name and product base unit are required', 'error')
-        return redirect(url_for('products.view_product', product_name=product_name))
+        return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
     existing = ProductSKU.query.filter(
         ProductSKU.product_name == name,
-        ProductSKU.product_name != product_name
+        ProductSKU.product_name != current_product_name
     ).first()
     if existing:
         flash('Another product with this name already exists', 'error')
-        return redirect(url_for('products.view_product', product_name=product_name))
+        return redirect(url_for('products.view_product', product_id=product_id))
 
     # Update all SKUs for this product
-    skus = ProductSKU.query.filter_by(product_name=product_name).all()
+    skus = ProductSKU.query.filter_by(product_name=current_product_name).all()
     for sku in skus:
         sku.product_name = name
         sku.unit = unit
@@ -192,13 +232,17 @@ def edit_product(product_name):
 
     db.session.commit()
     flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_name=name))
+    return redirect(url_for('products.view_product', product_id=product_id))
 
-@products_bp.route('/<product_name>/delete', methods=['POST'])
+@products_bp.route('/<int:product_id>/delete', methods=['POST'])
 @login_required
-def delete_product(product_name):
-    """Delete a product and all its related data"""
+def delete_product(product_id):
+    """Delete a product and all its related data by product ID"""
     try:
+        # Get the base SKU to find the product name
+        base_sku = ProductSKU.query.get_or_404(product_id)
+        product_name = base_sku.product_name
+        
         # Get all SKUs for this product
         skus = ProductSKU.query.filter_by(product_name=product_name).all()
 
@@ -210,7 +254,7 @@ def delete_product(product_name):
         total_inventory = sum(sku.current_quantity for sku in skus)
         if total_inventory > 0:
             flash('Cannot delete product with remaining inventory', 'error')
-            return redirect(url_for('products.view_product', product_name=product_name))
+            return redirect(url_for('products.view_product', product_id=product_id))
 
         # Delete history records first
         for sku in skus:
@@ -226,7 +270,7 @@ def delete_product(product_name):
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting product: {str(e)}', 'error')
-        return redirect(url_for('products.view_product', product_name=product_name))
+        return redirect(url_for('products.view_product', product_id=product_id))
 
 @products_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required

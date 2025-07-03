@@ -7,8 +7,9 @@ class ProductService:
     @staticmethod
     def get_product_summary_skus():
         """Get summary of all products with their total quantities"""
-        # Group by product_name and aggregate quantities
+        # Group by product_name and aggregate quantities, include product_id
         product_summaries = db.session.query(
+            func.min(ProductSKU.id).label('product_id'),
             ProductSKU.product_name,
             ProductSKU.unit,
             func.sum(ProductSKU.current_quantity).label('total_quantity'),
@@ -26,6 +27,7 @@ class ProductService:
         products = []
         for summary in product_summaries:
             products.append({
+                'product_id': summary.product_id,
                 'product_name': summary.product_name,
                 'product_base_unit': summary.unit,
                 'total_quantity': float(summary.total_quantity or 0),
