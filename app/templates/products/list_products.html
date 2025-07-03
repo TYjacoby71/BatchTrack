@@ -105,7 +105,7 @@
                     </div>
                     <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                   </div>
-                  
+
                   <!-- Size level details -->
                   <div class="collapse ms-3" id="card-variant-sizes-{{ loop.parent.index }}-{{ loop.index }}">
                     {% for inv in variation_inventory %}
@@ -149,6 +149,7 @@
             </div>
           </div>
           <div class="card-footer">
+            
             <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
                class="btn btn-outline-primary btn-sm w-100">
               View Details
@@ -180,6 +181,7 @@
               {% for product in products %}
               <tr class="product-row">
                 <td>
+                  
                   <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
                   </a>

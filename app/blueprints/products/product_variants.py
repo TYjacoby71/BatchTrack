@@ -124,9 +124,9 @@ def add_variant(product_name):
         db.session.rollback()
         return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
-@products_bp.route('/<product_name>/variant/<variant_name>')
+@products_bp.route('/<int:product_id>/variant/<variant_name>')
 @login_required
-def view_variant(product_name, variant_name):
+def view_variant(product_id, variant_name):
     """View individual product variation details"""
     # Get all SKUs for this product/variant combination
     skus = ProductSKU.query.filter_by(
@@ -193,9 +193,9 @@ def view_variant(product_name, variant_name):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<product_name>/variant/<variant_name>/edit', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
-def edit_variant(product_name, variant_name):
+def edit_variant(product_id, variant_name):
     """Edit product variation details"""
     name = request.form.get('name')
     description = request.form.get('description')
@@ -236,9 +236,9 @@ def edit_variant(product_name, variant_name):
                            product_name=product_name, 
                            variant_name=name))
 
-@products_bp.route('/<product_name>/variant/<variant_name>/delete', methods=['POST'])
+@products_bp.route('/<int:product_id>/variant/<variant_name>/delete', methods=['POST'])
 @login_required
-def delete_variant(product_name, variant_name):
+def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
     # Get all SKUs for this variant
     skus = ProductSKU.query.filter_by(
