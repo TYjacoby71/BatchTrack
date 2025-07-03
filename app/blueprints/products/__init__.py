@@ -1,4 +1,3 @@
-
 from flask import Blueprint
 
 # Create the main products blueprint
@@ -12,10 +11,10 @@ from .product_variants import *
 from .product_log_routes import *
 
 # Import the new product_inventory blueprint (SKU-based)
-from .product_inventory_routes import product_inventory_bp
+# from .product_inventory_routes import product_inventory_bp
 
 # Import the product API blueprint
 from .product_api import product_api_bp
 
 # Make both blueprints available for registration
-__all__ = ['products_bp', 'product_inventory_bp', 'product_api_bp']
+__all__ = ['products_bp', 'product_api_bp']

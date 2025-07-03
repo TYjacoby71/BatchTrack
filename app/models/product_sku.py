@@ -1,4 +1,75 @@
-on identifier
+
+from datetime import datetime
+from flask_login import current_user
+from ..extensions import db
+from .mixins import ScopedModelMixin
+
+class ProductSKU(ScopedModelMixin, db.Model):
+    """Product SKU model - represents sellable units of inventory"""
+    __tablename__ = 'product_sku'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # CORE PRODUCT IDENTIFICATION
+    product_name = db.Column(db.String(128), nullable=False)
+    variant_name = db.Column(db.String(128), nullable=False)
+    size_label = db.Column(db.String(64), nullable=False)
+    sku_code = db.Column(db.String(64), unique=True, nullable=False)
+    sku_name = db.Column(db.String(128), nullable=True)  # Optional human-readable name override
+    
+    # INVENTORY TRACKING - SINGLE SOURCE OF TRUTH
+    current_quantity = db.Column(db.Float, default=0.0)  # Sum of all history entries
+    reserved_quantity = db.Column(db.Float, default=0.0)  # Reserved for orders
+    unit = db.Column(db.String(32), nullable=False)
+    low_stock_threshold = db.Column(db.Float, default=10.0)
+    
+    # FIFO REFERENCE - LINKS TO BATCH/INVENTORY ORIGIN
+    fifo_id = db.Column(db.String(32), nullable=True)  # Links to raw inventory FIFO
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    
+    # PRICING
+    unit_cost = db.Column(db.Float, nullable=True)
+    retail_price = db.Column(db.Float, nullable=True)
+    wholesale_price = db.Column(db.Float, nullable=True)
+    profit_margin_target = db.Column(db.Float, nullable=True)  # Target percentage
+    
+    # PRODUCT CATEGORIZATION
+    category = db.Column(db.String(64), nullable=True)
+    subcategory = db.Column(db.String(64), nullable=True)
+    tags = db.Column(db.Text, nullable=True)  # JSON or comma-separated
+    description = db.Column(db.Text, nullable=True)
+    
+    # PRODUCT STATUS
+    is_active = db.Column(db.Boolean, default=True)
+    is_product_active = db.Column(db.Boolean, default=True)
+    is_discontinued = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # SUPPLIER AND SOURCING
+    supplier_name = db.Column(db.String(128), nullable=True)
+    supplier_sku = db.Column(db.String(64), nullable=True)
+    supplier_cost = db.Column(db.Float, nullable=True)
+    
+    # PHYSICAL PROPERTIES
+    weight = db.Column(db.Float, nullable=True)
+    weight_unit = db.Column(db.String(16), nullable=True)
+    dimensions = db.Column(db.String(64), nullable=True)  # "L x W x H"
+    
+    # BARCODES
+    barcode = db.Column(db.String(128), nullable=True, unique=True)
+    upc = db.Column(db.String(32), nullable=True, unique=True)
+    
+    # QUALITY CONTROL
+    quality_status = db.Column(db.String(32), nullable=True)  # passed, failed, pending, quarantine
+    compliance_status = db.Column(db.String(32), nullable=True)  # compliant, non_compliant, pending
+    quality_checked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    quality_checked_at = db.Column(db.DateTime, nullable=True)
+    
+    # STORAGE
+    location_id = db.Column(db.String(128), nullable=True)  # Storage location identifier
     location_name = db.Column(db.String(128), nullable=True)  # Human-readable location
     temperature_at_time = db.Column(db.Float, nullable=True)  # Storage temperature when last recorded
     
@@ -111,13 +182,11 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     # Change tracking
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     change_type = db.Column(db.String(32), nullable=False)  # batch_addition, recount, spoil, sale, trash, damage, gift/tester, manual_add
-    quantity_change = db.Column(db.Float, nullable=False)  # +/- amount
-    old_quantity = db.Column(db.Float, nullable=False)  # Quantity before change
-    new_quantity = db.Column(db.Float, nullable=False)  # Quantity after change
+    quantity_change = db.Column(db.Float, nullable=False)  # +/- amount - THIS IS THE DELTA
     
-    # FIFO tracking (like InventoryHistory)
-    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO entries
-    original_quantity = db.Column(db.Float, nullable=True)  # Original amount added
+    # FIFO tracking - ESSENTIAL FIELDS ONLY
+    remaining_quantity = db.Column(db.Float, default=0.0)  # For FIFO tracking on deductions
+    original_quantity = db.Column(db.Float, nullable=True)  # Only set for additions - starting FIFO amount
     unit = db.Column(db.String(32), nullable=False)  # Unit for this entry
     
     # Transaction details
@@ -169,10 +238,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     marketplace_order_id = db.Column(db.String(128), nullable=True)  # Order ID from marketplace
     marketplace_source = db.Column(db.String(32), nullable=True)  # shopify, etsy, amazon, etc.
     
-    # RESERVED QUANTITY TRACKING
-    reserved_quantity_change = db.Column(db.Float, nullable=True)  # Change in reserved quantity
-    old_reserved_quantity = db.Column(db.Float, nullable=True)  # Reserved quantity before change
-    new_reserved_quantity = db.Column(db.Float, nullable=True)  # Reserved quantity after change
+    # Reserved quantity changes are tracked in the main SKU table only
     
     # Relationships
     sku = db.relationship('ProductSKU', backref='history_entries')
@@ -200,4 +266,3 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     
     def __repr__(self):
         return f'<ProductSKUHistory {self.change_type}: {self.quantity_change}>'
-
