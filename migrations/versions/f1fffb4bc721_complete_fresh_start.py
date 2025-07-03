@@ -1,8 +1,8 @@
-"""Initial migration with clean schema
+"""complete_fresh_start
 
-Revision ID: 112dc7f2bfc1
+Revision ID: f1fffb4bc721
 Revises: 
-Create Date: 2025-06-27 17:59:40.752051
+Create Date: 2025-07-03 18:32:52.552280
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '112dc7f2bfc1'
+revision = 'f1fffb4bc721'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -73,69 +73,43 @@ def upgrade():
     op.create_table('product_sku',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_name', sa.String(length=128), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=True),
-    sa.Column('product_base_unit', sa.String(length=32), nullable=False),
     sa.Column('variant_name', sa.String(length=128), nullable=False),
-    sa.Column('variant_id', sa.Integer(), nullable=True),
-    sa.Column('variant_description', sa.Text(), nullable=True),
+    sa.Column('size_label', sa.String(length=64), nullable=False),
+    sa.Column('sku_code', sa.String(length=64), nullable=False),
     sa.Column('sku_name', sa.String(length=128), nullable=True),
-    sa.Column('size_label', sa.String(length=128), nullable=False),
-    sa.Column('unit', sa.String(length=32), nullable=False),
-    sa.Column('sku_code', sa.String(length=128), nullable=True),
     sa.Column('current_quantity', sa.Float(), nullable=True),
-    sa.Column('remaining_quantity', sa.Float(), nullable=True),
-    sa.Column('original_quantity', sa.Float(), nullable=True),
+    sa.Column('reserved_quantity', sa.Float(), nullable=True),
+    sa.Column('unit', sa.String(length=32), nullable=False),
     sa.Column('low_stock_threshold', sa.Float(), nullable=True),
+    sa.Column('fifo_id', sa.String(length=32), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('container_id', sa.Integer(), nullable=True),
     sa.Column('unit_cost', sa.Float(), nullable=True),
     sa.Column('retail_price', sa.Float(), nullable=True),
-    sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('fifo_id', sa.String(length=64), nullable=True),
-    sa.Column('change_type', sa.String(length=32), nullable=True),
-    sa.Column('container_id', sa.Integer(), nullable=True),
-    sa.Column('container_size', sa.String(length=128), nullable=True),
-    sa.Column('container_line_cost', sa.Float(), nullable=True),
-    sa.Column('is_perishable', sa.Boolean(), nullable=True),
-    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
-    sa.Column('expiration_date', sa.DateTime(), nullable=True),
-    sa.Column('batch_completed_at', sa.DateTime(), nullable=True),
-    sa.Column('customer', sa.String(length=128), nullable=True),
+    sa.Column('wholesale_price', sa.Float(), nullable=True),
+    sa.Column('profit_margin_target', sa.Float(), nullable=True),
+    sa.Column('category', sa.String(length=64), nullable=True),
+    sa.Column('subcategory', sa.String(length=64), nullable=True),
+    sa.Column('tags', sa.Text(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('is_product_active', sa.Boolean(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('last_updated', sa.DateTime(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('image_url', sa.String(length=512), nullable=True),
-    sa.Column('image_path', sa.String(length=512), nullable=True),
-    sa.Column('weight', sa.Float(), nullable=True),
-    sa.Column('length', sa.Float(), nullable=True),
-    sa.Column('width', sa.Float(), nullable=True),
-    sa.Column('height', sa.Float(), nullable=True),
-    sa.Column('barcode', sa.String(length=128), nullable=True),
-    sa.Column('upc', sa.String(length=128), nullable=True),
-    sa.Column('supplier_name', sa.String(length=128), nullable=True),
-    sa.Column('supplier_sku', sa.String(length=128), nullable=True),
-    sa.Column('supplier_contact', sa.String(length=256), nullable=True),
-    sa.Column('tags', sa.Text(), nullable=True),
-    sa.Column('category', sa.String(length=128), nullable=True),
-    sa.Column('subcategory', sa.String(length=128), nullable=True),
-    sa.Column('minimum_order_quantity', sa.Float(), nullable=True),
-    sa.Column('maximum_order_quantity', sa.Float(), nullable=True),
-    sa.Column('profit_margin_target', sa.Float(), nullable=True),
-    sa.Column('reserved_quantity', sa.Float(), nullable=True),
-    sa.Column('available_quantity', sa.Float(), nullable=True),
-    sa.Column('last_sold_date', sa.DateTime(), nullable=True),
     sa.Column('is_discontinued', sa.Boolean(), nullable=True),
-    sa.Column('is_hazardous', sa.Boolean(), nullable=True),
-    sa.Column('requires_refrigeration', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('supplier_name', sa.String(length=128), nullable=True),
+    sa.Column('supplier_sku', sa.String(length=64), nullable=True),
+    sa.Column('supplier_cost', sa.Float(), nullable=True),
+    sa.Column('weight', sa.Float(), nullable=True),
+    sa.Column('weight_unit', sa.String(length=16), nullable=True),
+    sa.Column('dimensions', sa.String(length=64), nullable=True),
+    sa.Column('barcode', sa.String(length=128), nullable=True),
+    sa.Column('upc', sa.String(length=32), nullable=True),
     sa.Column('quality_status', sa.String(length=32), nullable=True),
-    sa.Column('quality_checked_at', sa.DateTime(), nullable=True),
-    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
-    sa.Column('lot_number', sa.String(length=128), nullable=True),
-    sa.Column('batch_number', sa.String(length=128), nullable=True),
     sa.Column('compliance_status', sa.String(length=32), nullable=True),
-    sa.Column('regulatory_notes', sa.Text(), nullable=True),
+    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
+    sa.Column('quality_checked_at', sa.DateTime(), nullable=True),
     sa.Column('location_id', sa.String(length=128), nullable=True),
     sa.Column('location_name', sa.String(length=128), nullable=True),
     sa.Column('temperature_at_time', sa.Float(), nullable=True),
@@ -152,9 +126,11 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('barcode'),
     sa.UniqueConstraint('barcode', name='unique_barcode'),
     sa.UniqueConstraint('product_name', 'variant_name', 'size_label', 'fifo_id', name='unique_sku_fifo_combination'),
     sa.UniqueConstraint('sku_code'),
+    sa.UniqueConstraint('upc'),
     sa.UniqueConstraint('upc', name='unique_upc')
     )
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
@@ -162,6 +138,7 @@ def upgrade():
         batch_op.create_index('idx_batch_fifo', ['batch_id', 'fifo_id'], unique=False)
         batch_op.create_index('idx_category', ['category', 'subcategory'], unique=False)
         batch_op.create_index('idx_compliance_status', ['compliance_status'], unique=False)
+        batch_op.create_index('idx_current_reserved_qty', ['current_quantity', 'reserved_quantity'], unique=False)
         batch_op.create_index('idx_discontinued', ['is_discontinued'], unique=False)
         batch_op.create_index('idx_location', ['location_id'], unique=False)
         batch_op.create_index('idx_low_stock', ['current_quantity', 'low_stock_threshold'], unique=False)
@@ -261,6 +238,7 @@ def upgrade():
     sa.Column('name', sa.String(length=64), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('color', sa.String(length=7), nullable=True),
+    sa.Column('default_density', sa.Float(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
@@ -282,7 +260,6 @@ def upgrade():
     sa.Column('is_locked', sa.Boolean(), nullable=True),
     sa.Column('predicted_yield', sa.Float(), nullable=True),
     sa.Column('predicted_yield_unit', sa.String(length=50), nullable=True),
-    sa.Column('requires_containers', sa.Boolean(), nullable=True),
     sa.Column('allowed_containers', sa.PickleType(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -345,6 +322,7 @@ def upgrade():
     sa.Column('storage_unit', sa.String(length=32), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('intermediate', sa.Boolean(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['category_id'], ['ingredient_category.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
@@ -352,25 +330,24 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
-    with op.batch_alter_table('inventory_item', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_inventory_item_organization_id'), ['organization_id'], unique=False)
-
     op.create_table('batch_container',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
     sa.Column('container_id', sa.Integer(), nullable=False),
-    sa.Column('container_size', sa.String(length=32), nullable=False),
     sa.Column('container_quantity', sa.Integer(), nullable=False),
     sa.Column('quantity_used', sa.Integer(), nullable=False),
     sa.Column('fill_quantity', sa.Float(), nullable=True),
     sa.Column('fill_unit', sa.String(length=32), nullable=True),
     sa.Column('cost_each', sa.Float(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('batch_container', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_batch_container_organization_id'), ['organization_id'], unique=False)
+
     op.create_table('batch_ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
@@ -408,12 +385,12 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('batch_id', sa.Integer(), nullable=False),
     sa.Column('container_id', sa.Integer(), nullable=False),
-    sa.Column('container_size', sa.String(length=32), nullable=False),
     sa.Column('container_quantity', sa.Integer(), nullable=False),
     sa.Column('quantity_used', sa.Integer(), nullable=False),
     sa.Column('fill_quantity', sa.Float(), nullable=True),
     sa.Column('fill_unit', sa.String(length=32), nullable=True),
     sa.Column('cost_each', sa.Float(), nullable=True),
+    sa.Column('reason', sa.String(length=20), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
@@ -477,8 +454,6 @@ def upgrade():
     sa.Column('timestamp', sa.DateTime(), nullable=True),
     sa.Column('change_type', sa.String(length=32), nullable=False),
     sa.Column('quantity_change', sa.Float(), nullable=False),
-    sa.Column('old_quantity', sa.Float(), nullable=False),
-    sa.Column('new_quantity', sa.Float(), nullable=False),
     sa.Column('remaining_quantity', sa.Float(), nullable=True),
     sa.Column('original_quantity', sa.Float(), nullable=True),
     sa.Column('unit', sa.String(length=32), nullable=False),
@@ -511,9 +486,6 @@ def upgrade():
     sa.Column('quality_checked_by', sa.Integer(), nullable=True),
     sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
     sa.Column('marketplace_source', sa.String(length=32), nullable=True),
-    sa.Column('reserved_quantity_change', sa.Float(), nullable=True),
-    sa.Column('old_reserved_quantity', sa.Float(), nullable=True),
-    sa.Column('new_reserved_quantity', sa.Float(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
@@ -598,10 +570,10 @@ def downgrade():
 
     op.drop_table('batch_inventory_log')
     op.drop_table('batch_ingredient')
-    op.drop_table('batch_container')
-    with op.batch_alter_table('inventory_item', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_inventory_item_organization_id'))
+    with op.batch_alter_table('batch_container', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_batch_container_organization_id'))
 
+    op.drop_table('batch_container')
     op.drop_table('inventory_item')
     op.drop_table('unit')
     op.drop_table('tag')
@@ -635,6 +607,7 @@ def downgrade():
         batch_op.drop_index('idx_low_stock')
         batch_op.drop_index('idx_location')
         batch_op.drop_index('idx_discontinued')
+        batch_op.drop_index('idx_current_reserved_qty')
         batch_op.drop_index('idx_compliance_status')
         batch_op.drop_index('idx_category')
         batch_op.drop_index('idx_batch_fifo')

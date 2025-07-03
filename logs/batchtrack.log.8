@@ -1,10 +1,10 @@
-2025-07-02 19:26:37,317 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-02 19:34:26,128 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: ingredient_category.default_density
+sqlite3.OperationalError: no such column: inventory_item.intermediate
 
 The above exception was the direct cause of the following exception:
 
@@ -24,20 +24,15 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/routes/app_routes.py", line 55, in dashboard
-    return render_template("dashboard.html",
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
-    app.update_template_context(context)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 530, in update_template_context
-    context.update(self.ensure_sync(func)())
-                   ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/__init__.py", line 143, in inject_units
-    categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/routes/app_routes.py", line 33, in dashboard
+    alert_data = DashboardAlertService.get_dashboard_alerts()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/services/dashboard_alerts.py", line 83, in get_dashboard_alerts
+    low_stock_ingredients = get_low_stock_ingredients()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/services/inventory_alerts.py", line 10, in get_low_stock_ingredients
+    ).all()
+      ^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
     return self._iter().all()  # type: ignore
            ^^^^^^^^^^^^
@@ -73,10 +68,45 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: ingredient_category.default_density
-[SQL: SELECT ingredient_category.id AS ingredient_category_id, ingredient_category.name AS ingredient_category_name, ingredient_category.description AS ingredient_category_description, ingredient_category.color AS ingredient_category_color, ingredient_category.default_density AS ingredient_category_default_density, ingredient_category.is_active AS ingredient_category_is_active, ingredient_category.created_by AS ingredient_category_created_by, ingredient_category.created_at AS ingredient_category_created_at, ingredient_category.organization_id AS ingredient_category_organization_id 
-FROM ingredient_category ORDER BY ingredient_category.name]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: inventory_item.intermediate
+[SQL: SELECT inventory_item.id AS inventory_item_id, inventory_item.name AS inventory_item_name, inventory_item.category_id AS inventory_item_category_id, inventory_item.quantity AS inventory_item_quantity, inventory_item.unit AS inventory_item_unit, inventory_item.cost_per_unit AS inventory_item_cost_per_unit, inventory_item.low_stock_threshold AS inventory_item_low_stock_threshold, inventory_item.density AS inventory_item_density, inventory_item.type AS inventory_item_type, inventory_item.is_active AS inventory_item_is_active, inventory_item.is_archived AS inventory_item_is_archived, inventory_item.is_perishable AS inventory_item_is_perishable, inventory_item.shelf_life_days AS inventory_item_shelf_life_days, inventory_item.expiration_date AS inventory_item_expiration_date, inventory_item.storage_amount AS inventory_item_storage_amount, inventory_item.storage_unit AS inventory_item_storage_unit, inventory_item.created_by AS inventory_item_created_by, inventory_item.created_at AS inventory_item_created_at, inventory_item.intermediate AS inventory_item_intermediate, inventory_item.organization_id AS inventory_item_organization_id 
+FROM inventory_item 
+WHERE inventory_item.low_stock_threshold > ? AND inventory_item.quantity <= inventory_item.low_stock_threshold]
+[parameters: (0,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-07-02 19:31:08,617 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 19:31:10,382 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-02 19:31:13,842 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:35:17,972 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:35:20,926 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:35:47,179 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:36:25,039 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:37:08,034 INFO: BatchTrack - Intermediate ingredient work [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:38:06,612 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:40:24,717 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:41:42,520 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:52:48,436 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 19:55:42,298 ERROR: Exception on /inventory/edit/4 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/inventory/routes.py", line 458, in edit_inventory
+    update_fifo_perishable_status(item.id, shelf_life_days)
+  File "/home/runner/workspace/app/blueprints/fifo/services.py", line 183, in update_fifo_perishable_status
+    from blueprints.expiration.services import ExpirationService
+ModuleNotFoundError: No module named 'blueprints'
+2025-07-02 19:56:30,465 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 20:00:57,211 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 20:10:24,455 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 20:13:26,222 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-02 20:15:55,844 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
