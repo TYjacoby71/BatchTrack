@@ -81,7 +81,7 @@ def new_product():
         db.session.commit()
 
         flash('Product created successfully', 'success')
-        return redirect(url_for('product_inventory.view_sku', sku_id=sku.id))
+        return redirect(url_for('products.view_product', product_name=name))
 
     units = get_global_unit_list()
     return render_template('products/new_product.html', units=units)
