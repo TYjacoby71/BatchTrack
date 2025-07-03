@@ -124,10 +124,11 @@ def complete_batch(batch_id):
                 
                 # Get or create the bulk SKU for this product/variant combination
                 from ...services.product_service import ProductService
-                target_sku = ProductService.get_or_create_sku_by_ids(
-                    product_id=product.id,
-                    variant_id=variant.id,
-                    size_label='Bulk'
+                target_sku = ProductService.get_or_create_sku(
+                    product_name=product.name,
+                    variant_name=variant.name,
+                    size_label='Bulk',
+                    unit=product.base_unit
                 )
                 
                 # Store the SKU reference in the batch
