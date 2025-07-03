@@ -44,9 +44,6 @@ def product_list():
 
     return render_template('products/list_products.html', products=products, current_sort=sort_type)
 
-# Add alias for backward compatibility
-list_products = product_list
-
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_product():
@@ -100,7 +97,7 @@ def view_product(product_name):
 
     if not skus:
         flash('Product not found', 'error')
-        return redirect(url_for('products.list_products'))
+        return redirect(url_for('products.product_list'))
 
     # Group SKUs by variant
     variants = {}
@@ -202,7 +199,7 @@ def delete_product(product_name):
 
         if not skus:
             flash('Product not found', 'error')
-            return redirect(url_for('products.list_products'))
+            return redirect(url_for('products.product_list'))
 
         # Check if any SKU has inventory
         total_inventory = sum(sku.current_quantity for sku in skus)
@@ -219,7 +216,7 @@ def delete_product(product_name):
         db.session.commit()
 
         flash(f'Product "{product_name}" deleted successfully', 'success')
-        return redirect(url_for('products.list_products'))
+        return redirect(url_for('products.product_list'))
 
     except Exception as e:
         db.session.rollback()
