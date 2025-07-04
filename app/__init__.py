@@ -73,10 +73,12 @@ def create_app():
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
     try:
-        from .blueprints.products import products_bp, products_api_bp, product_inventory_bp
+        from .blueprints.products import products_bp, sku_bp, api_bp, product_variants_bp, product_inventory_bp
         app.register_blueprint(products_bp, url_prefix='/products')
-        app.register_blueprint(products_api_bp)
-        app.register_blueprint(product_inventory_bp, url_prefix='/products')
+        app.register_blueprint(sku_bp, url_prefix='/products/sku')
+        app.register_blueprint(api_bp, url_prefix='/products/api')
+        app.register_blueprint(product_variants_bp, url_prefix='/products/variants')
+        app.register_blueprint(product_inventory_bp, url_prefix='/products/inventory')
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
