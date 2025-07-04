@@ -16,7 +16,7 @@ def create_app():
     os.makedirs(instance_path, exist_ok=True)
     os.makedirs('static/product_images', exist_ok=True)
     os.chmod(instance_path, 0o777)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'new_batchtrack.db') #'sqlite:///batchtrack.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
 

@@ -7,21 +7,24 @@ class ProductService:
     @staticmethod
     def get_product_summary_skus():
         """Get summary of all products with their total quantities"""
-        # Group by product_name and aggregate quantities, include product_id
+        from ..models.product import Product
+        
+        # Use proper Product model relationships
         product_summaries = db.session.query(
-            func.min(ProductSKU.id).label('product_id'),
-            ProductSKU.product_name,
-            ProductSKU.unit,
+            Product.id.label('product_id'),
+            Product.name.label('product_name'),
+            Product.base_unit.label('product_base_unit'),
             func.sum(ProductSKU.current_quantity).label('total_quantity'),
             func.count(ProductSKU.id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
             func.max(ProductSKU.updated_at).label('last_updated')
-        ).filter(
+        ).join(ProductSKU).filter(
             ProductSKU.is_active == True,
-            ProductSKU.is_product_active == True
+            Product.is_active == True
         ).group_by(
-            ProductSKU.product_name,
-            ProductSKU.unit
+            Product.id,
+            Product.name,
+            Product.base_unit
         ).all()
 
         products = []
@@ -29,7 +32,7 @@ class ProductService:
             products.append({
                 'product_id': summary.product_id,
                 'product_name': summary.product_name,
-                'product_base_unit': summary.unit,
+                'product_base_unit': summary.product_base_unit,
                 'total_quantity': float(summary.total_quantity or 0),
                 'sku_count': summary.sku_count,
                 'low_stock_threshold': float(summary.low_stock_threshold or 0),
@@ -39,45 +42,43 @@ class ProductService:
         return products
 
     @staticmethod
-    def get_or_create_sku(product_name, variant_name, size_label, unit=None, sku_code=None, variant_description=None):
+    def get_or_create_sku(product_id, variant_id, size_label, sku_code=None):
         """Get existing SKU or create new one with automatic SKU generation"""
+        from ..models.product import Product, ProductVariant
+        from flask_login import current_user
+        
         # Check if SKU already exists
         sku = ProductSKU.query.filter_by(
-            product_name=product_name,
-            variant_name=variant_name,
+            product_id=product_id,
+            variant_id=variant_id,
             size_label=size_label
         ).first()
 
         if sku:
-            # If SKU exists but doesn't have a code, generate one
-            if not sku.sku_code or sku.sku_code.strip() == '':
-                sku.sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
-                db.session.flush()
             return sku
+
+        # Get the product and variant
+        product = Product.query.get(product_id)
+        variant = ProductVariant.query.get(variant_id)
+        
+        if not product or not variant:
+            raise ValueError("Product or variant not found")
 
         # Always generate SKU code automatically
         if not sku_code:
-            sku_code = ProductService.generate_sku_code(product_name, variant_name, size_label)
+            sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
-        # Get product base unit from existing SKUs - this should always inherit from parent
-        existing_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-        if existing_sku:
-            product_base_unit = existing_sku.unit
-        else:
-            product_base_unit = unit or 'g'
-
-        # Create new SKU - variants always inherit parent product unit
+        # Create new SKU
         sku = ProductSKU(
-            product_name=product_name,
-            variant_name=variant_name,
+            product_id=product_id,
+            variant_id=variant_id,
             size_label=size_label,
-            unit=product_base_unit,  # Always use parent product unit
+            unit=product.base_unit,  # Always inherit from parent product
             sku_code=sku_code,
-            description=variant_description,
-            current_quantity=0.0,  # New variants start with 0 inventory
+            current_quantity=0.0,
             is_active=True,
-            is_product_active=True,
-            organization_id=existing_sku.organization_id if existing_sku else None
+            organization_id=current_user.organization_id if current_user.is_authenticated else None,
+            created_by=current_user.id if current_user.is_authenticated else None
         )
 
         db.session.add(sku)

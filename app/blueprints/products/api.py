@@ -14,22 +14,20 @@ from . import products_api_bp
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
-        # Get distinct products with their first SKU ID as product identifier
-        products = db.session.query(
-            func.min(ProductSKU.id).label('product_id'),
-            ProductSKU.product_name, 
-            ProductSKU.unit
-        ).filter_by(
+        from ...models.product import Product
+        
+        # Get products using the proper Product model
+        products = Product.query.filter_by(
             is_active=True,
             organization_id=current_user.organization_id
-        ).group_by(ProductSKU.product_name, ProductSKU.unit).all()
+        ).all()
 
         product_list = []
-        for product_id, product_name, base_unit in products:
+        for product in products:
             product_list.append({
-                'id': product_id,
-                'name': product_name,
-                'product_base_unit': base_unit
+                'id': product.id,
+                'name': product.name,
+                'product_base_unit': product.base_unit
             })
 
         return jsonify(product_list)

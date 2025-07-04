@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
+from ...models.product_sku import ProductSKUHistory
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -76,29 +77,76 @@ def new_product():
             flash('Name and product base unit are required', 'error')
             return redirect(url_for('products.new_product'))
 
-        # Check if product already exists
-        existing = ProductSKU.query.filter_by(product_name=name).first()
-        if existing:
+        # Check if product already exists (check both new Product model and legacy ProductSKU)
+        from ...models.product import Product, ProductVariant
+        existing_product = Product.query.filter_by(
+            name=name,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        # Also check legacy ProductSKU table
+        existing_sku = ProductSKU.query.filter_by(
+            product_name=name,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if existing_product or existing_sku:
             flash('Product with this name already exists', 'error')
             return redirect(url_for('products.new_product'))
 
-        # Create the base SKU with auto-generated SKU code
-        from ...services.product_service import ProductService
-        sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
-        sku = ProductSKU(
-            product_name=name,
-            variant_name='Base',
-            size_label='Bulk',
-            unit=unit,
-            sku_code=sku_code,
-            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
-            organization_id=current_user.organization_id
-        )
-        db.session.add(sku)
-        db.session.commit()
+        try:
+            # Step 1: Create the main Product
+            product = Product(
+                name=name,
+                base_unit=unit,
+                low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(product)
+            db.session.flush()  # Get the product ID
 
-        flash('Product created successfully', 'success')
-        return redirect(url_for('products.view_product', product_name=name))
+            # Step 2: Create the base ProductVariant named "Base"
+            variant = ProductVariant(
+                product_id=product.id,
+                name='Base',
+                description='Default base variant',
+                organization_id=current_user.organization_id
+            )
+            db.session.add(variant)
+            db.session.flush()  # Get the variant ID
+
+            # Step 3: Create the base SKU with "Bulk" size label
+            from ...services.product_service import ProductService
+            sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
+            sku = ProductSKU(
+                # New foreign key relationships
+                product_id=product.id,
+                variant_id=variant.id,
+                size_label='Bulk',
+                sku_code=sku_code,
+                unit=unit,
+                low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id,
+                # Legacy fields for backward compatibility
+                product_name=name,
+                variant_name='Base',
+                # Initialize inventory
+                current_quantity=0.0,
+                is_active=True,
+                is_product_active=True
+            )
+            db.session.add(sku)
+            db.session.commit()
+
+            flash('Product created successfully', 'success')
+            return redirect(url_for('products.view_product', product_id=sku.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating product: {str(e)}', 'error')
+            return redirect(url_for('products.new_product'))
 
     units = get_global_unit_list()
     return render_template('products/new_product.html', units=units)
@@ -150,20 +198,38 @@ def view_product(product_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    # Create a product object for the template
-    product = type('Product', (), {
-        'id': product_id,
-        'name': product_name,
-        'product_base_unit': skus[0].unit if skus else None,
-        'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
-        'created_at': skus[0].created_at if skus else None,
-        'variations': [type('Variation', (), {
+    # Try to get the actual Product model first
+    from ...models.product import Product
+    actual_product = Product.query.filter_by(
+        name=product_name,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if actual_product:
+        # Use the actual Product model
+        product = actual_product
+        # Add variations for template compatibility
+        product.variations = [type('Variation', (), {
             'name': variant_name,
             'description': variant_data['description'],
             'id': variant_data['skus'][0].id if variant_data['skus'] else None,
             'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
         })() for variant_name, variant_data in variants.items()]
-    })()
+    else:
+        # Fall back to creating a product object for legacy products
+        product = type('Product', (), {
+            'id': product_id,
+            'name': product_name,
+            'product_base_unit': skus[0].unit if skus else None,
+            'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
+            'created_at': skus[0].created_at if skus else None,
+            'variations': [type('Variation', (), {
+                'name': variant_name,
+                'description': variant_data['description'],
+                'id': variant_data['skus'][0].id if variant_data['skus'] else None,
+                'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
+            })() for variant_name, variant_data in variants.items()]
+        })()
 
     return render_template('products/view_product.html',
                          product=product,
