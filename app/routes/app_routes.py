@@ -125,6 +125,42 @@ def check_stock():
 def unit_manager():
     return redirect(url_for('conversion.manage_units'))
 
+@app_routes_bp.route('/api/dismiss-alert', methods=['POST'])
+@login_required
+def dismiss_alert():
+    """API endpoint to dismiss alerts for the user session"""
+    try:
+        data = request.get_json()
+        alert_type = data.get('alert_type')
+        
+        if not alert_type:
+            return jsonify({'error': 'Alert type is required'}), 400
+        
+        # Store dismissed alerts in session
+        dismissed_alerts = session.get('dismissed_alerts', [])
+        if alert_type not in dismissed_alerts:
+            dismissed_alerts.append(alert_type)
+            session['dismissed_alerts'] = dismissed_alerts
+            session.permanent = True
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app_routes_bp.route('/api/dashboard-alerts')
+@login_required
+def api_dashboard_alerts():
+    """API endpoint to get fresh dashboard alerts"""
+    try:
+        dismissed_alerts = session.get('dismissed_alerts', [])
+        alert_data = DashboardAlertService.get_dashboard_alerts(
+            max_alerts=3, 
+            dismissed_alerts=dismissed_alerts
+        )
+        return jsonify(alert_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app_routes_bp.route('/user_dashboard')
 @login_required
 def user_dashboard():
