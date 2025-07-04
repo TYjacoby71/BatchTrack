@@ -294,52 +294,7 @@ function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
   alertsContainer.innerHTML = alertHtml;
 }
 
-function loadVariants() {
-  const productSelect = document.getElementById('productDropdown');
-  const variantSelect = document.getElementById('variant_id');
 
-  if (!productSelect || !variantSelect) {
-    console.log('Product or variant dropdown not found');
-    return;
-  }
-
-  const productId = productSelect.value;
-
-  // Clear and disable variant dropdown
-  variantSelect.innerHTML = '<option value="">Loading...</option>';
-  variantSelect.disabled = true;
-
-  if (!productId) {
-    variantSelect.innerHTML = '<option value="">Select product first...</option>';
-    return;
-  }
-
-  // Fetch variants for the selected product
-  fetch(`/products/api/${productId}/variants`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then(variants => {
-      variantSelect.innerHTML = '<option value="">Select variant...</option>';
-      
-      variants.forEach(variant => {
-        const option = document.createElement('option');
-        option.value = variant.id;
-        option.textContent = variant.name;
-        variantSelect.appendChild(option);
-      });
-      
-      variantSelect.disabled = false;
-    })
-    .catch(error => {
-      console.error('Error loading variants:', error.message || error);
-      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-      variantSelect.disabled = true;
-    });
-}
 
 function getCSRFToken() {
   const token = document.querySelector('input[name="csrf_token"]')?.value ||
