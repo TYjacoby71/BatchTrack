@@ -63,13 +63,10 @@ class ConversionEngine:
                         converted = amount
                     else:
                         try:
-                            from_multiplier = float(from_u.multiplier_to_base) if from_u.multiplier_to_base else 1.0
-                            to_multiplier = float(to_u.multiplier_to_base) if to_u.multiplier_to_base else 1.0
+                            from_multiplier = float(from_u.conversion_factor) if from_u.conversion_factor else 1.0
+                            to_multiplier = float(to_u.conversion_factor) if to_u.conversion_factor else 1.0
                             base_amount = amount * from_multiplier
                             converted = base_amount / to_multiplier
-                            print(f"DEBUG CONVERSION: {amount} {from_unit} -> {to_unit}")
-                            print(f"  from_multiplier: {from_multiplier}, to_multiplier: {to_multiplier}")
-                            print(f"  base_amount: {base_amount}, converted: {converted}")
                         except (ValueError, TypeError, ZeroDivisionError) as e:
                             raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}: {str(e)}")
                     conversion_type = 'direct'
@@ -86,11 +83,11 @@ class ConversionEngine:
                     used_density = density
 
                     if from_u.type == 'volume':
-                        grams = amount * from_u.multiplier_to_base * density
-                        converted = grams / to_u.multiplier_to_base
+                        grams = amount * from_u.conversion_factor * density
+                        converted = grams / to_u.conversion_factor
                     else:  # weight → volume
-                        ml = (amount * from_u.multiplier_to_base) / density
-                        converted = ml / to_u.multiplier_to_base
+                        ml = (amount * from_u.conversion_factor) / density
+                        converted = ml / to_u.conversion_factor
 
                     conversion_type = 'density'
 
