@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {% include 'components/sku/sku_details_card.html' %}
 
             <!-- Inventory Actions Card Component -->
-            {% include 'components/sku/inventory_actions_card.html' %}
+            
 
             <!-- FIFO Filter -->
             <div class="row mb-3">
@@ -149,36 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// SKU Inventory Actions - Dynamic Form Generation
-const skuData = {
-    retailPrice: {{ sku.retail_price or 0 }},
-    unitCost: {{ sku.unit_cost or 0 }},
-    currentQuantity: {{ total_quantity }},
-    unit: '{{ sku.unit }}',
-    availableQuantity: {{ sku.available_for_sale }}
-};
 
-function showActionForm() {
-    const actionType = document.getElementById('actionType').value;
-    const container = document.getElementById('actionFormContainer');
-    const formFields = document.getElementById('dynamicFormFields');
-    const hiddenChangeType = document.getElementById('hiddenChangeType');
 
-    if (!actionType) {
-        container.style.display = 'none';
-        return;
-    }
 
-    hiddenChangeType.value = actionType;
-    formFields.innerHTML = generateFormFields(actionType);
-    container.style.display = 'block';
-}
-
-function generateFormFields(actionType) {
-    let fields = '';
-
-    // Common quantity field
-    fields += `
         <div class="col-md-6">
             <label class="form-label">Quantity</label>
             <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
@@ -190,25 +163,7 @@ function generateFormFields(actionType) {
     switch(actionType) {
         case 'sale':
             fields += `
-                <div class="col-md-6">
-                    <label class="form-label">Order ID (Optional)</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Shopify order #1234">
-                </div>
-            `;
-            break;
-
-        case 'restock':
-            fields += `
-                <div class="col-md-6">
-                    <label class="form-label">Unit Cost</label>
-                    <input type="number" class="form-control" name="unit_cost" step="0.01" min="0" value="${skuData.unitCost}">
-                    <small class="text-muted">Cost per ${skuData.unit}</small>
-                </div>
-            `;
-            break;
-
-        case 'adjustment':
-            fields += `
+                
                 <div class="col-md-6">
                     <label class="form-label">Adjustment Type</label>
                     <select class="form-select" name="adjustment_type" required>

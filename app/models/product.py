@@ -65,7 +65,6 @@ class ProductVariant(ScopedModelMixin, db.Model):
     
     # Variant-specific properties
     color = db.Column(db.String(32), nullable=True)
-    size = db.Column(db.String(32), nullable=True)
     material = db.Column(db.String(64), nullable=True)
     scent = db.Column(db.String(64), nullable=True)
     
@@ -223,6 +222,12 @@ class ProductSKU(ScopedModelMixin, db.Model):
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
     
+    # Data integrity validation
+    def validate_product_variant_consistency(self):
+        """Ensure product_id matches variant.product_id for data integrity"""
+        if self.variant and self.product_id != self.variant.product_id:
+            raise ValueError(f"SKU product_id ({self.product_id}) does not match variant's product_id ({self.variant.product_id})")
+    
     # Table constraints
     __table_args__ = (
         db.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_combination'),
@@ -232,6 +237,16 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.Index('idx_active_skus', 'is_active', 'is_product_active'),
         db.Index('idx_low_stock', 'current_quantity', 'low_stock_threshold'),
     )
+    
+    @classmethod
+    def generate_sku_code(cls, product_name, variant_name, size_label):
+        """Generate a standardized SKU code from product/variant/size"""
+        # Create slugs from names
+        product_slug = ''.join(c.upper() if c.isalnum() else '' for c in product_name)[:8]
+        variant_slug = ''.join(c.upper() if c.isalnum() else '' for c in variant_name)[:6]
+        size_slug = ''.join(c.upper() if c.isalnum() else '' for c in size_label)[:6]
+        
+        return f"{product_slug}-{variant_slug}-{size_slug}"
     
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
