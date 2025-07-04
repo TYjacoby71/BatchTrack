@@ -49,8 +49,14 @@
                                 {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.1f"|format(entry.quantity_change) }}
                             </span>
                         </td>
-                        <td>{{ "%.1f"|format(entry.old_quantity) if entry.old_quantity is not none else 'N/A' }}</td>
-                        <td>{{ "%.1f"|format(entry.new_quantity) if entry.new_quantity is not none else 'N/A' }}</td>
+                        <td>
+                            {% if entry.quantity_change < 0 %}
+                                {{ "%.1f"|format(entry.remaining_quantity + (-entry.quantity_change)) }}
+                            {% else %}
+                                {{ "%.1f"|format(entry.remaining_quantity - entry.quantity_change) if entry.remaining_quantity is not none else 'N/A' }}
+                            {% endif %}
+                        </td>
+                        <td>{{ "%.1f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else 'N/A' }}</td>
                         <td>
                             {% if entry.remaining_quantity is not none %}
                                 {{ "%.1f"|format(entry.remaining_quantity) }}
