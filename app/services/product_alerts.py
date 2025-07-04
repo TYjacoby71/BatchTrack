@@ -6,22 +6,30 @@ class ProductAlertService:
     """Service for product-related alerts including low stock SKUs"""
 
     @staticmethod
-    def get_low_stock_skus() -> List[ProductSKU]:
-        """Get all ProductSKUs that are below their low stock threshold"""
-        return ProductSKU.query.filter(
+    def get_low_stock_skus():
+        """Get all SKUs that are below their low stock threshold"""
+        from ..models.models import InventoryItem
+
+        return db.session.query(ProductSKU).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             and_(
+                InventoryItem.quantity <= ProductSKU.low_stock_threshold,
                 ProductSKU.low_stock_threshold > 0,
-                ProductSKU.current_quantity <= ProductSKU.low_stock_threshold,
                 ProductSKU.is_active == True
             )
         ).all()
 
     @staticmethod
-    def get_out_of_stock_skus() -> List[ProductSKU]:
-        """Get all ProductSKUs that are completely out of stock"""
-        return ProductSKU.query.filter(
+    def get_out_of_stock_skus():
+        """Get all SKUs that are out of stock"""
+        from ..models.models import InventoryItem
+
+        return db.session.query(ProductSKU).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             and_(
-                ProductSKU.current_quantity <= 0,
+                InventoryItem.quantity == 0,
                 ProductSKU.is_active == True
             )
         ).all()
