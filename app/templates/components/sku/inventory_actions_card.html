@@ -7,17 +7,28 @@
     <!-- Add Existing Inventory Form -->
     <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <input type="hidden" name="change_type" value="restock"/>
       <div class="row">
         <div class="col-md-3">
+          <label class="form-label">Action Type</label>
+          <select name="change_type" class="form-select" required>
+            <option value="">Select action</option>
+            <option value="restock" selected>Add Stock</option>
+            <option value="spoil">Mark as Spoiled</option>
+            <option value="trash">Dispose/Trash</option>
+            <option value="sold">Manual Sale</option>
+            <option value="gift">Gift/Sample</option>
+            <option value="recount">Recount (Set Total)</option>
+          </select>
+        </div>
+        <div class="col-md-2">
           <label class="form-label">Quantity</label>
           <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">Unit</label>
           <input type="text" name="input_unit" class="form-control" value="{{ sku.unit }}" readonly>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">Cost per Unit</label>
           <div class="input-group">
             <span class="input-group-text">$</span>
@@ -26,7 +37,7 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">Notes</label>
-          <input type="text" name="notes" class="form-control" placeholder="Manual restock">
+          <input type="text" name="notes" class="form-control" placeholder="Reason for adjustment">
         </div>
       </div>
 
