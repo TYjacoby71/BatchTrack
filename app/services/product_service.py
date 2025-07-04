@@ -150,9 +150,7 @@ class ProductService:
             ProductVariant.name
         ).all()
 
-    @staticmethod
-    def get_products_summary():
-        return ProductService.get_product_summary_skus()
+    
 
     @staticmethod
     def get_low_stock_skus(threshold_multiplier: float = 1.0):
