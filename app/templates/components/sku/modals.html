@@ -115,7 +115,7 @@
                         <input type="number" class="form-control" id="quantity" name="quantity" 
                                step="0.01" min="0.01" required>
                         <div class="form-text">
-                            <span id="quantityHelp">For recount: enter new total quantity. For deductions: enter amount to remove.</span>
+                            <span id="quantityHelp">Select an adjustment type to see quantity instructions.</span>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -199,6 +199,38 @@ document.addEventListener('DOMContentLoaded', function() {
     if (changeTypeSelect) {
         changeTypeSelect.addEventListener('change', function() {
             const value = this.value;
+            const quantityHelp = document.getElementById('quantityHelp');
+
+            // Update quantity help text based on adjustment type
+            if (quantityHelp) {
+                switch(value) {
+                    case 'sale':
+                    case 'gift':
+                    case 'sample':
+                        quantityHelp.textContent = 'Enter the quantity sold/given away.';
+                        break;
+                    case 'damaged':
+                    case 'spoil':
+                    case 'trash':
+                    case 'expired':
+                        quantityHelp.textContent = 'Enter the quantity lost/damaged/expired.';
+                        break;
+                    case 'manual_addition':
+                        quantityHelp.textContent = 'Enter the quantity to add to existing stock.';
+                        break;
+                    case 'recount':
+                        quantityHelp.textContent = 'Enter the new total quantity after recount.';
+                        break;
+                    case 'reserved':
+                        quantityHelp.textContent = 'Enter the quantity to reserve for this order.';
+                        break;
+                    case 'unreserved':
+                        quantityHelp.textContent = 'Enter the quantity to release from reservation.';
+                        break;
+                    default:
+                        quantityHelp.textContent = 'Select an adjustment type to see quantity instructions.';
+                }
+            }
 
             // Show/hide order ID field for sales and reservations
             if (value === 'sale' || value === 'reserved') {
