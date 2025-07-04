@@ -56,7 +56,7 @@ def adjust_sku_inventory(sku_id):
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return redirect(url_for('products.view_sku', sku_id=sku_id))
+        return redirect(url_for('sku.view_sku', sku_id=sku_id))
 
     try:
         # Convert numeric values
@@ -156,7 +156,7 @@ def adjust_sku_inventory(sku_id):
 
     # Redirect for form submissions
     if not request.is_json:
-        return redirect(url_for('products.view_sku', sku_id=sku_id))
+        return redirect(url_for('sku.view_sku', sku_id=sku_id))
     return None
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
