@@ -219,6 +219,8 @@ def downgrade():
     op.drop_table('product_sku')
     op.drop_table('product_variant')
     op.drop_table('product')
+    op.drop_table('user')
+    op.drop_table('organization')
     op.drop_table('role_permission')
     op.drop_table('role')
     op.drop_table('permission')
