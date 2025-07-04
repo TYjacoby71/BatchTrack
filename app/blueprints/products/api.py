@@ -40,7 +40,7 @@ def get_products():
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
-        from ...models import Product, ProductVariant
+        from ...models.product import Product, ProductVariant
         
         # Get the product with org scoping
         product = Product.query.filter_by(
