@@ -284,7 +284,8 @@ def process_inventory_adjustment(
                     break
 
                 original_fifo_entry = InventoryHistory.query.get(deduction.fifo_reference_id)
-                if original_fifo_entry:                    credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
+                if original_fifo_entry:
+                    credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
 
                     # Credit back to the original FIFO entry's remaining quantity
                     original_fifo_entry.remaining_quantity += credit_amount
