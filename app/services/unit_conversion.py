@@ -63,10 +63,12 @@ class ConversionEngine:
                         converted = amount
                     else:
                         try:
-                            base_amount = amount * float(from_u.multiplier_to_base)
-                            converted = base_amount / float(to_u.multiplier_to_base)
-                        except (ValueError, TypeError):
-                            raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}")
+                            from_multiplier = float(from_u.multiplier_to_base) if from_u.multiplier_to_base else 1.0
+                            to_multiplier = float(to_u.multiplier_to_base) if to_u.multiplier_to_base else 1.0
+                            base_amount = amount * from_multiplier
+                            converted = base_amount / to_multiplier
+                        except (ValueError, TypeError, ZeroDivisionError) as e:
+                            raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}: {str(e)}")
                     conversion_type = 'direct'
 
                 # 4. Cross-type: volume ↔ weight
