@@ -1,4 +1,4 @@
-2025-07-04 21:52:54,689 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 22:32:02,597 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,7 +15,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 60, in adjust_sku_inventory
+  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 159, in adjust_sku_inventory
     return redirect(url_for('products.view_sku', sku_id=sku_id))
                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
@@ -30,66 +30,14 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.view_sku' with values ['sku_id']. Did you mean 'products.view_product' instead?
-2025-07-04 21:55:07,265 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:58:07,542 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:02:44,601 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:03:51,479 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:04:54,598 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:07:08,032 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:07:19,591 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:08:07,389 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:09:56,581 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 920, in full_dispatch_request
-    return self.finalize_request(rv)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 939, in finalize_request
-    response = self.make_response(rv)
-               ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1212, in make_response
-    raise TypeError(
-TypeError: The view function for 'product_inventory.adjust_sku_inventory' did not return a valid response. The function either returned None or ended without a return statement.
-2025-07-04 22:11:44,016 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:11:56,886 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:13:21,509 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:13:26,638 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:13:44,438 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 920, in full_dispatch_request
-    return self.finalize_request(rv)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 939, in finalize_request
-    response = self.make_response(rv)
-               ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1212, in make_response
-    raise TypeError(
-TypeError: The view function for 'product_inventory.adjust_sku_inventory' did not return a valid response. The function either returned None or ended without a return statement.
-2025-07-04 22:15:04,780 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:20:25,973 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:23:34,969 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:27:07,088 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 920, in full_dispatch_request
-    return self.finalize_request(rv)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 939, in finalize_request
-    response = self.make_response(rv)
-               ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1212, in make_response
-    raise TypeError(
-TypeError: The view function for 'product_inventory.adjust_sku_inventory' did not return a valid response. The function either returned None or ended without a return statement.
-2025-07-04 22:29:53,657 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:29:55,576 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 22:30:08,485 ERROR: Exception on /products/adjust/1 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 22:32:43,920 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:34:48,928 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:36:36,616 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:36:48,275 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:38:14,671 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:39:40,441 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:46:14,337 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:46:41,263 ERROR: Exception on /products/sku/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -106,19 +54,81 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 175, in adjust_sku_inventory
-    return redirect(url_for('products.view_sku', sku_id=sku_id))
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
-    return current_app.url_for(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.view_sku' with values ['sku_id']. Did you mean 'products.view_product' instead?
-2025-07-04 22:31:30,483 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+  File "/home/runner/workspace/app/blueprints/products/sku.py", line 22, in view_sku
+    return render_template('products/view_sku.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 1, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 125, in block 'content'
+    {% include 'components/sku/history_table.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/components/sku/history_table.html", line 52, in top-level template code
+    <td>{{ "%.1f"|format(entry.old_quantity) if entry.old_quantity is not none else 'N/A' }}</td>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1043, in do_format
+    return soft_str(value) % (kwargs or args)
+           ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+jinja2.exceptions.UndefinedError: 'app.models.product.ProductSKUHistory object' has no attribute 'old_quantity'
+2025-07-04 22:46:53,097 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:46:57,003 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:47:10,021 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 22:47:22,601 ERROR: Exception on /products/sku/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/products/sku.py", line 22, in view_sku
+    return render_template('products/view_sku.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 1, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 125, in block 'content'
+    {% include 'components/sku/history_table.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/components/sku/history_table.html", line 52, in top-level template code
+    <td>{{ "%.1f"|format(entry.old_quantity) if entry.old_quantity is not none else 'N/A' }}</td>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/filters.py", line 1043, in do_format
+    return soft_str(value) % (kwargs or args)
+           ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+jinja2.exceptions.UndefinedError: 'app.models.product.ProductSKUHistory object' has no attribute 'old_quantity'
