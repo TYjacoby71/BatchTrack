@@ -83,14 +83,14 @@ function updateRowCost(selectElement) {
   const row = selectElement.closest('.extra-row');
   const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
   const unit = selectElement.options[selectElement.selectedIndex].dataset.unit;
-  
+
   const costInput = row.querySelector('.cost');
   const unitSelect = row.querySelector('.unit');
-  
+
   if (costInput) {
     costInput.value = cost || 0;
   }
-  
+
   if (unitSelect && unit) {
     unitSelect.value = unit;
   }
@@ -256,3 +256,72 @@ function cancelBatch() {
     form.submit();
   }
 }
+
+// Load variants when product is selected
+function loadVariants(productId) {
+    console.log('Loading variants for product ID:', productId);
+    const variantSelect = document.getElementById('variant_id');
+
+    if (!variantSelect) {
+        console.error('Variant select element not found');
+        return;
+    }
+
+    if (!productId) {
+        variantSelect.innerHTML = '<option value="">Select a product first...</option>';
+        return;
+    }
+
+    variantSelect.innerHTML = '<option value="">Loading variants...</option>';
+
+    fetch(`/products/${productId}/variants`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            variantSelect.innerHTML = '<option value="">Select variant...</option>';
+            data.forEach(variant => {
+                const option = document.createElement('option');
+                option.value = variant.id;
+                option.textContent = variant.name;
+                variantSelect.appendChild(option);
+            });
+            console.log('Loaded variants successfully:', data);
+        })
+        .catch(error => {
+            console.error('Error loading variants:', error);
+            variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Batch form modal opened');
+
+    // Initialize any needed functionality
+    const modal = document.getElementById('finishBatchModal');
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', function () {
+            console.log('Modal opened, initializing...');
+
+            // Set up product change handler
+            const productSelect = document.getElementById('product_id');
+            const variantSelect = document.getElementById('variant_id');
+
+            if (productSelect && variantSelect) {
+                productSelect.addEventListener('change', function() {
+                    loadVariants(this.value);
+                });
+
+                // Load variants for initially selected product
+                if (productSelect.value) {
+                    loadVariants(productSelect.value);
+                }
+            } else {
+                console.error('Product or variant dropdown not found');
+            }
+        });
+    }
+});
