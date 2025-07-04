@@ -169,7 +169,7 @@ def process_inventory_adjustment(
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
             # Create appropriate history entry based on item type
-            if item_type == 'sku':
+            if item_type == 'product':
                 from app.models.product_sku import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
@@ -276,7 +276,7 @@ def process_inventory_adjustment(
             addition_unit = item.unit if item.unit else 'count'
             
             # Create appropriate history entry based on item type
-            if item_type == 'sku':
+            if item_type == 'product':
                 from app.models.product_sku import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
