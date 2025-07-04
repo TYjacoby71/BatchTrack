@@ -5,7 +5,14 @@ from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, C
 class ConversionEngine:
             @staticmethod
             def round_value(value, decimals=3):
-                return round(value, decimals)
+                """Round value with protection against floating point precision issues"""
+                if value is None:
+                    return None
+                # Use decimal for more precise rounding
+                from decimal import Decimal, ROUND_HALF_UP
+                decimal_value = Decimal(str(value))
+                rounded_decimal = decimal_value.quantize(Decimal('0.' + '0' * decimals), rounding=ROUND_HALF_UP)
+                return float(rounded_decimal)
 
             @staticmethod
             def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
@@ -112,9 +119,9 @@ class ConversionEngine:
                         print(f"Error logging conversion: {e}")
                         db.session.rollback()
 
-                # Return structured metadata
+                # Return structured metadata with consistent rounding
                 return {
-                    'converted_value': ConversionEngine.round_value(converted),
+                    'converted_value': ConversionEngine.round_value(converted, 3),
                     'conversion_type': conversion_type,
                     'density_used': used_density,
                     'from': from_unit,
