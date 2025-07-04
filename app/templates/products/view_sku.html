@@ -59,7 +59,7 @@ window.submitInventoryAdjustment = function() {
     const form = document.getElementById('inventoryForm');
     const formData = new FormData(form);
 
-    fetch("{{ url_for('products.adjust_sku', sku_id=sku.id) }}", {
+    fetch("{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}", {
         method: 'POST',
         body: formData
     })

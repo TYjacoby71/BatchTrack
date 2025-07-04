@@ -387,6 +387,78 @@ def reserve_inventory(sku_id):
     data = request.get_json() if request.is_json else request.form
     quantity = data.get('quantity')
     notes = data.get('notes', 'Inventory reservation')
+
+
+# Legacy compatibility routes - redirect to consolidated inventory adjustment
+@product_inventory_bp.route('/legacy/adjust/<int:sku_id>', methods=['POST'])
+@login_required 
+def legacy_adjust_sku(sku_id):
+    """Legacy route compatibility - redirects to main adjustment endpoint"""
+    return adjust_sku_inventory(sku_id)
+
+@product_inventory_bp.route('/api/adjust/<int:sku_id>', methods=['POST'])
+@login_required
+def api_adjust_sku_inventory(sku_id):
+    """API endpoint for SKU inventory adjustments - same as main adjustment but ensures JSON response"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+
+    data = request.get_json() if request.is_json else request.form
+
+    quantity = data.get('quantity')
+    change_type = data.get('change_type')
+    notes = data.get('notes')
+
+    if not quantity or not change_type:
+        return jsonify({'error': 'Quantity and change type are required'}), 400
+
+    try:
+        # Get additional product-specific parameters
+        customer = data.get('customer')
+        sale_price = data.get('sale_price')
+        order_id = data.get('order_id')
+
+        # Convert sale_price to float if provided
+        sale_price_float = None
+        if sale_price:
+            try:
+                sale_price_float = float(sale_price)
+            except (ValueError, TypeError):
+                pass
+
+        # Use centralized inventory adjustment service
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=float(quantity),
+            change_type=change_type,
+            unit=sku.unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='product',
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'SKU inventory adjusted successfully',
+                'new_quantity': sku.current_quantity
+            })
+        else:
+            return jsonify({'error': 'Error adjusting inventory'}), 500
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
     
     if not quantity:
         return jsonify({'error': 'Quantity is required'}), 400

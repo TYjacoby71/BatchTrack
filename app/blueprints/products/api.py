@@ -238,58 +238,6 @@ def add_inventory_from_batch():
 @products_api_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
 def adjust_sku_inventory(sku_id):
-    """Adjust SKU inventory via API"""
-    sku = ProductSKU.query.filter_by(
-        id=sku_id,
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
-
-    data = request.get_json()
-
-    quantity = data.get('quantity')
-    change_type = data.get('change_type')
-    notes = data.get('notes')
-
-    try:
-        # Get additional product-specific parameters
-        customer = data.get('customer')
-        sale_price = data.get('sale_price')
-        order_id = data.get('order_id')
-
-        # Convert sale_price to float if provided
-        sale_price_float = None
-        if sale_price:
-            try:
-                sale_price_float = float(sale_price)
-            except (ValueError, TypeError):
-                pass
-
-        # Use centralized inventory adjustment service
-        success = process_inventory_adjustment(
-            item_id=sku_id,
-            quantity=quantity,
-            change_type=change_type,
-            unit=sku.unit,
-            notes=notes,
-            created_by=current_user.id,
-            item_type='product',
-            customer=customer,
-            sale_price=sale_price_float,
-            order_id=order_id
-        )
-
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'SKU inventory adjusted successfully',
-                'new_quantity': sku.current_quantity
-            })
-        else:
-            return jsonify({'error': 'Error adjusting inventory'}), 500
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    """Legacy API route - redirect to consolidated product inventory adjustment"""
+    from ..product_inventory_routes import api_adjust_sku_inventory
+    return api_adjust_sku_inventory(sku_id)
