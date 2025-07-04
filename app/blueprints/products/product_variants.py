@@ -10,17 +10,36 @@ from . import products_bp
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
+        # First try to get from new Product model
         from ...models.product import Product, ProductVariant
         from ...models.product_sku import ProductSKU
         
-        # Get the Product record using the new model structure
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
         
+        # If not found in Product model, try legacy ProductSKU approach
         if not product:
-            return jsonify({'error': 'Product not found'}), 404
+            # Get product info from legacy ProductSKU
+            base_sku = ProductSKU.query.filter_by(
+                id=product_id,
+                organization_id=current_user.organization_id
+            ).first()
+            
+            if not base_sku:
+                return jsonify({'error': 'Product not found'}), 404
+            
+            # Create Product record if it doesn't exist
+            product = Product(
+                name=base_sku.product_name,
+                base_unit=base_sku.unit,
+                low_stock_threshold=base_sku.low_stock_threshold or 0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(product)
+            db.session.flush()
         
         # Get variant name from request
         if request.is_json:
@@ -55,21 +74,26 @@ def add_variant(product_id):
         db.session.add(new_variant)
         db.session.flush()  # Get the variant ID without committing
 
-        # Now create the ProductSKU for this variant
-        from ...utils.fifo_generator import generate_fifo_code
-        
+        # Generate SKU code
         sku_code = f"{product.name.replace(' ', '')[:3].upper()}-{variant_name.replace(' ', '')[:3].upper()}-BULK"
         
+        # Create ProductSKU for this variant
         new_sku = ProductSKU(
             product_id=product.id,
             variant_id=new_variant.id,
             size_label='Bulk',
             sku_code=sku_code,
-            unit=product.base_unit,  # Inherit from parent product
+            unit=product.base_unit,
             low_stock_threshold=product.low_stock_threshold,
             description=description,
             organization_id=current_user.organization_id,
-            created_by=current_user.id
+            created_by=current_user.id,
+            # Legacy fields for backward compatibility
+            product_name=product.name,
+            variant_name=variant_name,
+            current_quantity=0.0,
+            is_active=True,
+            is_product_active=True
         )
         db.session.add(new_sku)
         db.session.commit()
