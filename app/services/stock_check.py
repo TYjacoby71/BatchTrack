@@ -16,19 +16,19 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     for recipe_ingredient in recipe.recipe_ingredients:
         ingredient = recipe_ingredient.inventory_item
         print(f"Processing recipe ingredient: {recipe_ingredient.quantity} {recipe_ingredient.unit}")
-        
+
         if not ingredient:
             print(f"  - ERROR: No inventory item linked to recipe ingredient ID {recipe_ingredient.id}")
             continue
-            
+
         print(f"  - Found ingredient: {ingredient.name} (org_id: {ingredient.organization_id})")
         print(f"  - Current user org_id: {current_user.organization_id if current_user.is_authenticated else 'None'}")
-        
+
         # Ensure ingredient belongs to current user's organization
         if not ingredient.belongs_to_user():
             print(f"  - SKIPPING: Ingredient {ingredient.name} doesn't belong to current user's organization")
             continue
-            
+
         print(f"  - Ingredient belongs to user, proceeding with stock check")
         needed_amount = recipe_ingredient.quantity * scale
 
@@ -42,16 +42,16 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 InventoryHistory.expiration_date >= today  # Non-expired perishable items
             )
         ).all()
-        
+
         # Sum up available quantity from non-expired entries
         available = sum(entry.remaining_quantity for entry in available_fifo_entries)
-        
+
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
         density = ingredient.density if ingredient.density else None
-        
+
         print(f"  - Available (non-expired): {available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
-        
+
         try:
             # Convert available stock to recipe unit using UUCS
             print(f"  - Converting {available} {stock_unit} to {recipe_unit}")
@@ -62,7 +62,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 ingredient_id=ingredient.id
             )
             print(f"  - Conversion result: {conversion_result}")
-            
+
             if isinstance(conversion_result, dict):
                 available_converted = conversion_result['converted_value']
             else:
@@ -77,7 +77,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
             else:
                 status = 'NEEDED'
                 all_ok = False
-                
+
             print(f"  - Status: {status} (available_converted: {available_converted}, needed: {needed_amount})")
 
             # Append result for this ingredient

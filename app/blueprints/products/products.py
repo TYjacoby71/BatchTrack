@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, Product, ProductVariant, ProductSKU, ProductSKUHistory
+from ...models import db, Product, ProductVariant, ProductSKU, ProductSKUHistory, InventoryItem
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime

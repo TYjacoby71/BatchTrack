@@ -154,10 +154,9 @@
 
               <div class="mt-auto">
                 {% if variation %}
-                <a href="{{ url_for('products.view_variant', product_id=product.id, variant_name=variation.name) }}" 
-                   class="btn btn-outline-primary btn-sm w-100">
-                  View Details
-                </a>
+                <button class="btn btn-outline-primary btn-sm w-100" disabled>
+                  View Details (Coming Soon)
+                </button>
                 {% endif %}
               </div>
             </div>

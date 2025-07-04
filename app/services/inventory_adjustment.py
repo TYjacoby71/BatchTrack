@@ -3,6 +3,7 @@ from flask_login import current_user
 from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
+from app.services.unit_conversion import ConversionEngine
 from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
 from app.utils.fifo_generator import generate_fifo_id
 
@@ -17,7 +18,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         item = ProductSKU.query.get(item_id)
         if not item:
             return False, "Product SKU not found", 0, 0
-        
+
         # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
         all_fifo_entries = ProductSKUHistory.query.filter(
@@ -26,7 +27,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
                 ProductSKUHistory.remaining_quantity > 0
             )
         ).all()
-        
+
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.current_quantity
         item_name = item.display_name
@@ -43,7 +44,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
                 InventoryHistory.remaining_quantity > 0
             )
         ).all()
-        
+
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
         item_name = item.name
@@ -94,7 +95,7 @@ def process_inventory_adjustment(
     # Determine quantity change and special handling
     # Handle different quantity property names
     current_quantity = getattr(item, 'current_quantity', None) or getattr(item, 'quantity', 0)
-    
+
     if change_type == 'recount':
         qty_change = quantity - current_quantity
     elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
@@ -163,7 +164,7 @@ def process_inventory_adjustment(
         if change_type in ['spoil', 'trash', 'expired_disposal']:
             from app.blueprints.fifo.services import get_expired_fifo_entries
             expired_entries = get_expired_fifo_entries(item.id)
-            
+
             # If we have expired stock and the request quantity matches available expired stock,
             # deduct from expired lots instead of fresh stock
             expired_total = sum(entry.remaining_quantity for entry in expired_entries)
@@ -171,11 +172,11 @@ def process_inventory_adjustment(
                 # Deduct from expired entries manually
                 remaining_to_deduct = abs(qty_change)
                 deductions = []
-                
+
                 for entry in expired_entries:
                     if remaining_to_deduct <= 0:
                         break
-                    
+
                     deduction = min(entry.remaining_quantity, remaining_to_deduct)
                     entry.remaining_quantity -= deduction
                     remaining_to_deduct -= deduction
@@ -236,11 +237,12 @@ def process_inventory_adjustment(
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
-        # Update quantity based on item type
+        # Update quantity based on item type with rounding
+        rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         if hasattr(item, 'current_quantity'):
-            item.current_quantity += qty_change
+            item.current_quantity = ConversionEngine.round_value(item.current_quantity + rounded_qty_change, 3)
         else:
-            item.quantity += qty_change
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     else:
         # Handle credits/refunds by finding original FIFO entries to credit back to
@@ -312,7 +314,7 @@ def process_inventory_adjustment(
             # Create new stock entry
             # Ensure unit is never None for containers
             addition_unit = item.unit if item.unit else 'count'
-            
+
             # Create appropriate history entry based on item type
             if item_type == 'product':
                 from app.models.product_sku import ProductSKUHistory
@@ -354,11 +356,12 @@ def process_inventory_adjustment(
                 )
             db.session.add(history)
 
-        # Update quantity based on item type
+        # Update quantity based on item type with rounding
+        rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         if hasattr(item, 'current_quantity'):
-            item.current_quantity += qty_change
+            item.current_quantity = ConversionEngine.round_value(item.current_quantity + rounded_qty_change, 3)
         else:
-            item.quantity += qty_change
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     db.session.commit()
 
