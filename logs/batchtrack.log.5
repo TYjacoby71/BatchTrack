@@ -1,4 +1,4 @@
-2025-07-04 21:00:37,058 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 21:01:58,809 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1812, in _execute_context
     context = constructor(
@@ -83,5 +83,6 @@ sqlalchemy.exc.StatementError: (builtins.TypeError) float() argument must be a s
 FROM product_sku 
 WHERE product_sku.low_stock_threshold > ? AND product_sku.low_stock_threshold >= ? AND product_sku.is_active = 1]
 [parameters: [{}]]
-2025-07-04 21:01:46,278 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:01:58,285 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:03:06,689 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:03:10,199 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:03:18,182 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
