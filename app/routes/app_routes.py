@@ -28,10 +28,10 @@ def check_container_availability(container_ids, scale=1):
 def dashboard(scope_context=None):
     recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
-    
+
     # Get unified dashboard alerts
     alert_data = DashboardAlertService.get_dashboard_alerts()
-    
+
     stock_check = None
     selected_recipe = None
     scale = 1
@@ -82,12 +82,12 @@ def check_stock():
             return jsonify({"error": "Invalid scale value"}), 400
 
         recipe = Recipe.query.get_or_404(recipe_id)
-        
+
         # Use universal stock check service
         result = universal_stock_check(recipe, scale)
         stock_check = result['stock_check']
         all_ok = result['all_ok']
-        
+
         # Handle container validation
         container_ids = data.get('container_ids', [])
         if container_ids and isinstance(container_ids, list):
@@ -110,7 +110,7 @@ def check_stock():
             'status': item['status'],
             'type': item.get('type', 'ingredient')
         } for item in stock_check]
-        
+
         return jsonify({
             "stock_check": results,
             "status": status,
@@ -124,3 +124,56 @@ def check_stock():
 @login_required
 def unit_manager():
     return redirect(url_for('conversion.manage_units'))
+
+@app_routes_bp.route('/api/dismiss-alert', methods=['POST'])
+@login_required
+def dismiss_alert():
+    """API endpoint to dismiss alerts for the user session"""
+    try:
+        data = request.get_json()
+        alert_type = data.get('alert_type')
+        
+        if not alert_type:
+            return jsonify({'error': 'Alert type is required'}), 400
+        
+        # Store dismissed alerts in session
+        dismissed_alerts = session.get('dismissed_alerts', [])
+        if alert_type not in dismissed_alerts:
+            dismissed_alerts.append(alert_type)
+            session['dismissed_alerts'] = dismissed_alerts
+            session.permanent = True
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app_routes_bp.route('/api/dashboard-alerts')
+@login_required
+def api_dashboard_alerts():
+    """API endpoint to get fresh dashboard alerts"""
+    try:
+        dismissed_alerts = session.get('dismissed_alerts', [])
+        alert_data = DashboardAlertService.get_dashboard_alerts(
+            max_alerts=3, 
+            dismissed_alerts=dismissed_alerts
+        )
+        return jsonify(alert_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app_routes_bp.route('/user_dashboard')
+@login_required
+def user_dashboard():
+    # Get low stock and expiration alerts
+    low_stock_ingredients = get_low_stock_ingredients()
+    expiration_summary = ExpirationService.get_expiration_summary()
+
+    # Get dismissed alerts from session
+    dismissed_alerts = session.get('dismissed_alerts', [])
+
+    # Get comprehensive dashboard alerts filtered by dismissed alerts
+    alert_data = DashboardAlertService.get_dashboard_alerts(
+        max_alerts=3, 
+        dismissed_alerts=dismissed_alerts
+    )
+    return render_template('user_dashboard.html', low_stock_ingredients=low_stock_ingredients, expiration_summary=expiration_summary, alert_data=alert_data)
