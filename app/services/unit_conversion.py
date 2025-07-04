@@ -63,10 +63,12 @@ class ConversionEngine:
                         converted = amount
                     else:
                         try:
-                            base_amount = amount * float(from_u.multiplier_to_base)
-                            converted = base_amount / float(to_u.multiplier_to_base)
-                        except (ValueError, TypeError):
-                            raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}")
+                            from_multiplier = float(from_u.conversion_factor) if from_u.conversion_factor else 1.0
+                            to_multiplier = float(to_u.conversion_factor) if to_u.conversion_factor else 1.0
+                            base_amount = amount * from_multiplier
+                            converted = base_amount / to_multiplier
+                        except (ValueError, TypeError, ZeroDivisionError) as e:
+                            raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}: {str(e)}")
                     conversion_type = 'direct'
 
                 # 4. Cross-type: volume ↔ weight
@@ -81,11 +83,11 @@ class ConversionEngine:
                     used_density = density
 
                     if from_u.type == 'volume':
-                        grams = amount * from_u.multiplier_to_base * density
-                        converted = grams / to_u.multiplier_to_base
+                        grams = amount * from_u.conversion_factor * density
+                        converted = grams / to_u.conversion_factor
                     else:  # weight → volume
-                        ml = (amount * from_u.multiplier_to_base) / density
-                        converted = ml / to_u.multiplier_to_base
+                        ml = (amount * from_u.conversion_factor) / density
+                        converted = ml / to_u.conversion_factor
 
                     conversion_type = 'density'
 
