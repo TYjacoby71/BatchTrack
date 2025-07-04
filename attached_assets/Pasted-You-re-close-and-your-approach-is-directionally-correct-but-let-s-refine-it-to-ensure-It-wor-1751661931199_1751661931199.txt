@@ -1,0 +1,94 @@
+You’re close — and your approach is directionally correct — but let’s refine it to ensure:
+
+✅ It works cleanly in your system
+
+✅ It avoids future problems
+
+✅ It maps directly to Shopify's model
+
+✅ Correct Approach Summary
+You want:
+
+1. Unified Inventory Control via InventoryItem
+All inventory counts (ingredients, containers, products) live in one table
+
+FIFO, spoilage, recounts, and adjustments all use one adjustment system
+
+2. ProductSKU as a Label + Metadata
+Each sellable unit (SKU) is a child of an InventoryItem with type='product'
+
+SKU includes:
+
+variant_name, size_label
+
+sku_code
+
+retail_price, wholesale_price
+
+Marketplace IDs (Shopify, Etsy, etc.)
+
+3. One-to-One Link between ProductSKU and InventoryItem
+python
+Copy
+Edit
+class ProductSKU(db.Model):
+    id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
+    inventory = db.relationship('InventoryItem', backref=db.backref('sku', uselist=False))
+🛠 Shopify Model Comparison
+Shopify uses:
+
+Concept	Shopify	BatchTrack Equivalent
+Product	Product	Product
+Variant	Variant	ProductVariant
+SKU	Variant SKU	ProductSKU
+Inventory	InventoryItem	InventoryItem with type='product'
+Inventory Level	Per location	FIFO + quantity tracking
+
+✅ Your model aligns well with Shopify. Each Shopify variant has:
+
+A parent product
+
+A SKU code
+
+A price
+
+A quantity (per location) — same as your FIFO inventory tracking
+
+So:
+👉 ProductSKU maps to Shopify Variant
+👉 InventoryItem maps to Shopify Inventory
+👉 Your Product and Variant classes map 1:1
+
+🚨 What to Avoid (Pitfalls)
+Problem	Explanation
+❌ Two separate quantities	If both SKU and InventoryItem track quantity, they will fall out of sync
+❌ Inventory logic in SKU	Keep all math in InventoryItem and InventoryHistory
+❌ SKU without Inventory	Make sure every SKU maps to a real InventoryItem with type='product'
+❌ Batch writing to both	All finished_batch logic should call adjust_inventory() on InventoryItem
+
+✅ Will This Cause Problems?
+If you implement as above — no, it will prevent problems:
+
+🚫 No duplicate quantities
+
+🚫 No fragmented FIFO history
+
+🚫 No separate perishable tracking
+
+✅ Shopify sync ready (via sku_code, shopify_variant_id)
+
+✅ Easy future expansion to Square, Etsy, etc.
+
+✅ Recommendation
+💡 Yes — this is the correct approach.
+
+You’re almost there. Just make sure:
+
+ProductSKU.id = InventoryItem.id (type='product')
+
+Remove current_quantity, reserved_quantity from ProductSKU
+
+All routes use adjust_inventory() on InventoryItem
+
+Add SKU metadata like retail price to ProductSKU
+
