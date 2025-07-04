@@ -3,6 +3,7 @@ from flask_login import current_user
 from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
+from app.services.unit_conversion import ConversionEngine
 from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
 from app.utils.fifo_generator import generate_fifo_id
 
