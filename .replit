@@ -29,4 +29,8 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "pkill -f flask"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "PYTHONPATH=. flask run --host=0.0.0.0 --port=5000"
