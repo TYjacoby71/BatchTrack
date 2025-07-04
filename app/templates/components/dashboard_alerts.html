@@ -1,11 +1,12 @@
 
 <!-- Unified Alert System -->
 {% if alert_data.alerts %}
-<div class="alert-container mb-4">
+<div class="alert-container mb-4" id="alertContainer">
   {% for alert in alert_data.alerts %}
     <div class="alert alert-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }} 
                 alert-dismissible fade show" 
-         {% if alert.dismissible %}data-bs-dismiss="alert"{% endif %}>
+         data-alert-type="{{ alert.type }}"
+         id="alert-{{ alert.type }}">
       
       <div class="d-flex justify-content-between align-items-start">
         <div class="flex-grow-1">
@@ -23,7 +24,7 @@
         </div>
         
         {% if alert.dismissible %}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" onclick="dismissAlert('{{ alert.type }}')" aria-label="Close"></button>
         {% endif %}
       </div>
     </div>
@@ -39,3 +40,103 @@
   {% endif %}
 </div>
 {% endif %}
+
+<script>
+// Alert management functions
+async function dismissAlert(alertType) {
+    try {
+        const response = await fetch('/api/dismiss-alert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+            },
+            body: JSON.stringify({ alert_type: alertType })
+        });
+        
+        if (response.ok) {
+            // Remove the alert from the DOM
+            const alertElement = document.getElementById(`alert-${alertType}`);
+            if (alertElement) {
+                alertElement.remove();
+            }
+            
+            // Refresh alerts to show any new ones
+            refreshDashboardAlerts();
+        }
+    } catch (error) {
+        console.error('Error dismissing alert:', error);
+    }
+}
+
+async function refreshDashboardAlerts() {
+    try {
+        const response = await fetch('/api/dashboard-alerts');
+        if (response.ok) {
+            const alertData = await response.json();
+            updateAlertContainer(alertData);
+        }
+    } catch (error) {
+        console.error('Error refreshing alerts:', error);
+    }
+}
+
+function updateAlertContainer(alertData) {
+    const container = document.getElementById('alertContainer');
+    if (!container) return;
+    
+    // Only update if there are new alerts to show
+    if (alertData.alerts && alertData.alerts.length > 0) {
+        // Check if any alerts are already shown
+        const currentAlerts = container.querySelectorAll('.alert[data-alert-type]');
+        const currentTypes = Array.from(currentAlerts).map(el => el.dataset.alertType);
+        const newTypes = alertData.alerts.map(alert => alert.type);
+        
+        // Add new alerts that aren't currently displayed
+        alertData.alerts.forEach(alert => {
+            if (!currentTypes.includes(alert.type)) {
+                addAlertToContainer(alert, container);
+            }
+        });
+    }
+}
+
+function addAlertToContainer(alert, container) {
+    const priorityClass = alert.priority === 'CRITICAL' ? 'danger' : 
+                         alert.priority === 'HIGH' ? 'warning' : 'info';
+    const emoji = alert.priority === 'CRITICAL' ? '🚨' : 
+                  alert.priority === 'HIGH' ? '⚠️' : 'ℹ️';
+    
+    const alertHTML = `
+        <div class="alert alert-${priorityClass} alert-dismissible fade show" 
+             data-alert-type="${alert.type}" id="alert-${alert.type}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1">
+                        ${emoji} ${alert.title}
+                    </h6>
+                    <p class="mb-2">${alert.message}</p>
+                    ${alert.action_url ? `
+                    <a href="${alert.action_url}" class="btn btn-sm btn-outline-${priorityClass}">
+                        ${alert.action_text}
+                    </a>
+                    ` : ''}
+                </div>
+                ${alert.dismissible ? `
+                <button type="button" class="btn-close" onclick="dismissAlert('${alert.type}')" aria-label="Close"></button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', alertHTML);
+}
+
+// Auto-refresh alerts every 30 seconds (only if alerts still exist)
+setInterval(() => {
+    const alertContainer = document.getElementById('alertContainer');
+    if (alertContainer && alertContainer.children.length > 0) {
+        refreshDashboardAlerts();
+    }
+}, 30000);
+</script>

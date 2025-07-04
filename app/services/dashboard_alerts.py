@@ -19,7 +19,7 @@ class DashboardAlertService:
     }
     
     @staticmethod
-    def get_dashboard_alerts(max_alerts: int = 3) -> Dict:
+    def get_dashboard_alerts(max_alerts: int = 3, dismissed_alerts: list = None) -> Dict:
         """Get prioritized alerts for dashboard with cognitive load management"""
         alerts = []
         
@@ -162,6 +162,10 @@ class DashboardAlertService:
                 'action_text': 'Complete Batches',
                 'dismissible': True
             })
+        
+        # Filter out dismissed alerts from this session
+        if dismissed_alerts:
+            alerts = [alert for alert in alerts if alert['type'] not in dismissed_alerts]
         
         # Sort by priority and limit
         alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
