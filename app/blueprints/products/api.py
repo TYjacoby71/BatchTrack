@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
@@ -44,10 +43,10 @@ def get_product_variants(product_id):
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
+
         if not product:
             return jsonify({'error': 'Product not found'}), 404
-        
+
         # Get active variants for this product
         variants = ProductVariant.query.filter_by(
             product_id=product.id,
@@ -114,7 +113,7 @@ def quick_add_product():
             size_label='Bulk',
             unit=product_base_unit
         )
-        
+
         # Ensure the SKU belongs to the current user's organization
         if not sku.organization_id:
             sku.organization_id = current_user.organization_id
@@ -164,15 +163,15 @@ def add_inventory_from_batch():
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
+
         if not product:
             return jsonify({'error': 'Product not found'}), 404
-            
+
         variant = ProductVariant.query.filter_by(
             id=variant_id,
             product_id=product_id
         ).first()
-        
+
         if not variant:
             return jsonify({'error': 'Variant not found'}), 404
 
@@ -218,12 +217,12 @@ def adjust_sku_inventory(sku_id):
         id=sku_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not sku:
         return jsonify({'error': 'SKU not found'}), 404
-        
+
     data = request.get_json()
-    
+
     quantity = data.get('quantity')
     change_type = data.get('change_type')
     notes = data.get('notes')
@@ -277,10 +276,10 @@ def get_sku_details(sku_id):
         id=sku_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not sku:
         return jsonify({'error': 'SKU not found'}), 404
-    
+
     return jsonify({
         'id': sku.id,
         'sku_code': sku.sku_code,
@@ -303,16 +302,16 @@ def get_product_skus(product_id):
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not product:
         return jsonify({'error': 'Product not found'}), 404
-    
+
     skus = ProductSKU.query.filter_by(
         product_id=product_id,
         is_active=True,
         organization_id=current_user.organization_id
     ).all()
-    
+
     sku_list = []
     for sku in skus:
         sku_list.append({
@@ -325,5 +324,87 @@ def get_product_skus(product_id):
             'current_quantity': sku.current_quantity,
             'stock_status': sku.stock_status
         })
-    
+
     return jsonify(sku_list)
+
+@products_api_bp.route('/api/<int:product_id>/variants', methods=['GET'])
+@login_required
+def get_product_variants_api(product_id):
+    """Get all variants for a product"""
+    try:
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        variants = ProductVariant.query.filter_by(
+            product_id=product_id,
+            is_active=True
+        ).all()
+
+        variant_data = []
+        for variant in variants:
+            variant_data.append({
+                'id': variant.id,
+                'name': variant.name,
+                'description': variant.description,
+                'color': variant.color,
+                'size': variant.size,
+                'material': variant.material,
+                'scent': variant.scent
+            })
+
+        return jsonify({
+            'status': 'success',
+            'variants': variant_data
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@products_api_bp.route('/api/<int:product_id>/skus', methods=['GET'])
+@login_required
+def get_product_skus_api(product_id):
+    """Get all SKUs for a product"""
+    try:
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        skus = ProductSKU.query.filter_by(
+            product_id=product_id,
+            organization_id=current_user.organization_id
+        ).all()
+
+        sku_data = []
+        for sku in skus:
+            sku_data.append({
+                'id': sku.id,
+                'sku': sku.sku,
+                'variant_name': sku.variant.name if sku.variant else 'Base',
+                'size_label': sku.size_label,
+                'unit': sku.unit,
+                'quantity': sku.quantity or 0,
+                'cost_per_unit': float(sku.cost_per_unit) if sku.cost_per_unit else 0.0
+            })
+
+        return jsonify({
+            'status': 'success',
+            'skus': sku_data
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
