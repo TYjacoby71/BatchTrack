@@ -83,118 +83,113 @@ function loadContainers() {
     });
 }
 
-// Update container summary and calculate bulk
-function updateContainerSummary() {
-  const finalQuantityInput = document.getElementById('final_quantity');
-  if (!finalQuantityInput) return;
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable');
+  const shelfLifeField = document.getElementById('shelfLifeField');
 
-  const totalYield = parseFloat(finalQuantityInput.value) || 0;
+  if (isPerishable && shelfLifeField) {
+    const showShelfLife = isPerishable.checked;
+    shelfLifeField.style.display = showShelfLife ? 'block' : 'none';
 
-  // Get all container inputs
-  const containerInputs = document.querySelectorAll('.container-final-input');
-  let totalContainerized = 0;
-
-  containerInputs.forEach(input => {
-    const quantity = parseFloat(input.value) || 0;
-    const containerId = input.dataset.containerId;
-    const container = allowedContainers.find(c => c.id == containerId);
-
-    if (container && container.storage_amount) {
-      totalContainerized += quantity * container.storage_amount;
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = showShelfLife;
+      if (!showShelfLife) {
+        shelfLifeInput.value = '';
+        const expDateInput = document.getElementById('expiration_date');
+        const expDateDisplay = document.getElementById('expiration_date_display');
+        if (expDateInput) expDateInput.value = '';
+        if (expDateDisplay) expDateDisplay.value = '';
+      }
     }
-  });
-
-  const bulk = totalYield - totalContainerized;
-
-  // Update alerts
-  updateYieldAlerts(totalYield, totalContainerized, bulk);
+  }
 }
 
-// Validate yield distribution
 function validateYield() {
   const finalQuantityInput = document.getElementById('final_quantity');
-  if (!finalQuantityInput) return;
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  const hasContainers = false;
 
-  const totalYield = parseFloat(finalQuantityInput.value) || 0;
-
-  // Check if we have containers or if this goes all to bulk
-  const containerInputs = document.querySelectorAll('.container-final-input');
-
-  if (containerInputs.length === 0) {
-    console.log('No containers in batch - all yield goes to bulk');
-    updateYieldAlerts(totalYield, 0, totalYield);
+  if (!finalQuantityInput) {
     return;
   }
+
+  const finalQuantity = parseFloat(finalQuantityInput.value);
+
+  if (!finalQuantity || finalQuantity <= 0) {
+    if (alertsContainer) {
+      alertsContainer.innerHTML = '';
+    }
+    updateContainerSummary();
+    return;
+  }
+
+  // Update display with current yield
+  const finalYieldDisplay = document.getElementById('finalYieldDisplay');
+  if (finalYieldDisplay) {
+    finalYieldDisplay.textContent = finalQuantity.toFixed(2);
+  }
+
+  if (!hasContainers) {
+    console.log('No containers in batch - all yield goes to bulk');
+    updateUncontainedYield(finalQuantity);
+    return;
+  }
+
+  // Update container summary
+  updateContainerSummary();
+}
+
+function updateContainerTable(containers, finalQuantity) {
+  const tbody = document.getElementById('containerTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  containers.forEach(container => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${container.name}</td>
+      <td>${container.storage_amount} ${container.storage_unit}</td>
+      <td>${container.quantity_used || 0}</td>
+      <td>${(container.quantity_used || 0) * container.storage_amount} ${container.storage_unit}</td>
+    `;
+    tbody.appendChild(row);
+  });
 
   updateContainerSummary();
 }
 
-// Update yield distribution alerts
-function updateYieldAlerts(totalYield, containerized, bulk) {
-  const alertsContainer = document.getElementById('yield-alerts');
-  if (!alertsContainer) return;
+function updateContainerSummary() {
+  // Update container summary display
+  const summaryElement = document.getElementById('container-summary');
+  if (summaryElement) {
+    // Calculate totals from container table
+    const tbody = document.getElementById('containerTableBody');
+    if (tbody) {
+      const rows = tbody.querySelectorAll('tr');
+      let totalContainers = 0;
+      let totalVolume = 0;
 
-  let alertHtml = '';
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 4) {
+          totalContainers += parseInt(cells[2].textContent) || 0;
+          totalVolume += parseFloat(cells[3].textContent) || 0;
+        }
+      });
 
-  if (totalYield > 0) {
-    if (containerized > 0) {
-      alertHtml += `
-      <div class="alert alert-success alert-sm mb-1">
-        <i class="fas fa-box me-1"></i>
-        <strong>Containerized:</strong> ${containerized.toFixed(2)} units will be packaged in containers.
-      </div>`;
-    }
-
-    if (bulk > 0) {
-      alertHtml += `
-      <div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        <strong>Bulk Product:</strong> ${bulk.toFixed(2)} units will be stored as bulk product.
-      </div>`;
-    }
-  }
-
-  alertsContainer.innerHTML = alertHtml;
-}
-
-// Shelf life functions
-function toggleShelfLife() {
-  const isPerishableCheckbox = document.getElementById('is_perishable');
-  const shelfLifeField = document.getElementById('shelfLifeField');
-
-  if (!isPerishableCheckbox || !shelfLifeField) return;
-
-  const isPerishable = isPerishableCheckbox.checked;
-  shelfLifeField.style.display = isPerishable ? 'block' : 'none';
-
-  const shelfLifeInput = document.getElementById('shelf_life_days');
-  if (shelfLifeInput) {
-    shelfLifeInput.required = isPerishable;
-    if (!isPerishable) {
-      shelfLifeInput.value = '';
-      const expDateInput = document.getElementById('expiration_date');
-      const expDateDisplay = document.getElementById('expiration_date_display');
-      if (expDateInput) expDateInput.value = '';
-      if (expDateDisplay) expDateDisplay.value = '';
+      summaryElement.innerHTML = `
+        <strong>Container Summary:</strong> ${totalContainers} containers, ${totalVolume.toFixed(2)} total volume
+      `;
     }
   }
 }
 
-function updateExpirationDate() {
-  const shelfLifeInput = document.getElementById('shelf_life_days');
-  if (!shelfLifeInput) return;
-
-  const shelfLife = parseInt(shelfLifeInput.value);
-  if (shelfLife && shelfLife > 0) {
-    const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + shelfLife);
-    const dateString = expirationDate.toISOString().split('T')[0];
-
-    const expDateInput = document.getElementById('expiration_date');
-    const expDateDisplay = document.getElementById('expiration_date_display');
-
-    if (expDateInput) expDateInput.value = dateString;
-    if (expDateDisplay) expDateDisplay.value = dateString;
+function updateUncontainedYield(finalQuantity) {
+  const uncontainedDisplay = document.getElementById('uncontained-yield-display');
+  if (uncontainedDisplay) {
+    uncontainedDisplay.textContent = `${finalQuantity.toFixed(2)} bulk units`;
   }
 }
 
@@ -214,15 +209,28 @@ function getCSRFToken() {
   return token || '';
 }
 
-// Initialize when modal opens
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
+  // Set up event listeners
+  const isPerishableCheckbox = document.getElementById('is_perishable');
+  if (isPerishableCheckbox) {
+    isPerishableCheckbox.addEventListener('change', toggleShelfLife);
+    // Initialize state
+    toggleShelfLife();
+  }
+
+  const finalQuantityInput = document.getElementById('final_quantity');
+  if (finalQuantityInput) {
+    finalQuantityInput.addEventListener('input', validateYield);
+    finalQuantityInput.addEventListener('change', validateYield);
+    // Initialize
+    validateYield();
+  }
+
   const modal = document.getElementById('finishBatchModal');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function () {
       console.log('Modal opened, initializing...');
-
-      // Initialize shelf life toggle
-      toggleShelfLife();
 
       // Load variants if product fields exist
       const productSelect = document.getElementById('product_id');
@@ -232,13 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Load container data if needed
       loadContainers();
-
-      // Validate yield if input exists
-      const finalQuantityInput = document.getElementById('final_quantity');
-      if (finalQuantityInput) {
-        finalQuantityInput.addEventListener('input', validateYield);
-        validateYield();
-      }
 
       // Add event listeners to container inputs
       const containerInputs = document.querySelectorAll('.container-final-input');
