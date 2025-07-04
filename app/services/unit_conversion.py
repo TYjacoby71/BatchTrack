@@ -1,8 +1,8 @@
-        from datetime import datetime
-        from flask_login import current_user
-        from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
+from datetime import datetime
+from flask_login import current_user
+from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 
-        class ConversionEngine:
+class ConversionEngine:
             @staticmethod
             def round_value(value, decimals=3):
                 return round(value, decimals)
