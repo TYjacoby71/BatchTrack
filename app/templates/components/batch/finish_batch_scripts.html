@@ -163,7 +163,7 @@ function updateTotals() {
 }
 
 function loadVariants() {
-  const productSelect = document.getElementById('productDropdown');
+  const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_id');
 
   if (!productSelect || !variantSelect) {
@@ -174,11 +174,13 @@ function loadVariants() {
   const productId = productSelect.value;
   if (!productId) {
     variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    variantSelect.disabled = true;
     return;
   }
 
   // Show loading state
   variantSelect.innerHTML = '<option value="">Loading variants...</option>';
+  variantSelect.disabled = true;
 
   // Fetch variants for the selected product using the correct API endpoint
   fetch(`/products/api/${productId}/variants`)
@@ -218,7 +220,7 @@ function loadVariants() {
     })
     .catch(error => {
       console.error('Error loading variants:', error);
-      
+
       // Fallback: Show error message
       variantSelect.innerHTML = '<option value="">Error loading variants</option>';
       variantSelect.disabled = false;
