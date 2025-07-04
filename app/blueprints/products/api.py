@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
+from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from sqlalchemy import func
@@ -14,9 +15,7 @@ from . import products_api_bp
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
-        from ...models.product import Product
-        
-        # Get products using the proper Product model
+        # Get products using the Product model
         products = Product.query.filter_by(
             is_active=True,
             organization_id=current_user.organization_id
@@ -40,24 +39,11 @@ def get_products():
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
-        from ...models.product import Product, ProductVariant
-        from ...models import ProductSKU
-        
         # Get the product with org scoping
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
-        # If no Product found, try to find it via SKU (backward compatibility)
-        if not product:
-            sku = ProductSKU.query.filter_by(
-                id=product_id,
-                organization_id=current_user.organization_id
-            ).first()
-            
-            if sku and sku.product_id:
-                product = Product.query.get(sku.product_id)
         
         if not product:
             return jsonify({'error': 'Product not found'}), 404
@@ -72,7 +58,8 @@ def get_product_variants(product_id):
         for variant in variants:
             variant_list.append({
                 'id': variant.id,
-                'name': variant.name
+                'name': variant.name,
+                'description': variant.description or ''
             })
 
         return jsonify(variant_list)
@@ -89,24 +76,19 @@ def search_products():
     if len(query) < 2:
         return jsonify({'products': []})
 
-    # Search for unique product names with their base SKU ID
-    products = db.session.query(
-        func.min(ProductSKU.id).label('product_id'),
-        ProductSKU.product_name,
-        ProductSKU.unit.label('product_base_unit')
-    ).filter(
-        ProductSKU.product_name.ilike(f'%{query}%'),
-        ProductSKU.is_product_active == True,
-        ProductSKU.is_active == True,
-        ProductSKU.organization_id == current_user.organization_id
-    ).group_by(ProductSKU.product_name, ProductSKU.unit).limit(10).all()
+    # Search products using the Product model
+    products = Product.query.filter(
+        Product.name.ilike(f'%{query}%'),
+        Product.is_active == True,
+        Product.organization_id == current_user.organization_id
+    ).limit(10).all()
 
     result = []
-    for product_id, product_name, product_base_unit in products:
+    for product in products:
         result.append({
-            'id': product_id,
-            'name': product_name,
-            'default_unit': product_base_unit
+            'id': product.id,
+            'name': product.name,
+            'default_unit': product.base_unit
         })
 
     return jsonify({'products': result})
@@ -139,22 +121,20 @@ def quick_add_product():
 
         db.session.commit()
 
-        # Find the base product ID (first SKU for this product)
-        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
-            product_name=sku.product_name,
-            organization_id=current_user.organization_id
-        ).scalar()
-
         return jsonify({
             'success': True,
             'product': {
-                'id': base_sku,
-                'name': sku.product_name,
-                'product_base_unit': sku.unit
+                'id': sku.product.id,
+                'name': sku.product.name,
+                'product_base_unit': sku.product.base_unit
             },
             'variant': {
+                'id': sku.variant.id,
+                'name': sku.variant.name
+            },
+            'sku': {
                 'id': sku.id,
-                'name': sku.variant_name
+                'name': sku.display_name
             }
         })
 
@@ -166,35 +146,42 @@ def quick_add_product():
 @products_api_bp.route('/inventory/add-from-batch', methods=['POST'])
 @login_required
 def add_inventory_from_batch():
-    """Add product inventory from finished batch - SINGLE ENDPOINT"""
+    """Add product inventory from finished batch"""
     data = request.get_json()
 
     batch_id = data.get('batch_id')
-    product_id = data.get('product_id')  # Changed from product_name
-    product_name = data.get('product_name')  # Keep as fallback
-    variant_name = data.get('variant_name')
-    size_label = data.get('size_label')
+    product_id = data.get('product_id')
+    variant_id = data.get('variant_id')
     quantity = data.get('quantity')
+    size_label = data.get('size_label', 'Bulk')
 
-    if not batch_id or (not product_id and not product_name):
-        return jsonify({'error': 'Batch ID and Product ID or Name are required'}), 400
+    if not batch_id or not product_id or not variant_id:
+        return jsonify({'error': 'Batch ID, Product ID, and Variant ID are required'}), 400
 
     try:
-        # Get product name from ID if provided - with org scoping
-        if product_id:
-            base_sku = ProductSKU.query.filter_by(
-                id=product_id,
-                organization_id=current_user.organization_id
-            ).first()
-            if not base_sku:
-                return jsonify({'error': 'Product not found'}), 404
-            product_name = base_sku.product_name
+        # Get product and variant with org scoping
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+            
+        variant = ProductVariant.query.filter_by(
+            id=variant_id,
+            product_id=product_id
+        ).first()
+        
+        if not variant:
+            return jsonify({'error': 'Variant not found'}), 404
 
         # Get or create the SKU
         sku = ProductService.get_or_create_sku(
-            product_name=product_name,
-            variant_name=variant_name or 'Base',
-            size_label=size_label or 'Bulk'
+            product_name=product.name,
+            variant_name=variant.name,
+            size_label=size_label,
+            unit=product.base_unit
         )
 
         # Use the inventory adjustment service to add inventory
@@ -281,3 +268,62 @@ def adjust_sku_inventory(sku_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@products_api_bp.route('/sku/<int:sku_id>')
+@login_required
+def get_sku_details(sku_id):
+    """Get SKU details"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+    
+    return jsonify({
+        'id': sku.id,
+        'sku_code': sku.sku_code,
+        'display_name': sku.display_name,
+        'product_name': sku.product.name,
+        'variant_name': sku.variant.name,
+        'size_label': sku.size_label,
+        'unit': sku.unit,
+        'current_quantity': sku.current_quantity,
+        'low_stock_threshold': sku.low_stock_threshold,
+        'is_low_stock': sku.is_low_stock,
+        'stock_status': sku.stock_status
+    })
+
+@products_api_bp.route('/product/<int:product_id>/skus')
+@login_required
+def get_product_skus(product_id):
+    """Get all SKUs for a product"""
+    product = Product.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+    
+    skus = ProductSKU.query.filter_by(
+        product_id=product_id,
+        is_active=True,
+        organization_id=current_user.organization_id
+    ).all()
+    
+    sku_list = []
+    for sku in skus:
+        sku_list.append({
+            'id': sku.id,
+            'sku_code': sku.sku_code,
+            'display_name': sku.display_name,
+            'variant_name': sku.variant.name,
+            'size_label': sku.size_label,
+            'unit': sku.unit,
+            'current_quantity': sku.current_quantity,
+            'stock_status': sku.stock_status
+        })
+    
+    return jsonify(sku_list)
