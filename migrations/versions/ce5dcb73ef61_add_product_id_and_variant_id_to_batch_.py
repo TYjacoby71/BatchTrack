@@ -21,8 +21,8 @@ def upgrade():
     with op.batch_alter_table('batch', schema=None) as batch_op:
         batch_op.add_column(sa.Column('product_id', sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column('variant_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key(None, 'product', ['product_id'], ['id'])
-        batch_op.create_foreign_key(None, 'product_variant', ['variant_id'], ['id'])
+        batch_op.create_foreign_key('fk_batch_product_id', 'product', ['product_id'], ['id'])
+        batch_op.create_foreign_key('fk_batch_variant_id', 'product_variant', ['variant_id'], ['id'])
 
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
         batch_op.create_unique_constraint('unique_barcode', ['barcode'])
@@ -38,8 +38,8 @@ def downgrade():
         batch_op.drop_constraint('unique_barcode', type_='unique')
 
     with op.batch_alter_table('batch', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_batch_variant_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_batch_product_id', type_='foreignkey')
         batch_op.drop_column('variant_id')
         batch_op.drop_column('product_id')
 
