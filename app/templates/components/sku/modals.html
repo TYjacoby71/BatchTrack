@@ -1,4 +1,3 @@
-
 <!-- Edit SKU Details Modal -->
 <div class="modal fade" id="editSkuModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -42,7 +41,7 @@
                             </div>
                             <small class="text-muted">Check override to manually set unit cost</small>
                         </div>
-                        
+
                         <!-- Shelf Life Management -->
                         <div class="col-12">
                             <hr>
@@ -80,7 +79,7 @@
                 <h5 class="modal-title">Adjust FIFO Entry</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.adjust_fifo_entry') }}">
+            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="adjust_fifo">
                 <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
@@ -164,7 +163,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const overrideCheckbox = document.getElementById('override_edit_unit_cost');
     const unitCostInput = document.getElementById('edit_unit_cost');
-    
+
     if (overrideCheckbox && unitCostInput) {
         overrideCheckbox.addEventListener('change', function() {
             if (this.checked) {
@@ -180,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle perishable checkbox
     const perishableCheckbox = document.getElementById('is_perishable');
     const shelfLifeGroup = document.getElementById('shelfLifeGroup');
-    
+
     if (perishableCheckbox && shelfLifeGroup) {
         perishableCheckbox.addEventListener('change', function() {
             if (this.checked) {
@@ -196,18 +195,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const changeTypeSelect = document.getElementById('change_type');
     const orderIdGroup = document.getElementById('orderIdGroup');
     const reservationGroup = document.getElementById('reservationGroup');
-    
+
     if (changeTypeSelect) {
         changeTypeSelect.addEventListener('change', function() {
             const value = this.value;
-            
+
             // Show/hide order ID field for sales and reservations
             if (value === 'sale' || value === 'reserved') {
                 orderIdGroup.style.display = 'block';
             } else {
                 orderIdGroup.style.display = 'none';
             }
-            
+
             // Show reservation duration only for reservations
             if (value === 'reserved') {
                 reservationGroup.style.display = 'block';
@@ -225,10 +224,10 @@ window.openInventoryActionModal = function(action) {
     const changeTypeInput = document.getElementById('modal_change_type');
     const dynamicFields = document.getElementById('dynamicFields');
     const submitBtn = document.getElementById('submitActionBtn');
-    
+
     // Set change type
     changeTypeInput.value = action;
-    
+
     // Get SKU data for form population
     const skuData = {
         currentQuantity: {{ sku.current_quantity or 0 }},
@@ -236,9 +235,9 @@ window.openInventoryActionModal = function(action) {
         unitCost: {{ sku.unit_cost or 0 }},
         retailPrice: {{ sku.retail_price or 0 }}
     };
-    
+
     let fields = '';
-    
+
     switch(action) {
         case 'sale':
             modalTitle.textContent = 'Process Sale';
@@ -264,7 +263,7 @@ window.openInventoryActionModal = function(action) {
                 </div>
             `;
             break;
-            
+
         case 'gift':
             modalTitle.textContent = 'Gift/Sample Given';
             submitBtn.textContent = 'Record Gift';
@@ -290,7 +289,7 @@ window.openInventoryActionModal = function(action) {
                 </div>
             `;
             break;
-            
+
         case 'damage':
             modalTitle.textContent = 'Record Damage';
             submitBtn.textContent = 'Record Damage';
@@ -321,7 +320,7 @@ window.openInventoryActionModal = function(action) {
                 </div>
             `;
             break;
-            
+
         case 'spoil':
             modalTitle.textContent = 'Record Spoilage';
             submitBtn.textContent = 'Record Spoilage';
@@ -372,7 +371,7 @@ window.openInventoryActionModal = function(action) {
                 </div>
             `;
             break;
-            
+
         default:
             modalTitle.textContent = 'Inventory Adjustment';
             submitBtn.textContent = 'Submit';
@@ -388,9 +387,9 @@ window.openInventoryActionModal = function(action) {
                 </div>
             `;
     }
-    
+
     dynamicFields.innerHTML = fields;
-    
+
     // Show modal
     new bootstrap.Modal(modal).show();
 };
