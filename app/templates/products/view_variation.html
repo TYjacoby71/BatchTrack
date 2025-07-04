@@ -104,7 +104,7 @@
                   <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
                       {% if group.skus %}
-                      <a href="{{ url_for('products.view_product_sku', sku_id=group.skus[0].id) }}">
+                      <a href="{{ url_for('sku.view_sku', sku_id=group.skus[0].id) }}">
                         {{ size_display }}
                       </a>
                       {% else %}
@@ -138,7 +138,7 @@
                         <ul class="dropdown-menu">
                           <li>
                             {% if group.skus %}
-                            <a class="dropdown-item" href="{{ url_for('products.view_product_sku', sku_id=group.skus[0].id) }}">
+                            <a class="dropdown-item" href="{{ url_for('sku.view_sku', sku_id=group.skus[0].id) }}">
                               <i class="fas fa-edit"></i> Manage Stock
                             </a>
                             {% endif %}
@@ -146,7 +146,7 @@
                           <li><hr class="dropdown-divider"></li>
                           <li>
                             {% if group.skus %}
-                            <a class="dropdown-item" href="{{ url_for('products.view_product_sku', sku_id=group.skus[0].id) }}">
+                            <a class="dropdown-item" href="{{ url_for('sku.view_sku', sku_id=group.skus[0].id) }}">
                               <i class="fas fa-eye"></i> View SKU
                             </a>
                             {% endif %}
@@ -219,7 +219,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         {% if size_groups %}
-        <a href="{{ url_for('products.view_product_sku', sku_id=size_groups[size_groups.keys()|first].skus[0].id) }}" class="btn btn-primary">
+        <a href="{{ url_for('sku.view_sku', sku_id=size_groups[size_groups.keys()|first].skus[0].id) }}" class="btn btn-primary">
           Go to Item Management
         </a>
         {% endif %}
