@@ -4,7 +4,7 @@
   </div>
   <div class="card-body">
     <!-- Add Existing Inventory Form -->
-    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
+    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="row">
         <div class="col-md-3">
@@ -85,61 +85,10 @@
   </div>
 </div>
 
-<script>
-function toggleShelfLifeSection() {
-  const checkbox = document.getElementById('is_perishable');
-  const shelfLifeSection = document.getElementById('shelfLifeSection');
-  const shelfLifeDaysInput = document.getElementById('shelf_life_days');
-
-  if (checkbox.checked) {
-    shelfLifeSection.style.display = 'block';
-    shelfLifeDaysInput.required = true;
-  } else {
-    shelfLifeSection.style.display = 'none';
-    shelfLifeDaysInput.required = false;
-    shelfLifeDaysInput.value = '';
-    document.getElementById('expiration_date_display').value = '';
-    document.getElementById('expiration_date').value = '';
-  }
-}
-
-// Update expiration date when shelf life changes
-document.getElementById('shelf_life_days').addEventListener('input', function() {
-  updateExpirationDate();
-});
-
-document.getElementById('entry_date').addEventListener('change', function() {
-  updateExpirationDate();
-});
-
-function updateExpirationDate() {
-  const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
-  const entryDate = document.getElementById('entry_date').value;
-
-  if (shelfLifeDays && entryDate) {
-    const entry = new Date(entryDate);
-    const expiration = new Date(entry.getTime() + (shelfLifeDays * 24 * 60 * 60 * 1000));
-
-    const expirationStr = expiration.toISOString().split('T')[0];
-    document.getElementById('expiration_date_display').value = expirationStr;
-    document.getElementById('expiration_date').value = expirationStr;
-  }
-}
-
-// Initialize with current date
-document.addEventListener('DOMContentLoaded', function() {
-  const today = new Date().toISOString().split('T')[0];
-  const entryDateInput = document.getElementById('entry_date');
-  if (entryDateInput) {
-    entryDateInput.value = today;
-  }
-});
-</script>
-</div>
 <div class="card mb-4">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <i class="fas fa-tools"></i> Inventory Actions
+            <i class="fas fa-tools"></i> Quick Actions
         </h5>
     </div>
     <div class="card-body">
@@ -224,3 +173,54 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+
+<script>
+function toggleShelfLifeSection() {
+  const checkbox = document.getElementById('is_perishable');
+  const shelfLifeSection = document.getElementById('shelfLifeSection');
+  const shelfLifeDaysInput = document.getElementById('shelf_life_days');
+
+  if (checkbox.checked) {
+    shelfLifeSection.style.display = 'block';
+    shelfLifeDaysInput.required = true;
+  } else {
+    shelfLifeSection.style.display = 'none';
+    shelfLifeDaysInput.required = false;
+    shelfLifeDaysInput.value = '';
+    document.getElementById('expiration_date_display').value = '';
+    document.getElementById('expiration_date').value = '';
+  }
+}
+
+// Update expiration date when shelf life changes
+document.getElementById('shelf_life_days').addEventListener('input', function() {
+  updateExpirationDate();
+});
+
+document.getElementById('entry_date').addEventListener('change', function() {
+  updateExpirationDate();
+});
+
+function updateExpirationDate() {
+  const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
+  const entryDate = document.getElementById('entry_date').value;
+
+  if (shelfLifeDays && entryDate) {
+    const entry = new Date(entryDate);
+    const expiration = new Date(entry.getTime() + (shelfLifeDays * 24 * 60 * 60 * 1000));
+
+    const expirationStr = expiration.toISOString().split('T')[0];
+    document.getElementById('expiration_date_display').value = expirationStr;
+    document.getElementById('expiration_date').value = expirationStr;
+  }
+}
+
+// Initialize with current date
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  const entryDateInput = document.getElementById('entry_date');
+  if (entryDateInput) {
+    entryDateInput.value = today;
+  }
+});
+</script>
