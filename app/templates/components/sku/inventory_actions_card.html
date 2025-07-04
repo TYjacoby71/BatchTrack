@@ -1,1 +1,122 @@
-<!-- This component has been deleted - inventory actions now use the main inventory system -->
+
+<div class="card mt-4">
+  <div class="card-header">
+    <h5 class="mb-0">Inventory Actions</h5>
+  </div>
+  <div class="card-body">
+    <!-- Add Existing Inventory Form -->
+    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
+      <div class="row">
+        <div class="col-md-3">
+          <label class="form-label">Quantity</label>
+          <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Unit</label>
+          <input type="text" name="unit" class="form-control" value="{{ sku.unit }}" readonly>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cost per Unit</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="cost_override" class="form-control" step="0.01" min="0" placeholder="Optional">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Notes</label>
+          <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+        </div>
+      </div>
+
+      <!-- Perishable Section -->
+      <div class="row mt-3">
+        <div class="col-md-12">
+          <div class="form-check">
+            <input type="checkbox" id="is_perishable" name="is_perishable" class="form-check-input" onchange="toggleShelfLifeSection()">
+            <label class="form-check-label" for="is_perishable">
+              This inventory is perishable
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shelf Life Section (hidden by default) -->
+      <div id="shelfLifeSection" class="row mt-3" style="display: none;">
+        <div class="col-md-4">
+          <label class="form-label">Shelf Life (days)</label>
+          <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" placeholder="Enter days">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Expiration Date</label>
+          <input type="date" id="expiration_date_display" class="form-control" readonly>
+          <input type="hidden" id="expiration_date" name="expiration_date">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Entry Date</label>
+          <input type="date" id="entry_date" name="entry_date" class="form-control" value="{{ moment().format('YYYY-MM-DD') }}">
+        </div>
+      </div>
+
+      <!-- Hidden fields -->
+      <input type="hidden" name="change_type" value="restock">
+
+      <!-- Submit Button -->
+      <div class="row mt-3">
+        <div class="col-md-12">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Existing Inventory
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleShelfLifeSection() {
+  const checkbox = document.getElementById('is_perishable');
+  const shelfLifeSection = document.getElementById('shelfLifeSection');
+  const shelfLifeDaysInput = document.getElementById('shelf_life_days');
+  
+  if (checkbox.checked) {
+    shelfLifeSection.style.display = 'block';
+    shelfLifeDaysInput.required = true;
+  } else {
+    shelfLifeSection.style.display = 'none';
+    shelfLifeDaysInput.required = false;
+    shelfLifeDaysInput.value = '';
+    document.getElementById('expiration_date_display').value = '';
+    document.getElementById('expiration_date').value = '';
+  }
+}
+
+// Update expiration date when shelf life changes
+document.getElementById('shelf_life_days').addEventListener('input', function() {
+  updateExpirationDate();
+});
+
+document.getElementById('entry_date').addEventListener('change', function() {
+  updateExpirationDate();
+});
+
+function updateExpirationDate() {
+  const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
+  const entryDate = document.getElementById('entry_date').value;
+  
+  if (shelfLifeDays && entryDate) {
+    const entry = new Date(entryDate);
+    const expiration = new Date(entry.getTime() + (shelfLifeDays * 24 * 60 * 60 * 1000));
+    
+    const expirationStr = expiration.toISOString().split('T')[0];
+    document.getElementById('expiration_date_display').value = expirationStr;
+    document.getElementById('expiration_date').value = expirationStr;
+  }
+}
+
+// Initialize with current date
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('entry_date').value = today;
+});
+</script>
+</div>

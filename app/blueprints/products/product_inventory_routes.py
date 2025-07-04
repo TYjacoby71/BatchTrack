@@ -34,6 +34,9 @@ def adjust_sku_inventory(sku_id):
         order_id = data.get('order_id')
         cost_override = data.get('cost_override')
         target_expired = data.get('target_expired', False)  # Allow targeting expired inventory
+        is_perishable = data.get('is_perishable', False)
+        shelf_life_days = data.get('shelf_life_days')
+        expiration_date = data.get('expiration_date')
     else:
         quantity = request.form.get('quantity')
         change_type = request.form.get('change_type')
@@ -44,6 +47,9 @@ def adjust_sku_inventory(sku_id):
         order_id = request.form.get('order_id')
         cost_override = request.form.get('cost_override')
         target_expired = request.form.get('target_expired', 'false').lower() == 'true'
+        is_perishable = request.form.get('is_perishable') == 'on'
+        shelf_life_days = request.form.get('shelf_life_days')
+        expiration_date = request.form.get('expiration_date')
 
     # Validate required fields
     if not quantity or not change_type:
@@ -182,6 +188,20 @@ def dispose_expired_sku(sku_id):
         quantity = float(quantity)
         sale_price_float = float(sale_price) if sale_price else None
         cost_override_float = float(cost_override) if cost_override else None
+        
+        # Handle perishable inventory
+        custom_expiration_date = None
+        custom_shelf_life_days = None
+        
+        if is_perishable and shelf_life_days:
+            try:
+                custom_shelf_life_days = int(shelf_life_days)
+                # Parse expiration date if provided
+                if expiration_date:
+                    from datetime import datetime
+                    custom_expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
 
         # For disposal operations, auto-target expired inventory if available
         if change_type in ['spoil', 'trash', 'expired_disposal'] and not target_expired:
@@ -213,7 +233,9 @@ def dispose_expired_sku(sku_id):
             customer=customer,
             sale_price=sale_price_float,
             order_id=order_id,
-            cost_override=cost_override_float
+            cost_override=cost_override_float,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
         )
 
         if success:

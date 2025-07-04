@@ -274,23 +274,46 @@ def process_inventory_adjustment(
             # Create new stock entry
             # Ensure unit is never None for containers
             addition_unit = item.unit if item.unit else 'count'
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type=change_type,
-                quantity_change=qty_change,
-                unit=addition_unit,  # Record original unit used, default to 'count' for containers
-                remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
-                unit_cost=cost_per_unit,
-                note=notes,
-                quantity_used=0.0,  # Additions don't consume inventory - always 0
-                created_by=created_by,
-                expiration_date=expiration_date,
-                shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
-                is_perishable=item.is_perishable if expiration_date else False,
-                batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
-                used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
-                organization_id=current_user.organization_id
-            )
+            
+            # Create appropriate history entry based on item type
+            if item_type == 'sku':
+                from app.models.product_sku import ProductSKUHistory
+                history = ProductSKUHistory(
+                    sku_id=item.id,
+                    change_type=change_type,
+                    quantity_change=qty_change,
+                    unit=addition_unit,
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
+                    unit_cost=cost_per_unit,
+                    notes=notes,
+                    created_by=created_by,
+                    expiration_date=expiration_date,
+                    shelf_life_days=shelf_life_to_use,
+                    is_perishable=expiration_date is not None,
+                    batch_id=batch_id if change_type == 'finished_batch' else None,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id,
+                    organization_id=current_user.organization_id
+                )
+            else:
+                history = InventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=qty_change,
+                    unit=addition_unit,  # Record original unit used, default to 'count' for containers
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
+                    unit_cost=cost_per_unit,
+                    note=notes,
+                    quantity_used=0.0,  # Additions don't consume inventory - always 0
+                    created_by=created_by,
+                    expiration_date=expiration_date,
+                    shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
+                    is_perishable=item.is_perishable if expiration_date else False,
+                    batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
+                    used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
+                    organization_id=current_user.organization_id
+                )
             db.session.add(history)
 
         item.quantity += qty_change

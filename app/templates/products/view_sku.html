@@ -15,11 +15,11 @@ window.showInventoryModal = function(actionType) {
     const salePriceDiv = document.getElementById('salePriceDiv');
     const salePriceInput = document.getElementById('salePrice');
     const modalTitle = modal.querySelector('.modal-title');
-    
+
     // Reset form
     form.reset();
     actionTypeInput.value = actionType;
-    
+
     // Set modal title and configure based on action type
     switch(actionType) {
         case 'sale':
@@ -50,7 +50,7 @@ window.showInventoryModal = function(actionType) {
             modalTitle.textContent = 'Inventory Adjustment';
             salePriceDiv.style.display = 'none';
     }
-    
+
     // Show modal
     new bootstrap.Modal(modal).show();
 };
@@ -58,7 +58,7 @@ window.showInventoryModal = function(actionType) {
 window.submitInventoryAdjustment = function() {
     const form = document.getElementById('inventoryForm');
     const formData = new FormData(form);
-    
+
     fetch("{{ url_for('products.adjust_sku', sku_id=sku.id) }}", {
         method: 'POST',
         body: formData
@@ -123,6 +123,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <!-- History Table Component -->
             {% include 'components/sku/history_table.html' %}
+
+            <!-- Inventory Actions Card -->
+            {% include 'components/sku/inventory_actions_card.html' %}
         </div>
     </div>
 </div>
