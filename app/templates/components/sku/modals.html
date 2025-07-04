@@ -7,7 +7,7 @@
                 <h5 class="modal-title">Edit SKU Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="#" onclick="alert('SKU editing will be implemented in the new inventory system'); return false;">
+            <form method="POST" action="{{ url_for('sku.edit_sku', sku_id=sku.id) }}" id="editSkuForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -80,7 +80,7 @@
                 <h5 class="modal-title">Adjust FIFO Entry</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="adjustFifoForm" action="#" onclick="alert('FIFO adjustments will be implemented in the new inventory system'); return false;">
+            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.adjust_fifo_entry') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="adjust_fifo">
                 <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
@@ -142,7 +142,7 @@
                 <h5 class="modal-title" id="actionModalTitle">Inventory Action</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="inventoryForm" action="#" onclick="alert('Inventory adjustments will be implemented in the new inventory system'); return false;">
+            <form method="POST" id="inventoryForm" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="change_type" id="modal_change_type" value="">
                 <div class="modal-body">
