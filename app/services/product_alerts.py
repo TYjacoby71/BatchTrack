@@ -1,6 +1,7 @@
-from ..models import db, ProductSKU
+from ..models import db, ProductSKU, InventoryItem
 from sqlalchemy import and_
 from typing import List, Dict
+from flask_login import current_user
 
 class ProductAlertService:
     """Service for product-related alerts including low stock SKUs"""
