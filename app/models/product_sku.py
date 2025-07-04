@@ -151,6 +151,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
         return status_map.get(self.quality_status, 'Unknown')
     
     # RELATIONSHIPS
+    product = db.relationship('Product', back_populates='skus')
+    variant = db.relationship('ProductVariant', back_populates='skus')
     batch = db.relationship('Batch', foreign_keys=[batch_id], backref='source_product_skus')
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])

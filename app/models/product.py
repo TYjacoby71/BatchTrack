@@ -33,8 +33,8 @@ class Product(ScopedModelMixin, db.Model):
     etsy_shop_section_id = db.Column(db.String(64), nullable=True)
     
     # Relationships
-    variants = db.relationship('ProductVariant', backref='product', lazy='dynamic', cascade='all, delete-orphan')
-    skus = db.relationship('ProductSKU', backref='product', lazy='dynamic', cascade='all, delete-orphan')
+    variants = db.relationship('ProductVariant', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
+    skus = db.relationship('ProductSKU', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
     
     @property
     def base_variant(self):
@@ -73,7 +73,8 @@ class ProductVariant(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    skus = db.relationship('ProductSKU', backref='variant', lazy='dynamic', cascade='all, delete-orphan')
+    product = db.relationship('Product', back_populates='variants')
+    skus = db.relationship('ProductSKU', back_populates='variant', lazy='dynamic', cascade='all, delete-orphan')
     
     @property
     def bulk_sku(self):
