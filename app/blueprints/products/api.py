@@ -64,7 +64,7 @@ def get_product_variants(product_id):
         
         # Get active variants for this product
         variants = ProductVariant.query.filter_by(
-            product_id=product_id,
+            product_id=product.id,
             is_active=True
         ).all()
 
