@@ -1,8 +1,8 @@
 <!-- Product Selection Fields -->
 <div id="productFields">
   <div class="mb-3">
-    <label for="productDropdown">Product</label>
-    <select id="productDropdown" name="product_id" class="form-select" required onchange="loadVariants()">
+    <label for="product_id">Product</label>
+    <select id="product_id" name="product_id" class="form-select" required onchange="loadVariants()">
       <option value="">Select Product</option>
       {% for product in products %}
         <option value="{{ product.id }}" data-product-name="{{ product.name }}">
