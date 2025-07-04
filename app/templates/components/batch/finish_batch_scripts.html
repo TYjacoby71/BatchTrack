@@ -14,6 +14,7 @@ function loadVariants() {
   }
 
   const productId = productSelect.value;
+  console.log('Loading variants for product ID:', productId);
 
   // Reset variant dropdown
   variantSelect.innerHTML = '<option value="">Loading variants...</option>';
@@ -25,7 +26,7 @@ function loadVariants() {
   }
 
   // Fetch variants from API
-  fetch(`/products/api/${productId}/variants`, {
+  fetch(`/products/${productId}/variants`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'

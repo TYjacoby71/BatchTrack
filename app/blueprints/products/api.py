@@ -328,7 +328,7 @@ def get_product_skus(product_id):
     return jsonify(sku_list)
 
 @products_api_bp.route('/api/<int:product_id>/variants', methods=['GET'])
-@login_required
+@login_required  
 def get_product_variants_api(product_id):
     """Get all variants for a product"""
     try:

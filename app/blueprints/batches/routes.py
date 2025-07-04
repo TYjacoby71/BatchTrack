@@ -302,10 +302,22 @@ def view_batch_in_progress(batch_identifier):
         organization_id=current_user.organization_id
     ).all()
     
-    # Ensure variants are loaded for each product
+    # Ensure variants are loaded for each product and create base variant if none exist
     for product in products:
         # This will trigger the loading of variants relationship
-        _ = product.variants.filter_by(is_active=True).all()
+        variants = product.variants.filter_by(is_active=True).all()
+        
+        # If no variants exist, create a base variant
+        if not variants:
+            from ...models import ProductVariant
+            base_variant = ProductVariant(
+                product_id=product.id,
+                name='Base',
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(base_variant)
+            db.session.commit()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []
