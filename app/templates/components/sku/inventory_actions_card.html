@@ -53,7 +53,7 @@
         </div>
         <div class="col-md-4">
           <label class="form-label">Entry Date</label>
-          <input type="date" id="entry_date" name="entry_date" class="form-control" value="{{ moment().format('YYYY-MM-DD') }}">
+          <input type="date" id="entry_date" name="entry_date" class="form-control" value="">
         </div>
       </div>
 
@@ -116,7 +116,10 @@ function updateExpirationDate() {
 // Initialize with current date
 document.addEventListener('DOMContentLoaded', function() {
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('entry_date').value = today;
+  const entryDateInput = document.getElementById('entry_date');
+  if (entryDateInput) {
+    entryDateInput.value = today;
+  }
 });
 </script>
 </div>
