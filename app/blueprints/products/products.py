@@ -307,7 +307,7 @@ def delete_product(product_id):
             return redirect(url_for('products.product_list'))
 
         # Check if any SKU has inventory
-        total_inventory = sum(sku.current_quantity for sku in skus)
+        total_inventory = sum((sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in skus)
         if total_inventory > 0:
             flash('Cannot delete product with remaining inventory', 'error')
             return redirect(url_for('products.view_product', product_id=product_id))

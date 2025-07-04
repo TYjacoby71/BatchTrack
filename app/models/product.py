@@ -210,12 +210,14 @@ class ProductSKU(ScopedModelMixin, db.Model):
     @property
     def is_low_stock(self):
         """Check if current stock is below threshold"""
-        return self.current_quantity <= self.low_stock_threshold
+        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
+        return current_qty <= self.low_stock_threshold
     
     @property
     def stock_status(self):
         """Get stock status string"""
-        if self.current_quantity == 0:
+        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
+        if current_qty == 0:
             return "Out of Stock"
         elif self.is_low_stock:
             return "Low Stock"
@@ -225,7 +227,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     @property
     def available_for_sale(self):
         """Calculate available quantity for sale"""
-        return max(0, self.current_quantity - (self.reserved_quantity or 0))
+        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
+        return max(0, current_qty - (self.reserved_quantity or 0))
     
     # RELATIONSHIPS
     product = db.relationship('Product', back_populates='skus')
@@ -248,7 +251,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.UniqueConstraint('upc', name='unique_upc'),
         db.Index('idx_product_variant', 'product_id', 'variant_id'),
         db.Index('idx_active_skus', 'is_active', 'is_product_active'),
-        db.Index('idx_low_stock', 'current_quantity', 'low_stock_threshold'),
+        db.Index('idx_inventory_item', 'inventory_item_id'),
     )
     
     @classmethod
