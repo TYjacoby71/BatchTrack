@@ -444,89 +444,42 @@ def add_from_batch():
         inventory_entries = []
         total_containerized = 0
         
-        # Process regular containers
-        for container in batch.containers:
-            final_quantity = container_overrides.get(str(container.container_id), container.quantity_used)
-            if final_quantity > 0:
-                container_capacity = (container.container.storage_amount or 1) * final_quantity
-                total_containerized += container_capacity
-                
-                # Create container size label
-                container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'count'} {container.container.name}"
-                
-                # Get or create SKU for this container size
-                container_sku = ProductService.get_or_create_sku(
-                    product_name=target_sku.product_name,
-                    variant_name=variant_label,
-                    size_label=container_size_label,
-                    unit=batch.output_unit or target_sku.unit
-                )
-                
-                # Add inventory using centralized service
-                total_container_volume = container_capacity
-                success = process_inventory_adjustment(
-                    item_id=container_sku.id,
-                    quantity=total_container_volume,
-                    change_type='finished_batch',
-                    unit=batch.output_unit or target_sku.unit,
-                    notes=f"From batch {batch.label_code} - {final_quantity} containers",
-                    batch_id=batch_id,
-                    created_by=current_user.id,
-                    item_type='product',
-                    custom_expiration_date=batch.expiration_date,
-                    custom_shelf_life_days=batch.shelf_life_days
-                )
-                
-                if success:
-                    inventory_entries.append({
-                        'sku_id': container_sku.id,
-                        'quantity': total_container_volume,
-                        'container_name': container.container.name,
-                        'container_count': final_quantity,
-                        'type': 'container'
-                    })
+        # Use BatchService to handle container processing and avoid duplication
+        from ...services.batch_service import BatchService
         
-        # Process extra containers
-        for extra_container in batch.extra_containers:
-            final_quantity = container_overrides.get(str(extra_container.container_id), extra_container.quantity_used)
-            if final_quantity > 0:
-                container_capacity = (extra_container.container.storage_amount or 1) * final_quantity
-                total_containerized += container_capacity
-                
-                # Create container size label
-                container_size_label = f"{extra_container.container.storage_amount or 1}{extra_container.container.storage_unit or 'count'} {extra_container.container.name}"
-                
-                # Get or create SKU for this container size
-                container_sku = ProductService.get_or_create_sku(
-                    product_name=target_sku.product_name,
-                    variant_name=variant_label,
-                    size_label=container_size_label,
-                    unit=batch.output_unit or target_sku.unit
-                )
-                
-                # Add inventory using centralized service
-                total_container_volume = container_capacity
-                success = process_inventory_adjustment(
-                    item_id=container_sku.id,
-                    quantity=total_container_volume,
-                    change_type='finished_batch',
-                    unit=batch.output_unit or target_sku.unit,
-                    notes=f"From batch {batch.label_code} - {final_quantity} extra containers",
-                    batch_id=batch_id,
-                    created_by=current_user.id,
-                    item_type='product',
-                    custom_expiration_date=batch.expiration_date,
-                    custom_shelf_life_days=batch.shelf_life_days
-                )
-                
-                if success:
-                    inventory_entries.append({
-                        'sku_id': container_sku.id,
-                        'quantity': total_container_volume,
-                        'container_name': extra_container.container.name,
-                        'container_count': final_quantity,
-                        'type': 'extra_container'
-                    })
+        # Create a mock batch object for the service to use
+        class MockBatch:
+            def __init__(self, batch):
+                self.id = batch.id
+                self.label_code = batch.label_code
+                self.containers = batch.containers
+                self.extra_containers = batch.extra_containers
+                self.expiration_date = batch.expiration_date
+                self.shelf_life_days = batch.shelf_life_days
+                self.output_unit = batch.output_unit
+        
+        mock_batch = MockBatch(batch)
+        
+        # Create a mock product/variant for the service
+        class MockProduct:
+            def __init__(self, name):
+                self.name = name
+        
+        class MockVariant:
+            def __init__(self, name):
+                self.name = name
+        
+        mock_product = MockProduct(target_sku.product_name)
+        mock_variant = MockVariant(variant_label)
+        
+        # Process containers using BatchService
+        total_containerized += BatchService._process_batch_containers(
+            batch.containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries
+        )
+        
+        total_containerized += BatchService._process_batch_containers(
+            batch.extra_containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries, is_extra=True
+        )
         
         # Handle remaining bulk quantity
         bulk_quantity = quantity - total_containerized
