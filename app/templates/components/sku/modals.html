@@ -34,7 +34,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Unit Cost ($)</label>
                             <div class="input-group">
-                                <input type="number" name="unit_cost" id="edit_unit_cost" class="form-control" value="{{ sku.unit_cost or '' }}" step="0.01" min="0" readonly>
+                                <input type="number" name="unit_cost" id="edit_unit_cost" class="form-control" value="{{ sku.inventory_item.cost_per_unit if sku.inventory_item else sku.unit_cost or '' }}" step="0.01" min="0" readonly>
                                 <div class="input-group-text">
                                     <input class="form-check-input mt-0" type="checkbox" id="override_edit_unit_cost" name="override_unit_cost">
                                     <label class="form-check-label ms-1" for="override_edit_unit_cost">Override</label>
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 unitCostInput.focus();
             } else {
                 unitCostInput.setAttribute('readonly', 'readonly');
-                unitCostInput.value = '{{ sku.unit_cost or "" }}';
+                unitCostInput.value = '{{ sku.inventory_item.cost_per_unit if sku.inventory_item else sku.unit_cost or "" }}';
             }
         });
     }
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Pre-populate with current unit cost if available
                 const restockCostInput = document.getElementById('restock_cost');
                 if (restockCostInput && !restockCostInput.value) {
-                    restockCostInput.value = '{{ sku.unit_cost or "" }}';
+                    restockCostInput.value = '{{ sku.inventory_item.cost_per_unit if sku.inventory_item else sku.unit_cost or "" }}';
                 }
             } else {
                 restockCostGroup.style.display = 'none';

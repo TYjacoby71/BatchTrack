@@ -136,27 +136,46 @@ def process_inventory_adjustment(
         shelf_life_to_use = item.shelf_life_days
 
     # Get cost - handle weighted average vs override
-    if change_type in ['spoil', 'trash']:
-        # For spoilage/trash, don't assign a cost
-        cost_per_unit = None
-    elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
-        # For new stock additions, calculate weighted average
-        current_value = item.quantity * item.cost_per_unit
-        new_value = qty_change * (cost_override or item.cost_per_unit)
-        total_quantity = item.quantity + qty_change
+    if item_type == 'product':
+        # For ProductSKU, use the underlying inventory_item for cost calculations
+        inventory_item = item.inventory_item
+        
+        if change_type in ['spoil', 'trash']:
+            cost_per_unit = None
+        elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+            # Calculate weighted average on inventory_item
+            current_value = inventory_item.quantity * inventory_item.cost_per_unit
+            new_value = qty_change * (cost_override or inventory_item.cost_per_unit)
+            total_quantity = inventory_item.quantity + qty_change
 
-        if total_quantity > 0:
-            weighted_avg_cost = (current_value + new_value) / total_quantity
-            # Update the item's cost_per_unit to the new weighted average
-            item.cost_per_unit = weighted_avg_cost
+            if total_quantity > 0:
+                weighted_avg_cost = (current_value + new_value) / total_quantity
+                inventory_item.cost_per_unit = weighted_avg_cost
 
-        cost_per_unit = cost_override or item.cost_per_unit
-    elif cost_override is not None and change_type == 'cost_override':
-        # Only use cost_override for manual edits from the edit modal (true overrides)
-        cost_per_unit = cost_override
+            cost_per_unit = cost_override or inventory_item.cost_per_unit
+        elif cost_override is not None and change_type == 'cost_override':
+            cost_per_unit = cost_override
+            inventory_item.cost_per_unit = cost_override
+        else:
+            cost_per_unit = inventory_item.cost_per_unit
     else:
-        # For other operations, use current cost
-        cost_per_unit = item.cost_per_unit
+        # For InventoryItem, handle cost as before
+        if change_type in ['spoil', 'trash']:
+            cost_per_unit = None
+        elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+            current_value = item.quantity * item.cost_per_unit
+            new_value = qty_change * (cost_override or item.cost_per_unit)
+            total_quantity = item.quantity + qty_change
+
+            if total_quantity > 0:
+                weighted_avg_cost = (current_value + new_value) / total_quantity
+                item.cost_per_unit = weighted_avg_cost
+
+            cost_per_unit = cost_override or item.cost_per_unit
+        elif cost_override is not None and change_type == 'cost_override':
+            cost_per_unit = cost_override
+        else:
+            cost_per_unit = item.cost_per_unit
 
     # Deductions
     if qty_change < 0:
@@ -205,7 +224,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product_sku import ProductSKUHistory
+                from app.models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
@@ -237,9 +256,14 @@ def process_inventory_adjustment(
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
-        # Update InventoryItem quantity with rounding
+        # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        if item_type == 'product':
+            # For ProductSKU, update the underlying inventory_item
+            item.inventory_item.quantity = ConversionEngine.round_value(item.inventory_item.quantity + rounded_qty_change, 3)
+        else:
+            # For InventoryItem, update directly
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     else:
         # Handle credits/refunds by finding original FIFO entries to credit back to
@@ -314,7 +338,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product_sku import ProductSKUHistory
+                from app.models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
@@ -353,9 +377,14 @@ def process_inventory_adjustment(
                 )
             db.session.add(history)
 
-        # Update InventoryItem quantity with rounding
+        # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        if item_type == 'product':
+            # For ProductSKU, update the underlying inventory_item
+            item.inventory_item.quantity = ConversionEngine.round_value(item.inventory_item.quantity + rounded_qty_change, 3)
+        else:
+            # For InventoryItem, update directly
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     db.session.commit()
 

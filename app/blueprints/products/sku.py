@@ -53,8 +53,9 @@ def edit_sku(sku_id):
         # Handle unit cost override
         if request.form.get('override_unit_cost'):
             unit_cost = request.form.get('unit_cost')
-            if unit_cost:
-                sku.unit_cost = float(unit_cost)
+            if unit_cost and sku.inventory_item:
+                # Update the underlying inventory item cost
+                sku.inventory_item.cost_per_unit = float(unit_cost)
         
         # Handle perishable settings
         sku.is_perishable = bool(request.form.get('is_perishable'))
@@ -73,7 +74,7 @@ def edit_sku(sku_id):
             
             try:
                 success = process_inventory_adjustment(
-                    item_id=sku.inventory_item_id,
+                    item_id=sku.id,
                     quantity=float(recount_quantity),
                     change_type='recount',
                     unit=sku.unit,
