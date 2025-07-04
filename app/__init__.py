@@ -73,9 +73,10 @@ def create_app():
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     # Import and register blueprints
     try:
-        from .blueprints.products import products_bp, products_api_bp
+        from .blueprints.products import products_bp, products_api_bp, product_inventory_bp
         app.register_blueprint(products_bp, url_prefix='/products')
         app.register_blueprint(products_api_bp)
+        app.register_blueprint(product_inventory_bp, url_prefix='/products')
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
         pass
@@ -149,7 +150,7 @@ def create_app():
             from .utils.permissions import has_permission, has_role
             return dict(has_permission=has_permission, has_role=has_role)
         except ImportError:
-            return dict(has_permission=lambda x: True, has_role=lambda x: True)
+            return dict(has_permission=lambda x: True, has_role=has_role)
 
     # Add main routes
     @app.route('/')

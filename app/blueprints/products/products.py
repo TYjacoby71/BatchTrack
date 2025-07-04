@@ -1,10 +1,7 @@
-# Updated SKU adjustment logic to use the universal inventory adjustment service.
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, ProductSKU, InventoryItem
-from ...models.product import ProductSKUHistory
-from ...models.product import Product, ProductVariant
+from ...models import db, Product, ProductVariant, ProductSKU, ProductSKUHistory
+from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -85,13 +82,13 @@ def new_product():
             name=name,
             organization_id=current_user.organization_id
         ).first()
-        
+
         # Also check legacy ProductSKU table
         existing_sku = ProductSKU.query.filter_by(
             product_name=name,
             organization_id=current_user.organization_id
         ).first()
-        
+
         if existing_product or existing_sku:
             flash('Product with this name already exists', 'error')
             return redirect(url_for('products.new_product'))
@@ -161,11 +158,11 @@ def view_product(product_id):
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not base_sku:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-        
+
     product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
@@ -223,11 +220,11 @@ def view_product_by_name(product_name):
         product_name=product_name,
         is_active=True
     ).first()
-    
+
     if not sku:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-    
+
     return redirect(url_for('products.view_product', product_id=sku.id))
 
 
@@ -241,13 +238,13 @@ def edit_product(product_id):
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not base_sku:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-        
+
     product = base_sku.product
-    
+
     name = request.form.get('name')
     unit = request.form.get('product_base_unit')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
@@ -292,13 +289,13 @@ def delete_product(product_id):
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
+
         if not base_sku:
             flash('Product not found', 'error')
             return redirect(url_for('products.product_list'))
-            
+
         product = base_sku.product
-        
+
         # Get all SKUs for this product - with org scoping
         skus = ProductSKU.query.filter_by(
             product_id=product.id,
@@ -321,12 +318,12 @@ def delete_product(product_id):
 
         # Delete the SKUs
         ProductSKU.query.filter_by(product_id=product.id).delete()
-        
+
         # Delete the product and its variants
         from ...models.product import Product, ProductVariant
         ProductVariant.query.filter_by(product_id=product.id).delete()
         Product.query.filter_by(id=product.id).delete()
-        
+
         db.session.commit()
 
         flash(f'Product "{product.name}" deleted successfully', 'success')
@@ -337,6 +334,6 @@ def delete_product(product_id):
         flash(f'Error deleting product: {str(e)}', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-
+# Legacy adjust_sku route removed - use product_inventory routes instead
 
 # API routes moved to product_api.py for better organization

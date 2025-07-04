@@ -1,11 +1,15 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
-from . import products_bp
 
-@products_bp.route('/<int:product_id>/variants/new', methods=['POST'])
+# Create the product variants blueprint
+product_variants_bp = Blueprint('product_variants', __name__)
+
+@product_variants_bp.route('/<int:product_id>/variants/new', methods=['POST'])
 @login_required
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
@@ -108,7 +112,7 @@ def add_variant(product_id):
         db.session.rollback()
         return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
-@products_bp.route('/<int:product_id>/variant/<variant_name>')
+@product_variants_bp.route('/<int:product_id>/variant/<variant_name>')
 @login_required
 def view_variant(product_id, variant_name):
     """View individual product variation details"""
@@ -185,7 +189,7 @@ def view_variant(product_id, variant_name):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
+@product_variants_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
 def edit_variant(product_id, variant_name):
     """Edit product variation details"""
@@ -244,7 +248,7 @@ def edit_variant(product_id, variant_name):
                            product_id=product_id, 
                            variant_name=name))
 
-@products_bp.route('/<int:product_id>/variant/<variant_name>/delete', methods=['POST'])
+@product_variants_bp.route('/<int:product_id>/variant/<variant_name>/delete', methods=['POST'])
 @login_required
 def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
