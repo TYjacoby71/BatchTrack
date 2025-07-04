@@ -113,22 +113,32 @@ def add_variant(product_id):
 @login_required
 def view_variant(product_id, variant_name):
     """View individual product variation details"""
-    # Get the product name from product_id
-    base_sku = ProductSKU.query.filter_by(
+    # Get the product using the new Product model
+    from ...models.product import Product, ProductVariant
+    
+    product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
     
-    if not base_sku:
+    if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-        
-    product_name = base_sku.product_name
+    
+    # Get the variant by name
+    variant = ProductVariant.query.filter_by(
+        product_id=product.id,
+        name=variant_name
+    ).first()
+    
+    if not variant:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
     
     # Get all SKUs for this product/variant combination
     skus = ProductSKU.query.filter_by(
-        product_name=product_name,
-        variant_name=variant_name,
+        product_id=product.id,
+        variant_id=variant.id,
         is_active=True,
         organization_id=current_user.organization_id
     ).all()
@@ -166,27 +176,12 @@ def view_variant(product_id, variant_name):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    # Create a product object for the template
-    product = type('Product', (), {
-        'name': product_name,
-        'id': skus[0].id if skus else None,
-        'product_base_unit': skus[0].unit if skus else None,
-        'low_stock_threshold': skus[0].low_stock_threshold if skus else 0
-    })()
-
-    # Create a variation object for the template  
-    variation = type('Variation', (), {
-        'name': variant_name,
-        'description': skus[0].description if skus else None,
-        'id': skus[0].id if skus else None
-    })()
-
     return render_template('products/view_variation.html',
                          product=product,
-                         product_name=product_name,
-                         variant_name=variant_name,
-                         variation=variation,
-                         variant_description=skus[0].description if skus else None,
+                         product_name=product.name,
+                         variant_name=variant.name,
+                         variation=variant,
+                         variant_description=variant.description,
                          size_groups=size_groups,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list)
@@ -195,17 +190,27 @@ def view_variant(product_id, variant_name):
 @login_required
 def edit_variant(product_id, variant_name):
     """Edit product variation details"""
-    # Get the product name from product_id
-    base_sku = ProductSKU.query.filter_by(
+    from ...models.product import Product, ProductVariant
+    
+    # Get the product using the new Product model
+    product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
     
-    if not base_sku:
+    if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-        
-    product_name = base_sku.product_name
+    
+    # Get the variant
+    variant = ProductVariant.query.filter_by(
+        product_id=product.id,
+        name=variant_name
+    ).first()
+    
+    if not variant:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
     
     name = request.form.get('name')
     description = request.form.get('description')
@@ -217,11 +222,10 @@ def edit_variant(product_id, variant_name):
                                variant_name=variant_name))
 
     # Check if another variant has this name for the same product
-    existing = ProductSKU.query.filter(
-        ProductSKU.variant_name == name,
-        ProductSKU.product_name == product_name,
-        ProductSKU.variant_name != variant_name,
-        ProductSKU.organization_id == current_user.organization_id
+    existing = ProductVariant.query.filter(
+        ProductVariant.product_id == product.id,
+        ProductVariant.name == name,
+        ProductVariant.id != variant.id
     ).first()
 
     if existing:
@@ -230,16 +234,9 @@ def edit_variant(product_id, variant_name):
                                product_id=product_id, 
                                variant_name=variant_name))
 
-    # Update all SKUs with this variant name
-    skus = ProductSKU.query.filter_by(
-        product_name=product_name,
-        variant_name=variant_name,
-        organization_id=current_user.organization_id
-    ).all()
-
-    for sku in skus:
-        sku.variant_name = name
-        sku.variant_description = description if description else None
+    # Update the variant
+    variant.name = name
+    variant.description = description
 
     db.session.commit()
     flash('Variant updated successfully', 'success')
@@ -252,22 +249,32 @@ def edit_variant(product_id, variant_name):
 @login_required
 def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
-    # Get the product name from product_id
-    base_sku = ProductSKU.query.filter_by(
+    from ...models.product import Product, ProductVariant
+    
+    # Get the product using the new Product model
+    product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
     
-    if not base_sku:
+    if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-        
-    product_name = base_sku.product_name
+    
+    # Get the variant
+    variant = ProductVariant.query.filter_by(
+        product_id=product.id,
+        name=variant_name
+    ).first()
+    
+    if not variant:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
     
     # Get all SKUs for this variant
     skus = ProductSKU.query.filter_by(
-        product_name=product_name,
-        variant_name=variant_name,
+        product_id=product.id,
+        variant_id=variant.id,
         organization_id=current_user.organization_id
     ).all()
 
@@ -283,22 +290,28 @@ def delete_variant(product_id, variant_name):
                                product_id=product_id, 
                                variant_name=variant_name))
 
-    # Delete all SKUs for this variant
+    # Delete the variant and its SKUs
+    variant.is_active = False
     for sku in skus:
         sku.is_active = False
 
     db.session.commit()
 
     # Check if this was the last variant for the product
-    remaining_variants = ProductSKU.query.filter_by(
-        product_name=product_name,
-        is_active=True,
-        organization_id=current_user.organization_id
+    remaining_variants = ProductVariant.query.filter_by(
+        product_id=product.id,
+        is_active=True
     ).count()
 
     if remaining_variants == 0:
-        # Auto-create Base variant
-        ProductService.ensure_base_variant_if_needed(product_name)
+        # Create a Base variant
+        base_variant = ProductVariant(
+            product_id=product.id,
+            name='Base',
+            description='Default base variant',
+            organization_id=current_user.organization_id
+        )
+        db.session.add(base_variant)
         db.session.commit()
         flash(f'Variant "{variant_name}" deleted. Created default "Base" variant.', 'success')
     else:
