@@ -53,18 +53,28 @@ def get_product_variants(product_id):
             is_active=True
         ).all()
 
-        variant_list = []
+        variant_data = []
         for variant in variants:
-            variant_list.append({
+            variant_data.append({
                 'id': variant.id,
                 'name': variant.name,
-                'description': variant.description or ''
+                'description': variant.description or '',
+                'color': variant.color,
+                'size': variant.size,
+                'material': variant.material,
+                'scent': variant.scent
             })
 
-        return jsonify(variant_list)
+        return jsonify({
+            'status': 'success',
+            'variants': variant_data
+        })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @products_api_bp.route('/search')
 @login_required
@@ -327,46 +337,7 @@ def get_product_skus(product_id):
 
     return jsonify(sku_list)
 
-@products_api_bp.route('/api/<int:product_id>/variants', methods=['GET'])
-@login_required  
-def get_product_variants_api(product_id):
-    """Get all variants for a product"""
-    try:
-        product = Product.query.filter_by(
-            id=product_id,
-            organization_id=current_user.organization_id
-        ).first()
 
-        if not product:
-            return jsonify({'error': 'Product not found'}), 404
-
-        variants = ProductVariant.query.filter_by(
-            product_id=product_id,
-            is_active=True
-        ).all()
-
-        variant_data = []
-        for variant in variants:
-            variant_data.append({
-                'id': variant.id,
-                'name': variant.name,
-                'description': variant.description,
-                'color': variant.color,
-                'size': variant.size,
-                'material': variant.material,
-                'scent': variant.scent
-            })
-
-        return jsonify({
-            'status': 'success',
-            'variants': variant_data
-        })
-
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
 
 @products_api_bp.route('/api/<int:product_id>/skus', methods=['GET'])
 @login_required
