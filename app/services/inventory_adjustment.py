@@ -237,12 +237,9 @@ def process_inventory_adjustment(
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
-        # Update quantity based on item type with rounding
+        # Update InventoryItem quantity with rounding
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        if hasattr(item, 'current_quantity'):
-            item.current_quantity = ConversionEngine.round_value(item.current_quantity + rounded_qty_change, 3)
-        else:
-            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     else:
         # Handle credits/refunds by finding original FIFO entries to credit back to
@@ -356,12 +353,9 @@ def process_inventory_adjustment(
                 )
             db.session.add(history)
 
-        # Update quantity based on item type with rounding
+        # Update InventoryItem quantity with rounding
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        if hasattr(item, 'current_quantity'):
-            item.current_quantity = ConversionEngine.round_value(item.current_quantity + rounded_qty_change, 3)
-        else:
-            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     db.session.commit()
 

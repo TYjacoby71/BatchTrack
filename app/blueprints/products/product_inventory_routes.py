@@ -225,9 +225,9 @@ def dispose_expired_sku(sku_id):
             if expired_total >= quantity:
                 target_expired = True
 
-        # Use centralized inventory adjustment service
+        # Use centralized inventory adjustment service with InventoryItem
         success = process_inventory_adjustment(
-            item_id=sku_id,
+            item_id=sku.inventory_item_id,  # Use the InventoryItem ID
             quantity=quantity,
             change_type=change_type,
             unit=unit,
