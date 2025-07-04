@@ -67,6 +67,9 @@ class ConversionEngine:
                             to_multiplier = float(to_u.multiplier_to_base) if to_u.multiplier_to_base else 1.0
                             base_amount = amount * from_multiplier
                             converted = base_amount / to_multiplier
+                            print(f"DEBUG CONVERSION: {amount} {from_unit} -> {to_unit}")
+                            print(f"  from_multiplier: {from_multiplier}, to_multiplier: {to_multiplier}")
+                            print(f"  base_amount: {base_amount}, converted: {converted}")
                         except (ValueError, TypeError, ZeroDivisionError) as e:
                             raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}: {str(e)}")
                     conversion_type = 'direct'
