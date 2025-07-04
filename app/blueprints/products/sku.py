@@ -76,7 +76,7 @@ def edit_sku(sku_id):
             
             try:
                 success = process_inventory_adjustment(
-                    item_id=sku.inventory_item_id,
+                    item_id=sku.id,
                     quantity=float(recount_quantity),
                     change_type='recount',
                     unit=sku.unit,
