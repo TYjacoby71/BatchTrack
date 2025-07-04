@@ -1,29 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import ProductSKU, ProductSKUHistory
-from ...models.models import db
-from ...services.inventory_adjustment import process_inventory_adjustment
-from sqlalchemy.orm import joinedload
-from datetime import datetime
+from ...models import db, ProductSKU, ProductSKUHistory
+from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
 @products_bp.route('/sku/<int:sku_id>')
 @login_required
 def view_sku(sku_id):
-    """View detailed SKU information"""
-    from ...models.product import Product, ProductVariant
-
-    sku = ProductSKU.query.options(
-        db.joinedload(ProductSKU.product),
-        db.joinedload(ProductSKU.variant)
-    ).filter_by(
-        id=sku_id,
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not sku:
-        flash('SKU not found', 'error')
-        return redirect(url_for('products.product_list'))
+    """View individual SKU details"""
+    sku = ProductSKU.query.get_or_404(sku_id)
 
     # Get SKU history for this specific SKU
     history = ProductSKUHistory.query.filter_by(sku_id=sku_id).order_by(ProductSKUHistory.timestamp.desc()).all()
@@ -45,11 +31,11 @@ def adjust_sku(sku_id):
         id=sku_id,
         organization_id=current_user.organization_id
     ).first()
-
+    
     if not sku:
         flash('SKU not found', 'error')
         return redirect(url_for('products.product_list'))
-
+    
     quantity = int(request.form.get('quantity'))
     change_type = request.form.get('change_type')
     notes = request.form.get('notes')

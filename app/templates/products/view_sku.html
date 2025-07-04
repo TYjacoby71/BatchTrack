@@ -15,11 +15,11 @@ window.showInventoryModal = function(actionType) {
     const salePriceDiv = document.getElementById('salePriceDiv');
     const salePriceInput = document.getElementById('salePrice');
     const modalTitle = modal.querySelector('.modal-title');
-
+    
     // Reset form
     form.reset();
     actionTypeInput.value = actionType;
-
+    
     // Set modal title and configure based on action type
     switch(actionType) {
         case 'sale':
@@ -50,7 +50,7 @@ window.showInventoryModal = function(actionType) {
             modalTitle.textContent = 'Inventory Adjustment';
             salePriceDiv.style.display = 'none';
     }
-
+    
     // Show modal
     new bootstrap.Modal(modal).show();
 };
@@ -58,7 +58,7 @@ window.showInventoryModal = function(actionType) {
 window.submitInventoryAdjustment = function() {
     const form = document.getElementById('inventoryForm');
     const formData = new FormData(form);
-
+    
     fetch("{{ url_for('products.adjust_sku', sku_id=sku.id) }}", {
         method: 'POST',
         body: formData
@@ -104,53 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <!-- SKU Details Card Component -->
-            <div class="card mb-4">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-4">
-                <img src="{{ sku.image_url or url_for('static', filename='img/no-image.png') }}" alt="SKU Image" class="img-fluid">
-            </div>
-            <div class="col-md-8">
-                <div class="d-flex align-items-center">
-                    <h2 class="mb-0 me-3">{{ sku.sku_code }}</h2>
-                    {% if sku.is_active %}
-                        <span class="badge bg-success">Active</span>
-                    {% else %}
-                        <span class="badge bg-secondary">Inactive</span>
-                    {% endif %}
-                </div>
-                <p class="text-muted mb-0">
-                    {% if sku.product %}
-                        {{ sku.product.name }}
-                    {% else %}
-                        {{ sku.product_name }}
-                    {% endif %}
-                    - 
-                    {% if sku.variant %}
-                        {{ sku.variant.name }}
-                    {% else %}
-                        {{ sku.variant_name }}
-                    {% endif %}
-                    - {{ sku.size_label }}
-                </p>
-            </div>
-        </div>
-        <div class="row mt-3">
-            <div class="col-md-6">
-                <p><strong>Retail Price:</strong> {{ sku.retail_price }}</p>
-                <p><strong>Unit Cost:</strong> {{ sku.unit_cost }}</p>
-                <p><strong>Current Quantity:</strong> {{ total_quantity }} {{ sku.unit }}</p>
-                <p><strong>Available for Sale:</strong> {{ sku.available_for_sale }} {{ sku.unit }}</p>
-            </div>
-            <div class="col-md-6">
-                <p><strong>Size Label:</strong> {{ sku.size_label }}</p>
-                <p><strong>Unit:</strong> {{ sku.unit }}</p>
-                <p><strong>Barcode:</strong> {{ sku.barcode }}</p>
-                <p><strong>Legacy ID:</strong> {{ sku.legacy_id }}</p>
-            </div>
-        </div>
-    </div>
-</div>
+            {% include 'components/sku/sku_details_card.html' %}
 
             <!-- Inventory Actions Card Component -->
             {% include 'components/sku/inventory_actions_card.html' %}
