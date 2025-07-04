@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = Object.fromEntries(formData);
         const csrfToken = document.querySelector('input[name="csrf_token"]');
 
-        fetch("{{ url_for('products.add_variant', product_id=product.id) }}", {
+        fetch("{{ url_for('product_variants.add_variant', product_id=product.id) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
