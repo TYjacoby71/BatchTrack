@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
@@ -15,7 +14,7 @@ def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
         from ...models.product import Product
-        
+
         # Get products using the proper Product model
         products = Product.query.filter_by(
             is_active=True,
@@ -41,27 +40,16 @@ def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
         from ...models.product import Product, ProductVariant
-        from ...models import ProductSKU
-        
-        # Get the product with org scoping
+
+        # Get the product with org scoping - no legacy support
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
-        # If no Product found, try to find it via SKU (backward compatibility)
-        if not product:
-            sku = ProductSKU.query.filter_by(
-                id=product_id,
-                organization_id=current_user.organization_id
-            ).first()
-            
-            if sku and sku.product_id:
-                product = Product.query.get(sku.product_id)
-        
+
         if not product:
             return jsonify({'error': 'Product not found'}), 404
-        
+
         # Get active variants for this product
         variants = ProductVariant.query.filter_by(
             product_id=product.id,
@@ -132,7 +120,7 @@ def quick_add_product():
             size_label='Bulk',
             unit=product_base_unit
         )
-        
+
         # Ensure the SKU belongs to the current user's organization
         if not sku.organization_id:
             sku.organization_id = current_user.organization_id
@@ -231,12 +219,12 @@ def adjust_sku_inventory(sku_id):
         id=sku_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not sku:
         return jsonify({'error': 'SKU not found'}), 404
-        
+
     data = request.get_json()
-    
+
     quantity = data.get('quantity')
     change_type = data.get('change_type')
     notes = data.get('notes')

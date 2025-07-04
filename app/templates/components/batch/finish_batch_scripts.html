@@ -183,7 +183,16 @@ function loadVariants() {
   variantSelect.disabled = true;
 
   // Fetch variants for the selected product using the correct API endpoint
-  fetch(`/products/api/${productId}/variants`)
+  // First get the actual Product ID from the SKU
+            const productResponse = await fetch(`/products/api/sku/${productId}/product`);
+            if (!productResponse.ok) {
+                console.error('Failed to get product from SKU:', productResponse.status);
+                return;
+            }
+            const productData = await productResponse.json();
+            const actualProductId = productData.product_id;
+            
+            fetch(`/products/api/${actualProductId}/variants`)
     .then(response => {
       if (!response.ok) {
         console.error('Error loading variants:', response.status, response.statusText);
