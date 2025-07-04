@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `{{ url_for('product_variants.delete_variant', product_id='__PRODUCT_ID__', variant_name='__VARIANT_NAME__') }}`.replace('__PRODUCT_ID__', productId).replace('__VARIANT_NAME__', encodeURIComponent(variantName));
+            form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
 
             const csrfToken = document.querySelector('input[name="csrf_token"]');
             if (csrfToken) {
