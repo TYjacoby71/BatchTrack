@@ -154,8 +154,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     organization = db.relationship('Organization', backref='product_skus')
 
     # Relationships to new Product and ProductVariant models
-    product = db.relationship('Product', foreign_keys=[product_id], backref='skus')
-    variant = db.relationship('ProductVariant', foreign_keys=[variant_id], backref='skus')
+    product = db.relationship('Product', foreign_keys=[product_id])
+    variant = db.relationship('ProductVariant', foreign_keys=[variant_id])
 
     # RELATIONSHIPS
     batch = db.relationship('Batch', foreign_keys=[batch_id], backref='source_product_skus')
