@@ -159,7 +159,7 @@ def dispose_expired_sku(sku_id):
             unit=sku.unit,
             notes=f"{notes} - {len(expired_entries)} expired lots",
             created_by=current_user.id,
-            item_type='sku'
+            item_type='product'
         )
         
         if success:
@@ -304,7 +304,7 @@ def process_sale_webhook():
             unit=sku.unit,
             notes=f"Sale from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='sku',
+            item_type='product',
             customer=data.get('customer'),
             sale_price=float(data['sale_price']),
             order_id=data.get('order_id')
@@ -354,7 +354,7 @@ def process_return_webhook():
             unit=sku.unit,
             notes=f"Return from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='sku',
+            item_type='product',
             customer=data.get('customer'),
             order_id=data.get('original_order_id')
         )
@@ -399,7 +399,7 @@ def reserve_inventory(sku_id):
             unit=sku.unit,
             notes=notes,
             created_by=current_user.id,
-            item_type='sku',
+            item_type='product',
             order_id=data.get('order_id')
         )
         
@@ -472,7 +472,7 @@ def add_from_batch():
                     notes=f"From batch {batch.label_code} - {final_quantity} containers",
                     batch_id=batch_id,
                     created_by=current_user.id,
-                    item_type='sku',
+                    item_type='product',
                     custom_expiration_date=batch.expiration_date,
                     custom_shelf_life_days=batch.shelf_life_days
                 )
@@ -514,7 +514,7 @@ def add_from_batch():
                     notes=f"From batch {batch.label_code} - {final_quantity} extra containers",
                     batch_id=batch_id,
                     created_by=current_user.id,
-                    item_type='sku',
+                    item_type='product',
                     custom_expiration_date=batch.expiration_date,
                     custom_shelf_life_days=batch.shelf_life_days
                 )
@@ -550,7 +550,7 @@ def add_from_batch():
                 notes=f"From batch {batch.label_code} - Bulk remainder",
                 batch_id=batch_id,
                 created_by=current_user.id,
-                item_type='sku',
+                item_type='product',
                 custom_expiration_date=batch.expiration_date,
                 custom_shelf_life_days=batch.shelf_life_days
             )

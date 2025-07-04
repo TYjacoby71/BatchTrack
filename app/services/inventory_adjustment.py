@@ -6,32 +6,54 @@ from app.services.conversion_wrapper import safe_convert
 from app.blueprints.fifo.services import deduct_fifo, get_fifo_entries
 from app.utils.fifo_generator import generate_fifo_id
 
-def validate_inventory_fifo_sync(item_id):
+def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including frozen expired)
     Returns: (is_valid, error_message, inventory_qty, fifo_total)
     """
-    item = InventoryItem.query.get(item_id)
-    if not item:
-        return False, "Item not found", 0, 0
+    # Handle different item types
+    if item_type == 'product':
+        from app.models.product import ProductSKU, ProductSKUHistory
+        item = ProductSKU.query.get(item_id)
+        if not item:
+            return False, "Product SKU not found", 0, 0
+        
+        # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
+        from sqlalchemy import and_
+        all_fifo_entries = ProductSKUHistory.query.filter(
+            and_(
+                ProductSKUHistory.sku_id == item_id,
+                ProductSKUHistory.remaining_quantity > 0
+            )
+        ).all()
+        
+        fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
+        current_qty = item.current_quantity
+        item_name = item.display_name
+    else:
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            return False, "Item not found", 0, 0
 
-    # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
-    from sqlalchemy import and_
-    all_fifo_entries = InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == item_id,
-            InventoryHistory.remaining_quantity > 0
-        )
-    ).all()
-    
-    fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
+        # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
+        from sqlalchemy import and_
+        all_fifo_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == item_id,
+                InventoryHistory.remaining_quantity > 0
+            )
+        ).all()
+        
+        fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
+        current_qty = item.quantity
+        item_name = item.name
 
     # Allow small floating point differences (0.001)
-    if abs(item.quantity - fifo_total) > 0.001:
-        error_msg = f"SYNC ERROR: {item.name} inventory ({item.quantity}) != FIFO total ({fifo_total}) [includes frozen expired]"
-        return False, error_msg, item.quantity, fifo_total
+    if abs(current_qty - fifo_total) > 0.001:
+        error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != FIFO total ({fifo_total}) [includes frozen expired]"
+        return False, error_msg, current_qty, fifo_total
 
-    return True, "", item.quantity, fifo_total
+    return True, "", current_qty, fifo_total
 
 # FIFO ID generation now handled by centralized utils/fifo_generator.py
 
@@ -46,7 +68,7 @@ def process_inventory_adjustment(
     cost_override=None,
     custom_expiration_date=None,
     custom_shelf_life_days=None,
-    item_type=None,  # 'ingredient', 'container', 'sku'
+    item_type=None,  # 'ingredient', 'container', 'product'
     customer=None,  # For sales tracking
     sale_price=None,  # For sales tracking
     order_id=None,  # For marketplace integration
@@ -54,25 +76,37 @@ def process_inventory_adjustment(
     """
     Centralized inventory adjustment logic for use in both manual adjustments and batch deductions
     """
-    item = InventoryItem.query.get_or_404(item_id)
+    # Handle different item types - ProductSKU vs InventoryItem
+    if item_type == 'product':
+        from app.models.product import ProductSKU
+        item = ProductSKU.query.get_or_404(item_id)
+    else:
+        item = InventoryItem.query.get_or_404(item_id)
 
     # Convert units if needed (except for containers)
-    if item.type != 'container' and unit != item.unit:
+    # For ProductSKU, we don't need unit conversion as it's already in the right unit
+    if item_type != 'product' and getattr(item, 'type', None) != 'container' and unit != item.unit:
         conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
         if not conversion['ok']:
             raise ValueError(conversion['error'])
         quantity = conversion['result']['converted_value']
 
     # Determine quantity change and special handling
+    # Handle different quantity property names
+    current_quantity = getattr(item, 'current_quantity', None) or getattr(item, 'quantity', 0)
+    
     if change_type == 'recount':
-        qty_change = quantity - item.quantity
+        qty_change = quantity - current_quantity
     elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
         qty_change = -abs(quantity)
     elif change_type == 'reserved':
         # Special handling: move from current to reserved, don't change total
         if hasattr(item, 'reserved_quantity'):
             item.reserved_quantity = (item.reserved_quantity or 0) + quantity
-            item.current_quantity = (item.current_quantity or 0) - quantity
+            if hasattr(item, 'current_quantity'):
+                item.current_quantity = (item.current_quantity or 0) - quantity
+            else:
+                item.quantity = (item.quantity or 0) - quantity
             # Create history entry but don't change total inventory
             qty_change = 0
         else:
@@ -202,7 +236,11 @@ def process_inventory_adjustment(
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
-        item.quantity += qty_change
+        # Update quantity based on item type
+        if hasattr(item, 'current_quantity'):
+            item.current_quantity += qty_change
+        else:
+            item.quantity += qty_change
 
     else:
         # Handle credits/refunds by finding original FIFO entries to credit back to
@@ -316,12 +354,16 @@ def process_inventory_adjustment(
                 )
             db.session.add(history)
 
-        item.quantity += qty_change
+        # Update quantity based on item type
+        if hasattr(item, 'current_quantity'):
+            item.current_quantity += qty_change
+        else:
+            item.quantity += qty_change
 
     db.session.commit()
 
     # Validate inventory/FIFO sync after adjustment
-    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
     if not is_valid:
         # Rollback the transaction
         db.session.rollback()
