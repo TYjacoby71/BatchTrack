@@ -7,8 +7,7 @@ from .models import (
     BatchContainer, ExtraBatchContainer, InventoryHistory, BatchTimer, 
     ExtraBatchIngredient, InventoryItem, BatchInventoryLog, Tag
 )
-from .product import Product, ProductVariant
-from .product_sku import ProductSKU, ProductSKUHistory
+from .product import Product, ProductVariant, ProductSKU, ProductSKUHistory
 from .role import Role
 from .permission import Permission, role_permission
 
