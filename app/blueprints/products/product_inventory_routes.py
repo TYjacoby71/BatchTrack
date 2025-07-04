@@ -229,7 +229,7 @@ def dispose_expired_sku(sku_id):
             unit=unit,
             notes=notes,
             created_by=current_user.id,
-            item_type='sku',
+            item_type='product',
             customer=customer,
             sale_price=sale_price_float,
             order_id=order_id,

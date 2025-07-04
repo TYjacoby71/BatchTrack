@@ -29,36 +29,39 @@ class ConversionEngine:
         used_density = None
         converted = None
 
-        # 1. Custom Mapping (including compound)
-        def find_conversion_path(start, end, visited=None):
-            if visited is None:
-                visited = set()
-            if start == end:
-                return []
-            if start in visited:
-                return None
-            visited.add(start)
-            mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
-            for mapping in mappings:
-                path = find_conversion_path(mapping.to_unit, end, visited.copy())
-                if path is not None:
-                    return [mapping] + path
-            return None
+        # 1. Custom Mapping - check if either unit has a custom mapping
+        custom_from = CustomUnitMapping.query.filter_by(unit_name=from_unit).first()
+        custom_to = CustomUnitMapping.query.filter_by(unit_name=to_unit).first()
+        
+        # If we have custom mappings, convert through base units
+        if custom_from or custom_to:
+            try:
+                # Convert from_unit to its base
+                if custom_from:
+                    base_amount = amount * custom_from.conversion_factor
+                    base_unit = custom_from.base_unit
+                else:
+                    base_amount = amount * from_u.conversion_factor
+                    base_unit = from_u.base_unit
+                
+                # Convert from base to to_unit
+                if custom_to:
+                    converted = base_amount / custom_to.conversion_factor
+                else:
+                    converted = base_amount / to_u.conversion_factor
+                    
+                conversion_type = 'custom'
+            except (AttributeError, TypeError, ZeroDivisionError):
+                # Fall through to other conversion methods
+                pass
 
-        conversion_path = find_conversion_path(from_unit, to_unit)
-        if conversion_path:
-            converted = amount
-            for mapping in conversion_path:
-                converted *= mapping.multiplier
-            conversion_type = 'custom_compound' if len(conversion_path) > 1 else 'custom'
-
-        # 2. Direct (same unit)
-        elif from_unit == to_unit:
+        # 2. Direct (same unit) 
+        if converted is None and from_unit == to_unit:
             converted = amount
             conversion_type = 'direct'
 
         # 3. Same-type base conversion (volume → volume, weight → weight)
-        elif from_u.type == to_u.type:
+        elif converted is None and from_u.type == to_u.type:
             if from_unit == to_unit:
                 converted = amount
             else:
@@ -70,7 +73,7 @@ class ConversionEngine:
             conversion_type = 'direct'
 
         # 4. Cross-type: volume ↔ weight
-        elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+        elif converted is None and {'volume', 'weight'} <= {from_u.type, to_u.type}:
             # Only use ingredient-level density
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
@@ -89,7 +92,7 @@ class ConversionEngine:
 
             conversion_type = 'density'
 
-        else:
+        elif converted is None:
             raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
 
         # Log it only if user is authenticated and has organization

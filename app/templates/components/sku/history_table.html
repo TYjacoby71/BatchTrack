@@ -221,12 +221,12 @@
         </div>
 
         <!-- Pagination -->
-        {% if history_pagination.pages > 1 %}
+        {% if history_pagination and history_pagination.pages > 1 %}
         <nav aria-label="History pagination">
             <ul class="pagination justify-content-center">
                 {% if history_pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
+                        <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
                     </li>
                 {% endif %}
 
@@ -234,7 +234,7 @@
                     {% if page_num %}
                         {% if page_num != history_pagination.page %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
                             </li>
                         {% else %}
                             <li class="page-item active">
@@ -250,7 +250,7 @@
 
                 {% if history_pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('product_inventory.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
+                        <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
                     </li>
                 {% endif %}
             </ul>
