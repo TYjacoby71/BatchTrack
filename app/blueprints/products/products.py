@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
 from ...models.product_sku import ProductSKUHistory
+from ...models.product import Product, ProductVariant
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -40,9 +41,10 @@ def product_list():
     for data in product_data:
         # Get the first SKU ID for this product to use as product_id
         first_sku = ProductSKU.query.filter_by(
-            product_name=data['product_name'],
             organization_id=current_user.organization_id,
             is_active=True
+        ).join(ProductSKU.product).filter(
+            Product.name == data['product_name']
         ).first()
         if first_sku:
             data['product_id'] = first_sku.id
@@ -157,7 +159,7 @@ def view_product(product_id):
     """View product details with all SKUs by product ID"""
     from ...services.product_service import ProductService
 
-    # Get the base SKU to find the product name - with org scoping
+    # Get the base SKU to find the product - with org scoping
     base_sku = ProductSKU.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
@@ -167,11 +169,11 @@ def view_product(product_id):
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
         
-    product_name = base_sku.product_name
+    product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
     skus = ProductSKU.query.filter_by(
-        product_name=product_name,
+        product_id=product.id,
         is_active=True,
         organization_id=current_user.organization_id
     ).all()
@@ -183,11 +185,11 @@ def view_product(product_id):
     # Group SKUs by variant
     variants = {}
     for sku in skus:
-        variant_key = sku.variant_name
+        variant_key = sku.variant.name
         if variant_key not in variants:
             variants[variant_key] = {
-                'name': sku.variant_name,
-                'description': sku.description,
+                'name': sku.variant.name,
+                'description': sku.variant.description,
                 'skus': []
             }
         variants[variant_key]['skus'].append(sku)
@@ -198,38 +200,14 @@ def view_product(product_id):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
-    # Try to get the actual Product model first
-    from ...models.product import Product
-    actual_product = Product.query.filter_by(
-        name=product_name,
-        organization_id=current_user.organization_id
-    ).first()
-    
-    if actual_product:
-        # Use the actual Product model
-        product = actual_product
-        # Add variations for template compatibility
-        product.variations = [type('Variation', (), {
-            'name': variant_name,
-            'description': variant_data['description'],
-            'id': variant_data['skus'][0].id if variant_data['skus'] else None,
-            'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
-        })() for variant_name, variant_data in variants.items()]
-    else:
-        # Fall back to creating a product object for legacy products
-        product = type('Product', (), {
-            'id': product_id,
-            'name': product_name,
-            'product_base_unit': skus[0].unit if skus else None,
-            'low_stock_threshold': skus[0].low_stock_threshold if skus else 0,
-            'created_at': skus[0].created_at if skus else None,
-            'variations': [type('Variation', (), {
-                'name': variant_name,
-                'description': variant_data['description'],
-                'id': variant_data['skus'][0].id if variant_data['skus'] else None,
-                'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
-            })() for variant_name, variant_data in variants.items()]
-        })()
+    # Use the actual Product model
+    # Add variations for template compatibility
+    product.variations = [type('Variation', (), {
+        'name': variant_name,
+        'description': variant_data['description'],
+        'id': variant_data['skus'][0].id if variant_data['skus'] else None,
+        'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
+    })() for variant_name, variant_data in variants.items()]
 
     return render_template('products/view_product.html',
                          product=product,
@@ -261,7 +239,7 @@ def view_product_by_name(product_name):
 @login_required
 def edit_product(product_id):
     """Edit product details by product ID"""
-    # Get the base SKU to find the product name - with org scoping
+    # Get the base SKU to find the product - with org scoping
     base_sku = ProductSKU.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
@@ -271,7 +249,7 @@ def edit_product(product_id):
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
         
-    current_product_name = base_sku.product_name
+    product = base_sku.product
     
     name = request.form.get('name')
     unit = request.form.get('product_base_unit')
@@ -282,18 +260,24 @@ def edit_product(product_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
-    existing = ProductSKU.query.filter(
-        ProductSKU.product_name == name,
-        ProductSKU.product_name != current_product_name
+    from ...models.product import Product
+    existing = Product.query.filter(
+        Product.name == name,
+        Product.id != product.id,
+        Product.organization_id == current_user.organization_id
     ).first()
     if existing:
         flash('Another product with this name already exists', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
+    # Update the product
+    product.name = name
+    product.base_unit = unit
+    product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+
     # Update all SKUs for this product
-    skus = ProductSKU.query.filter_by(product_name=current_product_name).all()
+    skus = ProductSKU.query.filter_by(product_id=product.id).all()
     for sku in skus:
-        sku.product_name = name
         sku.unit = unit
         sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
@@ -306,7 +290,7 @@ def edit_product(product_id):
 def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
-        # Get the base SKU to find the product name - with org scoping
+        # Get the base SKU to find the product - with org scoping
         base_sku = ProductSKU.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
@@ -316,11 +300,11 @@ def delete_product(product_id):
             flash('Product not found', 'error')
             return redirect(url_for('products.product_list'))
             
-        product_name = base_sku.product_name
+        product = base_sku.product
         
         # Get all SKUs for this product - with org scoping
         skus = ProductSKU.query.filter_by(
-            product_name=product_name,
+            product_id=product.id,
             organization_id=current_user.organization_id
         ).all()
 
@@ -339,10 +323,16 @@ def delete_product(product_id):
             ProductSKUHistory.query.filter_by(sku_id=sku.id).delete()
 
         # Delete the SKUs
-        ProductSKU.query.filter_by(product_name=product_name).delete()
+        ProductSKU.query.filter_by(product_id=product.id).delete()
+        
+        # Delete the product and its variants
+        from ...models.product import Product, ProductVariant
+        ProductVariant.query.filter_by(product_id=product.id).delete()
+        Product.query.filter_by(id=product.id).delete()
+        
         db.session.commit()
 
-        flash(f'Product "{product_name}" deleted successfully', 'success')
+        flash(f'Product "{product.name}" deleted successfully', 'success')
         return redirect(url_for('products.product_list'))
 
     except Exception as e:
