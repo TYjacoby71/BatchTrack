@@ -10,7 +10,7 @@
             <!-- Stock Level -->
             <div class="col-md-3">
                 <div class="stat-box text-center">
-                    <h4 class="text-primary mb-1">{{ "%.2f"|format(total_quantity) }}</h4>
+                    <h4 class="text-primary mb-1">{{ "%.2f"|format(sku.inventory_item.quantity) }}</h4>
                     <small class="text-muted">Total Stock</small>
                     <br><small class="text-muted">{{ sku.unit }}</small>
                 </div>
@@ -51,7 +51,7 @@
         <div class="row mt-3">
             <div class="col-md-3">
                 <div class="stat-box text-center">
-                    <span class="badge {% if total_quantity <= 0 %}bg-danger{% elif total_quantity <= sku.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
+                    <span class="badge {% if sku.inventory_item.quantity <= 0 %}bg-danger{% elif sku.inventory_item.quantity <= sku.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
                         {{ sku.stock_status }}
                     </span>
                     <br><small class="text-muted">Status</small>

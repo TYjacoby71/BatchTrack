@@ -115,8 +115,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
     
-    # PRICING
-    unit_cost = db.Column(db.Float, nullable=True)
+    # PRICING - cost comes from inventory_item.cost_per_unit
     retail_price = db.Column(db.Float, nullable=True)
     wholesale_price = db.Column(db.Float, nullable=True)
     profit_margin_target = db.Column(db.Float, nullable=True)
@@ -200,6 +199,11 @@ class ProductSKU(ScopedModelMixin, db.Model):
     def current_quantity(self):
         """Get current quantity from unified inventory"""
         return self.inventory_item.quantity if self.inventory_item else 0.0
+    
+    @property
+    def cost_per_unit(self):
+        """Get cost per unit from unified inventory"""
+        return self.inventory_item.cost_per_unit if self.inventory_item else 0.0
     
     @property
     def reserved_quantity(self):

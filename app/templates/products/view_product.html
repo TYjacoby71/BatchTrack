@@ -15,7 +15,7 @@
         <div>
           <h2>{{ product.name }}</h2>
           <small class="text-muted">
-            Base Unit: {{ product.product_base_unit }} | 
+            Base Unit: {{ product.base_unit }} | 
             Low Stock Alert: {{ product.low_stock_threshold }} | 
             Created: {{ product.created_at.strftime('%Y-%m-%d') }}
           </small>
@@ -196,9 +196,9 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Product Base Unit</label>
-            <select name="product_base_unit" class="form-select" required>
+            <select name="base_unit" class="form-select" required>
               {% for unit in get_global_unit_list() %}
-                <option value="{{ unit.name }}" {% if unit.name == product.product_base_unit %}selected{% endif %}>
+                <option value="{{ unit.name }}" {% if unit.name == product.base_unit %}selected{% endif %}>
                   {{ unit.name }}
                 </option>
               {% endfor %}
