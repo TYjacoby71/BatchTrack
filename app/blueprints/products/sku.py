@@ -25,6 +25,55 @@ def view_sku(sku_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list)
 
+@sku_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+@login_required
+def edit_sku(sku_id):
+    """Edit SKU details"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first_or_404()
+    
+    try:
+        # Update basic fields
+        sku.sku_code = request.form.get('sku_code')
+        sku.size_label = request.form.get('size_label')
+        sku.location_name = request.form.get('location_name')
+        
+        # Update pricing
+        retail_price = request.form.get('retail_price')
+        if retail_price:
+            sku.retail_price = float(retail_price)
+        
+        # Update thresholds
+        low_stock_threshold = request.form.get('low_stock_threshold')
+        if low_stock_threshold:
+            sku.low_stock_threshold = float(low_stock_threshold)
+        
+        # Handle unit cost override
+        if request.form.get('override_unit_cost'):
+            unit_cost = request.form.get('unit_cost')
+            if unit_cost:
+                sku.unit_cost = float(unit_cost)
+        
+        # Handle perishable settings
+        sku.is_perishable = bool(request.form.get('is_perishable'))
+        if sku.is_perishable:
+            shelf_life_days = request.form.get('shelf_life_days')
+            if shelf_life_days:
+                sku.shelf_life_days = int(shelf_life_days)
+        else:
+            sku.shelf_life_days = None
+        
+        db.session.commit()
+        flash('SKU updated successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating SKU: {str(e)}', 'error')
+    
+    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+
 @sku_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
 def adjust_sku(sku_id):
