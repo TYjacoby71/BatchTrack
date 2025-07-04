@@ -113,20 +113,101 @@ function updateContainerSummary() {
 // Validate yield distribution
 function validateYield() {
   const finalQuantityInput = document.getElementById('final_quantity');
-  if (!finalQuantityInput) return;
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  const hasContainers = document.querySelectorAll('.container-final-input').length > 0;
 
-  const totalYield = parseFloat(finalQuantityInput.value) || 0;
-
-  // Check if we have containers or if this goes all to bulk
-  const containerInputs = document.querySelectorAll('.container-final-input');
-
-  if (containerInputs.length === 0) {
-    console.log('No containers in batch - all yield goes to bulk');
-    updateYieldAlerts(totalYield, 0, totalYield);
+  if (!finalQuantityInput) {
     return;
   }
 
+  const finalQuantity = parseFloat(finalQuantityInput.value);
+
+  if (!finalQuantity || finalQuantity <= 0) {
+    if (alertsContainer) {
+      alertsContainer.innerHTML = '';
+    }
+    updateContainerSummary();
+    return;
+  }
+
+  // Update display with current yield
+  const finalYieldDisplay = document.getElementById('finalYieldDisplay');
+  if (finalYieldDisplay) {
+    finalYieldDisplay.textContent = finalQuantity.toFixed(2);
+  }
+
+  if (!hasContainers) {
+    console.log('No containers in batch - all yield goes to bulk');
+    updateUncontainedYield(finalQuantity);
+    return;
+  }
+
+  // Update container summary
   updateContainerSummary();
+}
+
+function updateContainerTable(containers, finalQuantity) {
+  const tbody = document.getElementById('containerTableBody');
+  const totalUsed = document.getElementById('totalUsed');
+  const totalPassed = document.getElementById('totalPassed');
+  const totalCapacity = document.getElementById('totalCapacity');
+  const containerDistribution = document.getElementById('containerDistribution');
+
+  if (!tbody) return;
+
+  let totalContainerUsed = 0;
+  let totalContainerPassed = 0;
+  let totalContainerCapacity = 0;
+
+  tbody.innerHTML = '';
+
+  containers.forEach(container => {
+    const row = document.createElement('tr');
+    const used = container.used || 0;
+    const passed = container.passed || 0;
+    const capacity = container.capacity || 0;
+
+    totalContainerUsed += used;
+    totalContainerPassed += passed;
+    totalContainerCapacity += capacity;
+
+    row.innerHTML = `
+      <td>${container.name}</td>
+      <td>${used}</td>
+      <td>${passed}</td>
+      <td>${capacity}</td>
+      <td>${((passed / capacity) * 100).toFixed(1)}%</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  if (totalUsed) totalUsed.textContent = totalContainerUsed;
+  if (totalPassed) totalPassed.textContent = totalContainerPassed;
+  if (totalCapacity) totalCapacity.textContent = totalContainerCapacity;
+
+  // Update container distribution display
+  if (containerDistribution && finalQuantity > 0) {
+    const containerized = totalContainerPassed;
+    const bulk = finalQuantity - containerized;
+    
+    containerDistribution.innerHTML = `
+      <div class="alert alert-info">
+        <strong>Containerized:</strong> ${containerized.toFixed(2)} units<br>
+        <strong>Bulk:</strong> ${bulk.toFixed(2)} units
+      </div>
+    `;
+  }
+}
+
+function updateUncontainedYield(finalQuantity) {
+  const containerDistribution = document.getElementById('containerDistribution');
+  if (containerDistribution) {
+    containerDistribution.innerHTML = `
+      <div class="alert alert-info">
+        <strong>All Bulk:</strong> ${finalQuantity.toFixed(2)} units (no containers in this batch)
+      </div>
+    `;
+  }
 }
 
 // Update yield distribution alerts
