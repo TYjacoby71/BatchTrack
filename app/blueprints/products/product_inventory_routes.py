@@ -106,38 +106,22 @@ def adjust_sku_inventory(sku_id):
                 flash(error_msg, 'error')
                 return redirect(url_for('products.view_sku', sku_id=sku_id))
 
-        # Handle reservation operations specially
-        if change_type in ['reserved', 'unreserved']:
-            # These operations should work with the SKU directly, not the underlying inventory item
-            # since reservations are a product-specific concept
-            success = process_inventory_adjustment(
-                item_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                order_id=order_id
-            )
-        else:
-            # All other operations use the underlying inventory item for FIFO consistency
-            success = process_inventory_adjustment(
-                item_id=sku.inventory_item_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                sale_price=sale_price_float,
-                order_id=order_id,
-                cost_override=cost_override_float,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
-            )
+        # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='product',
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id,
+            cost_override=cost_override_float,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
 
         if success:
             message = f'SKU inventory adjusted successfully'
