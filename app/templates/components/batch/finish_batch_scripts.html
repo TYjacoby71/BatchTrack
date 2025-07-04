@@ -162,79 +162,7 @@ function updateTotals() {
   }
 }
 
-async function loadVariants() {
-  const productSelect = document.getElementById('product_id');
-  const variantSelect = document.getElementById('variant_id');
 
-  if (!productSelect || !variantSelect) {
-    console.log('Product or variant dropdown not found');
-    return;
-  }
-
-  const productId = productSelect.value;
-  if (!productId) {
-    variantSelect.innerHTML = '<option value="">Select product first...</option>';
-    variantSelect.disabled = true;
-    return;
-  }
-
-  // Show loading state
-  variantSelect.innerHTML = '<option value="">Loading variants...</option>';
-  variantSelect.disabled = true;
-
-  try {
-    // First get the actual Product ID from the SKU
-    const productResponse = await fetch(`/products/api/sku/${productId}/product`);
-    if (!productResponse.ok) {
-      console.error('Failed to get product from SKU:', productResponse.status);
-      variantSelect.innerHTML = '<option value="">Error loading product</option>';
-      return;
-    }
-    const productData = await productResponse.json();
-    const actualProductId = productData.product_id;
-    
-    // Now fetch variants for the product
-    const variantResponse = await fetch(`/products/api/${actualProductId}/variants`);
-    if (!variantResponse.ok) {
-      console.error('Error loading variants:', variantResponse.status, variantResponse.statusText);
-      throw new Error(`HTTP ${variantResponse.status}: ${variantResponse.statusText}`);
-    }
-    
-    const data = await variantResponse.json();
-    variantSelect.innerHTML = '<option value="">Select variant...</option>';
-
-    // The API returns an array of variants
-    if (data && Array.isArray(data) && data.length > 0) {
-      data.forEach(variant => {
-        const option = document.createElement('option');
-        option.value = variant.id;  // Use variant ID, not name
-        option.textContent = variant.name;
-        variantSelect.appendChild(option);
-      });
-
-      // Auto-select first variant (usually Base)
-      if (data.length > 0) {
-        variantSelect.value = data[0].id;
-      }
-    } else {
-      // Show message if no variants found
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = 'No variants available';
-      variantSelect.appendChild(option);
-    }
-
-    // Enable the variant select
-    variantSelect.disabled = false;
-    
-  } catch (error) {
-    console.error('Error loading variants:', error);
-    
-    // Fallback: Show error message
-    variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-    variantSelect.disabled = false;
-  }
-}
 
 function updateContainerSummary() {
   const finalQuantityInput = document.getElementById('final_quantity');
@@ -323,11 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Initialize shelf life toggle (safe for all batch types)
       toggleShelfLife();
 
-      // Load variants if product fields exist
-      const productSelect = document.getElementById('product_id');
-      if (productSelect) {
-        loadVariants();
-      }
+      
 
       // Only validate yield if the input exists and batch has containers
       const finalQuantityInput = document.getElementById('final_quantity');
