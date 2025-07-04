@@ -129,6 +129,12 @@
                         <input type="text" name="order_id" id="order_id" class="form-control" placeholder="External order ID (Shopify, Etsy, etc.)">
                     </div>
 
+                    <div class="mb-3" id="salePriceGroup" style="display: none;">
+                        <label for="sale_price" class="form-label">Sale Price ($)</label>
+                        <input type="number" name="sale_price" id="sale_price" class="form-control" step="0.01" min="0" placeholder="Enter sale price">
+                        <small class="form-text text-muted">Price for this sale transaction</small>
+                    </div>
+
                     <div class="mb-3" id="reservationGroup" style="display: none;">
                         <label for="expiration_minutes" class="form-label">Reservation Duration (minutes)</label>
                         <input type="number" name="expiration_minutes" id="expiration_minutes" class="form-control" value="30" min="1" max="1440">
@@ -180,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle FIFO adjustment type changes
     const changeTypeSelect = document.getElementById('change_type');
     const orderIdGroup = document.getElementById('orderIdGroup');
+    const salePriceGroup = document.getElementById('salePriceGroup');
     const reservationGroup = document.getElementById('reservationGroup');
 
     if (changeTypeSelect) {
@@ -191,6 +198,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 orderIdGroup.style.display = 'block';
             } else {
                 orderIdGroup.style.display = 'none';
+            }
+
+            // Show sale price field only for sales
+            if (value === 'sale') {
+                salePriceGroup.style.display = 'block';
+                // Pre-populate with retail price if available
+                const salePriceInput = document.getElementById('sale_price');
+                if (salePriceInput && !salePriceInput.value) {
+                    salePriceInput.value = '{{ sku.retail_price or "" }}';
+                }
+            } else {
+                salePriceGroup.style.display = 'none';
             }
 
             // Show reservation duration only for reservations
