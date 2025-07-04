@@ -58,6 +58,123 @@ def adjust_sku_inventory(sku_id):
         flash(error_msg, 'error')
         return redirect(url_for('products.view_sku', sku_id=sku_id))
 
+    try:
+        # Convert numeric values
+        quantity = float(quantity)
+        sale_price_float = float(sale_price) if sale_price else None
+        cost_override_float = float(cost_override) if cost_override else None
+
+        # Handle perishable inventory
+        custom_expiration_date = None
+        custom_shelf_life_days = None
+
+        if is_perishable and shelf_life_days:
+            try:
+                custom_shelf_life_days = int(shelf_life_days)
+                # Parse expiration date if provided
+                if expiration_date:
+                    from datetime import datetime
+                    custom_expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
+
+        # For disposal operations, auto-target expired inventory if available
+        if change_type in ['spoil', 'trash', 'expired_disposal'] and not target_expired:
+            from ...models import ProductSKUHistory
+            from datetime import datetime
+
+            # Check for expired SKU history entries
+            today = datetime.now().date()
+            expired_entries = ProductSKUHistory.query.filter(
+                ProductSKUHistory.sku_id == sku_id,
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.expiration_date.isnot(None),
+                ProductSKUHistory.expiration_date < today
+            ).all()
+
+            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+            if expired_total >= quantity:
+                target_expired = True
+
+        # For recount operations, validate the change is within reasonable bounds
+        if change_type == 'recount':
+            # Validate recount quantity is non-negative
+            if quantity < 0:
+                error_msg = 'Recount quantity cannot be negative'
+                if request.is_json:
+                    return jsonify({'error': error_msg}), 400
+                flash(error_msg, 'error')
+                return redirect(url_for('products.view_sku', sku_id=sku_id))
+
+        # Handle reservation operations specially
+        if change_type in ['reserved', 'unreserved']:
+            # These operations should work with the SKU directly, not the underlying inventory item
+            # since reservations are a product-specific concept
+            success = process_inventory_adjustment(
+                item_id=sku_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                order_id=order_id
+            )
+        else:
+            # All other operations use the underlying inventory item for FIFO consistency
+            success = process_inventory_adjustment(
+                item_id=sku.inventory_item_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                sale_price=sale_price_float,
+                order_id=order_id,
+                cost_override=cost_override_float,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days
+            )
+
+        if success:
+            message = f'SKU inventory adjusted successfully'
+            if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
+                message += ' (expired inventory processed first)'
+
+            if request.is_json:
+                return jsonify({
+                    'success': True,
+                    'message': message,
+                    'new_quantity': sku.current_quantity,
+                    'processed_expired': target_expired
+                })
+            flash(message, 'success')
+        else:
+            error_msg = 'Error adjusting inventory'
+            if request.is_json:
+                return jsonify({'error': error_msg}), 500
+            flash(error_msg, 'error')
+
+    except ValueError as e:
+        error_msg = str(e)
+        if request.is_json:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f'Error adjusting inventory: {str(e)}'
+        if request.is_json:
+            return jsonify({'error': error_msg}), 500
+        flash(error_msg, 'error')
+
+    # Redirect for form submissions
+    if not request.is_json:
+        return redirect(url_for('products.view_sku', sku_id=sku_id))
+    return None
+
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
 @login_required
 def get_sku_fifo_status(sku_id):
@@ -179,129 +296,6 @@ def dispose_expired_sku(sku_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-
-        error_msg = 'Quantity and change type are required'
-        if request.is_json:
-            return jsonify({'error': error_msg}), 400
-        flash(error_msg, 'error')
-        return redirect(url_for('products.view_sku', sku_id=sku_id))
-
-    try:
-        # Convert numeric values
-        quantity = float(quantity)
-        sale_price_float = float(sale_price) if sale_price else None
-        cost_override_float = float(cost_override) if cost_override else None
-
-        # Handle perishable inventory
-        custom_expiration_date = None
-        custom_shelf_life_days = None
-
-        if is_perishable and shelf_life_days:
-            try:
-                custom_shelf_life_days = int(shelf_life_days)
-                # Parse expiration date if provided
-                if expiration_date:
-                    from datetime import datetime
-                    custom_expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
-            except (ValueError, TypeError):
-                pass
-
-        # For disposal operations, auto-target expired inventory if available
-        if change_type in ['spoil', 'trash', 'expired_disposal'] and not target_expired:
-            from ...models import ProductSKUHistory
-            from datetime import datetime
-
-            # Check for expired SKU history entries
-            today = datetime.now().date()
-            expired_entries = ProductSKUHistory.query.filter(
-                ProductSKUHistory.sku_id == sku_id,
-                ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.expiration_date.isnot(None),
-                ProductSKUHistory.expiration_date < today
-            ).all()
-
-            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
-            if expired_total >= quantity:
-                target_expired = True
-
-        # For recount operations, validate the change is within reasonable bounds
-        if change_type == 'recount':
-            # Validate recount quantity is non-negative
-            if quantity < 0:
-                error_msg = 'Recount quantity cannot be negative'
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('products.view_sku', sku_id=sku_id))
-
-        # Handle reservation operations specially
-        if change_type in ['reserved', 'unreserved']:
-            # These operations should work with the SKU directly, not the underlying inventory item
-            # since reservations are a product-specific concept
-            success = process_inventory_adjustment(
-                item_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                order_id=order_id
-            )
-        else:
-            # All other operations use the underlying inventory item for FIFO consistency
-            success = process_inventory_adjustment(
-                item_id=sku.inventory_item_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                sale_price=sale_price_float,
-                order_id=order_id,
-                cost_override=cost_override_float,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
-            )
-
-        if success:
-            message = f'SKU inventory adjusted successfully'
-            if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
-                message += ' (expired inventory processed first)'
-
-            if request.is_json:
-                return jsonify({
-                    'success': True,
-                    'message': message,
-                    'new_quantity': sku.current_quantity,
-                    'processed_expired': target_expired
-                })
-            flash(message, 'success')
-        else:
-            error_msg = 'Error adjusting inventory'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 500
-            flash(error_msg, 'error')
-
-    except ValueError as e:
-        error_msg = str(e)
-        if request.is_json:
-            return jsonify({'error': error_msg}), 400
-        flash(error_msg, 'error')
-    except Exception as e:
-        db.session.rollback()
-        error_msg = f'Error adjusting inventory: {str(e)}'
-        if request.is_json:
-            return jsonify({'error': error_msg}), 500
-        flash(error_msg, 'error')
-
-    # Redirect for form submissions
-    if not request.is_json:
-        return redirect(url_for('products.view_sku', sku_id=sku_id))
-
 @product_inventory_bp.route('/webhook/sale', methods=['POST'])
 @login_required
 def process_sale_webhook():
@@ -416,77 +410,6 @@ def reserve_inventory(sku_id):
     data = request.get_json() if request.is_json else request.form
     quantity = data.get('quantity')
     notes = data.get('notes', 'Inventory reservation')
-
-
-# Legacy compatibility routes - redirect to consolidated inventory adjustment
-@product_inventory_bp.route('/legacy/adjust/<int:sku_id>', methods=['POST'])
-@login_required 
-def legacy_adjust_sku(sku_id):
-    """Legacy route compatibility - redirects to main adjustment endpoint"""
-    return adjust_sku_inventory(sku_id)
-
-@product_inventory_bp.route('/api/adjust/<int:sku_id>', methods=['POST'])
-@login_required
-def api_adjust_sku_inventory(sku_id):
-    """API endpoint for SKU inventory adjustments - same as main adjustment but ensures JSON response"""
-    sku = ProductSKU.query.filter_by(
-        id=sku_id,
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
-
-    data = request.get_json() if request.is_json else request.form
-
-    quantity = data.get('quantity')
-    change_type = data.get('change_type')
-    notes = data.get('notes')
-
-    if not quantity or not change_type:
-        return jsonify({'error': 'Quantity and change type are required'}), 400
-
-    try:
-        # Get additional product-specific parameters
-        customer = data.get('customer')
-        sale_price = data.get('sale_price')
-        order_id = data.get('order_id')
-
-        # Convert sale_price to float if provided
-        sale_price_float = None
-        if sale_price:
-            try:
-                sale_price_float = float(sale_price)
-            except (ValueError, TypeError):
-                pass
-
-        # Use centralized inventory adjustment service
-        success = process_inventory_adjustment(
-            item_id=sku_id,
-            quantity=float(quantity),
-            change_type=change_type,
-            unit=sku.unit,
-            notes=notes,
-            created_by=current_user.id,
-            customer=customer,
-            sale_price=sale_price_float,
-            order_id=order_id
-        )
-
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'SKU inventory adjusted successfully',
-                'new_quantity': sku.current_quantity
-            })
-        else:
-            return jsonify({'error': 'Error adjusting inventory'}), 500
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
 
     if not quantity:
         return jsonify({'error': 'Quantity is required'}), 400
@@ -622,6 +545,74 @@ def add_from_batch():
             'inventory_entries': inventory_entries,
             'message': f'Successfully added product inventory from batch {batch.label_code}'
         })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# Legacy compatibility routes - redirect to consolidated inventory adjustment
+@product_inventory_bp.route('/legacy/adjust/<int:sku_id>', methods=['POST'])
+@login_required 
+def legacy_adjust_sku(sku_id):
+    """Legacy route compatibility - redirects to main adjustment endpoint"""
+    return adjust_sku_inventory(sku_id)
+
+@product_inventory_bp.route('/api/adjust/<int:sku_id>', methods=['POST'])
+@login_required
+def api_adjust_sku_inventory(sku_id):
+    """API endpoint for SKU inventory adjustments - same as main adjustment but ensures JSON response"""
+    sku = ProductSKU.query.filter_by(
+        id=sku_id,
+        organization_id=current_user.organization_id
+    ).first()
+
+    if not sku:
+        return jsonify({'error': 'SKU not found'}), 404
+
+    data = request.get_json() if request.is_json else request.form
+
+    quantity = data.get('quantity')
+    change_type = data.get('change_type')
+    notes = data.get('notes')
+
+    if not quantity or not change_type:
+        return jsonify({'error': 'Quantity and change type are required'}), 400
+
+    try:
+        # Get additional product-specific parameters
+        customer = data.get('customer')
+        sale_price = data.get('sale_price')
+        order_id = data.get('order_id')
+
+        # Convert sale_price to float if provided
+        sale_price_float = None
+        if sale_price:
+            try:
+                sale_price_float = float(sale_price)
+            except (ValueError, TypeError):
+                pass
+
+        # Use centralized inventory adjustment service
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=float(quantity),
+            change_type=change_type,
+            unit=sku.unit,
+            notes=notes,
+            created_by=current_user.id,
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'SKU inventory adjusted successfully',
+                'new_quantity': sku.current_quantity
+            })
+        else:
+            return jsonify({'error': 'Error adjusting inventory'}), 500
 
     except Exception as e:
         db.session.rollback()
