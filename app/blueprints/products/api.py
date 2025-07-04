@@ -5,8 +5,8 @@ from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from sqlalchemy import func
 
-# Import the blueprint from __init__.py
-from . import products_api_bp
+# Define the blueprint
+products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products')
 
 @products_api_bp.route('/sku/<int:sku_id>/product')
 @login_required
