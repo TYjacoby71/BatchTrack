@@ -96,7 +96,7 @@ def complete_batch(batch_id):
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
             batch.variant_id = request.form.get('variant_id')
-            
+
             # Get container count overrides from form
             container_overrides = {}
             for key, value in request.form.items():
@@ -107,27 +107,27 @@ def complete_batch(batch_id):
             # For actual products, process containers and handle bulk overflow
             if batch.product_id and batch.variant_id:
                 from ...models import Product, ProductVariant
-                
+
                 # Get the product and variant
                 product = Product.query.filter_by(
                     id=batch.product_id,
                     organization_id=current_user.organization_id
                 ).first()
-                
+
                 variant = ProductVariant.query.filter_by(
                     id=batch.variant_id,
                     product_id=batch.product_id
                 ).first()
-                
+
                 if not product or not variant:
                     raise Exception("Selected product or variant not found")
-                
+
                 from ...services.product_service import ProductService
                 from ...services.inventory_adjustment import process_inventory_adjustment
-                
+
                 total_containerized = 0
                 inventory_entries = []
-                
+
                 # Process regular containers - stored as count units with container description as size label
                 for container in batch.containers:
                     final_quantity = container_overrides.get(container.container_id, container.quantity_used)
@@ -135,18 +135,19 @@ def complete_batch(batch_id):
                         # Track how much product capacity these containers represent
                         container_capacity = (container.container.storage_amount or 1) * final_quantity
                         total_containerized += container_capacity
-                        
+
                         # Size label is the full container description (e.g., "4oz Glass Jar")
                         container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'oz'} {container.container.name}"
-                        
+
                         # Get or create SKU for this container type - stored as count units
                         container_sku = ProductService.get_or_create_sku(
                             product_name=product.name,
                             variant_name=variant.name,
                             size_label=container_size_label,
-                            unit='count'  # Containers are always stored as count units
+                            unit='count',  # Containers are always stored as count units
+                            item_type='product'
                         )
-                        
+
                         # Add inventory for containers - quantity is the number of containers (count)
                         success = process_inventory_adjustment(
                             item_id=container_sku.id,
@@ -160,7 +161,7 @@ def complete_batch(batch_id):
                             custom_expiration_date=batch.expiration_date,
                             custom_shelf_life_days=batch.shelf_life_days
                         )
-                        
+
                         if success:
                             inventory_entries.append({
                                 'sku_id': container_sku.id,
@@ -169,7 +170,7 @@ def complete_batch(batch_id):
                                 'container_count': final_quantity,
                                 'type': 'container'
                             })
-                
+
                 # Process extra containers - stored as count units with container description as size label
                 for extra_container in batch.extra_containers:
                     final_quantity = container_overrides.get(extra_container.container_id, extra_container.quantity_used)
@@ -177,18 +178,19 @@ def complete_batch(batch_id):
                         # Track how much product capacity these containers represent
                         container_capacity = (extra_container.container.storage_amount or 1) * final_quantity
                         total_containerized += container_capacity
-                        
+
                         # Size label is the full container description (e.g., "4oz Glass Jar")
                         container_size_label = f"{extra_container.container.storage_amount or 1}{extra_container.container.storage_unit or 'oz'} {extra_container.container.name}"
-                        
+
                         # Get or create SKU for this container type - stored as count units
                         container_sku = ProductService.get_or_create_sku(
                             product_name=product.name,
                             variant_name=variant.name,
                             size_label=container_size_label,
-                            unit='count'  # Containers are always stored as count units
+                            unit='count',  # Containers are always stored as count units
+                            item_type='product'
                         )
-                        
+
                         # Add inventory for extra containers - quantity is the number of containers (count)
                         success = process_inventory_adjustment(
                             item_id=container_sku.id,
@@ -202,7 +204,7 @@ def complete_batch(batch_id):
                             custom_expiration_date=batch.expiration_date,
                             custom_shelf_life_days=batch.shelf_life_days
                         )
-                        
+
                         if success:
                             inventory_entries.append({
                                 'sku_id': container_sku.id,
@@ -211,7 +213,7 @@ def complete_batch(batch_id):
                                 'container_count': final_quantity,
                                 'type': 'extra_container'
                             })
-                
+
                 # Handle remaining bulk quantity (excess product)
                 bulk_quantity = final_quantity - total_containerized
                 if bulk_quantity > 0:
@@ -220,9 +222,10 @@ def complete_batch(batch_id):
                         product_name=product.name,
                         variant_name=variant.name,
                         size_label='Bulk',
-                        unit=batch.output_unit or product.base_unit
+                        unit=batch.output_unit or product.base_unit,
+                        item_type='product'
                     )
-                    
+
                     success = process_inventory_adjustment(
                         item_id=bulk_sku.id,
                         quantity=bulk_quantity,
@@ -235,17 +238,17 @@ def complete_batch(batch_id):
                         custom_expiration_date=batch.expiration_date,
                         custom_shelf_life_days=batch.shelf_life_days
                     )
-                    
+
                     if success:
                         inventory_entries.append({
                             'sku_id': bulk_sku.id,
                             'quantity': bulk_quantity,
                             'type': 'bulk'
                         })
-                        
+
                         # Store the bulk SKU reference in the batch for backwards compatibility
                         batch.sku_id = bulk_sku.id
-                
+
                 if not inventory_entries:
                     raise Exception("No inventory was added - check container quantities")
 
@@ -296,7 +299,7 @@ def complete_batch(batch_id):
                 # Determine expiration settings - use ingredient's settings if batch is non-perishable
                 custom_expiration_date = None
                 custom_shelf_life_days = None
-                
+
                 if batch.is_perishable:
                     # Use batch expiration settings
                     custom_expiration_date = batch.expiration_date
@@ -343,7 +346,7 @@ def complete_batch(batch_id):
                 # Determine expiration settings - use ingredient's settings if batch is non-perishable
                 custom_expiration_date = None
                 custom_shelf_life_days = None
-                
+
                 if batch.is_perishable:
                     # Use batch expiration settings
                     custom_expiration_date = batch.expiration_date
