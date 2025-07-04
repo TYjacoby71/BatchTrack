@@ -49,7 +49,7 @@
           {% if batch.extra_containers %}
           {% for extra_container in batch.extra_containers %}
           <tr class="table-warning">
-            <td>{{ extra_container.container.name }} <small class="text-muted">(Extra - {{ extra_container.reason or 'Additional' }})</small></td>
+            <td>{{ extra_container.container.name }}</td>
             <td>{{ extra_container.container.storage_amount or 0 }} {{ extra_container.container.storage_unit or 'count' }}</td>
             <td>{{ extra_container.quantity_used or extra_container.container_quantity }}</td>
             <td>
