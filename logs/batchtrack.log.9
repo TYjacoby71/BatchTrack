@@ -1,10 +1,10 @@
-2025-07-04 00:47:56,258 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 00:54:44,826 ERROR: Exception on / [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: product_sku.expiration_date
+sqlite3.OperationalError: no such table: user
 
 The above exception was the direct cause of the following exception:
 
@@ -21,27 +21,41 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/routes/app_routes.py", line 33, in dashboard
-    alert_data = DashboardAlertService.get_dashboard_alerts()
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/dashboard_alerts.py", line 84, in get_dashboard_alerts
-    product_stock_summary = ProductAlertService.get_product_stock_summary()
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/product_alerts.py", line 32, in get_product_stock_summary
-    low_stock_skus = ProductAlertService.get_low_stock_skus()
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/product_alerts.py", line 17, in get_low_stock_skus
-    ).all()
-      ^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
-    return self._iter().all()  # type: ignore
-           ^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
-    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
-                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/__init__.py", line 158, in index
+    if current_user.is_authenticated:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/local.py", line 526, in _get_current_object
+    return get_name(local())
+                    ^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 25, in <lambda>
+    current_user = LocalProxy(lambda: _get_user())
+                                      ^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 370, in _get_user
+    current_app.login_manager._load_user()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/login_manager.py", line 364, in _load_user
+    user = self._user_callback(user_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/__init__.py", line 38, in load_user
+    return User.query.get(int(user_id))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in get
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/deprecations.py", line 386, in warned
+    return fn(*args, **kwargs)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1126, in get
+    return self._get_impl(ident, loading.load_on_pk_identity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1135, in _get_impl
+    return self.session._get_impl(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 3874, in _get_impl
+    return db_load_fn(
+           ^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 694, in load_on_pk_identity
+    session.execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
     return self._execute_internal(
            ^^^^^^^^^^^^^^^^^^^^^^^
@@ -71,23 +85,11 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: product_sku.expiration_date
-[SQL: SELECT product_sku.id AS product_sku_id, product_sku.product_id AS product_sku_product_id, product_sku.variant_id AS product_sku_variant_id, product_sku.size_label AS product_sku_size_label, product_sku.sku_code AS product_sku_sku_code, product_sku.sku_name AS product_sku_sku_name, product_sku.current_quantity AS product_sku_current_quantity, product_sku.reserved_quantity AS product_sku_reserved_quantity, product_sku.unit AS product_sku_unit, product_sku.low_stock_threshold AS product_sku_low_stock_threshold, product_sku.fifo_id AS product_sku_fifo_id, product_sku.batch_id AS product_sku_batch_id, product_sku.container_id AS product_sku_container_id, product_sku.unit_cost AS product_sku_unit_cost, product_sku.retail_price AS product_sku_retail_price, product_sku.wholesale_price AS product_sku_wholesale_price, product_sku.profit_margin_target AS product_sku_profit_margin_target, product_sku.category AS product_sku_category, product_sku.subcategory AS product_sku_subcategory, product_sku.tags AS product_sku_tags, product_sku.description AS product_sku_description, product_sku.is_active AS product_sku_is_active, product_sku.is_product_active AS product_sku_is_product_active, product_sku.is_discontinued AS product_sku_is_discontinued, product_sku.created_at AS product_sku_created_at, product_sku.updated_at AS product_sku_updated_at, product_sku.created_by AS product_sku_created_by, product_sku.supplier_name AS product_sku_supplier_name, product_sku.supplier_sku AS product_sku_supplier_sku, product_sku.supplier_cost AS product_sku_supplier_cost, product_sku.weight AS product_sku_weight, product_sku.weight_unit AS product_sku_weight_unit, product_sku.dimensions AS product_sku_dimensions, product_sku.barcode AS product_sku_barcode, product_sku.upc AS product_sku_upc, product_sku.quality_status AS product_sku_quality_status, product_sku.compliance_status AS product_sku_compliance_status, product_sku.quality_checked_by AS product_sku_quality_checked_by, product_sku.quality_checked_at AS product_sku_quality_checked_at, product_sku.location_id AS product_sku_location_id, product_sku.location_name AS product_sku_location_name, product_sku.temperature_at_time AS product_sku_temperature_at_time, product_sku.shopify_product_id AS product_sku_shopify_product_id, product_sku.shopify_variant_id AS product_sku_shopify_variant_id, product_sku.etsy_listing_id AS product_sku_etsy_listing_id, product_sku.amazon_asin AS product_sku_amazon_asin, product_sku.marketplace_sync_status AS product_sku_marketplace_sync_status, product_sku.marketplace_last_sync AS product_sku_marketplace_last_sync, product_sku.expiration_date AS product_sku_expiration_date, product_sku.is_perishable AS product_sku_is_perishable, product_sku.shelf_life_days AS product_sku_shelf_life_days, product_sku.organization_id AS product_sku_organization_id 
-FROM product_sku 
-WHERE product_sku.low_stock_threshold > ? AND product_sku.current_quantity <= product_sku.low_stock_threshold AND product_sku.is_active = 1]
-[parameters: (0,)]
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: user
+[SQL: SELECT user.id AS user_id, user.username AS user_username, user.password_hash AS user_password_hash, user.role_id AS user_role_id, user.first_name AS user_first_name, user.last_name AS user_last_name, user.email AS user_email, user.phone AS user_phone, user.subscription_class AS user_subscription_class, user.organization_id AS user_organization_id, user.is_owner AS user_is_owner, user.created_at AS user_created_at, user.last_login AS user_last_login 
+FROM user 
+WHERE user.id = ?]
+[parameters: (2,)]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-07-04 00:48:47,131 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:48:48,936 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:48:53,887 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:49:27,877 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:49:29,738 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:49:55,249 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:49:57,092 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:50:44,691 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:50:46,754 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:51:21,540 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:52:24,100 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:52:26,105 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:54:25,151 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 00:54:44,219 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 00:56:19,636 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 00:56:25,428 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
