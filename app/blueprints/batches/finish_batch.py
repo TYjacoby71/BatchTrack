@@ -156,7 +156,7 @@ def complete_batch(batch_id):
                             notes=f"From batch {batch.label_code} - {final_quantity} {container.container.name} containers",
                             batch_id=batch.id,
                             created_by=current_user.id,
-                            item_type='sku',
+                            item_type='product',
                             custom_expiration_date=batch.expiration_date,
                             custom_shelf_life_days=batch.shelf_life_days
                         )
@@ -198,7 +198,7 @@ def complete_batch(batch_id):
                             notes=f"From batch {batch.label_code} - {final_quantity} extra {extra_container.container.name} containers",
                             batch_id=batch.id,
                             created_by=current_user.id,
-                            item_type='sku',
+                            item_type='product',
                             custom_expiration_date=batch.expiration_date,
                             custom_shelf_life_days=batch.shelf_life_days
                         )
@@ -231,7 +231,7 @@ def complete_batch(batch_id):
                         notes=f"From batch {batch.label_code} - Bulk remainder (excess)",
                         batch_id=batch.id,
                         created_by=current_user.id,
-                        item_type='sku',
+                        item_type='product',
                         custom_expiration_date=batch.expiration_date,
                         custom_shelf_life_days=batch.shelf_life_days
                     )
