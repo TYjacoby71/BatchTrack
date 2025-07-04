@@ -7,6 +7,7 @@
     <!-- Add Existing Inventory Form -->
     <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="change_type" value="restock"/>
       <div class="row">
         <div class="col-md-3">
           <label class="form-label">Quantity</label>
@@ -14,22 +15,33 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">Unit</label>
-          <input type="text" name="unit" class="form-control" value="{{ sku.unit }}" readonly>
+          <input type="text" name="input_unit" class="form-control" value="{{ sku.unit }}" readonly>
         </div>
         <div class="col-md-3">
           <label class="form-label">Cost per Unit</label>
           <div class="input-group">
             <span class="input-group-text">$</span>
-            <input type="number" name="cost_override" class="form-control" step="0.01" min="0" placeholder="Optional">
+            <input type="number" name="unit_cost" class="form-control" step="0.01" min="0" placeholder="Optional" value="{{ sku.unit_cost or '' }}">
           </div>
         </div>
         <div class="col-md-3">
           <label class="form-label">Notes</label>
-          <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+          <input type="text" name="notes" class="form-control" placeholder="Manual restock">
         </div>
       </div>
 
       <!-- Perishable Section -->
+      <div class="row mt-3">
+        <div class="col-md-6">
+          <label class="form-label">Expiration Date (Optional)</label>
+          <input type="date" name="expiration_date" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Shelf Life (Days)</label>
+          <input type="number" name="shelf_life_days" class="form-control" placeholder="Optional">
+        </div>
+      </div>
+
       <div class="row mt-3">
         <div class="col-md-12">
           <div class="form-check">
