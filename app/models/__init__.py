@@ -17,5 +17,5 @@ __all__ = [
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
-    'ProductSKU', 'ProductSKUHistory', 'Role', 'Permission', 'role_permission'
+    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Role', 'Permission', 'role_permission'
 ]
