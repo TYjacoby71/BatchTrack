@@ -33,7 +33,7 @@
                   {% set total_bulk = total_bulk + group.total_quantity %}
                 {% endif %}
               {% endfor %}
-              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.product_base_unit }}
+              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.base_unit }}
             </div>
             <div class="col-md-2">
               <strong>Total Packaged:</strong> {{ total_packaged|int }} items
@@ -180,7 +180,7 @@
         <h5 class="modal-title">Edit Variation</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{{ url_for('products.edit_variant', product_id=product.id, variant_name=variation.name) }}">
+      <form method="POST" action="{{ url_for('product_variants.edit_variant', product_id=product.id, variant_name=variation.name) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
+            form.action = `{{ url_for('product_variants.delete_variant', product_id='__PRODUCT_ID__', variant_name='__VARIANT_NAME__') }}`.replace('__PRODUCT_ID__', productId).replace('__VARIANT_NAME__', encodeURIComponent(variantName));
 
             const csrfToken = document.querySelector('input[name="csrf_token"]');
             if (csrfToken) {
