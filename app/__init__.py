@@ -71,16 +71,25 @@ def create_app():
     app.register_blueprint(finish_batch_bp, url_prefix='/batches')
     app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-    # Import and register blueprints
+    # Import and register product blueprints
     try:
-        from .blueprints.products import products_bp, products_api_bp, product_inventory_bp, product_variants_bp
-        app.register_blueprint(products_bp, url_prefix='/products')
-        app.register_blueprint(products_api_bp)
-        app.register_blueprint(product_inventory_bp, url_prefix='/products')
-        app.register_blueprint(product_variants_bp, url_prefix='/products')
+        from .blueprints.products import register_products_blueprints
+        register_products_blueprints(app)
     except ImportError as e:
         print(f"Warning: Could not register product blueprints: {e}")
-        pass
+        # Fallback registration
+        try:
+            from .blueprints.products.products import products_bp
+            from .blueprints.products.api import products_api_bp
+            from .blueprints.products.product_inventory_routes import product_inventory_bp
+            from .blueprints.products.product_variants import product_variants_bp
+            app.register_blueprint(products_bp, url_prefix='/products')
+            app.register_blueprint(products_api_bp)
+            app.register_blueprint(product_inventory_bp, url_prefix='/products')
+            app.register_blueprint(product_variants_bp, url_prefix='/products')
+        except ImportError:
+            print("Could not register any product blueprints")
+            pass
 
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
