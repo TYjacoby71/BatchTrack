@@ -205,7 +205,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product_sku import ProductSKUHistory
+                from app.models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
@@ -237,9 +237,14 @@ def process_inventory_adjustment(
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
-        # Update InventoryItem quantity with rounding
+        # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        if item_type == 'product':
+            # For ProductSKU, update the underlying inventory_item
+            item.inventory_item.quantity = ConversionEngine.round_value(item.inventory_item.quantity + rounded_qty_change, 3)
+        else:
+            # For InventoryItem, update directly
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     else:
         # Handle credits/refunds by finding original FIFO entries to credit back to
@@ -314,7 +319,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product_sku import ProductSKUHistory
+                from app.models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
@@ -353,9 +358,14 @@ def process_inventory_adjustment(
                 )
             db.session.add(history)
 
-        # Update InventoryItem quantity with rounding
+        # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        if item_type == 'product':
+            # For ProductSKU, update the underlying inventory_item
+            item.inventory_item.quantity = ConversionEngine.round_value(item.inventory_item.quantity + rounded_qty_change, 3)
+        else:
+            # For InventoryItem, update directly
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
     db.session.commit()
 
