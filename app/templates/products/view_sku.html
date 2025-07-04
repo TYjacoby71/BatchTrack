@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}{% endblock %}
+{% block title %}{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }} Item{% endblock %}
 
 {% block scripts %}
 <!-- Only include necessary scripts for this page -->
@@ -100,10 +100,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </nav>
 
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h2>
+                <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }} Item</h2>
             </div>
 
-            <!-- SKU Details Card Component -->
+            <!-- Item Details Card Component -->
             {% include 'components/sku/sku_details_card.html' %}
 
             <!-- Inventory Actions Card Component -->
