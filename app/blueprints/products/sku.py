@@ -4,10 +4,7 @@ from ...models import db, ProductSKU, ProductSKUHistory
 from ...utils.unit_utils import get_global_unit_list
 from . import products_bp
 
-# Create the sku blueprint
-sku_bp = Blueprint('sku', __name__, url_prefix='/sku')
-
-@sku_bp.route('/<int:sku_id>')
+@products_bp.route('/sku/<int:sku_id>')
 @login_required
 def view_sku(sku_id):
     """View individual SKU details"""
@@ -25,7 +22,7 @@ def view_sku(sku_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list)
 
-@sku_bp.route('/<int:sku_id>/adjust', methods=['POST'])
+@products_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
 def adjust_sku(sku_id):
     """Legacy route - redirect to consolidated product inventory adjustment"""
