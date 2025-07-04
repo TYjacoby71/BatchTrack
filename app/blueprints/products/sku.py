@@ -1,10 +1,13 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, ProductSKUHistory
 from ...utils.unit_utils import get_global_unit_list
-from . import products_bp
 
-@products_bp.route('/sku/<int:sku_id>')
+# Create the sku blueprint
+sku_bp = Blueprint('sku', __name__)
+
+@sku_bp.route('/sku/<int:sku_id>')
 @login_required
 def view_sku(sku_id):
     """View individual SKU details"""
@@ -22,10 +25,10 @@ def view_sku(sku_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list)
 
-@products_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
+@sku_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
 def adjust_sku(sku_id):
     """Legacy route - redirect to consolidated product inventory adjustment"""
     # Redirect to the consolidated product inventory adjustment route
-    from ..product_inventory_routes import adjust_sku_inventory
+    from .product_inventory_routes import adjust_sku_inventory
     return adjust_sku_inventory(sku_id)
