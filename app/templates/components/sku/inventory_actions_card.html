@@ -6,6 +6,7 @@
   <div class="card-body">
     <!-- Add Existing Inventory Form -->
     <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="row">
         <div class="col-md-3">
           <label class="form-label">Quantity</label>
