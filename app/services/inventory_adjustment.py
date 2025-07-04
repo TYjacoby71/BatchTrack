@@ -139,7 +139,7 @@ def process_inventory_adjustment(
     if item_type == 'product':
         # For ProductSKU, use the underlying inventory_item for cost calculations
         inventory_item = item.inventory_item
-        
+
         if change_type in ['spoil', 'trash']:
             cost_per_unit = None
         elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
@@ -284,8 +284,7 @@ def process_inventory_adjustment(
                     break
 
                 original_fifo_entry = InventoryHistory.query.get(deduction.fifo_reference_id)
-                if original_fifo_entry:
-                    credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
+                if original_fifo_entry:                    credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
 
                     # Credit back to the original FIFO entry's remaining quantity
                     original_fifo_entry.remaining_quantity += credit_amount
@@ -350,7 +349,6 @@ def process_inventory_adjustment(
                     quantity_change=qty_change,
                     unit=addition_unit,
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
-                    original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     notes=notes,
                     created_by=created_by,
@@ -371,7 +369,6 @@ def process_inventory_adjustment(
                     quantity_change=qty_change,
                     unit=addition_unit,  # Record original unit used, default to 'count' for containers
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
-                    original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     note=notes,
                     quantity_used=0.0,  # Additions don't consume inventory - always 0
