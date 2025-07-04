@@ -88,15 +88,26 @@
                         <label for="change_type" class="form-label">Adjustment Type</label>
                         <select name="change_type" id="change_type" class="form-select" required>
                             <option value="">Select adjustment type</option>
-                            <option value="manual_addition">Manual Addition</option>
-                            <option value="recount">Recount (Set Total)</option>
-                            <option value="damaged">Damaged</option>
-                            <option value="spoil">Spoiled</option>
-                            <option value="trash">Trash</option>
-                            <option value="sample">Sample</option>
-                            <option value="sale">Manual Sale</option>
-                            <option value="reserved">Reserve for Order</option>
-                            <option value="unreserved">Release Reservation</option>
+                            <!-- Business Deductions -->
+                            <optgroup label="Business Deductions" id="businessGroup" style="display: none;">
+                                <option value="sale">Sale</option>
+                                <option value="gift">Gift</option>
+                                <option value="sample">Tester/Sample</option>
+                            </optgroup>
+                            <!-- Loss/Waste -->
+                            <optgroup label="Loss/Waste" id="lossGroup" style="display: none;">
+                                <option value="damaged">Damage</option>
+                                <option value="spoil">Spoilage</option>
+                                <option value="trash">Trash</option>
+                                <option value="expired">Expired</option>
+                            </optgroup>
+                            <!-- Manual Adjustments -->
+                            <optgroup label="Manual Adjustments" id="manualGroup" style="display: none;">
+                                <option value="manual_addition">Add Existing Stock</option>
+                                <option value="recount">Recount (Set Total)</option>
+                                <option value="reserved">Reserve for Order</option>
+                                <option value="unreserved">Release Reservation</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -192,35 +203,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Simple function for opening FIFO adjustment modal with inventory item data
+// Function for opening FIFO adjustment modal with specific action categories
 window.openInventoryActionModal = function(action) {
-    // For now, just redirect to adjust FIFO modal 
-    // This will be simplified to work with the existing FIFO adjustment modal
     const modal = document.getElementById('adjustFifoModal');
-    if (modal) {
-        // Set the change type based on action
-        const changeTypeSelect = document.getElementById('change_type');
-        if (changeTypeSelect) {
-            switch(action) {
-                case 'sale':
-                    changeTypeSelect.value = 'sale';
-                    break;
-                case 'gift':
-                    changeTypeSelect.value = 'sample';
-                    break;
-                case 'damage':
-                    changeTypeSelect.value = 'damaged';
-                    break;
-                case 'spoil':
-                    changeTypeSelect.value = 'spoil';
-                    break;
-                case 'recount':
-                    changeTypeSelect.value = 'recount';
-                    break;
-            }
-            // Trigger change event to show/hide relevant fields
-            changeTypeSelect.dispatchEvent(new Event('change'));
+    const modalTitle = modal.querySelector('.modal-title');
+    const changeTypeSelect = document.getElementById('change_type');
+    
+    if (modal && changeTypeSelect) {
+        // Hide all optgroups first
+        const allGroups = ['businessGroup', 'lossGroup', 'manualGroup'];
+        allGroups.forEach(groupId => {
+            const group = document.getElementById(groupId);
+            if (group) group.style.display = 'none';
+        });
+        
+        // Clear previous selection
+        changeTypeSelect.value = '';
+        
+        // Show appropriate group and set modal title based on action
+        switch(action) {
+            case 'business':
+                modalTitle.textContent = 'Business Deductions';
+                document.getElementById('businessGroup').style.display = 'block';
+                break;
+            case 'loss':
+                modalTitle.textContent = 'Record Loss/Waste';
+                document.getElementById('lossGroup').style.display = 'block';
+                break;
+            case 'manual':
+                modalTitle.textContent = 'Manual Adjustments';
+                document.getElementById('manualGroup').style.display = 'block';
+                break;
         }
+        
+        // Trigger change event to show/hide relevant fields
+        changeTypeSelect.dispatchEvent(new Event('change'));
         new bootstrap.Modal(modal).show();
     }
 };
