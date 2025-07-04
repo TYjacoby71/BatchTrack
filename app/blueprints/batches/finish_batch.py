@@ -104,7 +104,7 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # For actual products, create or get the target SKU
+            # For actual products, process containers and handle bulk overflow
             if batch.product_id and batch.variant_id:
                 from ...models import Product, ProductVariant
                 
@@ -122,33 +122,130 @@ def complete_batch(batch_id):
                 if not product or not variant:
                     raise Exception("Selected product or variant not found")
                 
-                # Get or create the bulk SKU for this product/variant combination
                 from ...services.product_service import ProductService
-                target_sku = ProductService.get_or_create_sku(
-                    product_name=product.name,
-                    variant_name=variant.name,
-                    size_label='Bulk',
-                    unit=product.base_unit
-                )
-                
-                # Store the SKU reference in the batch
-                batch.sku_id = target_sku.id
-                
-                # Add inventory using the centralized service
                 from ...services.inventory_adjustment import process_inventory_adjustment
-                success = process_inventory_adjustment(
-                    item_id=target_sku.id,
-                    quantity=batch.final_quantity,
-                    change_type='finished_batch',
-                    unit=target_sku.unit,
-                    notes=f"Added from batch {batch.label_code}",
-                    batch_id=batch.id,
-                    created_by=current_user.id,
-                    item_type='sku'
-                )
                 
-                if not success:
-                    raise Exception("Failed to add product inventory")
+                total_containerized = 0
+                inventory_entries = []
+                
+                # Process regular containers with proper size labels
+                for container in batch.containers:
+                    final_quantity = container_overrides.get(container.container_id, container.quantity_used)
+                    if final_quantity > 0:
+                        container_capacity = (container.container.storage_amount or 1) * final_quantity
+                        total_containerized += container_capacity
+                        
+                        # Create container size label matching container size
+                        container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'count'}"
+                        
+                        # Get or create SKU for this container size
+                        container_sku = ProductService.get_or_create_sku(
+                            product_name=product.name,
+                            variant_name=variant.name,
+                            size_label=container_size_label,
+                            unit=batch.output_unit or product.base_unit
+                        )
+                        
+                        # Add inventory for containers
+                        success = process_inventory_adjustment(
+                            item_id=container_sku.id,
+                            quantity=container_capacity,
+                            change_type='finished_batch',
+                            unit=container_sku.unit,
+                            notes=f"From batch {batch.label_code} - {final_quantity} {container.container.name} containers",
+                            batch_id=batch.id,
+                            created_by=current_user.id,
+                            item_type='sku',
+                            custom_expiration_date=batch.expiration_date,
+                            custom_shelf_life_days=batch.shelf_life_days
+                        )
+                        
+                        if success:
+                            inventory_entries.append({
+                                'sku_id': container_sku.id,
+                                'quantity': container_capacity,
+                                'container_name': container.container.name,
+                                'container_count': final_quantity,
+                                'type': 'container'
+                            })
+                
+                # Process extra containers with proper size labels
+                for extra_container in batch.extra_containers:
+                    final_quantity = container_overrides.get(extra_container.container_id, extra_container.quantity_used)
+                    if final_quantity > 0:
+                        container_capacity = (extra_container.container.storage_amount or 1) * final_quantity
+                        total_containerized += container_capacity
+                        
+                        # Create container size label matching container size
+                        container_size_label = f"{extra_container.container.storage_amount or 1}{extra_container.container.storage_unit or 'count'}"
+                        
+                        # Get or create SKU for this container size
+                        container_sku = ProductService.get_or_create_sku(
+                            product_name=product.name,
+                            variant_name=variant.name,
+                            size_label=container_size_label,
+                            unit=batch.output_unit or product.base_unit
+                        )
+                        
+                        # Add inventory for extra containers
+                        success = process_inventory_adjustment(
+                            item_id=container_sku.id,
+                            quantity=container_capacity,
+                            change_type='finished_batch',
+                            unit=container_sku.unit,
+                            notes=f"From batch {batch.label_code} - {final_quantity} extra {extra_container.container.name} containers",
+                            batch_id=batch.id,
+                            created_by=current_user.id,
+                            item_type='sku',
+                            custom_expiration_date=batch.expiration_date,
+                            custom_shelf_life_days=batch.shelf_life_days
+                        )
+                        
+                        if success:
+                            inventory_entries.append({
+                                'sku_id': container_sku.id,
+                                'quantity': container_capacity,
+                                'container_name': extra_container.container.name,
+                                'container_count': final_quantity,
+                                'type': 'extra_container'
+                            })
+                
+                # Handle remaining bulk quantity (excess product)
+                bulk_quantity = final_quantity - total_containerized
+                if bulk_quantity > 0:
+                    # Get or create bulk SKU for excess product
+                    bulk_sku = ProductService.get_or_create_sku(
+                        product_name=product.name,
+                        variant_name=variant.name,
+                        size_label='Bulk',
+                        unit=batch.output_unit or product.base_unit
+                    )
+                    
+                    success = process_inventory_adjustment(
+                        item_id=bulk_sku.id,
+                        quantity=bulk_quantity,
+                        change_type='finished_batch',
+                        unit=bulk_sku.unit,
+                        notes=f"From batch {batch.label_code} - Bulk remainder (excess)",
+                        batch_id=batch.id,
+                        created_by=current_user.id,
+                        item_type='sku',
+                        custom_expiration_date=batch.expiration_date,
+                        custom_shelf_life_days=batch.shelf_life_days
+                    )
+                    
+                    if success:
+                        inventory_entries.append({
+                            'sku_id': bulk_sku.id,
+                            'quantity': bulk_quantity,
+                            'type': 'bulk'
+                        })
+                        
+                        # Store the bulk SKU reference in the batch for backwards compatibility
+                        batch.sku_id = bulk_sku.id
+                
+                if not inventory_entries:
+                    raise Exception("No inventory was added - check container quantities")
 
         elif output_type == 'ingredient':
             # For intermediate ingredients, always use batch output units regardless of containers
