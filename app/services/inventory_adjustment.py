@@ -14,7 +14,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     # Handle different item types
     if item_type == 'product':
-        from app.models.product import ProductSKU, ProductSKUHistory
+        from ..models.product import ProductSKU, ProductSKUHistory
         item = ProductSKU.query.get(item_id)
         if not item:
             return False, "Product SKU not found", 0, 0
@@ -79,7 +79,7 @@ def process_inventory_adjustment(
     """
     # Handle different item types - ProductSKU vs InventoryItem
     if item_type == 'product':
-        from app.models.product import ProductSKU
+        from ..models.product import ProductSKU
         item = ProductSKU.query.get_or_404(item_id)
     else:
         item = InventoryItem.query.get_or_404(item_id)
@@ -224,7 +224,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product import ProductSKUHistory
+                from ..models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
@@ -343,7 +343,7 @@ def process_inventory_adjustment(
 
             # Create appropriate history entry based on item type
             if item_type == 'product':
-                from app.models.product import ProductSKUHistory
+                from ..models.product import ProductSKUHistory
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
