@@ -219,8 +219,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 salePriceGroup.style.display = 'none';
             }
 
-            // Show restock cost field only for restock operations
-            if (value === 'restock') {
+            // Show restock cost field for restock and manual addition operations
+            if (value === 'restock' || value === 'manual_addition') {
                 restockCostGroup.style.display = 'block';
                 // Pre-populate with current unit cost if available
                 const restockCostInput = document.getElementById('restock_cost');
