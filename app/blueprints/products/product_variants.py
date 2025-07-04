@@ -10,8 +10,7 @@ from . import products_bp
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
-        from ...models.product import Product, ProductVariant
-        from ...models.product_sku import ProductSKU
+        from ...models.product import Product, ProductVariant, ProductSKU
         
         # First try to get the Product record
         product = Product.query.filter_by(
