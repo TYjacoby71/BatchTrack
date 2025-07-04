@@ -8,6 +8,10 @@ import uuid
 
 class ProductService:
     @staticmethod
+    def generate_sku_code(product_name: str, variant_name: str, size_label: str):
+        """Generate a unique SKU code"""
+        return f"{product_name[:3].upper()}-{variant_name[:3].upper()}-{size_label[:3].upper()}-{str(uuid.uuid4())[:8].upper()}"
+    @staticmethod
     def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g'):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
 
@@ -53,7 +57,7 @@ class ProductService:
 
         if not sku:
             # Generate SKU code
-            sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{size_label[:3].upper()}-{str(uuid.uuid4())[:8].upper()}"
+            sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
             sku = ProductSKU(
                 product_id=product.id,

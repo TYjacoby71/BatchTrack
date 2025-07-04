@@ -131,9 +131,6 @@ def new_product():
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id,
-                # Legacy fields for backward compatibility
-                product_name=name,
-                variant_name='Base',
                 # Initialize inventory
                 current_quantity=0.0,
                 is_active=True,

@@ -294,6 +294,8 @@ function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
   alertsContainer.innerHTML = alertHtml;
 }
 
+
+
 function getCSRFToken() {
   const token = document.querySelector('input[name="csrf_token"]')?.value ||
                 document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
