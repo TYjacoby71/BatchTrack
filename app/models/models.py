@@ -106,9 +106,9 @@ class Unit(db.Model):
 
 class CustomUnitMapping(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    unit_name = db.Column(db.String(64), nullable=False)
-    conversion_factor = db.Column(db.Float, nullable=False)
-    base_unit = db.Column(db.String(64), nullable=False)
+    from_unit = db.Column(db.String(64), nullable=False)
+    to_unit = db.Column(db.String(64), nullable=False)
+    multiplier = db.Column(db.Float, nullable=False)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
