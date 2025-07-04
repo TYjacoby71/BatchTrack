@@ -128,30 +128,31 @@ def complete_batch(batch_id):
                 total_containerized = 0
                 inventory_entries = []
                 
-                # Process regular containers with proper size labels
+                # Process regular containers - stored as count units with container description as size label
                 for container in batch.containers:
                     final_quantity = container_overrides.get(container.container_id, container.quantity_used)
                     if final_quantity > 0:
+                        # Track how much product capacity these containers represent
                         container_capacity = (container.container.storage_amount or 1) * final_quantity
                         total_containerized += container_capacity
                         
-                        # Create container size label matching container size
-                        container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'count'}"
+                        # Size label is the full container description (e.g., "4oz Glass Jar")
+                        container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'oz'} {container.container.name}"
                         
-                        # Get or create SKU for this container size
+                        # Get or create SKU for this container type - stored as count units
                         container_sku = ProductService.get_or_create_sku(
                             product_name=product.name,
                             variant_name=variant.name,
                             size_label=container_size_label,
-                            unit=batch.output_unit or product.base_unit
+                            unit='count'  # Containers are always stored as count units
                         )
                         
-                        # Add inventory for containers
+                        # Add inventory for containers - quantity is the number of containers (count)
                         success = process_inventory_adjustment(
                             item_id=container_sku.id,
-                            quantity=container_capacity,
+                            quantity=final_quantity,  # Number of containers, not capacity
                             change_type='finished_batch',
-                            unit=container_sku.unit,
+                            unit='count',
                             notes=f"From batch {batch.label_code} - {final_quantity} {container.container.name} containers",
                             batch_id=batch.id,
                             created_by=current_user.id,
@@ -163,36 +164,37 @@ def complete_batch(batch_id):
                         if success:
                             inventory_entries.append({
                                 'sku_id': container_sku.id,
-                                'quantity': container_capacity,
+                                'quantity': final_quantity,  # Number of containers
                                 'container_name': container.container.name,
                                 'container_count': final_quantity,
                                 'type': 'container'
                             })
                 
-                # Process extra containers with proper size labels
+                # Process extra containers - stored as count units with container description as size label
                 for extra_container in batch.extra_containers:
                     final_quantity = container_overrides.get(extra_container.container_id, extra_container.quantity_used)
                     if final_quantity > 0:
+                        # Track how much product capacity these containers represent
                         container_capacity = (extra_container.container.storage_amount or 1) * final_quantity
                         total_containerized += container_capacity
                         
-                        # Create container size label matching container size
-                        container_size_label = f"{extra_container.container.storage_amount or 1}{extra_container.container.storage_unit or 'count'}"
+                        # Size label is the full container description (e.g., "4oz Glass Jar")
+                        container_size_label = f"{extra_container.container.storage_amount or 1}{extra_container.container.storage_unit or 'oz'} {extra_container.container.name}"
                         
-                        # Get or create SKU for this container size
+                        # Get or create SKU for this container type - stored as count units
                         container_sku = ProductService.get_or_create_sku(
                             product_name=product.name,
                             variant_name=variant.name,
                             size_label=container_size_label,
-                            unit=batch.output_unit or product.base_unit
+                            unit='count'  # Containers are always stored as count units
                         )
                         
-                        # Add inventory for extra containers
+                        # Add inventory for extra containers - quantity is the number of containers (count)
                         success = process_inventory_adjustment(
                             item_id=container_sku.id,
-                            quantity=container_capacity,
+                            quantity=final_quantity,  # Number of containers, not capacity
                             change_type='finished_batch',
-                            unit=container_sku.unit,
+                            unit='count',
                             notes=f"From batch {batch.label_code} - {final_quantity} extra {extra_container.container.name} containers",
                             batch_id=batch.id,
                             created_by=current_user.id,
@@ -204,7 +206,7 @@ def complete_batch(batch_id):
                         if success:
                             inventory_entries.append({
                                 'sku_id': container_sku.id,
-                                'quantity': container_capacity,
+                                'quantity': final_quantity,  # Number of containers
                                 'container_name': extra_container.container.name,
                                 'container_count': final_quantity,
                                 'type': 'extra_container'
