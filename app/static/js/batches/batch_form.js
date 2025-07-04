@@ -274,7 +274,7 @@ function loadVariants(productId) {
 
     variantSelect.innerHTML = '<option value="">Loading variants...</option>';
 
-    fetch(`/products/${productId}/variants`)
+    fetch(`/products/api/${productId}/variants`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -283,13 +283,17 @@ function loadVariants(productId) {
         })
         .then(data => {
             variantSelect.innerHTML = '<option value="">Select variant...</option>';
-            data.forEach(variant => {
-                const option = document.createElement('option');
-                option.value = variant.id;
-                option.textContent = variant.name;
-                variantSelect.appendChild(option);
-            });
-            console.log('Loaded variants successfully:', data);
+            if (data.status === 'success' && data.variants) {
+                data.variants.forEach(variant => {
+                    const option = document.createElement('option');
+                    option.value = variant.id;
+                    option.textContent = variant.name;
+                    variantSelect.appendChild(option);
+                });
+                console.log('Loaded variants successfully:', data.variants);
+            } else {
+                throw new Error(data.message || 'Failed to load variants');
+            }
         })
         .catch(error => {
             console.error('Error loading variants:', error);
