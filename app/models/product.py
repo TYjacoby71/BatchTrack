@@ -47,11 +47,6 @@ class Product(ScopedModelMixin, db.Model):
         return self.variants.filter_by(name='Base').first()
     
     @property
-    def total_inventory(self):
-        """Total inventory across all SKUs"""
-        return sum(sku.current_quantity for sku in self.skus if sku.is_active)
-    
-    @property
     def variant_count(self):
         """Number of active variants"""
         return self.variants.filter_by(is_active=True).count()
@@ -87,11 +82,6 @@ class ProductVariant(ScopedModelMixin, db.Model):
     def bulk_sku(self):
         """Get the bulk SKU for this variant"""
         return self.skus.filter_by(size_label='Bulk').first()
-    
-    @property
-    def total_inventory(self):
-        """Total inventory for this variant across all size labels"""
-        return sum(sku.current_quantity for sku in self.skus if sku.is_active)
     
     # Unique constraint on product + variant name
     __table_args__ = (

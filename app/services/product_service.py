@@ -158,3 +158,21 @@ class ProductService:
             ProductSKU.is_active == True,
             ProductSKU.organization_id == current_user.organization_id
         ).all()
+    @staticmethod
+    def get_product_inventory_summary(product_id):
+        """Get inventory summary for a product - all data derived from SKU level"""
+        product = Product.query.get(product_id)
+        if not product:
+            return None
+
+        active_skus = [sku for sku in product.skus if sku.is_active]
+        total_inventory = sum(sku.current_quantity for sku in active_skus)
+        low_stock_count = sum(1 for sku in active_skus if sku.is_low_stock)
+
+        return {
+            'product_id': product.id,
+            'product_name': product.name,
+            'total_inventory': total_inventory,
+            'variant_count': product.variant_count,
+            'low_stock_count': low_stock_count
+        }
