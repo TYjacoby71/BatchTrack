@@ -41,12 +41,23 @@ def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
         from ...models.product import Product, ProductVariant
+        from ...models import ProductSKU
         
         # Get the product with org scoping
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
+        
+        # If no Product found, try to find it via SKU (backward compatibility)
+        if not product:
+            sku = ProductSKU.query.filter_by(
+                id=product_id,
+                organization_id=current_user.organization_id
+            ).first()
+            
+            if sku and sku.product_id:
+                product = Product.query.get(sku.product_id)
         
         if not product:
             return jsonify({'error': 'Product not found'}), 404
