@@ -3,6 +3,55 @@ from ...models import db, InventoryItem, Unit
 
 quick_add_bp = Blueprint("quick_add", __name__, url_prefix='/quick-add', template_folder='templates')
 
+@quick_add_bp.route('/product', methods=['POST'])
+def quick_add_product():
+    try:
+        from flask_login import current_user
+        from ...models import InventoryHistory
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        product = InventoryItem(
+            name=data['name'],
+            type='product',
+            unit=data.get('unit', 'count'),
+            quantity=0
+        )
+
+        db.session.add(product)
+        db.session.flush()  # Get the ID without committing
+
+        # Create initial history entry for FIFO tracking
+        history = InventoryHistory(
+            inventory_item_id=product.id,
+            change_type='restock',
+            quantity_change=0,
+            remaining_quantity=0,
+            unit=product.unit,
+            unit_cost=0,
+            note='Initial product creation via quick add',
+            created_by=current_user.id if current_user else None,
+            quantity_used=0,
+            is_perishable=False
+        )
+        db.session.add(history)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'product': {
+                'id': product.id,
+                'name': product.name,
+                'unit': product.unit
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @quick_add_bp.route('/container', methods=['POST'])
 def quick_add_container():
     try:

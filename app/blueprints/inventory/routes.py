@@ -154,7 +154,7 @@ def add_inventory():
     try:
         quantity = float(request.form.get('quantity', 0))
         unit = request.form.get('unit')
-        item_type = request.form.get('type', 'ingredient')
+        item_type = request.form.get('type', 'ingredient')  # 'ingredient', 'container', or 'product'
         cost_per_unit = float(request.form.get('cost_per_unit', 0))
         low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
         is_perishable = request.form.get('is_perishable') == 'on'
@@ -176,6 +176,9 @@ def add_inventory():
             # For containers, ensure unit is set to empty string and history uses 'count'
             unit = ''  # Containers don't have a unit on the item itself
             history_unit = 'count'  # But history entries use 'count'
+        elif item_type == 'product':
+            # Products use count by default but can have other units
+            history_unit = unit if unit else 'count'
         else:
             # For ingredients, use the provided unit for both item and history
             history_unit = unit
