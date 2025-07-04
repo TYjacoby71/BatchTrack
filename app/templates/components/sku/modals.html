@@ -135,6 +135,12 @@
                         <small class="form-text text-muted">Price for this sale transaction</small>
                     </div>
 
+                    <div class="mb-3" id="restockCostGroup" style="display: none;">
+                        <label for="restock_cost" class="form-label">Cost Per Unit ($)</label>
+                        <input type="number" name="restock_cost" id="restock_cost" class="form-control" step="0.01" min="0" placeholder="Enter cost per unit">
+                        <small class="form-text text-muted">Cost per unit for this restock (affects weighted average cost)</small>
+                    </div>
+
                     <div class="mb-3" id="reservationGroup" style="display: none;">
                         <label for="expiration_minutes" class="form-label">Reservation Duration (minutes)</label>
                         <input type="number" name="expiration_minutes" id="expiration_minutes" class="form-control" value="30" min="1" max="1440">
@@ -187,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const changeTypeSelect = document.getElementById('change_type');
     const orderIdGroup = document.getElementById('orderIdGroup');
     const salePriceGroup = document.getElementById('salePriceGroup');
+    const restockCostGroup = document.getElementById('restockCostGroup');
     const reservationGroup = document.getElementById('reservationGroup');
 
     if (changeTypeSelect) {
@@ -210,6 +217,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 salePriceGroup.style.display = 'none';
+            }
+
+            // Show restock cost field only for restock operations
+            if (value === 'restock') {
+                restockCostGroup.style.display = 'block';
+                // Pre-populate with current unit cost if available
+                const restockCostInput = document.getElementById('restock_cost');
+                if (restockCostInput && !restockCostInput.value) {
+                    restockCostInput.value = '{{ sku.unit_cost or "" }}';
+                }
+            } else {
+                restockCostGroup.style.display = 'none';
             }
 
             // Show reservation duration only for reservations
