@@ -1,10 +1,15 @@
-2025-07-04 21:03:19,034 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 21:01:58,809 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.OperationalError: no such column: product_sku.inventory_item_id
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1812, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1485, in _init_compiled
+    l_param: List[Any] = [
+                         ^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1487, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "lib/sqlalchemy/cyextension/processors.pyx", line 27, in sqlalchemy.cyextension.processors.to_float
+TypeError: float() argument must be a string or a real number, not 'property'
 
 The above exception was the direct cause of the following exception:
 
@@ -30,10 +35,10 @@ Traceback (most recent call last):
   File "/home/runner/workspace/app/services/dashboard_alerts.py", line 84, in get_dashboard_alerts
     product_stock_summary = ProductAlertService.get_product_stock_summary()
                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/product_alerts.py", line 40, in get_product_stock_summary
+  File "/home/runner/workspace/app/services/product_alerts.py", line 32, in get_product_stock_summary
     low_stock_skus = ProductAlertService.get_low_stock_skus()
                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/product_alerts.py", line 21, in get_low_stock_skus
+  File "/home/runner/workspace/app/services/product_alerts.py", line 17, in get_low_stock_skus
     ).all()
       ^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
@@ -60,22 +65,24 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
     ret = self._execute_context(
           ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1818, in _execute_context
     self._handle_dbapi_exception(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: product_sku.inventory_item_id
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1812, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1485, in _init_compiled
+    l_param: List[Any] = [
+                         ^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1487, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "lib/sqlalchemy/cyextension/processors.pyx", line 27, in sqlalchemy.cyextension.processors.to_float
+sqlalchemy.exc.StatementError: (builtins.TypeError) float() argument must be a string or a real number, not 'property'
 [SQL: SELECT product_sku.id AS product_sku_id, product_sku.product_id AS product_sku_product_id, product_sku.variant_id AS product_sku_variant_id, product_sku.size_label AS product_sku_size_label, product_sku.sku_code AS product_sku_sku_code, product_sku.sku_name AS product_sku_sku_name, product_sku.inventory_item_id AS product_sku_inventory_item_id, product_sku.unit AS product_sku_unit, product_sku.low_stock_threshold AS product_sku_low_stock_threshold, product_sku.fifo_id AS product_sku_fifo_id, product_sku.batch_id AS product_sku_batch_id, product_sku.container_id AS product_sku_container_id, product_sku.unit_cost AS product_sku_unit_cost, product_sku.retail_price AS product_sku_retail_price, product_sku.wholesale_price AS product_sku_wholesale_price, product_sku.profit_margin_target AS product_sku_profit_margin_target, product_sku.category AS product_sku_category, product_sku.subcategory AS product_sku_subcategory, product_sku.tags AS product_sku_tags, product_sku.description AS product_sku_description, product_sku.is_active AS product_sku_is_active, product_sku.is_product_active AS product_sku_is_product_active, product_sku.is_discontinued AS product_sku_is_discontinued, product_sku.created_at AS product_sku_created_at, product_sku.updated_at AS product_sku_updated_at, product_sku.created_by AS product_sku_created_by, product_sku.supplier_name AS product_sku_supplier_name, product_sku.supplier_sku AS product_sku_supplier_sku, product_sku.supplier_cost AS product_sku_supplier_cost, product_sku.weight AS product_sku_weight, product_sku.weight_unit AS product_sku_weight_unit, product_sku.dimensions AS product_sku_dimensions, product_sku.barcode AS product_sku_barcode, product_sku.upc AS product_sku_upc, product_sku.quality_status AS product_sku_quality_status, product_sku.compliance_status AS product_sku_compliance_status, product_sku.quality_checked_by AS product_sku_quality_checked_by, product_sku.quality_checked_at AS product_sku_quality_checked_at, product_sku.location_id AS product_sku_location_id, product_sku.location_name AS product_sku_location_name, product_sku.temperature_at_time AS product_sku_temperature_at_time, product_sku.shopify_product_id AS product_sku_shopify_product_id, product_sku.shopify_variant_id AS product_sku_shopify_variant_id, product_sku.etsy_listing_id AS product_sku_etsy_listing_id, product_sku.amazon_asin AS product_sku_amazon_asin, product_sku.marketplace_sync_status AS product_sku_marketplace_sync_status, product_sku.marketplace_last_sync AS product_sku_marketplace_last_sync, product_sku.expiration_date AS product_sku_expiration_date, product_sku.is_perishable AS product_sku_is_perishable, product_sku.shelf_life_days AS product_sku_shelf_life_days, product_sku.organization_id AS product_sku_organization_id 
-FROM product_sku JOIN inventory_item ON product_sku.inventory_item_id = inventory_item.id 
-WHERE inventory_item.quantity <= product_sku.low_stock_threshold AND product_sku.low_stock_threshold > ? AND product_sku.is_active = 1]
-[parameters: (0,)]
-(Background on this error at: https://sqlalche.me/e/20/e3q8)
-2025-07-04 21:04:06,178 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:04:21,421 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+FROM product_sku 
+WHERE product_sku.low_stock_threshold > ? AND product_sku.low_stock_threshold >= ? AND product_sku.is_active = 1]
+[parameters: [{}]]
+2025-07-04 21:03:06,689 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:03:10,199 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:03:18,182 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
