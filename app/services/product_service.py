@@ -86,7 +86,11 @@ class ProductService:
             func.count(ProductSKU.id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
             func.max(ProductSKU.updated_at).label('last_updated')
-        ).join(ProductSKU).join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
+        ).select_from(Product).join(
+            ProductSKU, Product.id == ProductSKU.product_id
+        ).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             ProductSKU.is_active == True,
             Product.is_active == True,
             Product.organization_id == current_user.organization_id
