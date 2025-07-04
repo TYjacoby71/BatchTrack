@@ -254,6 +254,16 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.Index('idx_inventory_item', 'inventory_item_id'),
     )
     
+    @property
+    def display_name(self):
+        """Get display name for the SKU"""
+        if self.sku_name:
+            return self.sku_name
+        elif self.product and self.variant:
+            return f"{self.product.name} - {self.variant.name} - {self.size_label}"
+        else:
+            return self.sku_code or f"SKU #{self.id}"
+    
     @classmethod
     def generate_sku_code(cls, product_name, variant_name, size_label):
         """Generate a standardized SKU code from product/variant/size"""
