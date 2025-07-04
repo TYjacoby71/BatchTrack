@@ -1,4 +1,4 @@
-2025-07-04 21:29:59,938 ERROR: Exception on /products/1/variant/Base [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 21:35:40,900 ERROR: Exception on /products/sku/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,9 +15,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 182, in view_variant
-    return render_template('products/view_variation.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/products/sku.py", line 22, in view_sku
+    return render_template('products/view_sku.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,35 +28,34 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 1, in top-level template code
+    {% extends "layout.html" %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 256, in block 'content'
-    form.action = `{{ url_for('product_variants.delete_variant', product_id='__PRODUCT_ID__', variant_name='__VARIANT_NAME__') }}`.replace('__PRODUCT_ID__', productId).replace('__VARIANT_NAME__', encodeURIComponent(variantName));
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 97, in block 'content'
+    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variant', product_id=sku.id, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
     rv = url_adapter.build(  # type: ignore[union-attr]
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 922, in build
-    rv = self._partial_build(endpoint, values, method, append_unknown)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 814, in _partial_build
-    build_rv = rule.build(values, append_unknown)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/rules.py", line 850, in build
-    return self._build_unknown(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<werkzeug routing>", line 1, in <builder:'/products/<int:product_id>/variant/<variant_name>/delete'>
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/converters.py", line 163, in to_url
-    value_str = str(self.num_convert(value))
-                    ^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '__PRODUCT_ID__'
-2025-07-04 21:33:55,279 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:33:56,307 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:34:04,329 ERROR: Exception on /products/1/variant/Base [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.view_variant' with values ['product_id', 'variant_name']. Did you mean 'product_variants.view_variant' instead?
+2025-07-04 21:36:26,019 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:36:26,076 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:38:09,899 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:39:31,759 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:40:12,915 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:42:23,176 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:42:27,991 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:42:37,708 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:45:01,120 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:45:07,376 ERROR: Exception on /products/sku/1 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -73,9 +72,9 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 182, in view_variant
-    return render_template('products/view_variation.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/products/sku.py", line 22, in view_sku
+    return render_template('products/view_sku.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
     return _render(app, template, context)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -86,31 +85,25 @@ Traceback (most recent call last):
     self.environment.handle_exception()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 1, in top-level template code
+    {% extends "layout.html" %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
     {% block content %}{% endblock %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 256, in block 'content'
-    form.action = `{{ url_for('product_variants.delete_variant', product_id='__PRODUCT_ID__', variant_name='__VARIANT_NAME__') }}`.replace('__PRODUCT_ID__', productId).replace('__VARIANT_NAME__', encodeURIComponent(variantName));
+  File "/home/runner/workspace/app/templates/products/view_sku.html", line 110, in block 'content'
+    {% include 'components/sku/inventory_actions_card.html' %}
     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/templates/components/sku/inventory_actions_card.html", line 7, in top-level template code
+    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
     rv = url_adapter.build(  # type: ignore[union-attr]
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 922, in build
-    rv = self._partial_build(endpoint, values, method, append_unknown)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 814, in _partial_build
-    build_rv = rule.build(values, append_unknown)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/rules.py", line 850, in build
-    return self._build_unknown(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<werkzeug routing>", line 1, in <builder:'/products/<int:product_id>/variant/<variant_name>/delete'>
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/converters.py", line 163, in to_url
-    value_str = str(self.num_convert(value))
-                    ^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '__PRODUCT_ID__'
-2025-07-04 21:35:28,980 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:35:32,276 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.adjust_sku' with values ['sku_id']. Did you mean 'products_api.adjust_sku_inventory' instead?
+2025-07-04 21:46:39,767 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
