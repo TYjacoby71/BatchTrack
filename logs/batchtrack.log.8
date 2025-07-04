@@ -1,4 +1,18 @@
-2025-07-04 20:30:21,843 ERROR: Exception on /products/1/variant/Base [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 20:59:38,682 ERROR: Exception on /user_dashboard [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1812, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1485, in _init_compiled
+    l_param: List[Any] = [
+                         ^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1487, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "lib/sqlalchemy/cyextension/processors.pyx", line 27, in sqlalchemy.cyextension.processors.to_float
+TypeError: float() argument must be a string or a real number, not 'property'
+
+The above exception was the direct cause of the following exception:
+
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -15,35 +29,60 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 182, in view_variant
-    return render_template('products/view_variation.html',
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
-    return _render(app, template, context)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
-    rv = template.render(context)
-         ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 1, in top-level template code
-    {% extends 'layout.html' %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/layout.html", line 152, in top-level template code
-    {% block content %}{% endblock %}
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/templates/products/view_variation.html", line 107, in block 'content'
-    <a href="{{ url_for('products.view_sku', sku_id=group.skus[0].id) }}">
-    ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
-    return self.handle_url_build_error(error, endpoint, values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
-    rv = url_adapter.build(  # type: ignore[union-attr]
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
-    raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.view_sku' with values ['sku_id']. Did you mean 'products.view_product' instead?
-2025-07-04 20:59:37,944 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+  File "/home/runner/workspace/app/routes/app_routes.py", line 33, in dashboard
+    alert_data = DashboardAlertService.get_dashboard_alerts()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/services/dashboard_alerts.py", line 84, in get_dashboard_alerts
+    product_stock_summary = ProductAlertService.get_product_stock_summary()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/services/product_alerts.py", line 32, in get_product_stock_summary
+    low_stock_skus = ProductAlertService.get_low_stock_skus()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/services/product_alerts.py", line 17, in get_low_stock_skus
+    ).all()
+      ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1818, in _execute_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1812, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1485, in _init_compiled
+    l_param: List[Any] = [
+                         ^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 1487, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "lib/sqlalchemy/cyextension/processors.pyx", line 27, in sqlalchemy.cyextension.processors.to_float
+sqlalchemy.exc.StatementError: (builtins.TypeError) float() argument must be a string or a real number, not 'property'
+[SQL: SELECT product_sku.id AS product_sku_id, product_sku.product_id AS product_sku_product_id, product_sku.variant_id AS product_sku_variant_id, product_sku.size_label AS product_sku_size_label, product_sku.sku_code AS product_sku_sku_code, product_sku.sku_name AS product_sku_sku_name, product_sku.inventory_item_id AS product_sku_inventory_item_id, product_sku.unit AS product_sku_unit, product_sku.low_stock_threshold AS product_sku_low_stock_threshold, product_sku.fifo_id AS product_sku_fifo_id, product_sku.batch_id AS product_sku_batch_id, product_sku.container_id AS product_sku_container_id, product_sku.unit_cost AS product_sku_unit_cost, product_sku.retail_price AS product_sku_retail_price, product_sku.wholesale_price AS product_sku_wholesale_price, product_sku.profit_margin_target AS product_sku_profit_margin_target, product_sku.category AS product_sku_category, product_sku.subcategory AS product_sku_subcategory, product_sku.tags AS product_sku_tags, product_sku.description AS product_sku_description, product_sku.is_active AS product_sku_is_active, product_sku.is_product_active AS product_sku_is_product_active, product_sku.is_discontinued AS product_sku_is_discontinued, product_sku.created_at AS product_sku_created_at, product_sku.updated_at AS product_sku_updated_at, product_sku.created_by AS product_sku_created_by, product_sku.supplier_name AS product_sku_supplier_name, product_sku.supplier_sku AS product_sku_supplier_sku, product_sku.supplier_cost AS product_sku_supplier_cost, product_sku.weight AS product_sku_weight, product_sku.weight_unit AS product_sku_weight_unit, product_sku.dimensions AS product_sku_dimensions, product_sku.barcode AS product_sku_barcode, product_sku.upc AS product_sku_upc, product_sku.quality_status AS product_sku_quality_status, product_sku.compliance_status AS product_sku_compliance_status, product_sku.quality_checked_by AS product_sku_quality_checked_by, product_sku.quality_checked_at AS product_sku_quality_checked_at, product_sku.location_id AS product_sku_location_id, product_sku.location_name AS product_sku_location_name, product_sku.temperature_at_time AS product_sku_temperature_at_time, product_sku.shopify_product_id AS product_sku_shopify_product_id, product_sku.shopify_variant_id AS product_sku_shopify_variant_id, product_sku.etsy_listing_id AS product_sku_etsy_listing_id, product_sku.amazon_asin AS product_sku_amazon_asin, product_sku.marketplace_sync_status AS product_sku_marketplace_sync_status, product_sku.marketplace_last_sync AS product_sku_marketplace_last_sync, product_sku.expiration_date AS product_sku_expiration_date, product_sku.is_perishable AS product_sku_is_perishable, product_sku.shelf_life_days AS product_sku_shelf_life_days, product_sku.organization_id AS product_sku_organization_id 
+FROM product_sku 
+WHERE product_sku.low_stock_threshold > ? AND product_sku.low_stock_threshold >= ? AND product_sku.is_active = 1]
+[parameters: [{}]]
+2025-07-04 21:00:16,687 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:00:22,286 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:00:36,653 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
