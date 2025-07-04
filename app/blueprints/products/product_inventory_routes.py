@@ -53,7 +53,11 @@ def adjust_sku_inventory(sku_id):
 
     # Validate required fields
     if not quantity or not change_type:
-
+        error_msg = 'Quantity and change type are required'
+        if request.is_json:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return redirect(url_for('products.view_sku', sku_id=sku_id))
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
 @login_required
