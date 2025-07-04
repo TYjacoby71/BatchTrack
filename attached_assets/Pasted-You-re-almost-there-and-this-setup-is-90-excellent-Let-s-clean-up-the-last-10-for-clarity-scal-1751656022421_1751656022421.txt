@@ -1,0 +1,110 @@
+You're almost there — and this setup is 90% excellent. Let's clean up the last 10% for clarity, scalability, and to match your mental model. Here's a full breakdown:
+
+✅ YOUR SYSTEM STRUCTURE (AS WRITTEN)
+You’ve got:
+
+Class	Role
+Product	The top-level product (e.g., “Royal Tallow”)
+ProductVariant	The scent/flavor/etc (e.g., “Lavender”, “Unscented”)
+ProductSKU	The sellable unit (e.g., “4oz Lavender Tallow in Glass Jar”)
+ProductSKUHistory	FIFO log of stock movement for that exact sellable item (SKU)
+
+This is solid.
+
+🔧 THINGS TO FIX / IMPROVE
+1. ✅ Size should not live in ProductVariant
+You are correct — size belongs to the SKU, not the variant.
+Your intuition is right:
+
+Variant: differentiates formulas (e.g., scent, type, color)
+
+SKU: adds physical packaging/delivery format (size, container, etc.)
+
+Action: Remove these from ProductVariant:
+
+python
+Copy
+Edit
+# REMOVE from ProductVariant:
+size = db.Column(db.String(32), nullable=True)  # ✅ move to SKU
+2. ⚠️ product_id in SKU is technically redundant (but might be okay)
+You’re still storing both product_id and variant_id on ProductSKU, even though variant_id → product_id is already implied by the relationship.
+
+Options:
+
+✅ If you want pure data integrity, drop product_id from ProductSKU.
+
+⚠️ If you want easy product_id filtering, keep it but add a validation check to ensure sku.product_id == sku.variant.product_id.
+
+We discussed this here already, but TL;DR:
+
+Don't store the same relationship twice unless you really need the performance benefit. It invites bugs if you don't validate.
+
+3. ✅ size_label and sku_code are excellent choices
+These are doing the job perfectly:
+
+size_label: human-readable (e.g., "4oz Glass Jar")
+
+sku_code: machine-readable/Shopify-facing (e.g., "RTL-LAV-4OZ")
+
+You're free to generate sku_code from the combination:
+
+python
+Copy
+Edit
+f"{product.slug}-{variant.slug}-{size_code}".upper()
+And store that permanently — makes Shopify/Sync stuff way easier.
+
+4. ✅ ProductSKUHistory design is excellent
+You're tracking:
+
+FIFO info
+
+Change types
+
+Batch + user info
+
+Perishability
+
+This looks rock-solid. No major changes needed there.
+
+🧠 WHY THIS MODEL IS SCALABLE
+By separating:
+
+Product = category or umbrella name
+
+Variant = formulation/scent/type
+
+SKU = sellable instance (size/container/etc.)
+
+You now mirror Shopify, Square, Etsy, and Amazon models — this means:
+
+Shopify product = your Product
+
+Shopify variant = your SKU (Shopify’s “variant” includes size + scent — your SKU handles that)
+
+Batch links cleanly to SKU
+
+FIFO and stock status operate at the SKU level, which is perfect
+
+🔁 TO-DO LIST
+Here's what I’d recommend doing next:
+
+✅ Remove size from ProductVariant
+
+❓ Decide whether to keep product_id in SKU:
+
+If yes, add validator to ensure integrity
+
+If no, remove it and always access via sku.variant.product
+
+🧼 Audit product_service.py and product_routes.py:
+
+Make sure all create/update flows respect this hierarchy
+
+✅ Ensure SKU creation enforces uniqueness on:
+
+(variant_id + size_label)
+
+or your existing (product_id, variant_id, size_label, fifo_id)
+
