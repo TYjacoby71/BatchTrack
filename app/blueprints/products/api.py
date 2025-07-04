@@ -1,3 +1,4 @@
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
@@ -6,8 +7,8 @@ from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from sqlalchemy import func
 
-# Import the blueprint from __init__.py
-from . import products_api_bp
+# Create the blueprint locally instead of importing it
+products_api_bp = Blueprint('products_api', __name__)
 
 @products_api_bp.route('/')
 @login_required
@@ -337,8 +338,6 @@ def get_product_skus(product_id):
 
     return jsonify(sku_list)
 
-
-
 @products_api_bp.route('/api/<int:product_id>/skus', methods=['GET'])
 @login_required
 def get_product_skus_api(product_id):
@@ -379,31 +378,6 @@ def get_product_skus_api(product_id):
             'status': 'error',
             'message': str(e)
         }), 500
-from flask import Blueprint, jsonify
-from flask_login import login_required, current_user
-from ...models import Product, ProductVariant
-
-products_api_bp = Blueprint('products_api', __name__)
-
-@products_api_bp.route('/products/<int:product_id>/variants')
-@login_required
-def get_product_variants(product_id):
-    """Get variants for a specific product"""
-    product = Product.query.filter_by(
-        id=product_id,
-        organization_id=current_user.organization_id,
-        is_active=True
-    ).first_or_404()
-    
-    variants = ProductVariant.query.filter_by(
-        product_id=product_id,
-        is_active=True
-    ).all()
-    
-    return jsonify([{
-        'id': variant.id,
-        'name': variant.name
-    } for variant in variants])
 
 @products_api_bp.route('/api/containers/available/<int:batch_id>')
 @login_required
