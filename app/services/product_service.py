@@ -76,15 +76,17 @@ class ProductService:
     @staticmethod
     def get_product_summary_skus():
         """Get summary of all products with their total quantities"""
+        from ..models import InventoryItem
+        
         product_summaries = db.session.query(
             Product.id.label('product_id'),
             Product.name.label('product_name'),
             Product.base_unit.label('product_base_unit'),
-            func.sum(ProductSKU.current_quantity).label('total_quantity'),
+            func.sum(InventoryItem.quantity).label('total_quantity'),
             func.count(ProductSKU.id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
             func.max(ProductSKU.updated_at).label('last_updated')
-        ).join(ProductSKU).filter(
+        ).join(ProductSKU).join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
             ProductSKU.is_active == True,
             Product.is_active == True,
             Product.organization_id == current_user.organization_id
@@ -123,7 +125,7 @@ class ProductService:
                 'sku_id': sku.id,
                 'variant_name': sku.variant.name,
                 'size_label': sku.size_label,
-                'quantity': sku.current_quantity,
+                'quantity': sku.inventory_item.quantity if sku.inventory_item else 0.0,
                 'unit': sku.unit,
                 'unit_cost': sku.unit_cost,
                 'expiration_date': sku.expiration_date,
@@ -155,8 +157,10 @@ class ProductService:
     @staticmethod
     def get_low_stock_skus(threshold_multiplier: float = 1.0):
         """Get SKUs that are low on stock"""
-        return ProductSKU.query.filter(
-            ProductSKU.current_quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
+        from ..models import InventoryItem
+        
+        return ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
+            InventoryItem.quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True,
             ProductSKU.organization_id == current_user.organization_id
         ).all()
@@ -168,7 +172,7 @@ class ProductService:
             return None
 
         active_skus = [sku for sku in product.skus if sku.is_active]
-        total_inventory = sum(sku.current_quantity for sku in active_skus)
+        total_inventory = sum((sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in active_skus)
         low_stock_count = sum(1 for sku in active_skus if sku.is_low_stock)
 
         return {

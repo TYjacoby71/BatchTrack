@@ -115,7 +115,19 @@ def new_product():
             db.session.add(variant)
             db.session.flush()  # Get the variant ID
 
-            # Step 3: Create the base SKU with "Bulk" size label
+            # Step 3: Create inventory item for the SKU
+            inventory_item = InventoryItem(
+                name=f"{name} - Base - Bulk",
+                type='product',
+                unit=unit,
+                quantity=0.0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(inventory_item)
+            db.session.flush()  # Get the inventory_item ID
+
+            # Step 4: Create the base SKU with "Bulk" size label
             from ...services.product_service import ProductService
             sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
             sku = ProductSKU(
@@ -128,8 +140,8 @@ def new_product():
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id,
-                # Initialize inventory
-                current_quantity=0.0,
+                # Link to inventory item
+                inventory_item_id=inventory_item.id,
                 is_active=True,
                 is_product_active=True
             )
