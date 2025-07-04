@@ -162,7 +162,7 @@ function updateTotals() {
   }
 }
 
-function loadVariants() {
+async function loadVariants() {
   const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_id');
 
@@ -182,58 +182,58 @@ function loadVariants() {
   variantSelect.innerHTML = '<option value="">Loading variants...</option>';
   variantSelect.disabled = true;
 
-  // Fetch variants for the selected product using the correct API endpoint
-  // First get the actual Product ID from the SKU
-            const productResponse = await fetch(`/products/api/sku/${productId}/product`);
-            if (!productResponse.ok) {
-                console.error('Failed to get product from SKU:', productResponse.status);
-                return;
-            }
-            const productData = await productResponse.json();
-            const actualProductId = productData.product_id;
-            
-            fetch(`/products/api/${actualProductId}/variants`)
-    .then(response => {
-      if (!response.ok) {
-        console.error('Error loading variants:', response.status, response.statusText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      variantSelect.innerHTML = '<option value="">Select variant...</option>';
+  try {
+    // First get the actual Product ID from the SKU
+    const productResponse = await fetch(`/products/api/sku/${productId}/product`);
+    if (!productResponse.ok) {
+      console.error('Failed to get product from SKU:', productResponse.status);
+      variantSelect.innerHTML = '<option value="">Error loading product</option>';
+      return;
+    }
+    const productData = await productResponse.json();
+    const actualProductId = productData.product_id;
+    
+    // Now fetch variants for the product
+    const variantResponse = await fetch(`/products/api/${actualProductId}/variants`);
+    if (!variantResponse.ok) {
+      console.error('Error loading variants:', variantResponse.status, variantResponse.statusText);
+      throw new Error(`HTTP ${variantResponse.status}: ${variantResponse.statusText}`);
+    }
+    
+    const data = await variantResponse.json();
+    variantSelect.innerHTML = '<option value="">Select variant...</option>';
 
-      // The API returns an array of variants
-      if (data && Array.isArray(data) && data.length > 0) {
-        data.forEach(variant => {
-          const option = document.createElement('option');
-          option.value = variant.id;  // Use variant ID, not name
-          option.textContent = variant.name;
-          variantSelect.appendChild(option);
-        });
-
-        // Auto-select first variant (usually Base)
-        if (data.length > 0) {
-          variantSelect.value = data[0].id;
-        }
-      } else {
-        // Show message if no variants found
+    // The API returns an array of variants
+    if (data && Array.isArray(data) && data.length > 0) {
+      data.forEach(variant => {
         const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No variants available';
+        option.value = variant.id;  // Use variant ID, not name
+        option.textContent = variant.name;
         variantSelect.appendChild(option);
+      });
+
+      // Auto-select first variant (usually Base)
+      if (data.length > 0) {
+        variantSelect.value = data[0].id;
       }
+    } else {
+      // Show message if no variants found
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No variants available';
+      variantSelect.appendChild(option);
+    }
 
-      // Enable the variant select
-      variantSelect.disabled = false;
-    })
-    .catch(error => {
-      console.error('Error loading variants:', error);
-
-      // Fallback: Show error message
-      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
-      variantSelect.disabled = false;
-    });
+    // Enable the variant select
+    variantSelect.disabled = false;
+    
+  } catch (error) {
+    console.error('Error loading variants:', error);
+    
+    // Fallback: Show error message
+    variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+    variantSelect.disabled = false;
+  }
 }
 
 function updateContainerSummary() {

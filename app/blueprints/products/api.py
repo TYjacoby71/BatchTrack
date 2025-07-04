@@ -8,6 +8,30 @@ from sqlalchemy import func
 # Import the blueprint from __init__.py
 from . import products_api_bp
 
+@products_api_bp.route('/sku/<int:sku_id>/product')
+@login_required
+def get_product_from_sku(sku_id):
+    """Get the Product ID from a SKU ID"""
+    try:
+        sku = ProductSKU.query.filter_by(
+            id=sku_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not sku:
+            return jsonify({'error': 'SKU not found'}), 404
+
+        if not sku.product_id:
+            return jsonify({'error': 'SKU has no associated product'}), 404
+
+        return jsonify({
+            'product_id': sku.product_id,
+            'sku_id': sku.id
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @products_api_bp.route('/')
 @login_required
 def get_products():
