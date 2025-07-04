@@ -293,14 +293,31 @@ def view_batch_in_progress(batch_identifier):
     all_ingredients = InventoryItem.query.filter_by(type='ingredient').order_by(InventoryItem.name).all()
     inventory_items = InventoryItem.query.order_by(InventoryItem.name).all()
 
-    # Get products for finish batch modal - use Product model
+    # Get products with their variants for finish batch modal
     from ...models import Product
     
-    # Get active products for the organization
+    # Get active products for the organization with their variants
     products = Product.query.filter_by(
         is_active=True,
         organization_id=current_user.organization_id
     ).all()
+    
+    # Ensure variants are loaded for each product and create base variant if none exist
+    for product in products:
+        # This will trigger the loading of variants relationship
+        variants = product.variants.filter_by(is_active=True).all()
+        
+        # If no variants exist, create a base variant
+        if not variants:
+            from ...models import ProductVariant
+            base_variant = ProductVariant(
+                product_id=product.id,
+                name='Base',
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(base_variant)
+            db.session.commit()
 
     # Calculate container breakdown for finish modal
     container_breakdown = []
