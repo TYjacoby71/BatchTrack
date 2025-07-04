@@ -10,16 +10,12 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     
-    # CORE PRODUCT IDENTIFICATION - Now using foreign keys
+    # CORE PRODUCT IDENTIFICATION - Simple foreign key relationships only
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=False)
     size_label = db.Column(db.String(64), nullable=False, default='Bulk')
     sku_code = db.Column(db.String(64), unique=True, nullable=False)
     sku_name = db.Column(db.String(128), nullable=True)  # Optional human-readable name override
-    
-    # LEGACY FIELDS - Keep for backward compatibility during migration
-    product_name = db.Column(db.String(128), nullable=True)  # Will be removed after migration
-    variant_name = db.Column(db.String(128), nullable=True)  # Will be removed after migration
     
     # INVENTORY TRACKING - SINGLE SOURCE OF TRUTH
     current_quantity = db.Column(db.Float, default=0.0)  # Sum of all history entries
@@ -91,10 +87,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
         """Human-readable SKU name"""
         if self.sku_name:
             return self.sku_name
-        # Use relationships if available, fall back to legacy fields
-        product_name = self.product.name if self.product else self.product_name
-        variant_name = self.variant.name if self.variant else self.variant_name
-        return f"{product_name} - {variant_name} - {self.size_label}"
+        # Always use relationships - no fallback to legacy fields
+        return f"{self.product.name} - {self.variant.name} - {self.size_label}"
     
     @property
     def product_base_unit(self):
@@ -178,9 +172,6 @@ class ProductSKU(ScopedModelMixin, db.Model):
         db.Index('idx_marketplace_sync', 'marketplace_sync_status'),
         db.Index('idx_location', 'location_id'),
         db.Index('idx_discontinued', 'is_discontinued'),
-        # Legacy indexes for backward compatibility
-        db.Index('idx_legacy_product_name', 'product_name'),
-        db.Index('idx_legacy_variant_name', 'variant_name'),
     )
     
     def __repr__(self):

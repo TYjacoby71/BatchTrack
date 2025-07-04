@@ -88,7 +88,6 @@ class ProductVariant(ScopedModelMixin, db.Model):
     # Unique constraint on product + variant name
     __table_args__ = (
         db.UniqueConstraint('product_id', 'name', name='unique_product_variant'),
-        db.Index('idx_product_variant', 'product_id', 'name'),
     )
     
     def __repr__(self):

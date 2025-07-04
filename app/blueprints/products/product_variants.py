@@ -9,125 +9,80 @@ from . import products_bp
 @login_required
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
-    # Get the product name from product_id
-    base_sku = ProductSKU.query.filter_by(
-        id=product_id,
-        organization_id=current_user.organization_id
-    ).first()
-    
-    if not base_sku:
-        return jsonify({'error': 'Product not found'}), 404
+    try:
+        from ...models.product import Product, ProductVariant
+        from ...models.product_sku import ProductSKU
         
-    product_name = base_sku.product_name
-    
-    if request.is_json:
-        data = request.get_json()
-        variant_name = data.get('name')
-        sku_code = data.get('sku')
-        description = data.get('description')
+        # Get the Product record using the new model structure
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get variant name from request
+        if request.is_json:
+            data = request.get_json()
+            variant_name = data.get('name')
+            description = data.get('description')
+        else:
+            variant_name = request.form.get('name')
+            description = request.form.get('description')
 
         if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
 
-        # Get the parent product's base unit from existing SKUs
-        existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-        if not existing_product_sku:
-            return jsonify({'error': 'Parent product not found'}), 404
-
-        parent_unit = existing_product_sku.unit
+        variant_name = variant_name.strip()
 
         # Check if variant already exists for this product
-        existing_variant = ProductSKU.query.filter_by(
-            product_name=product_name, 
-            variant_name=variant_name.strip()
+        existing_variant = ProductVariant.query.filter_by(
+            product_id=product.id,
+            name=variant_name
         ).first()
 
         if existing_variant:
             return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
 
-        try:
-            # Create new SKU with inherited unit and default Bulk size
-            sku = ProductService.get_or_create_sku(
-                product_name=product_name,
-                variant_name=variant_name.strip(),
-                size_label='Bulk',  # Always create Bulk size for new variants
-                unit=parent_unit,   # Inherit parent product's unit
-                sku_code=sku_code,
-                variant_description=description
-            )
-
-            # Set additional properties BEFORE committing
-            sku.description = description
-            sku.organization_id = existing_product_sku.organization_id
-            sku.low_stock_threshold = existing_product_sku.low_stock_threshold
-
-            db.session.commit()
-
-            return jsonify({
-                'success': True,
-                'variant': {
-                    'id': sku.id,
-                    'name': sku.variant_name,
-                    'sku': sku.sku_code,
-                    'unit': sku.unit,
-                    'size_label': sku.size_label
-                }
-            })
-
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
-
-    # Handle form data as well
-    variant_name = request.form.get('name')
-    sku_code = request.form.get('sku')
-    description = request.form.get('description')
-
-    if not variant_name or variant_name.strip() == '':
-        return jsonify({'error': 'Variant name is required'}), 400
-
-    try:
-        # Get the parent product's base unit from existing SKUs
-        existing_product_sku = ProductSKU.query.filter_by(product_name=product_name).first()
-        if not existing_product_sku:
-            return jsonify({'error': 'Parent product not found'}), 404
-
-        parent_unit = existing_product_sku.unit
-
-        # Check if variant already exists
-        existing_variant = ProductSKU.query.filter_by(
-            product_name=product_name, 
-            variant_name=variant_name.strip()
-        ).first()
-
-        if existing_variant:
-            return jsonify({'error': f'Variant "{variant_name}" already exists for this product'}), 400
-
-        # Create new SKU with inherited unit
-        sku = ProductService.get_or_create_sku(
-            product_name=product_name,
-            variant_name=variant_name.strip(),
-            size_label='Bulk',
-            unit=parent_unit,
-            sku_code=sku_code,
-            variant_description=description
+        # Create the ProductVariant first
+        new_variant = ProductVariant(
+            product_id=product.id,
+            name=variant_name,
+            description=description,
+            organization_id=current_user.organization_id
         )
+        db.session.add(new_variant)
+        db.session.flush()  # Get the variant ID without committing
 
-        # Set additional properties BEFORE committing
-        sku.description = description
-        sku.organization_id = existing_product_sku.organization_id
-        sku.low_stock_threshold = existing_product_sku.low_stock_threshold
-
+        # Now create the ProductSKU for this variant
+        from ...utils.fifo_generator import generate_fifo_code
+        
+        sku_code = f"{product.name.replace(' ', '')[:3].upper()}-{variant_name.replace(' ', '')[:3].upper()}-BULK"
+        
+        new_sku = ProductSKU(
+            product_id=product.id,
+            variant_id=new_variant.id,
+            size_label='Bulk',
+            sku_code=sku_code,
+            unit=product.base_unit,  # Inherit from parent product
+            low_stock_threshold=product.low_stock_threshold,
+            description=description,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        db.session.add(new_sku)
         db.session.commit()
 
         return jsonify({
             'success': True,
             'variant': {
-                'id': sku.id,
-                'name': sku.variant_name,
-                'sku': sku.sku_code,
-                'unit': sku.unit,
-                'size_label': sku.size_label
+                'id': new_variant.id,
+                'name': new_variant.name,
+                'sku_id': new_sku.id,
+                'sku': new_sku.sku_code,
+                'unit': new_sku.unit,
+                'size_label': new_sku.size_label
             }
         })
 
