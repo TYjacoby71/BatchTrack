@@ -103,9 +103,10 @@ class ProductSKU(ScopedModelMixin, db.Model):
     sku_code = db.Column(db.String(64), unique=True, nullable=False)
     sku_name = db.Column(db.String(128), nullable=True)
     
-    # INVENTORY TRACKING
-    current_quantity = db.Column(db.Float, default=0.0)
-    reserved_quantity = db.Column(db.Float, default=0.0)
+    # INVENTORY ITEM REFERENCE - unified inventory control
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    
+    # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)
     unit = db.Column(db.String(32), nullable=False)
     low_stock_threshold = db.Column(db.Float, default=10.0)
     
@@ -196,6 +197,17 @@ class ProductSKU(ScopedModelMixin, db.Model):
         return self.product.base_unit if self.product else self.unit
     
     @property
+    def current_quantity(self):
+        """Get current quantity from unified inventory"""
+        return self.inventory_item.quantity if self.inventory_item else 0.0
+    
+    @property
+    def reserved_quantity(self):
+        """Reserved quantity - for compatibility"""
+        # This could be calculated from ProductSKUHistory if needed
+        return 0.0
+    
+    @property
     def is_low_stock(self):
         """Check if current stock is below threshold"""
         return self.current_quantity <= self.low_stock_threshold
@@ -218,6 +230,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
     # RELATIONSHIPS
     product = db.relationship('Product', back_populates='skus')
     variant = db.relationship('ProductVariant', back_populates='skus')
+    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='product_sku')
     batch = db.relationship('Batch', foreign_keys=[batch_id], backref='source_product_skus')
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
