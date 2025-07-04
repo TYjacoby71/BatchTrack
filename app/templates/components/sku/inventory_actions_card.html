@@ -4,7 +4,7 @@
   </div>
   <div class="card-body">
     <!-- Add Existing Inventory Form -->
-    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('products.adjust_sku', sku_id=sku.id) }}">
+    <form id="addExistingInventoryForm" method="POST" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="row">
         <div class="col-md-3">
@@ -85,6 +85,95 @@
   </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-tools"></i> Quick Actions
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-success" onclick="showInventoryModal('sale')">
+                        <i class="fas fa-cash-register"></i> Record Sale
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-info" onclick="showInventoryModal('gift')">
+                        <i class="fas fa-gift"></i> Record Gift
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-warning" onclick="showInventoryModal('damage')">
+                        <i class="fas fa-exclamation-triangle"></i> Record Damage
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-primary" onclick="showInventoryModal('manual')">
+                        <i class="fas fa-edit"></i> Manual Adjust
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-secondary" onclick="showInventoryModal('recount')">
+                        <i class="fas fa-count"></i> Physical Count
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSkuModal">
+                        <i class="fas fa-cog"></i> Edit Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Inventory Modal -->
+<div class="modal fade" id="inventoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Inventory Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="inventoryForm" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action_type" id="actionType" value="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" step="0.01" required>
+                        <div class="form-text">Current stock: {{ sku.current_quantity or 0 }} {{ sku.unit }}</div>
+                    </div>
+                    <div class="mb-3" id="salePriceDiv" style="display: none;">
+                        <label for="salePrice" class="form-label">Sale Price ($)</label>
+                        <input type="number" class="form-control" id="salePrice" name="sale_price" step="0.01" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitInventoryAdjustment()">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function toggleShelfLifeSection() {
   const checkbox = document.getElementById('is_perishable');
@@ -135,4 +224,3 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-</div>

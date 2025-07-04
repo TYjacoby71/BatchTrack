@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=sku.id) }}">{{ sku.product_name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_variant', product_id=sku.id, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('product_variants.view_variant', product_id=sku.id, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
                     <li class="breadcrumb-item active">{{ sku.size_label }}</li>
                 </ol>
             </nav>
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {% include 'components/sku/sku_details_card.html' %}
 
             <!-- Inventory Actions Card Component -->
-            
+            {% include 'components/sku/inventory_actions_card.html' %}
 
             <!-- FIFO Filter -->
             <div class="row mb-3">
@@ -123,9 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <!-- History Table Component -->
             {% include 'components/sku/history_table.html' %}
-
-            <!-- Inventory Actions Card -->
-            
 
             <!-- Include Modals -->
             {% include 'components/sku/modals.html' %}
@@ -149,82 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-
-
-
-        <div class="col-md-6">
-            <label class="form-label">Quantity</label>
-            <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" required>
-            <small class="text-muted">${skuData.unit} (Available: ${skuData.availableQuantity})</small>
-        </div>
-    `;
-
-    // Action-specific fields
-    switch(actionType) {
-        case 'sale':
-            fields += `
-                
-                <div class="col-md-6">
-                    <label class="form-label">Adjustment Type</label>
-                    <select class="form-select" name="adjustment_type" required>
-                        <option value="increase">Increase Stock (+)</option>
-                        <option value="decrease">Decrease Stock (-)</option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Reason</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Reason for adjustment..." required>
-                </div>
-            `;
-            break;
-
-        case 'return':
-            fields += `
-                <div class="col-md-6">
-                    <label class="form-label">Return Source</label>
-                    <select class="form-select" name="return_source">
-                        <option value="shopify">Shopify Return</option>
-                        <option value="manual">Manual Return</option>
-                        <option value="damaged">Damaged Return</option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Return Details</label>
-                    <input type="text" class="form-control" name="notes" placeholder="Return reason, order ID, etc.">
-                </div>
-            `;
-            break;
-    }
-
-    return fields;
-}
-
-function resetActionForm() {
-    document.getElementById('actionType').value = '';
-    document.getElementById('actionFormContainer').style.display = 'none';
-    document.getElementById('dynamicFormFields').innerHTML = '';
-}
-
-// Populate FIFO adjustment modal with data
-document.addEventListener('DOMContentLoaded', function() {
-    const adjustModal = document.getElementById('adjustFifoModal');
-    if (adjustModal) {
-        adjustModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const inventoryId = button.getAttribute('data-inventory-id');
-            const currentQuantity = button.getAttribute('data-current-quantity');
-            const unit = button.getAttribute('data-unit');
-
-            // Set the inventory ID
-            document.getElementById('modalInventoryId').value = inventoryId;
-
-            // Update help text
-            document.getElementById('quantityHelp').textContent = 
-                `Current quantity: ${currentQuantity} ${unit}. For recount: enter new total quantity. For deductions: enter amount to remove.`;
-        });
-    }
-});
-
 function toggleFifoFilter() {
     const checkbox = document.getElementById('fifoFilter');
     const url = new URL(window.location);
