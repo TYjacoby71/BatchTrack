@@ -28,21 +28,7 @@
           {% if sku.size_label == 'Bulk' %}
           <input type="text" name="input_unit" class="form-control" value="{{ sku.product.base_unit }}" readonly>
           {% else %}
-          <select name="input_unit" class="form-select" required>
-            <option value="{{ sku.unit }}" selected>{{ sku.unit }}</option>
-            {% if sku.unit != 'count' %}
-            <option value="count">count</option>
-            {% endif %}
-            {% if sku.unit != 'gram' %}
-            <option value="gram">gram</option>
-            {% endif %}
-            {% if sku.unit != 'floz' %}
-            <option value="floz">floz</option>
-            {% endif %}
-            {% if sku.unit != 'ml' %}
-            <option value="ml">ml</option>
-            {% endif %}
-          </select>
+          <input type="text" name="input_unit" class="form-control" value="count" readonly>
           {% endif %}
         </div>
         <div class="col-md-2">
