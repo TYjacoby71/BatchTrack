@@ -38,33 +38,22 @@ def get_products():
 @products_api_bp.route('/<int:product_id>/variants')
 @login_required
 def get_product_variants(product_id):
-    """Get variants for a specific product by ID (supports both Product ID and SKU ID for backward compatibility)"""
+    """Get variants for a specific product by ID"""
     try:
         from ...models.product import Product, ProductVariant
         
-        # First try to get the product directly
+        # Get the product with org scoping
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
-        # If no Product found, try to find it via SKU (backward compatibility)
-        if not product:
-            # Maybe the product_id is actually a SKU ID
-            sku = ProductSKU.query.filter_by(
-                id=product_id,
-                organization_id=current_user.organization_id
-            ).first()
-            
-            if sku and sku.product_id:
-                product = Product.query.get(sku.product_id)
         
         if not product:
             return jsonify({'error': 'Product not found'}), 404
         
         # Get active variants for this product
         variants = ProductVariant.query.filter_by(
-            product_id=product.id,
+            product_id=product_id,
             is_active=True
         ).all()
 
