@@ -104,17 +104,8 @@ def complete_batch(batch_id):
                     container_id = int(key.replace('container_final_', ''))
                     container_overrides[container_id] = int(value)
 
-            # Get product and variant from form data
-        product_id = request.form.get('product_id')
-        variant_id = request.form.get('variant_id')
-        
-        # Save product selection to batch
-        if product_id and variant_id:
-            batch.product_id = int(product_id)
-            batch.variant_id = int(variant_id)
-
-        # For actual products, create or get the target SKU
-        if batch.product_id and batch.variant_id:
+            # For actual products, create or get the target SKU
+            if batch.product_id and batch.variant_id:
                 from ...models import Product, ProductVariant
                 
                 # Get the product and variant
