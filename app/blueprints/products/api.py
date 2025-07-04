@@ -95,6 +95,64 @@ def get_product_variants(product_id):
 @products_api_bp.route('/search')
 @login_required
 def search_products():
+    """Search SKUs by product name, variant, or size label"""
+    search_term = request.args.get('q', '').strip()
+    if not search_term:
+        return jsonify([])
+    
+    try:
+        skus = ProductService.search_skus(search_term)
+        results = []
+        for sku in skus:
+            results.append({
+                'sku_id': sku.id,
+                'sku_code': sku.sku_code,
+                'product_name': sku.product.name,
+                'variant_name': sku.variant.name,
+                'size_label': sku.size_label,
+                'current_quantity': float(sku.current_quantity or 0),
+                'unit': sku.unit
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@products_api_bp.route('/low-stock')
+@login_required
+def get_low_stock():
+    """Get SKUs that are low on stock"""
+    threshold_multiplier = float(request.args.get('threshold', 1.0))
+    
+    try:
+        low_stock_skus = ProductService.get_low_stock_skus(threshold_multiplier)
+        results = []
+        for sku in low_stock_skus:
+            results.append({
+                'sku_id': sku.id,
+                'sku_code': sku.sku_code,
+                'product_name': sku.product.name,
+                'variant_name': sku.variant.name,
+                'size_label': sku.size_label,
+                'current_quantity': float(sku.current_quantity or 0),
+                'low_stock_threshold': float(sku.low_stock_threshold or 0),
+                'unit': sku.unit
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@products_api_bp.route('/<int:product_id>/inventory-summary')
+@login_required
+def get_product_inventory_summary_api(product_id):
+    """Get inventory summary for a specific product"""
+    try:
+        summary = ProductService.get_product_inventory_summary(product_id)
+        if not summary:
+            return jsonify({'error': 'Product not found'}), 404
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+def search_products():
     """Search products by name"""
     query = request.args.get('q', '').strip()
 
