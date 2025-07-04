@@ -224,22 +224,48 @@ def dispose_expired_sku(sku_id):
             if expired_total >= quantity:
                 target_expired = True
 
-        # Use centralized inventory adjustment service with InventoryItem
-        success = process_inventory_adjustment(
-            item_id=sku.inventory_item_id,  # Use the InventoryItem ID
-            quantity=quantity,
-            change_type=change_type,
-            unit=unit,
-            notes=notes,
-            created_by=current_user.id,
-            item_type='product',
-            customer=customer,
-            sale_price=sale_price_float,
-            order_id=order_id,
-            cost_override=cost_override_float,
-            custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
-        )
+        # For recount operations, validate the change is within reasonable bounds
+        if change_type == 'recount':
+            # Validate recount quantity is non-negative
+            if quantity < 0:
+                error_msg = 'Recount quantity cannot be negative'
+                if request.is_json:
+                    return jsonify({'error': error_msg}), 400
+                flash(error_msg, 'error')
+                return redirect(url_for('products.view_sku', sku_id=sku_id))
+
+        # Handle reservation operations specially
+        if change_type in ['reserved', 'unreserved']:
+            # These operations should work with the SKU directly, not the underlying inventory item
+            # since reservations are a product-specific concept
+            success = process_inventory_adjustment(
+                item_id=sku_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                order_id=order_id
+            )
+        else:
+            # All other operations use the underlying inventory item for FIFO consistency
+            success = process_inventory_adjustment(
+                item_id=sku.inventory_item_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                sale_price=sale_price_float,
+                order_id=order_id,
+                cost_override=cost_override_float,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days
+            )
 
         if success:
             message = f'SKU inventory adjusted successfully'
