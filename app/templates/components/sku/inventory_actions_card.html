@@ -1,4 +1,3 @@
-
 <div class="card mt-4">
   <div class="card-header">
     <h5 class="mb-0">Inventory Actions</h5>
@@ -26,7 +25,25 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">Unit</label>
-          <input type="text" name="input_unit" class="form-control" value="{{ sku.unit }}" readonly>
+          {% if sku.size_label == 'Bulk' %}
+          <input type="text" name="input_unit" class="form-control" value="{{ sku.product.base_unit }}" readonly>
+          {% else %}
+          <select name="input_unit" class="form-select" required>
+            <option value="{{ sku.unit }}" selected>{{ sku.unit }}</option>
+            {% if sku.unit != 'count' %}
+            <option value="count">count</option>
+            {% endif %}
+            {% if sku.unit != 'gram' %}
+            <option value="gram">gram</option>
+            {% endif %}
+            {% if sku.unit != 'floz' %}
+            <option value="floz">floz</option>
+            {% endif %}
+            {% if sku.unit != 'ml' %}
+            <option value="ml">ml</option>
+            {% endif %}
+          </select>
+          {% endif %}
         </div>
         <div class="col-md-2">
           <label class="form-label">Cost per Unit</label>
@@ -87,7 +104,7 @@ function toggleShelfLifeSection() {
   const checkbox = document.getElementById('is_perishable');
   const shelfLifeSection = document.getElementById('shelfLifeSection');
   const shelfLifeDaysInput = document.getElementById('shelf_life_days');
-  
+
   if (checkbox.checked) {
     shelfLifeSection.style.display = 'block';
     shelfLifeDaysInput.required = true;
@@ -112,11 +129,11 @@ document.getElementById('entry_date').addEventListener('change', function() {
 function updateExpirationDate() {
   const shelfLifeDays = parseInt(document.getElementById('shelf_life_days').value);
   const entryDate = document.getElementById('entry_date').value;
-  
+
   if (shelfLifeDays && entryDate) {
     const entry = new Date(entryDate);
     const expiration = new Date(entry.getTime() + (shelfLifeDays * 24 * 60 * 60 * 1000));
-    
+
     const expirationStr = expiration.toISOString().split('T')[0];
     document.getElementById('expiration_date_display').value = expirationStr;
     document.getElementById('expiration_date').value = expirationStr;
