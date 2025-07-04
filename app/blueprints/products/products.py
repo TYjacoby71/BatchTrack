@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
-from ...models.product_sku import ProductSKUHistory
+from ...models.product import ProductSKUHistory
 from ...models.product import Product, ProductVariant
 from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
