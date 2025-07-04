@@ -53,7 +53,10 @@ def edit_sku(sku_id):
         # Handle unit cost override
         if request.form.get('override_unit_cost'):
             unit_cost = request.form.get('unit_cost')
-            if unit_cost:
+            if unit_cost and sku.inventory_item:
+                # Update the underlying inventory item cost
+                sku.inventory_item.cost_per_unit = float(unit_cost)
+                # Also update SKU unit_cost for compatibility
                 sku.unit_cost = float(unit_cost)
         
         # Handle perishable settings
