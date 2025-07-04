@@ -317,6 +317,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
 
     // Global functions
+    window.loadVariants = function() {
+        // Reload the page to refresh variant data
+        location.reload();
+    };
+
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');
         if (!form) return;
@@ -343,7 +348,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while adding the variant.');
+            alert('An error occurred while adding variant');
+        });
+    }; adding the variant.');
         });
     };
 
