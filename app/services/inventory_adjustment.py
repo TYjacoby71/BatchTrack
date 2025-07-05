@@ -238,7 +238,7 @@ def process_inventory_adjustment(
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
             else:
                 history = InventoryHistory(
@@ -253,7 +253,7 @@ def process_inventory_adjustment(
                     created_by=created_by,
                     quantity_used=quantity_used_value,  # Only set for actual consumption
                     used_for_batch_id=batch_id,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
             db.session.add(history)
         # Update quantity with rounding - handle ProductSKU vs InventoryItem
@@ -306,7 +306,7 @@ def process_inventory_adjustment(
                         created_by=created_by,
                         quantity_used=0.0,  # Credits don't consume inventory
                         used_for_batch_id=batch_id,
-                        organization_id=current_user.organization_id
+                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                     )
                     db.session.add(credit_history)
 
@@ -327,7 +327,7 @@ def process_inventory_adjustment(
                     quantity_used=0.0,  # Restocks don't consume inventory
                     expiration_date=expiration_date,
                     used_for_batch_id=batch_id,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
                 db.session.add(excess_history)
         else:
@@ -355,7 +355,7 @@ def process_inventory_adjustment(
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
             else:
                 history = InventoryHistory(
@@ -373,7 +373,7 @@ def process_inventory_adjustment(
                     is_perishable=item.is_perishable if expiration_date else False,
                     batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
                     used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
-                    organization_id=current_user.organization_id
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
             db.session.add(history)
 

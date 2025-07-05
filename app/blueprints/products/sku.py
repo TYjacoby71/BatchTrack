@@ -100,10 +100,4 @@ def edit_sku(sku_id):
     
     return redirect(url_for('sku.view_sku', sku_id=sku_id))
 
-@sku_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
-@login_required
-def adjust_sku(sku_id):
-    """Legacy route - redirect to consolidated product inventory adjustment"""
-    # Redirect to the consolidated product inventory adjustment route
-    from .product_inventory_routes import adjust_sku_inventory
-    return adjust_sku_inventory(sku_id)
+# Legacy adjustment route removed - all adjustments must go through centralized service
