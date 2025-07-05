@@ -106,24 +106,199 @@ def adjust_sku_inventory(sku_id):
                 flash(error_msg, 'error')
                 return redirect(url_for('products.view_sku', sku_id=sku_id))
 
-        # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
-        success = process_inventory_adjustment(
-            item_id=sku_id,
-            quantity=quantity,
-            change_type=change_type,
-            unit=unit,
-            notes=notes,
-            created_by=current_user.id,
-            item_type='product',
-            customer=customer,
-            sale_price=sale_price_float,
-            order_id=order_id,
-            cost_override=cost_override_float,
-            custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
-        )
+            # Special handling for recount - mirror raw inventory system
+            # Check if SKU has no history - this indicates it needs FIFO initialization
+            from ...models import ProductSKUHistory
+            history_count = ProductSKUHistory.query.filter_by(sku_id=sku_id).count()
+
+            if history_count == 0 and quantity > 0:
+                # This is essentially initial stock creation - handle like raw inventory system
+                from ...utils.fifo_generator import generate_fifo_id
+                from datetime import datetime
+
+                # Create initial FIFO entry directly
+                history = ProductSKUHistory(
+                    sku_id=sku_id,
+                    change_type='restock',  # Use restock for initial creation
+                    quantity_change=quantity,
+                    remaining_quantity=quantity,
+                    unit=unit,
+                    notes=notes or 'Initial stock creation via recount',
+                    created_by=current_user.id,
+                    expiration_date=custom_expiration_date,
+                    shelf_life_days=custom_shelf_life_days,
+                    is_perishable=custom_expiration_date is not None,
+                    fifo_code=generate_fifo_id('restock'),
+                    organization_id=current_user.organization_id
+                )
+                db.session.add(history)
+
+                # Update SKU quantity through inventory_item
+                sku.inventory_item.quantity = quantity
+                if cost_override_float:
+                    sku.inventory_item.cost_per_unit = cost_override_float
+
+                db.session.commit()
+                
+                message = 'Initial SKU inventory created successfully'
+                if request.is_json:
+                    return jsonify({
+                        'success': True,
+                        'message': message,
+                        'new_quantity': sku.current_quantity
+                    })
+                flash(message, 'success')
+                return redirect(url_for('sku.view_sku', sku_id=sku_id))
+            else:
+                # Pre-validation check for existing SKUs with history - mirror raw inventory
+                from ...services.inventory_adjustment import validate_inventory_fifo_sync
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku_id, item_type='product')
+                if not is_valid:
+                    error_msg = f'Pre-recount validation failed: {error_msg}'
+                    if request.is_json:
+                        return jsonify({'error': error_msg}), 400
+                    flash(error_msg, 'error')
+                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+
+        # Special recount handling - mirror raw inventory system exactly
+        if change_type == 'recount':
+            # Handle recount with FIFO sync like raw inventory
+            from ...models import ProductSKUHistory
+            from ...utils.fifo_generator import generate_fifo_id
+            from datetime import datetime
+
+            current_qty = sku.current_quantity
+            qty_difference = quantity - current_qty
+
+            if qty_difference == 0:
+                # No change needed
+                success = True
+                message = 'Recount completed - no adjustment needed'
+            elif qty_difference > 0:
+                # Adding inventory - create new FIFO entry
+                # Check if we need to fill existing lots first
+                existing_entries = ProductSKUHistory.query.filter(
+                    ProductSKUHistory.sku_id == sku_id,
+                    ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change,
+                    ProductSKUHistory.quantity_change > 0
+                ).order_by(ProductSKUHistory.timestamp.asc()).all()
+
+                remaining_to_add = qty_difference
+
+                # Fill existing unfilled lots first
+                for entry in existing_entries:
+                    if remaining_to_add <= 0:
+                        break
+                    
+                    can_fill = entry.quantity_change - entry.remaining_quantity
+                    if can_fill > 0:
+                        fill_amount = min(can_fill, remaining_to_add)
+                        entry.remaining_quantity += fill_amount
+                        remaining_to_add -= fill_amount
+
+                # Create new lot for any remaining quantity
+                if remaining_to_add > 0:
+                    history = ProductSKUHistory(
+                        sku_id=sku_id,
+                        change_type='recount',
+                        quantity_change=remaining_to_add,
+                        remaining_quantity=remaining_to_add,
+                        unit=unit,
+                        notes=notes or 'Recount adjustment - quantity increase',
+                        created_by=current_user.id,
+                        expiration_date=custom_expiration_date,
+                        shelf_life_days=custom_shelf_life_days,
+                        is_perishable=custom_expiration_date is not None,
+                        fifo_code=generate_fifo_id('recount'),
+                        unit_cost=cost_override_float or sku.cost_per_unit,
+                        organization_id=current_user.organization_id
+                    )
+                    db.session.add(history)
+
+                # Update SKU quantity
+                sku.inventory_item.quantity = quantity
+                if cost_override_float:
+                    sku.inventory_item.cost_per_unit = cost_override_float
+
+                success = True
+            else:
+                # Reducing inventory - deduct from remaining quantities (including expired)
+                # This is the key fix - recount can deduct from ANY lots, not just fresh ones
+                from ...models import ProductSKUHistory
+                
+                all_entries_with_remaining = ProductSKUHistory.query.filter(
+                    ProductSKUHistory.sku_id == sku_id,
+                    ProductSKUHistory.remaining_quantity > 0
+                ).order_by(ProductSKUHistory.timestamp.asc()).all()
+
+                remaining_to_deduct = abs(qty_difference)
+                
+                # Deduct from all available lots (fresh and expired)
+                for entry in all_entries_with_remaining:
+                    if remaining_to_deduct <= 0:
+                        break
+                    
+                    deduction = min(entry.remaining_quantity, remaining_to_deduct)
+                    entry.remaining_quantity -= deduction
+                    remaining_to_deduct -= deduction
+                    
+                    # Create deduction history entry
+                    deduction_history = ProductSKUHistory(
+                        sku_id=sku_id,
+                        change_type='recount',
+                        quantity_change=-deduction,
+                        remaining_quantity=0,
+                        unit=unit,
+                        notes=f"{notes or 'Recount adjustment'} (From FIFO #{entry.id})",
+                        created_by=current_user.id,
+                        fifo_reference_id=entry.id,
+                        unit_cost=entry.unit_cost,
+                        organization_id=current_user.organization_id
+                    )
+                    db.session.add(deduction_history)
+
+                if remaining_to_deduct > 0:
+                    # This shouldn't happen in a proper recount, but handle it
+                    db.session.rollback()
+                    success = False
+                    error_msg = f'Recount failed: tried to deduct {abs(qty_difference)} but only {abs(qty_difference) - remaining_to_deduct} available'
+                else:
+                    # Update SKU quantity
+                    sku.inventory_item.quantity = quantity
+                    success = True
+
+            if success:
+                db.session.commit()
+        else:
+            # All other operations use the centralized service
+            success = process_inventory_adjustment(
+                item_id=sku_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                sale_price=sale_price_float,
+                order_id=order_id,
+                cost_override=cost_override_float,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days
+            )
 
         if success:
+            # Post-validation check for recount operations - mirror raw inventory system
+            if change_type == 'recount':
+                from ...services.inventory_adjustment import validate_inventory_fifo_sync
+                is_valid_post, error_msg_post, _, _ = validate_inventory_fifo_sync(sku_id, item_type='product')
+                if not is_valid_post:
+                    error_msg = f'Post-recount validation failed: {error_msg_post}'
+                    if request.is_json:
+                        return jsonify({'error': error_msg}), 400
+                    flash(error_msg, 'error')
+                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+
             message = f'SKU inventory adjusted successfully'
             if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
                 message += ' (expired inventory processed first)'
