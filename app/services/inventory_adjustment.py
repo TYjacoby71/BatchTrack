@@ -139,7 +139,7 @@ def process_inventory_adjustment(
     if item_type == 'product':
         # For ProductSKU, use the underlying inventory_item for cost calculations
         inventory_item = item.inventory_item
-
+        
         if change_type in ['spoil', 'trash']:
             cost_per_unit = None
         elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
@@ -350,6 +350,7 @@ def process_inventory_adjustment(
                     quantity_change=qty_change,
                     unit=addition_unit,
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
+                    original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     notes=notes,
                     created_by=created_by,
@@ -360,7 +361,7 @@ def process_inventory_adjustment(
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
-                    fifo_code=generate_fifo_id(change_type) if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
+                    fifo_code=generate_fifo_id() if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
                     organization_id=current_user.organization_id
                 )
             else:
@@ -370,6 +371,7 @@ def process_inventory_adjustment(
                     quantity_change=qty_change,
                     unit=addition_unit,  # Record original unit used, default to 'count' for containers
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
+                    original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     note=notes,
                     quantity_used=0.0,  # Additions don't consume inventory - always 0
@@ -379,7 +381,7 @@ def process_inventory_adjustment(
                     is_perishable=item.is_perishable if expiration_date else False,
                     batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
                     used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
-                    fifo_code=generate_fifo_id(change_type) if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
+                    fifo_code=generate_fifo_id() if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
                     organization_id=current_user.organization_id
                 )
             db.session.add(history)
