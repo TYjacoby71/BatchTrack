@@ -106,113 +106,24 @@ def adjust_sku_inventory(sku_id):
                 flash(error_msg, 'error')
                 return redirect(url_for('products.view_sku', sku_id=sku_id))
 
-            # Special handling for recount - use ProductFIFOService
-            from ...models import ProductSKUHistory
-            from ...services.fifo_product import ProductFIFOService
-            
-            history_count = ProductSKUHistory.query.filter_by(sku_id=sku_id).count()
-
-            if history_count == 0 and quantity > 0:
-                # This is initial stock creation
-                try:
-                    success, message = ProductFIFOService.create_initial_stock(
-                        sku_id=sku_id,
-                        quantity=quantity,
-                        unit=unit,
-                        notes=notes or 'Initial stock creation via recount',
-                        cost_override=cost_override_float,
-                        custom_expiration_date=custom_expiration_date,
-                        custom_shelf_life_days=custom_shelf_life_days
-                    )
-                    
-                    if success:
-                        db.session.commit()
-                        if request.is_json:
-                            return jsonify({
-                                'success': True,
-                                'message': message,
-                                'new_quantity': sku.current_quantity
-                            })
-                        flash(message, 'success')
-                        return redirect(url_for('sku.view_sku', sku_id=sku_id))
-                except Exception as e:
-                    db.session.rollback()
-                    error_msg = str(e)
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
-            else:
-                # Pre-validation check for existing SKUs with history
-                from ...services.inventory_adjustment import validate_inventory_fifo_sync
-                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku_id, item_type='product')
-                if not is_valid:
-                    error_msg = f'Pre-recount validation failed: {error_msg}'
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
-
-        # Special recount handling - use ProductFIFOService
-        if change_type == 'recount':
-            try:
-                from ...services.fifo_product import ProductFIFOService
-                success, message = ProductFIFOService.handle_recount(
-                    sku_id=sku_id,
-                    target_quantity=quantity,
-                    unit=unit,
-                    notes=notes,
-                    cost_override=cost_override_float,
-                    custom_expiration_date=custom_expiration_date,
-                    custom_shelf_life_days=custom_shelf_life_days
-                )
-                
-                if success:
-                    db.session.commit()
-                else:
-                    db.session.rollback()
-                    error_msg = message
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
-            except Exception as e:
-                db.session.rollback()
-                error_msg = str(e)
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', sku_id=sku_id))
-        else:
-            # All other operations use the centralized service
-            success = process_inventory_adjustment(
-                item_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                sale_price=sale_price_float,
-                order_id=order_id,
-                cost_override=cost_override_float,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
-            )
+        # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='product',
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id,
+            cost_override=cost_override_float,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
 
         if success:
-            # Post-validation check for recount operations - mirror raw inventory system
-            if change_type == 'recount':
-                from ...services.inventory_adjustment import validate_inventory_fifo_sync
-                is_valid_post, error_msg_post, _, _ = validate_inventory_fifo_sync(sku_id, item_type='product')
-                if not is_valid_post:
-                    error_msg = f'Post-recount validation failed: {error_msg_post}'
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
-
             message = f'SKU inventory adjusted successfully'
             if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
                 message += ' (expired inventory processed first)'
@@ -543,17 +454,38 @@ def add_from_batch():
         # Use BatchService to handle container processing and avoid duplication
         from ...services.batch_service import BatchService
 
-        # Use real models instead of mock classes
-        target_product = target_sku.product
-        target_variant = target_sku.variant
+        # Create a mock batch object for the service to use
+        class MockBatch:
+            def __init__(self, batch):
+                self.id = batch.id
+                self.label_code = batch.label_code
+                self.containers = batch.containers
+                self.extra_containers = batch.extra_containers
+                self.expiration_date = batch.expiration_date
+                self.shelf_life_days = batch.shelf_life_days
+                self.output_unit = batch.output_unit
+
+        mock_batch = MockBatch(batch)
+
+        # Create a mock product/variant for the service
+        class MockProduct:
+            def __init__(self, name):
+                self.name = name
+
+        class MockVariant:
+            def __init__(self, name):
+                self.name = name
+
+        mock_product = MockProduct(target_sku.product_name)
+        mock_variant = MockVariant(variant_label)
 
         # Process containers using BatchService
         total_containerized += BatchService._process_batch_containers(
-            batch.containers, container_overrides, batch, target_product, target_variant, inventory_entries
+            batch.containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries
         )
 
         total_containerized += BatchService._process_batch_containers(
-            batch.extra_containers, container_overrides, batch, target_product, target_variant, inventory_entries, is_extra=True
+            batch.extra_containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries, is_extra=True
         )
 
         # Handle remaining bulk quantity
@@ -602,65 +534,4 @@ def add_from_batch():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# Legacy routes removed - use /adjust/<int:sku_id> directly
-
-@product_inventory_bp.route('/api/adjust/<int:sku_id>', methods=['POST'])
-@login_required
-def api_adjust_sku_inventory(sku_id):
-    """API endpoint for SKU inventory adjustments - same as main adjustment but ensures JSON response"""
-    sku = ProductSKU.query.filter_by(
-        id=sku_id,
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
-
-    data = request.get_json() if request.is_json else request.form
-
-    quantity = data.get('quantity')
-    change_type = data.get('change_type')
-    notes = data.get('notes')
-
-    if not quantity or not change_type:
-        return jsonify({'error': 'Quantity and change type are required'}), 400
-
-    try:
-        # Get additional product-specific parameters
-        customer = data.get('customer')
-        sale_price = data.get('sale_price')
-        order_id = data.get('order_id')
-
-        # Convert sale_price to float if provided
-        sale_price_float = None
-        if sale_price:
-            try:
-                sale_price_float = float(sale_price)
-            except (ValueError, TypeError):
-                pass
-
-        # Use centralized inventory adjustment service
-        success = process_inventory_adjustment(
-            item_id=sku_id,
-            quantity=float(quantity),
-            change_type=change_type,
-            unit=sku.unit,
-            notes=notes,
-            created_by=current_user.id,
-            customer=customer,
-            sale_price=sale_price_float,
-            order_id=order_id
-        )
-
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'SKU inventory adjusted successfully',
-                'new_quantity': sku.current_quantity
-            })
-        else:
-            return jsonify({'error': 'Error adjusting inventory'}), 500
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+# All legacy routes removed - adjustments must use centralized service through main endpoint

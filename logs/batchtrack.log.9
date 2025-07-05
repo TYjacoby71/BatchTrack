@@ -1,4 +1,13 @@
-2025-07-04 21:06:27,502 ERROR: Exception on /products/list [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-04 21:04:26,566 ERROR: Exception on /products/list [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.ProgrammingError: Error binding parameter 1: type 'property' is not supported
+
+The above exception was the direct cause of the following exception:
+
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -18,7 +27,7 @@ Traceback (most recent call last):
   File "/home/runner/workspace/app/blueprints/products/products.py", line 20, in product_list
     product_data = ProductService.get_product_summary_skus()
                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/product_service.py", line 97, in get_product_summary_skus
+  File "/home/runner/workspace/app/services/product_service.py", line 95, in get_product_summary_skus
     ).all()
       ^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
@@ -42,46 +51,25 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
     return connection._execute_clauseelement(
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1630, in _execute_clauseelement
-    compiled_sql, extracted_params, cache_hit = elem._compile_w_cache(
-                                                ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 711, in _compile_w_cache
-    compiled_sql = self._compiler(
-                   ^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 320, in _compiler
-    return dialect.statement_compiler(dialect, self, **kw)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 1446, in __init__
-    Compiled.__init__(self, dialect, statement, **kwargs)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 886, in __init__
-    self.string = self.process(self.statement, **compile_kwargs)
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 932, in process
-    return obj._compiler_dispatch(self, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py", line 141, in _compiler_dispatch
-    return meth(self, **kw)  # type: ignore  # noqa: E501
-           ^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 4728, in visit_select
-    compile_state = select_stmt._compile_state_factory(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 686, in create_for_statement
-    return klass.create_for_statement(statement, compiler, **kw)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 447, in create_for_statement
-    return cls._create_orm_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 1246, in _create_orm_context
-    self._setup_for_generate()
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 1281, in _setup_for_generate
-    self._join(query._setup_joins, self._entities)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 1924, in _join
-    self._join_left_to_right(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 1959, in _join_left_to_right
-    ) = self._join_determine_implicit_left_side(
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 2114, in _join_determine_implicit_left_side
-    raise sa_exc.InvalidRequestError(
-sqlalchemy.exc.InvalidRequestError: Can't determine which FROM clause to join from, there are multiple FROMS which can join to this entity. Please use the .select_from() method to establish an explicit left side, as well as providing an explicit ON clause if not present already to help resolve the ambiguity.
-2025-07-04 21:07:09,495 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-04 21:07:17,660 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (sqlite3.ProgrammingError) Error binding parameter 1: type 'property' is not supported
+[SQL: SELECT product.id AS product_id, product.name AS product_name, product.base_unit AS product_base_unit, sum(?) AS total_quantity, count(product_sku.id) AS sku_count, min(product_sku.low_stock_threshold) AS low_stock_threshold, max(product_sku.updated_at) AS last_updated 
+FROM product JOIN product_sku ON product.id = product_sku.product_id 
+WHERE product_sku.is_active = 1 AND product.is_active = 1 AND product.organization_id = ? GROUP BY product.id, product.name, product.base_unit]
+[parameters: (<property object at 0x7f5d921daca0>, 1)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-07-04 21:06:22,826 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-04 21:06:22,827 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]

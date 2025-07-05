@@ -295,7 +295,6 @@ def add_inventory_from_batch():
 
 @products_api_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
-def adjust_sku_inventory(sku_id):
-    """Legacy API route - redirect to consolidated product inventory adjustment"""
-    from ..product_inventory_routes import api_adjust_sku_inventory
-    return api_adjust_sku_inventory(sku_id)
+def adjust_sku_inventory_legacy(sku_id):
+    """Legacy API route - redirects to main product inventory adjustment endpoint"""
+    return jsonify({'error': 'This endpoint has been deprecated. Use /products/inventory/adjust/<sku_id> instead'}), 410

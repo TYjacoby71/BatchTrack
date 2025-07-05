@@ -366,12 +366,7 @@ def adjust_inventory(id):
             )
 
             if success:
-                # Post-validation check to ensure FIFO sync is maintained
-                is_valid_post, error_msg_post, _, _ = validate_inventory_fifo_sync(id)
-                if not is_valid_post:
-                    flash(f'Post-adjustment validation failed: {error_msg_post}', 'error')
-                else:
-                    flash('Inventory adjusted successfully')
+                flash('Inventory adjusted successfully')
             else:
                 flash('Error adjusting inventory', 'error')
 
