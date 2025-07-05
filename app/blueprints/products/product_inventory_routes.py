@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
+from app.blueprints.fifo.services import FIFOService
 
 product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products/inventory')
 
