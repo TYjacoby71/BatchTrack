@@ -215,17 +215,17 @@ def process_inventory_adjustment(
             # Show clearer description for batch cancellations
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
 
-            # Create deduction history for each FIFO entry used
             # Ensure unit is never None for containers
             history_unit = item.unit if item.unit else 'count'
 
             # Only set quantity_used for actual consumption (spoil, trash, batch usage)
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
-            # Create appropriate history entry based on item type
+            # Use centralized history logger
+            from .history_logger import HistoryLogger
+            
             if item_type == 'product':
-                from app.models.product import ProductSKUHistory
-                history = ProductSKUHistory(
+                HistoryLogger.record_product_sku_history(
                     sku_id=item.id,
                     change_type=change_type,
                     quantity_change=-deduction_amount,
@@ -234,28 +234,25 @@ def process_inventory_adjustment(
                     fifo_reference_id=entry_id,
                     unit_cost=cost_per_unit,
                     notes=f"{used_for_note} (From FIFO #{entry_id})",
-                    created_by=created_by,
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
-                    organization_id=current_user.organization_id
+                    created_by=created_by
                 )
             else:
-                history = InventoryHistory(
+                HistoryLogger.record_inventory_history(
                     inventory_item_id=item.id,
                     change_type=change_type,
                     quantity_change=-deduction_amount,
-                    unit=history_unit,  # Record original unit used, default to 'count' for containers
+                    unit=history_unit,
                     remaining_quantity=0,
                     fifo_reference_id=entry_id,
                     unit_cost=cost_per_unit,
-                    note=f"{used_for_note} (From FIFO #{entry_id})",
-                    created_by=created_by,
-                    quantity_used=quantity_used_value,  # Only set for actual consumption
+                    notes=f"{used_for_note} (From FIFO #{entry_id})",
+                    quantity_used=quantity_used_value,
                     used_for_batch_id=batch_id,
-                    organization_id=current_user.organization_id
+                    created_by=created_by
                 )
-            db.session.add(history)
         # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         if item_type == 'product':
@@ -291,45 +288,43 @@ def process_inventory_adjustment(
                     original_fifo_entry.remaining_quantity += credit_amount
                     remaining_to_credit -= credit_amount
 
-                    # Create credit history entry
-                    # Ensure unit is never None for containers
+                    # Create credit history entry using centralized logger
                     credit_unit = item.unit if item.unit else 'count'
-                    credit_history = InventoryHistory(
+                    from .history_logger import HistoryLogger
+                    
+                    HistoryLogger.record_inventory_history(
                         inventory_item_id=item.id,
                         change_type=change_type,
                         quantity_change=credit_amount,
-                        unit=credit_unit,  # Record original unit used, default to 'count' for containers
+                        unit=credit_unit,
                         remaining_quantity=0,  # Credits don't create new FIFO entries
                         unit_cost=cost_per_unit,
-                        fifo_reference_id=original_fifo_entry.id,  # Reference the original FIFO entry
-                        note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
-                        created_by=created_by,
+                        fifo_reference_id=original_fifo_entry.id,
+                        notes=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
                         quantity_used=0.0,  # Credits don't consume inventory
                         used_for_batch_id=batch_id,
-                        organization_id=current_user.organization_id
+                        created_by=created_by
                     )
-                    db.session.add(credit_history)
 
             # If there's still quantity to credit (shouldn't happen in normal cases)
             if remaining_to_credit > 0:
-                # Create new FIFO entry for any excess
-                # Ensure unit is never None for containers
+                # Create new FIFO entry for any excess using centralized logger
                 excess_unit = item.unit if item.unit else 'count'
-                excess_history = InventoryHistory(
+                from .history_logger import HistoryLogger
+                
+                HistoryLogger.record_inventory_history(
                     inventory_item_id=item.id,
                     change_type='restock',  # Treat excess as new stock
                     quantity_change=remaining_to_credit,
-                    unit=excess_unit,  # Use current inventory unit for new stock, default to 'count' for containers
+                    unit=excess_unit,
                     remaining_quantity=remaining_to_credit,
                     unit_cost=cost_per_unit,
-                    note=f"{notes} (Excess credit - no original FIFO found)",
-                    created_by=created_by,
+                    notes=f"{notes} (Excess credit - no original FIFO found)",
                     quantity_used=0.0,  # Restocks don't consume inventory
                     expiration_date=expiration_date,
                     used_for_batch_id=batch_id,
-                    organization_id=current_user.organization_id
+                    created_by=created_by
                 )
-                db.session.add(excess_history)
         else:
             # Regular additions (restock or recount or adjustment up)
             # Create new stock entry
@@ -341,10 +336,11 @@ def process_inventory_adjustment(
             if change_type == 'recount':
                 original_quantity_for_recount = current_quantity
 
-            # Create appropriate history entry based on item type
+            # Use centralized history logger based on item type
+            from .history_logger import HistoryLogger
+            
             if item_type == 'product':
-                from app.models.product import ProductSKUHistory
-                history = ProductSKUHistory(
+                HistoryLogger.record_product_sku_history(
                     sku_id=item.id,
                     change_type=change_type,
                     quantity_change=qty_change,
@@ -352,7 +348,6 @@ def process_inventory_adjustment(
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
                     unit_cost=cost_per_unit,
                     notes=notes,
-                    created_by=created_by,
                     expiration_date=expiration_date,
                     shelf_life_days=shelf_life_to_use,
                     is_perishable=expiration_date is not None,
@@ -361,28 +356,26 @@ def process_inventory_adjustment(
                     sale_price=sale_price,
                     order_id=order_id,
                     fifo_code=generate_fifo_id(change_type) if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
-                    organization_id=current_user.organization_id
+                    created_by=created_by
                 )
             else:
-                history = InventoryHistory(
+                HistoryLogger.record_inventory_history(
                     inventory_item_id=item.id,
                     change_type=change_type,
                     quantity_change=qty_change,
-                    unit=addition_unit,  # Record original unit used, default to 'count' for containers
+                    unit=addition_unit,
                     remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
                     unit_cost=cost_per_unit,
-                    note=notes,
+                    notes=notes,
                     quantity_used=0.0,  # Additions don't consume inventory - always 0
-                    created_by=created_by,
                     expiration_date=expiration_date,
-                    shelf_life_days=shelf_life_to_use,  # Record the shelf life used for this entry
+                    shelf_life_days=shelf_life_to_use,
                     is_perishable=item.is_perishable if expiration_date else False,
-                    batch_id=batch_id if change_type == 'finished_batch' else None,  # Set batch_id for finished_batch entries
-                    used_for_batch_id=batch_id if change_type not in ['restock'] else None,  # Track batch for finished_batch
+                    batch_id=batch_id if change_type == 'finished_batch' else None,
+                    used_for_batch_id=batch_id if change_type not in ['restock'] else None,
                     fifo_code=generate_fifo_id(change_type) if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
-                    organization_id=current_user.organization_id
+                    created_by=created_by
                 )
-            db.session.add(history)
 
         # Update quantity with rounding - handle ProductSKU vs InventoryItem
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
