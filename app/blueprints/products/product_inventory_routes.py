@@ -106,44 +106,51 @@ def adjust_sku_inventory(sku_id):
                 flash(error_msg, 'error')
                 return redirect(url_for('products.view_sku', sku_id=sku_id))
 
-            # Special handling for recount - use ProductFIFOService
+            # Special handling for recount - mirror raw inventory system
+            # Check if SKU has no history - this indicates it needs FIFO initialization
             from ...models import ProductSKUHistory
-            from ...services.fifo_product import ProductFIFOService
-            
             history_count = ProductSKUHistory.query.filter_by(sku_id=sku_id).count()
 
             if history_count == 0 and quantity > 0:
-                # This is initial stock creation
-                try:
-                    success, message = ProductFIFOService.create_initial_stock(
-                        sku_id=sku_id,
-                        quantity=quantity,
-                        unit=unit,
-                        notes=notes or 'Initial stock creation via recount',
-                        cost_override=cost_override_float,
-                        custom_expiration_date=custom_expiration_date,
-                        custom_shelf_life_days=custom_shelf_life_days
-                    )
-                    
-                    if success:
-                        db.session.commit()
-                        if request.is_json:
-                            return jsonify({
-                                'success': True,
-                                'message': message,
-                                'new_quantity': sku.current_quantity
-                            })
-                        flash(message, 'success')
-                        return redirect(url_for('sku.view_sku', sku_id=sku_id))
-                except Exception as e:
-                    db.session.rollback()
-                    error_msg = str(e)
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+                # This is essentially initial stock creation - handle like raw inventory system
+                from ...utils.fifo_generator import generate_fifo_id
+                from datetime import datetime
+
+                # Create initial FIFO entry directly
+                history = ProductSKUHistory(
+                    sku_id=sku_id,
+                    change_type='restock',  # Use restock for initial creation
+                    quantity_change=quantity,
+                    remaining_quantity=quantity,
+                    unit=unit,
+                    notes=notes or 'Initial stock creation via recount',
+                    created_by=current_user.id,
+                    expiration_date=custom_expiration_date,
+                    shelf_life_days=custom_shelf_life_days,
+                    is_perishable=custom_expiration_date is not None,
+                    fifo_code=generate_fifo_id('restock'),
+                    organization_id=current_user.organization_id
+                )
+                db.session.add(history)
+
+                # Update SKU quantity through inventory_item
+                sku.inventory_item.quantity = quantity
+                if cost_override_float:
+                    sku.inventory_item.cost_per_unit = cost_override_float
+
+                db.session.commit()
+                
+                message = 'Initial SKU inventory created successfully'
+                if request.is_json:
+                    return jsonify({
+                        'success': True,
+                        'message': message,
+                        'new_quantity': sku.current_quantity
+                    })
+                flash(message, 'success')
+                return redirect(url_for('sku.view_sku', sku_id=sku_id))
             else:
-                # Pre-validation check for existing SKUs with history
+                # Pre-validation check for existing SKUs with history - mirror raw inventory
                 from ...services.inventory_adjustment import validate_inventory_fifo_sync
                 is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku_id, item_type='product')
                 if not is_valid:
@@ -153,53 +160,22 @@ def adjust_sku_inventory(sku_id):
                     flash(error_msg, 'error')
                     return redirect(url_for('sku.view_sku', sku_id=sku_id))
 
-        # Special recount handling - use ProductFIFOService
-        if change_type == 'recount':
-            try:
-                from ...services.fifo_product import ProductFIFOService
-                success, message = ProductFIFOService.handle_recount(
-                    sku_id=sku_id,
-                    target_quantity=quantity,
-                    unit=unit,
-                    notes=notes,
-                    cost_override=cost_override_float,
-                    custom_expiration_date=custom_expiration_date,
-                    custom_shelf_life_days=custom_shelf_life_days
-                )
-                
-                if success:
-                    db.session.commit()
-                else:
-                    db.session.rollback()
-                    error_msg = message
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    flash(error_msg, 'error')
-                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
-            except Exception as e:
-                db.session.rollback()
-                error_msg = str(e)
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', sku_id=sku_id))
-        else:
-            # All other operations use the centralized service
-            success = process_inventory_adjustment(
-                item_id=sku_id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                item_type='product',
-                customer=customer,
-                sale_price=sale_price_float,
-                order_id=order_id,
-                cost_override=cost_override_float,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
-            )
+        # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
+        success = process_inventory_adjustment(
+            item_id=sku_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            created_by=current_user.id,
+            item_type='product',
+            customer=customer,
+            sale_price=sale_price_float,
+            order_id=order_id,
+            cost_override=cost_override_float,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
 
         if success:
             # Post-validation check for recount operations - mirror raw inventory system
@@ -543,17 +519,38 @@ def add_from_batch():
         # Use BatchService to handle container processing and avoid duplication
         from ...services.batch_service import BatchService
 
-        # Use real models instead of mock classes
-        target_product = target_sku.product
-        target_variant = target_sku.variant
+        # Create a mock batch object for the service to use
+        class MockBatch:
+            def __init__(self, batch):
+                self.id = batch.id
+                self.label_code = batch.label_code
+                self.containers = batch.containers
+                self.extra_containers = batch.extra_containers
+                self.expiration_date = batch.expiration_date
+                self.shelf_life_days = batch.shelf_life_days
+                self.output_unit = batch.output_unit
+
+        mock_batch = MockBatch(batch)
+
+        # Create a mock product/variant for the service
+        class MockProduct:
+            def __init__(self, name):
+                self.name = name
+
+        class MockVariant:
+            def __init__(self, name):
+                self.name = name
+
+        mock_product = MockProduct(target_sku.product_name)
+        mock_variant = MockVariant(variant_label)
 
         # Process containers using BatchService
         total_containerized += BatchService._process_batch_containers(
-            batch.containers, container_overrides, batch, target_product, target_variant, inventory_entries
+            batch.containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries
         )
 
         total_containerized += BatchService._process_batch_containers(
-            batch.extra_containers, container_overrides, batch, target_product, target_variant, inventory_entries, is_extra=True
+            batch.extra_containers, container_overrides, mock_batch, mock_product, mock_variant, inventory_entries, is_extra=True
         )
 
         # Handle remaining bulk quantity
@@ -602,7 +599,12 @@ def add_from_batch():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# Legacy routes removed - use /adjust/<int:sku_id> directly
+# Legacy compatibility routes - redirect to consolidated inventory adjustment
+@product_inventory_bp.route('/legacy/adjust/<int:sku_id>', methods=['POST'])
+@login_required 
+def legacy_adjust_sku(sku_id):
+    """Legacy route compatibility - redirects to main adjustment endpoint"""
+    return adjust_sku_inventory(sku_id)
 
 @product_inventory_bp.route('/api/adjust/<int:sku_id>', methods=['POST'])
 @login_required
