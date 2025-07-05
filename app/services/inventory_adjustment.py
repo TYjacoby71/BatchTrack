@@ -336,11 +336,6 @@ def process_inventory_adjustment(
             # Ensure unit is never None for containers
             addition_unit = item.unit if item.unit else 'count'
 
-            # For recounts, calculate the original quantity before the recount
-            original_quantity_for_recount = None
-            if change_type == 'recount':
-                original_quantity_for_recount = current_quantity
-
             # Create appropriate history entry based on item type
             if item_type == 'product':
                 from app.models.product import ProductSKUHistory
@@ -349,7 +344,7 @@ def process_inventory_adjustment(
                     change_type=change_type,
                     quantity_change=qty_change,
                     unit=addition_unit,
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
                     original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     notes=notes,
@@ -370,7 +365,7 @@ def process_inventory_adjustment(
                     change_type=change_type,
                     quantity_change=qty_change,
                     unit=addition_unit,  # Record original unit used, default to 'count' for containers
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else 0,
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'recount'] and qty_change > 0 else None,
                     original_quantity=original_quantity_for_recount if change_type == 'recount' else None,
                     unit_cost=cost_per_unit,
                     note=notes,
