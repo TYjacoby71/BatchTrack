@@ -106,6 +106,60 @@ def adjust_sku_inventory(sku_id):
                 flash(error_msg, 'error')
                 return redirect(url_for('products.view_sku', sku_id=sku_id))
 
+            # Special handling for recount - mirror raw inventory system
+            # Check if SKU has no history - this indicates it needs FIFO initialization
+            from ...models import ProductSKUHistory
+            history_count = ProductSKUHistory.query.filter_by(sku_id=sku_id).count()
+
+            if history_count == 0 and quantity > 0:
+                # This is essentially initial stock creation - handle like raw inventory system
+                from ...utils.fifo_generator import generate_fifo_id
+                from datetime import datetime
+
+                # Create initial FIFO entry directly
+                history = ProductSKUHistory(
+                    sku_id=sku_id,
+                    change_type='restock',  # Use restock for initial creation
+                    quantity_change=quantity,
+                    remaining_quantity=quantity,
+                    unit=unit,
+                    notes=notes or 'Initial stock creation via recount',
+                    created_by=current_user.id,
+                    expiration_date=custom_expiration_date,
+                    shelf_life_days=custom_shelf_life_days,
+                    is_perishable=custom_expiration_date is not None,
+                    fifo_code=generate_fifo_id('restock'),
+                    organization_id=current_user.organization_id
+                )
+                db.session.add(history)
+
+                # Update SKU quantity through inventory_item
+                sku.inventory_item.quantity = quantity
+                if cost_override_float:
+                    sku.inventory_item.cost_per_unit = cost_override_float
+
+                db.session.commit()
+                
+                message = 'Initial SKU inventory created successfully'
+                if request.is_json:
+                    return jsonify({
+                        'success': True,
+                        'message': message,
+                        'new_quantity': sku.current_quantity
+                    })
+                flash(message, 'success')
+                return redirect(url_for('sku.view_sku', sku_id=sku_id))
+            else:
+                # Pre-validation check for existing SKUs with history - mirror raw inventory
+                from ...services.inventory_adjustment import validate_inventory_fifo_sync
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku_id, item_type='product')
+                if not is_valid:
+                    error_msg = f'Pre-recount validation failed: {error_msg}'
+                    if request.is_json:
+                        return jsonify({'error': error_msg}), 400
+                    flash(error_msg, 'error')
+                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+
         # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
         success = process_inventory_adjustment(
             item_id=sku_id,
@@ -124,6 +178,17 @@ def adjust_sku_inventory(sku_id):
         )
 
         if success:
+            # Post-validation check for recount operations - mirror raw inventory system
+            if change_type == 'recount':
+                from ...services.inventory_adjustment import validate_inventory_fifo_sync
+                is_valid_post, error_msg_post, _, _ = validate_inventory_fifo_sync(sku_id, item_type='product')
+                if not is_valid_post:
+                    error_msg = f'Post-recount validation failed: {error_msg_post}'
+                    if request.is_json:
+                        return jsonify({'error': error_msg}), 400
+                    flash(error_msg, 'error')
+                    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+
             message = f'SKU inventory adjusted successfully'
             if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
                 message += ' (expired inventory processed first)'
