@@ -1,4 +1,3 @@
-
 from ...models import InventoryHistory, db, InventoryItem
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
@@ -11,14 +10,14 @@ class FIFOService:
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
         from sqlalchemy import union_all
         from app.models.product import ProductSKUHistory
-        
+
         today = datetime.now().date()
-        
+
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
             return []
-        
+
         if item.type == 'product':
             # For products, only query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
@@ -45,14 +44,14 @@ class FIFOService:
                     )
                 )
             )
-        
+
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
             query = query.filter(
                 (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
                  else InventoryHistory.organization_id == current_user.organization_id)
             )
-        
+
         return query.order_by(
             (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
              else InventoryHistory.timestamp.asc())
@@ -62,14 +61,14 @@ class FIFOService:
     def get_expired_fifo_entries(inventory_item_id):
         """Get expired FIFO entries with remaining quantity (for disposal only)"""
         from app.models.product import ProductSKUHistory
-        
+
         today = datetime.now().date()
-        
+
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
             return []
-        
+
         if item.type == 'product':
             # For products, only query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
@@ -90,14 +89,14 @@ class FIFOService:
                     InventoryHistory.expiration_date < today
                 )
             )
-        
+
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
             query = query.filter(
                 (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
                  else InventoryHistory.organization_id == current_user.organization_id)
             )
-        
+
         return query.order_by(
             (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
              else InventoryHistory.timestamp.asc())
@@ -107,12 +106,12 @@ class FIFOService:
     def get_all_fifo_entries(inventory_item_id):
         """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
         from app.models.product import ProductSKUHistory
-        
+
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
             return []
-        
+
         if item.type == 'product':
             # For products, only query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
@@ -129,14 +128,14 @@ class FIFOService:
                     InventoryHistory.remaining_quantity > 0
                 )
             )
-        
+
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
             query = query.filter(
                 (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
                  else InventoryHistory.organization_id == current_user.organization_id)
             )
-        
+
         return query.order_by(
             (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
              else InventoryHistory.timestamp.asc())
@@ -152,45 +151,45 @@ class FIFOService:
         if change_type in ['spoil', 'trash', 'expired_disposal']:
             expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
             expired_total = sum(entry.remaining_quantity for entry in expired_entries)
-            
+
             # If we have enough expired stock, use it
             if expired_total >= quantity:
                 remaining = quantity
                 deduction_plan = []
-                
+
                 for entry in expired_entries:
                     if remaining <= 0:
                         break
                     deduction = min(entry.remaining_quantity, remaining)
                     remaining -= deduction
                     deduction_plan.append((entry.id, deduction, entry.unit_cost))
-                
+
                 return True, deduction_plan, expired_total
-        
+
         # Regular FIFO (non-expired entries)
         fifo_entries = FIFOService.get_fifo_entries(inventory_item_id)
         available_quantity = sum(entry.remaining_quantity for entry in fifo_entries)
-        
+
         if available_quantity < quantity:
             return False, [], available_quantity
-        
+
         remaining = quantity
         deduction_plan = []
-        
+
         for entry in fifo_entries:
             if remaining <= 0:
                 break
             deduction = min(entry.remaining_quantity, remaining)
             remaining -= deduction
             deduction_plan.append((entry.id, deduction, entry.unit_cost))
-        
+
         return True, deduction_plan, available_quantity
 
     @staticmethod
     def execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
         from app.models.product import ProductSKUHistory
-        
+
         for entry_id, deduct_amount, _ in deduction_plan:
             # Try InventoryHistory first
             entry = InventoryHistory.query.get(entry_id)
@@ -225,7 +224,7 @@ class FIFOService:
         if item.type == 'product':
             # Use ProductSKUHistory for products
             from app.models.product import ProductSKUHistory
-            
+
             history = ProductSKUHistory(
                 inventory_item_id=inventory_item_id,
                 change_type=change_type,
@@ -265,7 +264,7 @@ class FIFOService:
                 fifo_code=fifo_code,
                 organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
             )
-        
+
         db.session.add(history)
         return history
 
@@ -279,9 +278,9 @@ class FIFOService:
         """
         item = InventoryItem.query.get(inventory_item_id)
         history_unit = item.unit if item.unit else 'count'
-        
+
         history_entries = []
-        
+
         for entry_id, deduction_amount, unit_cost in deduction_plan:
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
@@ -293,7 +292,7 @@ class FIFOService:
             if item.type == 'product':
                 # Use ProductSKUHistory for products
                 from app.models.product import ProductSKUHistory
-                
+
                 history = ProductSKUHistory(
                     inventory_item_id=inventory_item_id,
                     change_type=change_type,
@@ -329,10 +328,10 @@ class FIFOService:
                     fifo_code=fifo_code,
                     organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
                 )
-            
+
             db.session.add(history)
             history_entries.append(history)
-        
+
         return history_entries
 
     @staticmethod
@@ -341,7 +340,7 @@ class FIFOService:
         Handle refund credits by finding original FIFO entries to credit back to
         """
         item = InventoryItem.query.get(inventory_item_id)
-        
+
         # Find the original deduction entries for this batch
         original_deductions = InventoryHistory.query.filter(
             InventoryHistory.inventory_item_id == inventory_item_id,
@@ -423,13 +422,13 @@ class FIFOService:
             success, deduction_plan, _ = FIFOService.calculate_deduction_plan(
                 inventory_item_id, abs(difference), 'recount'
             )
-            
+
             if not success:
                 return False
 
             # Execute the deduction
             FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
-            
+
             # Create history entries
             FIFOService.create_deduction_history(
                 inventory_item_id, deduction_plan, 'recount', note, 
