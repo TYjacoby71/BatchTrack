@@ -115,6 +115,12 @@ def create_app():
     # Setup logging
     from .utils.unit_utils import setup_logging
     setup_logging(app)
+    
+    # Enable debug logging in development
+    if app.debug:
+        import logging
+        app.logger.setLevel(logging.DEBUG)
+        logging.getLogger('werkzeug').setLevel(logging.DEBUG)
 
     # Initialize API routes
     try:
