@@ -351,8 +351,8 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     
     # Indexes
     __table_args__ = (
-        db.Index('idx_sku_remaining', 'sku_id', 'remaining_quantity'),
-        db.Index('idx_sku_timestamp', 'sku_id', 'timestamp'),
+        db.Index('idx_inventory_item_remaining', 'inventory_item_id', 'remaining_quantity'),
+        db.Index('idx_inventory_item_timestamp', 'inventory_item_id', 'timestamp'),
         db.Index('idx_change_type', 'change_type'),
         db.Index('idx_fifo_code', 'fifo_code'),
     )
