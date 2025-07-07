@@ -140,7 +140,7 @@ class ProductService:
         groups = []
         for sku in skus:
             groups.append({
-                'sku_id': sku.id,
+                'sku_id': sku.inventory_item_id,
                 'variant_name': sku.variant.name,
                 'size_label': sku.size_label,
                 'quantity': sku.inventory_item.quantity if sku.inventory_item else 0.0,
