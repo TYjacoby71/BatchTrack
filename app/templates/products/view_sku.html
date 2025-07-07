@@ -177,5 +177,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 {% endblock %}
+```
+
+```html
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h5>
+        <p class="card-text">
+            <strong>SKU:</strong> {{ sku.sku }}<br>
+            <strong>Retail Price:</strong> ${{ "%.2f"|format(sku.retail_price or 0) }}<br>
+            <strong>Unit Cost:</strong> ${{ "%.2f"|format(sku.unit_cost or 0) }}<br>
+            <strong>Quantity:</strong>
+            <strong>{{ "%.1f"|format(sku.quantity or 0) }}</strong>
+        </p>
+    </div>
+</div>

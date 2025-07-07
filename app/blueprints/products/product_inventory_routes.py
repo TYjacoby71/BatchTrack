@@ -263,7 +263,7 @@ def get_sku_fifo_status(sku_id):
     return jsonify({
         'sku_id': sku_id,
         'inventory_item_id': inventory_item_id,
-        'total_quantity': sku.current_quantity,
+        'total_quantity': sku.quantity,
         'fresh_quantity': fresh_total,
         'expired_quantity': expired_total,
         'fresh_entries_count': len(fresh_entries),
@@ -388,7 +388,7 @@ def process_sale_webhook():
             return jsonify({
                 'success': True,
                 'message': 'Sale processed successfully',
-                'remaining_quantity': sku.current_quantity
+                'remaining_quantity': sku.quantity
             })
         else:
             return jsonify({'error': 'Failed to process sale'}), 500
@@ -439,7 +439,7 @@ def process_return_webhook():
             return jsonify({
                 'success': True,
                 'message': 'Return processed successfully',
-                'new_quantity': sku.current_quantity
+                'new_quantity': sku.quantity
             })
         else:
             return jsonify({'error': 'Failed to process return'}), 500
@@ -489,7 +489,7 @@ def reserve_inventory(sku_id):
             return jsonify({
                 'success': True,
                 'message': 'Inventory reserved successfully',
-                'available_quantity': sku.current_quantity,
+                'available_quantity': sku.quantity,
                 'reserved_quantity': getattr(sku, 'reserved_quantity', 0)
             })
         else:
