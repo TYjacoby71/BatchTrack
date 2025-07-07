@@ -14,7 +14,15 @@ def view_sku(inventory_item_id):
     sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
-    history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
+    history = ProductSKUHistory.query.filter_by(
+        inventory_item_id=sku.inventory_item_id,
+        organization_id=current_user.organization_id
+    ).order_by(ProductSKUHistory.timestamp.desc()).all()
+
+    # Debug logging
+    print(f"DEBUG: SKU {sku.inventory_item_id} history count: {len(history)}")
+    for h in history:
+        print(f"DEBUG: History entry {h.id}: {h.change_type} {h.quantity_change} at {h.timestamp}")
 
     # Calculate total quantity from inventory_item
     total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
