@@ -32,27 +32,24 @@ def upgrade():
     
     # Only proceed if we still have sku_id and don't have inventory_item_id
     if 'sku_id' in columns and 'inventory_item_id' not in columns:
-        # Get existing foreign key constraints
+        # Get existing foreign key constraints and indexes
         existing_fks = inspector.get_foreign_keys('product_sku_history')
         existing_indexes = inspector.get_indexes('product_sku_history')
         
+        # First, add the new column without constraints
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
-            # Add the new inventory_item_id column
             batch_op.add_column(sa.Column('inventory_item_id', sa.Integer(), nullable=True))
-            
-            # Create foreign key constraint
-            batch_op.create_foreign_key('fk_product_sku_history_inventory_item', 'product_sku', ['inventory_item_id'], ['inventory_item_id'])
         
         # Update data - map sku_id values to inventory_item_id
-        # Since ProductSKU now uses inventory_item_id as primary key, map old sku_id to inventory_item_id
         op.execute("""
             UPDATE product_sku_history 
             SET inventory_item_id = sku_id
             WHERE sku_id IS NOT NULL
         """)
         
-        # Make inventory_item_id NOT NULL and clean up
+        # Now make changes with proper constraint handling
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
+            # Make inventory_item_id NOT NULL
             batch_op.alter_column('inventory_item_id', nullable=False)
             
             # Drop old indexes if they exist
@@ -67,9 +64,9 @@ def upgrade():
             batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
             batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
             
-            # Drop old foreign keys if they exist
+            # Drop old foreign keys that reference sku_id - only if they have names
             for fk in existing_fks:
-                if 'sku_id' in fk['constrained_columns']:
+                if 'sku_id' in fk['constrained_columns'] and fk.get('name'):
                     try:
                         batch_op.drop_constraint(fk['name'], type_='foreignkey')
                     except:
@@ -77,6 +74,10 @@ def upgrade():
             
             # Drop the old sku_id column
             batch_op.drop_column('sku_id')
+        
+        # Finally, add the new foreign key constraint
+        with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
+            batch_op.create_foreign_key('fk_product_sku_history_inventory_item', 'product_sku', ['inventory_item_id'], ['inventory_item_id'])
 
 
 def downgrade():
