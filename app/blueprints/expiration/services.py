@@ -102,7 +102,7 @@ class ExpirationService:
 
         # Get expired product SKUs with batch-aware calculation
         from ...models import ProductSKU, ProductSKUHistory
-        
+
         # Get SKUs with remaining quantity from FIFO entries
         expired_skus = db.session.query(
             ProductSKUHistory.sku_id,
@@ -115,7 +115,7 @@ class ExpirationService:
         ).join(ProductSKU).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.original_quantity.isnot(None)  # Only addition entries
+                ProductSKUHistory.quantity_change > 0  # Only addition entries
             )
         ).all()
 
@@ -165,7 +165,7 @@ class ExpirationService:
 
         # Product SKUs expiring soon with batch-aware calculation
         from ...models import ProductSKU, ProductSKUHistory
-        
+
         # Get SKUs with remaining quantity from FIFO entries
         expiring_skus = db.session.query(
             ProductSKUHistory.sku_id,
@@ -178,7 +178,7 @@ class ExpirationService:
         ).join(ProductSKU).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.original_quantity.isnot(None)  # Only addition entries
+                ProductSKUHistory.quantity_change > 0  # Only addition entries
             )
         ).all()
 
@@ -244,7 +244,7 @@ class ExpirationService:
         expired_sku_history = ProductSKUHistory.query.filter(
             and_(
                 ProductSKUHistory.remaining_quantity <= 0,
-                ProductSKUHistory.original_quantity.isnot(None)
+                ProductSKUHistory.quantity_change > 0
             )
         ).all()
 
@@ -409,7 +409,7 @@ class ExpirationService:
         elif item_type == 'product':
             # Handle product SKU history spoilage
             from ...services.product_inventory_service import ProductInventoryService
-            
+
             history_entry = ProductSKUHistory.query.get(item_id)
             if not history_entry or float(history_entry.remaining_quantity) <= 0:
                 raise ValueError("Product history entry not found or has no remaining quantity")
