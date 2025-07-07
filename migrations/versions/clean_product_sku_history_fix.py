@@ -9,13 +9,11 @@ Create Date: 2025-01-08 12:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = 'clean_product_sku_history_fix'
 down_revision = '3478c1df1783'
 branch_labels = None
 depends_on = None
-
 
 def upgrade():
     # Clean up any leftover temporary tables first
@@ -52,7 +50,7 @@ def upgrade():
             # Make inventory_item_id NOT NULL
             batch_op.alter_column('inventory_item_id', nullable=False)
             
-            # Drop old indexes if they exist
+            # Drop old indexes that reference sku_id - check if they exist first
             for idx in existing_indexes:
                 if idx['name'] in ['idx_sku_remaining', 'idx_sku_timestamp']:
                     try:
@@ -60,11 +58,17 @@ def upgrade():
                     except:
                         pass
             
-            # Create new indexes
-            batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
-            batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
+            # Create new indexes - but don't create if they already exist
+            try:
+                batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
+            except:
+                pass
+            try:
+                batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
+            except:
+                pass
             
-            # Drop old foreign keys that reference sku_id - only if they have names
+            # Drop old foreign keys that reference sku_id
             for fk in existing_fks:
                 if 'sku_id' in fk['constrained_columns'] and fk.get('name'):
                     try:
@@ -73,12 +77,22 @@ def upgrade():
                         pass
             
             # Drop the old sku_id column
-            batch_op.drop_column('sku_id')
+            try:
+                batch_op.drop_column('sku_id')
+            except:
+                pass
         
         # Finally, add the new foreign key constraint
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
-            batch_op.create_foreign_key('fk_product_sku_history_inventory_item', 'product_sku', ['inventory_item_id'], ['inventory_item_id'])
-
+            try:
+                batch_op.create_foreign_key(
+                    'fk_product_sku_history_inventory_item', 
+                    'product_sku', 
+                    ['inventory_item_id'], 
+                    ['inventory_item_id']
+                )
+            except:
+                pass
 
 def downgrade():
     # Reverse the changes
@@ -86,17 +100,45 @@ def downgrade():
         # Add back sku_id column
         batch_op.add_column(sa.Column('sku_id', sa.Integer(), nullable=True))
         
+        # Copy data back
+        op.execute("""
+            UPDATE product_sku_history 
+            SET sku_id = inventory_item_id
+            WHERE inventory_item_id IS NOT NULL
+        """)
+        
+        # Make sku_id NOT NULL
+        batch_op.alter_column('sku_id', nullable=False)
+        
         # Drop new indexes
-        batch_op.drop_index('idx_inventory_item_remaining')
-        batch_op.drop_index('idx_inventory_item_timestamp')
+        try:
+            batch_op.drop_index('idx_inventory_item_remaining')
+        except:
+            pass
+        try:
+            batch_op.drop_index('idx_inventory_item_timestamp')
+        except:
+            pass
         
         # Create old indexes
-        batch_op.create_index('idx_sku_remaining', ['sku_id', 'remaining_quantity'], unique=False)
-        batch_op.create_index('idx_sku_timestamp', ['sku_id', 'timestamp'], unique=False)
+        try:
+            batch_op.create_index('idx_sku_remaining', ['sku_id', 'remaining_quantity'], unique=False)
+        except:
+            pass
+        try:
+            batch_op.create_index('idx_sku_timestamp', ['sku_id', 'timestamp'], unique=False)
+        except:
+            pass
         
         # Drop foreign key and column
-        batch_op.drop_constraint('fk_product_sku_history_inventory_item', type_='foreignkey')
+        try:
+            batch_op.drop_constraint('fk_product_sku_history_inventory_item', type_='foreignkey')
+        except:
+            pass
         batch_op.drop_column('inventory_item_id')
         
         # Recreate old foreign key
-        batch_op.create_foreign_key('product_sku_history_ibfk_1', 'product_sku', ['sku_id'], ['inventory_item_id'])
+        try:
+            batch_op.create_foreign_key('product_sku_history_ibfk_1', 'product_sku', ['sku_id'], ['inventory_item_id'])
+        except:
+            pass
