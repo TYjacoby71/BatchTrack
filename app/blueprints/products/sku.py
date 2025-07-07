@@ -23,7 +23,8 @@ def view_sku(sku_id):
                          sku=sku,
                          history=history,
                          total_quantity=total_quantity,
-                         get_global_unit_list=get_global_unit_list)
+                         get_global_unit_list=get_global_unit_list,
+                         fifo_filter=request.args.get('fifo', 'false').lower() == 'true')
 
 @sku_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
 @login_required
