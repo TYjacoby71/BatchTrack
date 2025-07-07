@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
+from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from app.blueprints.fifo.services import FIFOService
@@ -126,56 +127,35 @@ def adjust_sku_inventory(inventory_item_id):
             logger.info("=== USING DIRECT FIFO RECOUNT (like raw inventory) ===")
             logger.info(f"Recounting inventory item {inventory_item_id} to {quantity}")
 
+            # Store original quantity for history calculation
+            original_quantity = sku.inventory_item.quantity or 0
+            
             # Use the same recount logic as raw inventory - absolute adjustment
-            from app.blueprints.fifo.services import FIFOService
             success = FIFOService.recount_fifo(inventory_item_id, quantity, notes or "Product recount", current_user.id)
 
             if success:
                 # Update the inventory item quantity directly
                 sku.inventory_item.quantity = quantity
                 
-                # Create a ProductSKUHistory entry to match the raw inventory system
-                from app.utils.fifo_generator import generate_fifo_code
-                qty_change = quantity - (sku.inventory_item.quantity or 0)
+                # Calculate the actual change
+                qty_change = quantity - original_quantity
                 
                 # Generate FIFO code for the recount
+                from app.utils.fifo_generator import generate_fifo_code
                 if qty_change > 0:
                     fifo_code = generate_fifo_code('recount', qty_change, None)
                 else:
                     fifo_code = generate_fifo_code('recount', 0, None)
                 
-                history = ProductSKUHistory(
-                    inventory_item_id=inventory_item_id,
-                    change_type='recount',
-                    quantity_change=qty_change,
-                    unit=sku.unit or 'count',
-                    remaining_quantity=qty_change if qty_change > 0 else 0,
-                    unit_cost=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
-                    notes=notes or "Product recount - absolute adjustment",
-                    created_by=current_user.id,
-                    fifo_code=fifo_code,
-                    organization_id=current_user.organization_id
-                )
-                db.session.add(history)
-                db.session.commit()
-
-                # Create ProductSKU history entry for the recount
-                from app.models.product import ProductSKUHistory
-                from app.utils.fifo_generator import generate_fifo_code
-
-                current_quantity = sku.inventory_item.quantity
-                qty_change = quantity - current_quantity if current_quantity else quantity
-
-                fifo_code = generate_fifo_code('recount', qty_change, None)
-
+                # Create single ProductSKUHistory entry for the recount
                 history = ProductSKUHistory(
                     inventory_item_id=inventory_item_id,
                     change_type='recount',
                     quantity_change=qty_change,
                     unit=unit or sku.unit or 'count',
-                    remaining_quantity=0,  # Recounts don't create FIFO entries
-                    unit_cost=sku.inventory_item.cost_per_unit,
-                    notes=notes or f"Product recount: {current_quantity} → {quantity}",
+                    remaining_quantity=qty_change if qty_change > 0 else 0,
+                    unit_cost=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
+                    notes=notes or f"Product recount: {original_quantity} → {quantity}",
                     created_by=current_user.id,
                     fifo_code=fifo_code,
                     organization_id=current_user.organization_id
