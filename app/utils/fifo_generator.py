@@ -1,101 +1,146 @@
-# Base-36 FIFO ID Generator
-# Replaces integer auto-increment with structured base-36 codes
+
+# Base-32 FIFO ID Generator
+# Generates structured base-32 codes for FIFO tracking
 
 import secrets
 import base64
+from datetime import datetime
 
-BASE36_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
+BASE36_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-def get_change_type_prefix(change_type):
-    """Get 3-letter prefix for change type - addition events create lots"""
+def get_fifo_prefix(change_type, is_lot=False):
+    """
+    Get 3-letter prefix for FIFO code
+    - LOT: Events that create remaining quantity (restock, finished_batch, etc.)
+    - Action prefixes: Events that consume or adjust quantity
+    """
+    if is_lot:
+        return 'LOT'
+    
     prefix_map = {
-        'restock': 'LOT',  # Restock events are lots
-        'batch': 'BTC',    # Batch completions 
-        'spoil': 'SPL',    # Spoilage deductions
-        'trash': 'TRS',    # Trash deductions
-        'recount': 'RCN',  # Recount adjustments
-        'finished_batch': 'LOT',  # Finished batches create new lots
-        'refunded': 'REF', # Refund additions
-        'cost_override': 'CST'
+        'sold': 'SLD',
+        'shipped': 'SHP', 
+        'spoil': 'SPL',
+        'trash': 'TRS',
+        'damaged': 'DMG',
+        'expired_disposal': 'EXP',
+        'used': 'USE',
+        'batch': 'BCH',
+        'recount': 'RCN',
+        'refunded': 'REF',
+        'returned': 'RTN',
+        'cost_override': 'CST',
+        'manual_addition': 'ADD',
+        'tester': 'TST',
+        'gift': 'GFT',
+        'quality_fail': 'QFL'
     }
-    return prefix_map.get(change_type, 'UNK')
+    return prefix_map.get(change_type, 'TXN')
 
-def int_to_base36(number):
-    """Convert integer to base-36 string"""
-    if number == 0:
-        return '0'
-
-    result = ''
-    base = len(BASE36_CHARS)  # Now 36 characters
-    while number > 0:
-        result = BASE36_CHARS[number % base] + result
-        number //= base
-    return result
-
-def generate_fifo_id(change_type):
+def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
     """
-    Generate next FIFO ID for given change type
-    Note: Addition events (restock, finished_batch) create 'lots' with LOT prefix
+    Generate FIFO code with proper prefix and base32 suffix
+    
+    Args:
+        change_type: Type of inventory change
+        remaining_quantity: Quantity remaining after transaction (>0 = lot)
+        batch_label: If from batch, use batch label instead of generated code
+    
+    Returns:
+        String: FIFO code (e.g., 'LOT-A7B2C3D4' or 'SLD-X9Y8Z7W6')
     """
-    from models import db, InventoryHistory
+    
+    # If from batch and has batch label, use batch label
+    if batch_label:
+        return f"BCH-{batch_label}"
+    
+    # Determine if this is a lot (creates remaining quantity)
+    is_lot = remaining_quantity > 0 and change_type in [
+        'restock', 'finished_batch', 'manual_addition', 'returned', 'refunded'
+    ]
+    
+    # Get prefix
+    prefix = get_fifo_prefix(change_type, is_lot)
+    
+    # Generate base36 suffix (8 characters)
+    suffix = int_to_base36(secrets.randbits(32))[:8].upper()
+    
+    return f"{prefix}-{suffix}"
 
-    prefix = get_change_type_prefix(change_type)
+def generate_batch_fifo_code(batch_label, change_type='finished_batch'):
+    """Generate FIFO code for batch-related transactions"""
+    return f"BCH-{batch_label}"
 
-    # Get the highest sequence number across all prefixes
-    # This ensures global uniqueness across all change types
-    latest_entry = db.session.query(InventoryHistory.id).order_by(InventoryHistory.id.desc()).first()
+def parse_fifo_code(fifo_code):
+    """
+    Parse FIFO code to extract prefix and suffix
+    
+    Returns:
+        dict: {'prefix': str, 'suffix': str, 'is_lot': bool, 'is_batch': bool}
+    """
+    if not fifo_code or '-' not in fifo_code:
+        return {'prefix': None, 'suffix': None, 'is_lot': False, 'is_batch': False}
+    
+    parts = fifo_code.split('-', 1)
+    prefix = parts[0]
+    suffix = parts[1] if len(parts) > 1 else ''
+    
+    return {
+        'prefix': prefix,
+        'suffix': suffix,
+        'is_lot': prefix == 'LOT',
+        'is_batch': prefix == 'BCH'
+    }
 
-    if latest_entry:
-        next_sequence = latest_entry[0] + 1
-    else:
-        next_sequence = 1
-
-    # Convert to base-36 first
-    base36_raw = int_to_base36(next_sequence)
-    print(f"DEBUG: Raw base-36 conversion {next_sequence} -> '{base36_raw}' (length: {len(base36_raw)})")
-
-    # Apply padding
-    sequence_base36 = base36_raw.zfill(6)  # Pad to 6 characters
-    print(f"DEBUG: After zfill(6): '{sequence_base36}' (length: {len(sequence_base36)})")
-
-    full_fifo_id = f"{prefix}-{sequence_base36}"
-    print(f"DEBUG: Full FIFO ID: '{full_fifo_id}' (total length: {len(full_fifo_id)})")
-    print(f"DEBUG: Characters in sequence: {[char for char in sequence_base36]}")
-
-    return full_fifo_id
-
-def base36_to_int(base36_str):
-    """Convert base-36 string back to integer"""
-    result = 0
-    base = len(BASE36_CHARS)  # 36 characters
-    for char in base36_str:
-        result = result * base + BASE36_CHARS.index(char)
-    return result
-
-def validate_fifo_id(fifo_id):
-    """Validate FIFO ID format"""
-    if not fifo_id or '-' not in fifo_id:
+def validate_fifo_code(fifo_code):
+    """Validate FIFO code format"""
+    parsed = parse_fifo_code(fifo_code)
+    if not parsed['prefix']:
         return False
-
-    parts = fifo_id.split('-')
-    if len(parts) != 2:
+    
+    # Check if prefix is valid
+    valid_prefixes = ['LOT', 'SLD', 'SHP', 'SPL', 'TRS', 'DMG', 'EXP', 'USE', 
+                     'BCH', 'RCN', 'REF', 'RTN', 'CST', 'ADD', 'TST', 'GFT', 'QFL', 'TXN']
+    
+    if parsed['prefix'] not in valid_prefixes:
         return False
-
-    prefix, sequence = parts
-
-    # Check if all characters in sequence are valid base-36
+    
+    # For batch codes, suffix can be anything
+    if parsed['is_batch']:
+        return True
+    
+    # For other codes, check base36 format
     try:
-        for char in sequence:
-            if char not in BASE36_CHARS:
-                return False
+        if parsed['suffix']:
+            # Check if all characters are valid base36
+            for char in parsed['suffix']:
+                if char not in BASE36_CHARS:
+                    return False
         return True
     except:
         return False
 
-def generate_fifo_code(prefix="FIFO"):
-    """Generate a unique FIFO identifier using base32 encoding"""
-    # Generate 8 random bytes and encode as base32
-    random_bytes = secrets.token_bytes(8)
-    # Remove padding and make lowercase for readability
-    fifo_code = base64.b32encode(random_bytes).decode('ascii').rstrip('=').lower()
-    return f"{prefix}_{fifo_code}"
+def int_to_base36(num):
+    """Convert integer to base36 string"""
+    if num == 0:
+        return '0'
+    
+    digits = []
+    while num:
+        num, remainder = divmod(num, 36)
+        digits.append(BASE36_CHARS[remainder])
+    
+    return ''.join(reversed(digits))
+
+def base36_to_int(base36_str):
+    """Convert base36 string to integer"""
+    return int(base36_str, 36)
+
+def get_change_type_prefix(change_type):
+    """Legacy function - use get_fifo_prefix instead"""
+    return get_fifo_prefix(change_type, False)
+
+# Legacy function for backward compatibility
+def generate_fifo_id(change_type):
+    """Legacy function - use generate_fifo_code instead"""
+    return generate_fifo_code(change_type)

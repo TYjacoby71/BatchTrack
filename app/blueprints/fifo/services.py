@@ -3,7 +3,7 @@ from ...models import InventoryHistory, db, InventoryItem
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
 from flask_login import current_user
-from app.utils.fifo_generator import generate_fifo_id
+from app.utils.fifo_generator import generate_fifo_code, generate_batch_fifo_code
 
 class FIFOService:
     @staticmethod
@@ -132,6 +132,9 @@ class FIFOService:
         if not unit:
             unit = item.unit if item.unit else 'count'
 
+        # Generate FIFO code
+        fifo_code = generate_fifo_code(change_type, quantity, batch_id)
+
         # Create new FIFO entry
         history = InventoryHistory(
             inventory_item_id=inventory_item_id,
@@ -148,6 +151,7 @@ class FIFOService:
             is_perishable=expiration_date is not None,
             batch_id=batch_id if change_type == 'finished_batch' else None,
             used_for_batch_id=batch_id if change_type not in ['restock'] else None,
+            fifo_code=fifo_code,
             organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         )
         
@@ -170,6 +174,9 @@ class FIFOService:
             used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
             quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
+            # Generate FIFO code for deduction
+            fifo_code = generate_fifo_code(change_type, 0, batch_id)
+
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
                 change_type=change_type,
@@ -182,6 +189,7 @@ class FIFOService:
                 created_by=created_by,
                 quantity_used=quantity_used_value,
                 used_for_batch_id=batch_id,
+                fifo_code=fifo_code,
                 organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
             )
             db.session.add(history)

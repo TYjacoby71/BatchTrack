@@ -10,9 +10,9 @@
                     <tr>
                         <th>Date</th>
                         <th>Type</th>
+                        <th>FIFO Code</th>
                         <th>Qty Change</th>
                         <th>Remaining</th>
-                        <th>FIFO Code</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
@@ -42,18 +42,6 @@
                             </span>
                         </td>
                         <td>
-                            <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.1f"|format(entry.quantity_change) }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if entry.remaining_quantity is not none %}
-                                {{ "%.1f"|format(entry.remaining_quantity) }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
                             {% if entry.fifo_reference_id %}
                                 <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
                                     {% if entry.fifo_source %}
@@ -70,6 +58,18 @@
                                 <span class="text-success">
                                     New Lot
                                 </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.1f"|format(entry.quantity_change) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if entry.remaining_quantity is not none %}
+                                {{ "%.1f"|format(entry.remaining_quantity) }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

@@ -215,7 +215,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     fifo_source = f"New Lot - {change_type}"
 
                 # Generate FIFO code for tracking
-                fifo_code = f"{change_type.upper()}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                from app.utils.fifo_generator import generate_fifo_code
+                fifo_code = generate_fifo_code(change_type, qty_change, batch_id)
 
                 history = ProductSKUHistory(
                     inventory_item_id=item_id,
@@ -262,7 +263,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     history_unit = item.unit if item.unit else 'count'
 
                     # Generate FIFO code for tracking
-                    fifo_code = f"{change_type.upper()}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    from app.utils.fifo_generator import generate_fifo_code
+                    fifo_code = generate_fifo_code(change_type, qty_change, batch_id)
 
                     history = ProductSKUHistory(
                         inventory_item_id=item_id,
