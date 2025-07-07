@@ -18,8 +18,15 @@ depends_on = None
 
 
 def upgrade():
-    # Check if the column already exists before trying to add it
+    # Clean up any leftover temporary tables first
     conn = op.get_bind()
+    try:
+        conn.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_product_sku_history"))
+        conn.commit()
+    except:
+        pass
+    
+    # Check if the column already exists before trying to add it
     inspector = sa.inspect(conn)
     columns = [col['name'] for col in inspector.get_columns('product_sku_history')]
     
