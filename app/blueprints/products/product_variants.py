@@ -165,7 +165,13 @@ def view_variant(product_id, variant_name):
                 'batches': []  # Add batches for cost calculations
             }
 
-        size_groups[key]['total_quantity'] += sku.current_quantity
+        # Use inventory_item.quantity if available, otherwise use a calculated quantity
+                    if hasattr(sku, 'inventory_item') and sku.inventory_item:
+                        size_groups[key]['total_quantity'] += sku.inventory_item.quantity
+                    elif hasattr(sku, 'quantity'):
+                        size_groups[key]['total_quantity'] += sku.quantity
+                    else:
+                        size_groups[key]['total_quantity'] += 0
         size_groups[key]['skus'].append(sku)
 
         # Add batch information for cost calculations
