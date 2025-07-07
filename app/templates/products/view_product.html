@@ -322,13 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
         location.reload();
     };
 
-    // Make sure the function is available globally
-    if (typeof loadVariants === 'undefined') {
-        window.loadVariants = function() {
-            location.reload();
-        };
-    }
-
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');
         if (!form) return;

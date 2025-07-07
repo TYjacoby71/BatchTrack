@@ -14,22 +14,28 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     # Handle different item types
     if item_type == 'product':
         from app.models.product import ProductSKU, ProductSKUHistory
-        item = ProductSKU.query.get(item_id)
-        if not item:
-            return False, "Product SKU not found", 0, 0
+        # For products, item_id should be inventory_item_id
+        item = InventoryItem.query.get(item_id)
+        if not item or item.type != 'product':
+            return False, "Product inventory item not found", 0, 0
+
+        # Find the SKU that uses this inventory item
+        sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
+        if not sku:
+            return False, "Product SKU not found for inventory item", 0, 0
 
         # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
-                ProductSKUHistory.sku_id == item_id,
+                ProductSKUHistory.sku_id == sku.id,
                 ProductSKUHistory.remaining_quantity > 0
             )
         ).all()
 
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
-        current_qty = item.current_quantity
-        item_name = item.display_name
+        current_qty = item.quantity
+        item_name = item.name
     else:
         item = InventoryItem.query.get(item_id)
         if not item:
