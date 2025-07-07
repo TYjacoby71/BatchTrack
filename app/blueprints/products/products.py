@@ -44,7 +44,7 @@ def product_list():
             Product.name == data['product_name']
         ).first()
         if first_sku:
-            data['product_id'] = first_sku.id
+            data['product_id'] = first_sku.inventory_item_id
             enhanced_product_data.append(data)
 
     products = [ProductSummary(data) for data in enhanced_product_data]
@@ -149,7 +149,7 @@ def new_product():
             db.session.commit()
 
             flash('Product created successfully', 'success')
-            return redirect(url_for('products.view_product', product_id=sku.id))
+            return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
 
         except Exception as e:
             db.session.rollback()
@@ -167,7 +167,7 @@ def view_product(product_id):
 
     # Get the base SKU to find the product - with org scoping
     base_sku = ProductSKU.query.filter_by(
-        id=product_id,
+        inventory_item_id=product_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -211,7 +211,7 @@ def view_product(product_id):
     product.variations = [type('Variation', (), {
         'name': variant_name,
         'description': variant_data['description'],
-        'id': variant_data['skus'][0].id if variant_data['skus'] else None,
+        'id': variant_data['skus'][0].inventory_item_id if variant_data['skus'] else None,
         'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
     })() for variant_name, variant_data in variants.items()]
 
@@ -237,7 +237,7 @@ def view_product_by_name(product_name):
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
 
-    return redirect(url_for('products.view_product', product_id=sku.id))
+    return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
 
 
 
@@ -247,7 +247,7 @@ def edit_product(product_id):
     """Edit product details by product ID"""
     # Get the base SKU to find the product - with org scoping
     base_sku = ProductSKU.query.filter_by(
-        id=product_id,
+        inventory_item_id=product_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -298,7 +298,7 @@ def delete_product(product_id):
     try:
         # Get the base SKU to find the product - with org scoping
         base_sku = ProductSKU.query.filter_by(
-            id=product_id,
+            inventory_item_id=product_id,
             organization_id=current_user.organization_id
         ).first()
 

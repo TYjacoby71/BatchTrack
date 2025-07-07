@@ -97,7 +97,7 @@ class ProductService:
             Product.name.label('product_name'),
             Product.base_unit.label('product_base_unit'),
             func.sum(InventoryItem.quantity).label('total_quantity'),
-            func.count(ProductSKU.id).label('sku_count'),
+            func.count(ProductSKU.inventory_item_id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
             func.max(ProductSKU.updated_at).label('last_updated')
         ).select_from(Product).join(
