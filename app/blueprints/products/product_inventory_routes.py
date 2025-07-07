@@ -21,7 +21,7 @@ def adjust_sku_inventory(sku_id):
     logger.info(f"Organization: {current_user.organization_id}")
     logger.info(f"Request method: {request.method}")
     logger.info(f"Request is JSON: {request.is_json}")
-    
+
     sku = ProductSKU.query.filter_by(
         inventory_item_id=sku_id,
         organization_id=current_user.organization_id
@@ -52,10 +52,10 @@ def adjust_sku_inventory(sku_id):
     # Extract required fields
     quantity = data.get('quantity')
     change_type = data.get('change_type')
-    
+
     logger.info(f"Extracted quantity: {quantity} (type: {type(quantity)})")
     logger.info(f"Extracted change_type: {change_type}")
-    
+
     # Allow empty quantity for recount (will be treated as 0)
     if quantity is None or quantity == '':
         logger.info(f"Empty quantity detected. Change type: {change_type}")
@@ -69,7 +69,7 @@ def adjust_sku_inventory(sku_id):
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, 'error')
             return redirect(url_for('sku.view_sku', sku_id=sku_id))
-    
+
     if not change_type:
         error_msg = 'Change type is required'
         logger.error(f"Change type validation failed: {error_msg}")
@@ -83,11 +83,11 @@ def adjust_sku_inventory(sku_id):
         logger.info(f"Converting quantity '{quantity}' to float")
         quantity = float(quantity)
         logger.info(f"Converted quantity: {quantity}")
-        
+
         if quantity < 0 and change_type not in ['recount']:
             logger.error(f"Negative quantity not allowed for change_type: {change_type}")
             raise ValueError('Quantity cannot be negative')
-        
+
         # Extract optional fields
         notes = data.get('notes', '')
         unit = data.get('unit', sku.unit)
@@ -95,7 +95,7 @@ def adjust_sku_inventory(sku_id):
         sale_price = float(data.get('sale_price')) if data.get('sale_price') else None
         order_id = data.get('order_id')
         cost_override = float(data.get('cost_override')) if data.get('cost_override') else None
-        
+
         logger.info(f"Optional fields extracted:")
         logger.info(f"  - notes: {notes}")
         logger.info(f"  - unit: {unit}")
@@ -103,7 +103,7 @@ def adjust_sku_inventory(sku_id):
         logger.info(f"  - sale_price: {sale_price}")
         logger.info(f"  - order_id: {order_id}")
         logger.info(f"  - cost_override: {cost_override}")
-        
+
         # Handle expiration data
         custom_expiration_date = None
         custom_shelf_life_days = None
@@ -134,7 +134,7 @@ def adjust_sku_inventory(sku_id):
         logger.info(f"  - cost_override: {cost_override}")
         logger.info(f"  - custom_expiration_date: {custom_expiration_date}")
         logger.info(f"  - custom_shelf_life_days: {custom_shelf_life_days}")
-        
+
         success = process_inventory_adjustment(
             item_id=sku.inventory_item_id,  # Use inventory_item_id directly
             quantity=quantity,
@@ -150,7 +150,7 @@ def adjust_sku_inventory(sku_id):
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days
         )
-        
+
         logger.info(f"Inventory adjustment result: {success}")
 
         if success:
@@ -160,7 +160,7 @@ def adjust_sku_inventory(sku_id):
             db.session.refresh(sku)
             new_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
             logger.info(f"New quantity after adjustment: {new_quantity}")
-            
+
             if request.is_json:
                 return jsonify({
                     'success': True,
@@ -203,7 +203,7 @@ def get_sku_fifo_status(sku_id):
     """Get FIFO status for SKU using unified inventory system"""
     logger.info(f"=== FIFO STATUS REQUEST ===")
     logger.info(f"SKU ID: {sku_id}")
-    
+
     sku = ProductSKU.query.filter_by(
         inventory_item_id=sku_id,
         organization_id=current_user.organization_id
@@ -212,7 +212,7 @@ def get_sku_fifo_status(sku_id):
     if not sku:
         logger.error(f"SKU not found for FIFO status: {sku_id}")
         return jsonify({'error': 'SKU not found'}), 404
-    
+
     logger.info(f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}")
 
     from ...models import InventoryHistory
@@ -355,7 +355,7 @@ def process_sale_webhook():
 
     try:
         success = process_inventory_adjustment(
-            item_id=sku.id,
+            item_id=sku.inventory_item_id,
             quantity=float(data['quantity']),
             change_type='sold',
             unit=sku.unit,
@@ -405,7 +405,7 @@ def process_return_webhook():
 
     try:
         success = process_inventory_adjustment(
-            item_id=sku.id,
+            item_id=sku.inventory_item_id,
             quantity=float(data['quantity']),
             change_type='returned',
             unit=sku.unit,
@@ -435,7 +435,7 @@ def reserve_inventory(sku_id):
     """Reserve inventory for pending orders"""
     logger.info(f"=== RESERVE INVENTORY REQUEST ===")
     logger.info(f"SKU ID: {sku_id}")
-    
+
     sku = ProductSKU.query.filter_by(
         inventory_item_id=sku_id,
         organization_id=current_user.organization_id
@@ -444,7 +444,7 @@ def reserve_inventory(sku_id):
     if not sku:
         logger.error(f"SKU not found for reservation: {sku_id}")
         return jsonify({'error': 'SKU not found'}), 404
-    
+
     logger.info(f"Found SKU for reservation: {sku.inventory_item_id}")
 
     data = request.get_json() if request.is_json else request.form
@@ -559,7 +559,7 @@ def add_from_batch():
                 )
 
             success = process_inventory_adjustment(
-                item_id=bulk_sku.id,
+                item_id=bulk_sku.inventory_item_id,
                 quantity=bulk_quantity,
                 change_type='finished_batch',
                 unit=batch.output_unit or target_sku.unit,
@@ -590,4 +590,62 @@ def add_from_batch():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# All legacy routes removed - adjustments must use centralized service through main endpoint
+@product_inventory_bp.route('/inventory/add-from-batch', methods=['POST'])
+@login_required
+def add_inventory_from_batch():
+    """Add product inventory from finished batch"""
+    data = request.get_json()
+
+    batch_id = data.get('batch_id')
+    product_id = data.get('product_id')
+    product_name = data.get('product_name')
+    variant_name = data.get('variant_name')
+    size_label = data.get('size_label')
+    quantity = data.get('quantity')
+
+    if not batch_id or (not product_id and not product_name):
+        return jsonify({'error': 'Batch ID and Product ID or Name are required'}), 400
+
+    try:
+        # Get product name from ID if provided - with org scoping
+        if product_id:
+            base_sku = ProductSKU.query.filter_by(
+                id=product_id,
+                organization_id=current_user.organization_id
+            ).first()
+            if not base_sku:
+                return jsonify({'error': 'Product not found'}), 404
+            product_name = base_sku.product_name
+
+        # Get or create the SKU
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name or 'Base',
+            size_label=size_label or 'Bulk'
+        )
+
+        # Use the inventory adjustment service to add inventory
+        success = process_inventory_adjustment(
+            item_id=sku.inventory_item_id,
+            quantity=quantity,
+            change_type='batch_completion',
+            unit=sku.unit,
+            notes=f'Added from batch {batch_id}',
+            batch_id=batch_id,
+            created_by=current_user.id,
+            item_type='product'
+        )
+
+        if success:
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'sku_id': sku.id,
+                'message': f'Added {quantity} {sku.unit} to {sku.display_name}'
+            })
+        else:
+            return jsonify({'error': 'Failed to add inventory'}), 500
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
