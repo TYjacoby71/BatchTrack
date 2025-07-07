@@ -1,4 +1,3 @@
-
 # Base-32 FIFO ID Generator
 # Generates structured base-32 codes for FIFO tracking
 
@@ -16,7 +15,7 @@ def get_fifo_prefix(change_type, is_lot=False):
     """
     if is_lot:
         return 'LOT'
-    
+
     prefix_map = {
         'sold': 'SLD',
         'shipped': 'SHP', 
@@ -40,31 +39,37 @@ def get_fifo_prefix(change_type, is_lot=False):
 def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
     """
     Generate FIFO code with proper prefix and base32 suffix
-    
+
     Args:
         change_type: Type of inventory change
         remaining_quantity: Quantity remaining after transaction (>0 = lot)
         batch_label: If from batch, use batch label instead of generated code
-    
+
     Returns:
         String: FIFO code (e.g., 'LOT-A7B2C3D4' or 'SLD-X9Y8Z7W6')
     """
-    
+
     # If from batch and has batch label, use batch label
     if batch_label:
         return f"BCH-{batch_label}"
-    
+
     # Determine if this is a lot (creates remaining quantity)
-    is_lot = remaining_quantity > 0 and change_type in [
-        'restock', 'finished_batch', 'manual_addition', 'returned', 'refunded'
+    # Only these types with positive quantities create lots
+    lot_creation_types = [
+        'recount',  # positive overflow recount
+        'restock', 
+        'finished_batch', 
+        'manual_addition'  # adding existing quantities
     ]
-    
+
+    is_lot = change_type in lot_creation_types and remaining_quantity > 0
+
     # Get prefix
     prefix = get_fifo_prefix(change_type, is_lot)
-    
+
     # Generate base36 suffix (8 characters)
     suffix = int_to_base36(secrets.randbits(32))[:8].upper()
-    
+
     return f"{prefix}-{suffix}"
 
 def generate_batch_fifo_code(batch_label, change_type='finished_batch'):
@@ -74,17 +79,17 @@ def generate_batch_fifo_code(batch_label, change_type='finished_batch'):
 def parse_fifo_code(fifo_code):
     """
     Parse FIFO code to extract prefix and suffix
-    
+
     Returns:
         dict: {'prefix': str, 'suffix': str, 'is_lot': bool, 'is_batch': bool}
     """
     if not fifo_code or '-' not in fifo_code:
         return {'prefix': None, 'suffix': None, 'is_lot': False, 'is_batch': False}
-    
+
     parts = fifo_code.split('-', 1)
     prefix = parts[0]
     suffix = parts[1] if len(parts) > 1 else ''
-    
+
     return {
         'prefix': prefix,
         'suffix': suffix,
@@ -97,18 +102,18 @@ def validate_fifo_code(fifo_code):
     parsed = parse_fifo_code(fifo_code)
     if not parsed['prefix']:
         return False
-    
+
     # Check if prefix is valid
     valid_prefixes = ['LOT', 'SLD', 'SHP', 'SPL', 'TRS', 'DMG', 'EXP', 'USE', 
                      'BCH', 'RCN', 'REF', 'RTN', 'CST', 'ADD', 'TST', 'GFT', 'QFL', 'TXN']
-    
+
     if parsed['prefix'] not in valid_prefixes:
         return False
-    
+
     # For batch codes, suffix can be anything
     if parsed['is_batch']:
         return True
-    
+
     # For other codes, check base36 format
     try:
         if parsed['suffix']:
@@ -124,12 +129,12 @@ def int_to_base36(num):
     """Convert integer to base36 string"""
     if num == 0:
         return '0'
-    
+
     digits = []
     while num:
         num, remainder = divmod(num, 36)
         digits.append(BASE36_CHARS[remainder])
-    
+
     return ''.join(reversed(digits))
 
 def base36_to_int(base36_str):
