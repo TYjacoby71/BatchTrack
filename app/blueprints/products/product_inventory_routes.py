@@ -12,7 +12,7 @@ product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/pro
 def adjust_sku_inventory(sku_id):
     """SKU inventory adjustment - uses centralized inventory adjustment service"""
     sku = ProductSKU.query.filter_by(
-        id=sku_id,
+        inventory_item_id=sku_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -130,7 +130,7 @@ def adjust_sku_inventory(sku_id):
 def get_sku_fifo_status(sku_id):
     """Get FIFO status for SKU using unified inventory system"""
     sku = ProductSKU.query.filter_by(
-        id=sku_id,
+        inventory_item_id=sku_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -195,7 +195,7 @@ def get_sku_fifo_status(sku_id):
 def dispose_expired_sku(sku_id):
     """Dispose of expired SKU inventory using unified inventory system"""
     sku = ProductSKU.query.filter_by(
-        id=sku_id,
+        inventory_item_id=sku_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -356,7 +356,7 @@ def process_return_webhook():
 def reserve_inventory(sku_id):
     """Reserve inventory for pending orders"""
     sku = ProductSKU.query.filter_by(
-        id=sku_id,
+        inventory_item_id=sku_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -372,7 +372,7 @@ def reserve_inventory(sku_id):
 
     try:
         success = process_inventory_adjustment(
-            item_id=sku_id,
+            item_id=sku.inventory_item_id,
             quantity=float(quantity),
             change_type='reserved',
             unit=sku.unit,
