@@ -48,207 +48,201 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
     return True, "", current_qty, fifo_total
 
-def process_inventory_adjustment(
-    item_id,
-    quantity,
-    change_type,
-    unit=None,
-    notes=None,
-    batch_id=None,
-    created_by=None,
-    cost_override=None,
-    custom_expiration_date=None,
-    custom_shelf_life_days=None,
-    item_type=None,  # 'ingredient', 'container', 'product'
-    customer=None,  # For sales tracking
-    sale_price=None,  # For sales tracking
-    order_id=None,  # For marketplace integration
-):
+def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
+                                 created_by=None, batch_id=None, cost_override=None,
+                                 custom_expiration_date=None, custom_shelf_life_days=None,
+                                 item_type='ingredient', customer=None, sale_price=None, order_id=None):
     """
-    Centralized inventory adjustment logic - coordinates with FIFO service
+    Centralized inventory adjustment service that handles both ingredients and products
+    with proper FIFO tracking and expiration management
     """
-    # Handle different item types - ProductSKU vs InventoryItem
-    if item_type == 'product':
-        from app.models.product import ProductSKU
-        item = ProductSKU.query.get_or_404(item_id)
-        target_item_id = item.inventory_item.id  # Use underlying inventory item for FIFO
-        inventory_item = item.inventory_item
-    else:
-        item = InventoryItem.query.get_or_404(item_id)
-        target_item_id = item_id
-        inventory_item = item
+    try:
+        # Get the item - treat item_id as inventory_item_id for unified handling
+        item = InventoryItem.query.get(item_id)
 
-    # Convert units if needed (except for containers and products)
-    if item_type != 'product' and getattr(item, 'type', None) != 'container' and unit != inventory_item.unit:
-        conversion = safe_convert(quantity, unit, inventory_item.unit, ingredient_id=inventory_item.id)
-        if not conversion['ok']:
-            raise ValueError(conversion['error'])
-        quantity = conversion['result']['converted_value']
+        if not item:
+            raise ValueError(f"Inventory item not found for ID: {item_id}")
 
-    # Determine quantity change and special handling
-    current_quantity = getattr(item, 'current_quantity', None) or getattr(inventory_item, 'quantity', 0)
+        # Organization scoping check
+        if current_user and current_user.is_authenticated:
+            if item.organization_id != current_user.organization_id:
+                raise ValueError("Access denied: Item does not belong to your organization")
 
-    if change_type == 'recount':
-        qty_change = quantity - current_quantity
-    elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
-        qty_change = -abs(quantity)
-    elif change_type == 'reserved':
-        # Special handling: move from current to reserved, don't change total
-        if hasattr(item, 'reserved_quantity'):
-            item.reserved_quantity = (item.reserved_quantity or 0) + quantity
-            if hasattr(item, 'current_quantity'):
-                item.current_quantity = (item.current_quantity or 0) - quantity
+        # Convert units if needed (except for containers and products)
+        if item_type != 'product' and getattr(item, 'type', None) != 'container' and unit != item.unit:
+            conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
+            if not conversion['ok']:
+                raise ValueError(conversion['error'])
+            quantity = conversion['result']['converted_value']
+
+        # Determine quantity change and special handling
+        current_quantity = getattr(item, 'current_quantity', None) or getattr(item, 'quantity', 0)
+
+        if change_type == 'recount':
+            qty_change = quantity - current_quantity
+        elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
+            qty_change = -abs(quantity)
+        elif change_type == 'reserved':
+            # Special handling: move from current to reserved, don't change total
+            if hasattr(item, 'reserved_quantity'):
+                item.reserved_quantity = (item.reserved_quantity or 0) + quantity
+                if hasattr(item, 'current_quantity'):
+                    item.current_quantity = (item.current_quantity or 0) - quantity
+                else:
+                    item.quantity = (item.quantity or 0) - quantity
+                # Create history entry but don't change total inventory
+                qty_change = 0
             else:
-                inventory_item.quantity = (inventory_item.quantity or 0) - quantity
-            # Create history entry but don't change total inventory
-            qty_change = 0
+                raise ValueError("Item type doesn't support reservations")
+        elif change_type == 'returned':
+            qty_change = quantity
         else:
-            raise ValueError("Item type doesn't support reservations")
-    elif change_type == 'returned':
-        qty_change = quantity
-    else:
-        qty_change = quantity
+            qty_change = quantity
 
-    # Handle expiration using ExpirationService
-    from app.blueprints.expiration.services import ExpirationService
+        # Handle expiration using ExpirationService
+        from app.blueprints.expiration.services import ExpirationService
 
-    expiration_date = None
-    shelf_life_to_use = None
+        expiration_date = None
+        shelf_life_to_use = None
 
-    if custom_expiration_date:
-        expiration_date = custom_expiration_date
-        shelf_life_to_use = custom_shelf_life_days
-    elif change_type == 'restock' and inventory_item.is_perishable and inventory_item.shelf_life_days:
-        expiration_date = ExpirationService.calculate_expiration_date(
-            datetime.utcnow(), inventory_item.shelf_life_days
-        )
-        shelf_life_to_use = inventory_item.shelf_life_days
+        if custom_expiration_date:
+            expiration_date = custom_expiration_date
+            shelf_life_to_use = custom_shelf_life_days
+        elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                datetime.utcnow(), item.shelf_life_days
+            )
+            shelf_life_to_use = item.shelf_life_days
 
-    # Handle cost calculations
-    if change_type in ['spoil', 'trash']:
-        cost_per_unit = None
-    elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
-        # Calculate weighted average
-        current_value = inventory_item.quantity * inventory_item.cost_per_unit
-        new_value = qty_change * (cost_override or inventory_item.cost_per_unit)
-        total_quantity = inventory_item.quantity + qty_change
+        # Handle cost calculations
+        if change_type in ['spoil', 'trash']:
+            cost_per_unit = None
+        elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+            # Calculate weighted average
+            current_value = item.quantity * item.cost_per_unit
+            new_value = qty_change * (cost_override or item.cost_per_unit)
+            total_quantity = item.quantity + qty_change
 
-        if total_quantity > 0:
-            weighted_avg_cost = (current_value + new_value) / total_quantity
-            inventory_item.cost_per_unit = weighted_avg_cost
+            if total_quantity > 0:
+                weighted_avg_cost = (current_value + new_value) / total_quantity
+                item.cost_per_unit = weighted_avg_cost
 
-        cost_per_unit = cost_override or inventory_item.cost_per_unit
-    elif cost_override is not None and change_type == 'cost_override':
-        cost_per_unit = cost_override
-        inventory_item.cost_per_unit = cost_override
-    else:
-        cost_per_unit = inventory_item.cost_per_unit
-
-    # Handle inventory changes using FIFO service
-    if qty_change < 0:
-        # Deductions - use FIFO service
-        success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
-            target_item_id, abs(qty_change), change_type
-        )
-
-        if not success:
-            raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
-
-        # Execute the deduction plan
-        FIFOService.execute_deduction_plan(deduction_plan)
-
-        # Create history entries for deductions
-        if item_type == 'product':
-            # Handle ProductSKU history separately
-            from app.models.product import ProductSKUHistory
-            history_unit = inventory_item.unit if inventory_item.unit else 'count'
-
-            for entry_id, deduction_amount, unit_cost in deduction_plan:
-                used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
-                quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
-
-                history = ProductSKUHistory(
-                    sku_id=item.id,
-                    change_type=change_type,
-                    quantity_change=-deduction_amount,
-                    unit=history_unit,
-                    remaining_quantity=0,
-                    fifo_reference_id=entry_id,
-                    unit_cost=cost_per_unit,
-                    notes=f"{used_for_note} (From FIFO #{entry_id})",
-                    created_by=created_by,
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id,
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-                )
-                db.session.add(history)
+            cost_per_unit = cost_override or item.cost_per_unit
+        elif cost_override is not None and change_type == 'cost_override':
+            cost_per_unit = cost_override
+            item.cost_per_unit = cost_override
         else:
-            # Use FIFO service for regular inventory items
-            FIFOService.create_deduction_history(
-                target_item_id, deduction_plan, change_type, notes,
-                batch_id, created_by, customer, sale_price, order_id
+            cost_per_unit = item.cost_per_unit
+
+        # Handle inventory changes using FIFO service
+        if qty_change < 0:
+            # Deductions - use FIFO service
+            success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+                item_id, abs(qty_change), change_type
             )
 
-    elif qty_change > 0:
-        # Additions - use FIFO service
-        if change_type == 'refunded' and batch_id:
-            # Handle refund credits using FIFO service
-            FIFOService.handle_refund_credits(
-                target_item_id, qty_change, batch_id, notes, created_by, cost_per_unit
-            )
-        else:
-            # Regular additions using FIFO service
+            if not success:
+                raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
+
+            # Execute the deduction plan
+            FIFOService.execute_deduction_plan(deduction_plan)
+
+            # Create history entries for deductions
             if item_type == 'product':
                 # Handle ProductSKU history separately
                 from app.models.product import ProductSKUHistory
-                history_unit = inventory_item.unit if inventory_item.unit else 'count'
+                history_unit = item.unit if item.unit else 'count'
 
-                history = ProductSKUHistory(
-                    sku_id=item.id,
-                    change_type=change_type,
-                    quantity_change=qty_change,
-                    unit=history_unit,
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
-                    unit_cost=cost_per_unit,
-                    notes=notes,
-                    created_by=created_by,
-                    expiration_date=expiration_date,
-                    shelf_life_days=shelf_life_to_use,
-                    is_perishable=expiration_date is not None,
-                    batch_id=batch_id if change_type == 'finished_batch' else None,
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id,
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-                )
-                db.session.add(history)
+                for entry_id, deduction_amount, unit_cost in deduction_plan:
+                    used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
+                    quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
+
+                    history = ProductSKUHistory(
+                        sku_id=item.id,
+                        change_type=change_type,
+                        quantity_change=-deduction_amount,
+                        unit=history_unit,
+                        remaining_quantity=0,
+                        fifo_reference_id=entry_id,
+                        unit_cost=cost_per_unit,
+                        notes=f"{used_for_note} (From FIFO #{entry_id})",
+                        created_by=created_by,
+                        customer=customer,
+                        sale_price=sale_price,
+                        order_id=order_id,
+                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
+                    )
+                    db.session.add(history)
             else:
                 # Use FIFO service for regular inventory items
-                FIFOService.add_fifo_entry(
-                    inventory_item_id=target_item_id,
-                    quantity=qty_change,
-                    change_type=change_type,
-                    unit=inventory_item.unit,
-                    notes=notes,
-                    cost_per_unit=cost_per_unit,
-                    expiration_date=expiration_date,
-                    shelf_life_days=shelf_life_to_use,
-                    batch_id=batch_id,
-                    created_by=created_by
+                FIFOService.create_deduction_history(
+                    item_id, deduction_plan, change_type, notes,
+                    batch_id, created_by, customer, sale_price, order_id
                 )
 
-    # Update inventory quantity with rounding
-    rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-    inventory_item.quantity = ConversionEngine.round_value(inventory_item.quantity + rounded_qty_change, 3)
+        elif qty_change > 0:
+            # Additions - use FIFO service
+            if change_type == 'refunded' and batch_id:
+                # Handle refund credits using FIFO service
+                FIFOService.handle_refund_credits(
+                    item_id, qty_change, batch_id, notes, created_by, cost_per_unit
+                )
+            else:
+                # Regular additions using FIFO service
+                if item_type == 'product':
+                    # Handle ProductSKU history separately
+                    from app.models.product import ProductSKUHistory
+                    history_unit = item.unit if item.unit else 'count'
 
-    db.session.commit()
+                    history = ProductSKUHistory(
+                        sku_id=item.id,
+                        change_type=change_type,
+                        quantity_change=qty_change,
+                        unit=history_unit,
+                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
+                        unit_cost=cost_per_unit,
+                        notes=notes,
+                        created_by=created_by,
+                        expiration_date=expiration_date,
+                        shelf_life_days=shelf_life_to_use,
+                        is_perishable=expiration_date is not None,
+                        batch_id=batch_id if change_type == 'finished_batch' else None,
+                        customer=customer,
+                        sale_price=sale_price,
+                        order_id=order_id,
+                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
+                    )
+                    db.session.add(history)
+                else:
+                    # Use FIFO service for regular inventory items
+                    FIFOService.add_fifo_entry(
+                        inventory_item_id=item_id,
+                        quantity=qty_change,
+                        change_type=change_type,
+                        unit=item.unit,
+                        notes=notes,
+                        cost_per_unit=cost_per_unit,
+                        expiration_date=expiration_date,
+                        shelf_life_days=shelf_life_to_use,
+                        batch_id=batch_id,
+                        created_by=created_by
+                    )
 
-    # Validate inventory/FIFO sync after adjustment
-    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
-    if not is_valid:
-        # Rollback the transaction
+        # Update inventory quantity with rounding
+        rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
+        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+
+        db.session.commit()
+
+        # Validate inventory/FIFO sync after adjustment
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+        if not is_valid:
+            # Rollback the transaction
+            db.session.rollback()
+            raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
+
+        return True
+
+    except Exception as e:
         db.session.rollback()
-        raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-
-    return True
+        raise e

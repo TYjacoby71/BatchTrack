@@ -11,7 +11,7 @@ class FIFOService:
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
         today = datetime.now().date()
         
-        return InventoryHistory.query.filter(
+        query = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0,
@@ -21,31 +21,49 @@ class FIFOService:
                     InventoryHistory.expiration_date >= today    # Not expired yet
                 )
             )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+        )
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
         """Get expired FIFO entries with remaining quantity (for disposal only)"""
         today = datetime.now().date()
         
-        return InventoryHistory.query.filter(
+        query = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date.isnot(None),
                 InventoryHistory.expiration_date < today
             )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+        )
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def get_all_fifo_entries(inventory_item_id):
         """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
-        return InventoryHistory.query.filter(
+        query = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0
             )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+        )
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
