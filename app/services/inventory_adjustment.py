@@ -221,10 +221,14 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     if not sku:
                         raise ValueError("ProductSKU not found for inventory item")
 
+                    # Ensure inventory item is marked as product type
+                    if item.type != 'product':
+                        item.type = 'product'
+
                     history_unit = item.unit if item.unit else 'count'
 
                     history = ProductSKUHistory(
-                        inventory_item_id=sku.inventory_item_id,
+                        inventory_item_id=item_id,
                         change_type=change_type,
                         quantity_change=qty_change,
                         unit=history_unit,

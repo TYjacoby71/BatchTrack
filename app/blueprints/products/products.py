@@ -118,7 +118,7 @@ def new_product():
             # Step 3: Create inventory item for the SKU
             inventory_item = InventoryItem(
                 name=f"{name} - Base - Bulk",
-                type='product',
+                type='product',  # Critical: mark as product type
                 unit=unit,
                 quantity=0.0,
                 organization_id=current_user.organization_id,

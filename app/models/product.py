@@ -284,7 +284,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'product_sku_history'
     
     id = db.Column(db.Integer, primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('product_sku.inventory_item_id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     
     # Change tracking
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -342,7 +342,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     marketplace_source = db.Column(db.String(32), nullable=True)
     
     # Relationships
-    sku = db.relationship('ProductSKU', foreign_keys=[inventory_item_id], backref='history_entries')
+    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='product_history_entries')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     user = db.relationship('User', foreign_keys=[created_by])
