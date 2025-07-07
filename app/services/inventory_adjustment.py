@@ -153,9 +153,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             # Execute the deduction plan using FIFO service
             FIFOService.execute_deduction_plan(deduction_plan, item_id)
-
-                # Create a new history entry for the deduction
-                history = InventoryHistory(
                     inventory_item_id=item_id,
                     change_type=change_type,
                     quantity_change=-deduction_amount,
