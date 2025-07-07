@@ -151,13 +151,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             if not success:
                 raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
 
-            # Execute the deduction plan and create history entries
-            for entry_id, deduction_amount, unit_cost in deduction_plan:
-                # Update the source FIFO entry
-                source_entry = InventoryHistory.query.get(entry_id)
-                if source_entry:
-                    source_entry.remaining_quantity = max(0, source_entry.remaining_quantity - deduction_amount)
-                    source_entry.quantity_used = (source_entry.quantity_used or 0) + deduction_amount
+            # Execute the deduction plan using FIFO service
+            FIFOService.execute_deduction_plan(deduction_plan, item_id)
 
                 # Create a new history entry for the deduction
                 history = InventoryHistory(

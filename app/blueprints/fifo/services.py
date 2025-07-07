@@ -187,12 +187,20 @@ class FIFOService:
         return True, deduction_plan, available_quantity
 
     @staticmethod
-    def execute_deduction_plan(deduction_plan):
+    def execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
+        from app.models.product import ProductSKUHistory
+        
         for entry_id, deduct_amount, _ in deduction_plan:
+            # Try InventoryHistory first
             entry = InventoryHistory.query.get(entry_id)
             if entry:
                 entry.remaining_quantity -= deduct_amount
+            else:
+                # Try ProductSKUHistory for products
+                entry = ProductSKUHistory.query.get(entry_id)
+                if entry:
+                    entry.remaining_quantity -= deduct_amount
 
     @staticmethod
     def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
@@ -420,7 +428,7 @@ class FIFOService:
                 return False
 
             # Execute the deduction
-            FIFOService.execute_deduction_plan(deduction_plan)
+            FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
             
             # Create history entries
             FIFOService.create_deduction_history(
