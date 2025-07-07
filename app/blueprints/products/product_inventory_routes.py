@@ -98,7 +98,12 @@ def adjust_sku_inventory(inventory_item_id):
         customer = data.get('customer')
         sale_price = float(data.get('sale_price')) if data.get('sale_price') else None
         order_id = data.get('order_id')
-        cost_override = float(data.get('cost_override')) if data.get('cost_override') else None
+        # Handle both 'cost_override' and 'restock_cost' field names
+        cost_override = None
+        if data.get('cost_override'):
+            cost_override = float(data.get('cost_override'))
+        elif data.get('restock_cost'):
+            cost_override = float(data.get('restock_cost'))
 
         logger.info(f"Optional fields extracted:")
         logger.info(f"  - notes: {notes}")
