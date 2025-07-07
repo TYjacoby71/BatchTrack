@@ -1,1 +1,1 @@
-// This file has been deleted - inventory operations now use the main inventory adjustment system
+const url = `/products/inventory/adjust/${skuId}`;

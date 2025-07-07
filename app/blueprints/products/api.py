@@ -236,62 +236,8 @@ def quick_add_product():
 @products_api_bp.route('/inventory/add-from-batch', methods=['POST'])
 @login_required
 def add_inventory_from_batch():
-    """Add product inventory from finished batch - SINGLE ENDPOINT"""
-    data = request.get_json()
-
-    batch_id = data.get('batch_id')
-    product_id = data.get('product_id')  # Changed from product_name
-    product_name = data.get('product_name')  # Keep as fallback
-    variant_name = data.get('variant_name')
-    size_label = data.get('size_label')
-    quantity = data.get('quantity')
-
-    if not batch_id or (not product_id and not product_name):
-        return jsonify({'error': 'Batch ID and Product ID or Name are required'}), 400
-
-    try:
-        # Get product name from ID if provided - with org scoping
-        if product_id:
-            base_sku = ProductSKU.query.filter_by(
-                id=product_id,
-                organization_id=current_user.organization_id
-            ).first()
-            if not base_sku:
-                return jsonify({'error': 'Product not found'}), 404
-            product_name = base_sku.product_name
-
-        # Get or create the SKU
-        sku = ProductService.get_or_create_sku(
-            product_name=product_name,
-            variant_name=variant_name or 'Base',
-            size_label=size_label or 'Bulk'
-        )
-
-        # Use the inventory adjustment service to add inventory
-        success = process_inventory_adjustment(
-            item_id=sku.id,
-            quantity=quantity,
-            change_type='batch_completion',
-            unit=sku.unit,
-            notes=f'Added from batch {batch_id}',
-            batch_id=batch_id,
-            created_by=current_user.id,
-            item_type='product'
-        )
-
-        if success:
-            db.session.commit()
-            return jsonify({
-                'success': True,
-                'sku_id': sku.id,
-                'message': f'Added {quantity} {sku.unit} to {sku.display_name}'
-            })
-        else:
-            return jsonify({'error': 'Failed to add inventory'}), 500
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    """Add product inventory from finished batch - REDIRECTS TO INVENTORY ROUTES"""
+    return jsonify({'error': 'This endpoint has been moved. Use /products/inventory/add-from-batch instead'}), 301
 
 @products_api_bp.route('/sku/<int:sku_id>/adjust', methods=['POST'])
 @login_required
