@@ -210,7 +210,7 @@ def adjust_sku_inventory(inventory_item_id):
     logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT END ===")
     if not request.is_json:
         logger.info(f"Redirecting to SKU view: {inventory_item_id}")
-        return redirect(url_for('products.sku_view', sku_id=inventory_item_id))
+        return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
     return None
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
