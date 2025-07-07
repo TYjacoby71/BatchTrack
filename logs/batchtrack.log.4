@@ -1,74 +1,113 @@
-2025-07-07 19:52:56,298 INFO: SKU ID: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
-2025-07-07 19:52:56,299 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
-2025-07-07 19:52:56,299 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
-2025-07-07 19:52:56,299 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
-2025-07-07 19:52:56,300 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
-2025-07-07 19:52:56,301 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:30]
-2025-07-07 19:52:56,302 INFO: SKU details - ID: 4, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:32]
-2025-07-07 19:52:56,302 INFO: SKU inventory item: <InventoryItem 4> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:33]
-2025-07-07 19:52:56,302 INFO: Current inventory quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:35]
-2025-07-07 19:52:56,303 INFO: Form request data: {'csrf_token': 'ImJmMDMzMGUyZTY5OTkzY2EzMTY5YTcyNWI5ZGIzOWI1MzY2NGFlYTMi.aGwlkg.Ref3f2NsuRF_GJfMoLbXxTFBFVs', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'gift', 'quantity': '1', 'notes': '', 'order_id': '', 'sale_price': '', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:50]
-2025-07-07 19:52:56,303 INFO: Extracted quantity: 1 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:56]
-2025-07-07 19:52:56,303 INFO: Extracted change_type: gift [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:57]
-2025-07-07 19:52:56,303 INFO: Converting quantity '1' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:83]
-2025-07-07 19:52:56,303 INFO: Converted quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:85]
-2025-07-07 19:52:56,303 INFO: Optional fields extracted: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:99]
-2025-07-07 19:52:56,303 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:100]
-2025-07-07 19:52:56,304 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:101]
-2025-07-07 19:52:56,304 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:102]
-2025-07-07 19:52:56,304 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:103]
-2025-07-07 19:52:56,304 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:104]
-2025-07-07 19:52:56,304 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:105]
-2025-07-07 19:52:56,304 INFO: === CALLING CENTRALIZED INVENTORY ADJUSTMENT === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:122]
-2025-07-07 19:52:56,304 INFO: Parameters: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:123]
-2025-07-07 19:52:56,304 INFO:   - item_id (inventory_item_id): 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:124]
-2025-07-07 19:52:56,305 INFO:   - quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:125]
-2025-07-07 19:52:56,305 INFO:   - change_type: gift [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:126]
-2025-07-07 19:52:56,305 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:127]
-2025-07-07 19:52:56,305 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:128]
-2025-07-07 19:52:56,305 INFO:   - created_by: 2 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:129]
-2025-07-07 19:52:56,305 INFO:   - item_type: product [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:130]
-2025-07-07 19:52:56,305 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:131]
-2025-07-07 19:52:56,306 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:132]
-2025-07-07 19:52:56,306 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:133]
-2025-07-07 19:52:56,306 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:134]
-2025-07-07 19:52:56,306 INFO:   - custom_expiration_date: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:135]
-2025-07-07 19:52:56,306 INFO:   - custom_shelf_life_days: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:136]
-2025-07-07 19:52:56,313 ERROR: Exception in SKU inventory adjustment: Error adjusting inventory: 'ProductSKU' object has no attribute 'id' [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:187]
-2025-07-07 19:52:56,314 ERROR: Full traceback: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:188]
+2025-07-07 20:09:38,417 ERROR: Full traceback: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:204]
 Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 138, in adjust_sku_inventory
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: product_sku_history.sku_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 141, in adjust_sku_inventory
     success = process_inventory_adjustment(
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 276, in process_inventory_adjustment
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 281, in process_inventory_adjustment
     raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 192, in process_inventory_adjustment
-    sku_id=sku.id,
-           ^^^^^^
-AttributeError: 'ProductSKU' object has no attribute 'id'
-2025-07-07 19:52:56,315 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:194]
-2025-07-07 19:52:56,315 INFO: Redirecting to SKU view: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:196]
-2025-07-07 19:56:18,753 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:04:13,139 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:04:32,226 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:18]
-2025-07-07 20:04:32,226 INFO: SKU ID: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
-2025-07-07 20:04:32,226 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
-2025-07-07 20:04:32,226 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
-2025-07-07 20:04:32,226 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
-2025-07-07 20:04:32,227 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
-2025-07-07 20:04:32,229 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:31]
-2025-07-07 20:04:32,229 INFO: SKU details - inventory_item_id: 4, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:33]
-2025-07-07 20:04:32,229 INFO: SKU inventory item: <InventoryItem 4> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:34]
-2025-07-07 20:04:32,229 INFO: Current inventory quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:36]
-2025-07-07 20:04:32,230 INFO: Form request data: {'csrf_token': 'ImJmMDMzMGUyZTY5OTkzY2EzMTY5YTcyNWI5ZGIzOWI1MzY2NGFlYTMi.aGwoSQ.KI2qXG7180W8AfhRFj1KzrxAXBk', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'sale', 'quantity': '1', 'notes': '', 'order_id': '', 'sale_price': '10.99', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:53]
-2025-07-07 20:04:32,230 INFO: Extracted quantity: 1 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:59]
-2025-07-07 20:04:32,230 INFO: Extracted change_type: sale [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:60]
-2025-07-07 20:04:32,230 INFO: Converting quantity '1' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:86]
-2025-07-07 20:04:32,230 INFO: Converted quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:88]
-2025-07-07 20:04:32,230 INFO: Optional fields extracted: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:102]
-2025-07-07 20:04:32,230 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:103]
-2025-07-07 20:04:32,231 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:104]
-2025-07-07 20:04:32,231 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:105]
-2025-07-07 20:04:32,231 INFO:   - sale_price: 10.99 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:106]
-2025-07-07 20:04:32,231 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:107]
-2025-07-07 20:04:32,231 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:108]
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 268, in process_inventory_adjustment
+    db.session.commit()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2032, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
+    self._flush(objects)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4488, in _flush
+    with util.safe_reraise():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
+    flush_context.execute()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: product_sku_history.sku_id
+[SQL: INSERT INTO product_sku_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, original_quantity, unit, unit_cost, sale_price, customer, fifo_code, fifo_reference_id, fifo_source, is_perishable, shelf_life_days, expiration_date, batch_id, container_id, notes, note, created_by, order_id, reservation_id, is_reserved, sale_location, quantity_used, batch_number, lot_number, temperature_at_time, location_id, location_name, quality_status, compliance_status, quality_checked_by, marketplace_order_id, marketplace_source, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (4, '2025-07-07 20:09:38.405184', 'manual_addition', 1.0, 1.0, None, 'floz', 1.0, None, None, None, None, None, 0, None, None, None, None, '', None, 2, '', None, 0, None, 0.0, None, None, None, None, None, None, None, None, None, None, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-07-07 20:09:38,428 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:210]
+2025-07-07 20:09:38,428 INFO: Redirecting to SKU view: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:212]
+2025-07-07 20:09:38,428 ERROR: Exception on /products/adjust/4 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/products/product_inventory_routes.py", line 213, in adjust_sku_inventory
+    return redirect(url_for('products.sku_view', sku_id=sku_id))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.sku_view' with values ['sku_id']. Did you mean 'products.view_product' instead?
+2025-07-07 20:10:10,714 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 20:10:28,661 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 20:15:39,135 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
