@@ -346,6 +346,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
+    window.loadVariants = function() {
+        // Function to reload/refresh variant data
+        location.reload();
+    };
+
     window.confirmDeleteProduct = function(productId, displayName) {
         if (confirm(`Are you sure you want to delete "${displayName}"? This cannot be undone.`)) {
             const form = document.createElement('form');
