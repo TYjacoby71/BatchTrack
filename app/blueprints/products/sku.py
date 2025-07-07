@@ -11,7 +11,7 @@ sku_bp = Blueprint('sku', __name__)
 @login_required
 def view_sku(sku_id):
     """View individual SKU details"""
-    sku = ProductSKU.query.get_or_404(sku_id)
+    sku = ProductSKU.query.filter_by(inventory_item_id=sku_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
     history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
@@ -23,14 +23,15 @@ def view_sku(sku_id):
                          sku=sku,
                          history=history,
                          total_quantity=total_quantity,
-                         get_global_unit_list=get_global_unit_list)
+                         get_global_unit_list=get_global_unit_list,
+                         fifo_filter=request.args.get('fifo', 'false').lower() == 'true')
 
 @sku_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
 @login_required
 def edit_sku(sku_id):
     """Edit SKU details"""
     sku = ProductSKU.query.filter_by(
-        id=sku_id,
+        inventory_item_id=sku_id,
         organization_id=current_user.organization_id
     ).first_or_404()
     
@@ -74,7 +75,7 @@ def edit_sku(sku_id):
             
             try:
                 success = process_inventory_adjustment(
-                    item_id=sku.id,
+                    item_id=sku.inventory_item_id,
                     quantity=float(recount_quantity),
                     change_type='recount',
                     unit=sku.unit,
@@ -98,6 +99,6 @@ def edit_sku(sku_id):
         db.session.rollback()
         flash(f'Error updating SKU: {str(e)}', 'error')
     
-    return redirect(url_for('sku.view_sku', sku_id=sku_id))
+    return redirect(url_for('sku.view_sku', sku_id=sku.inventory_item_id))
 
 # Legacy adjustment route removed - all adjustments must go through centralized service

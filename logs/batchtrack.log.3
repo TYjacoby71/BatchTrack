@@ -1,9 +1,10 @@
-2025-07-07 18:37:04,053 ERROR: Exception on /products/sku/4 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-07 18:37:56,990 ERROR: Exception on /products/sku/4 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 2181, in _entity_namespace_key
-    return getattr(ns, key)  # type: ignore
-           ^^^^^^^^^^^^^^^^
-AttributeError: type object 'ProductSKUHistory' has no attribute 'sku_id'
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: product_sku_history.inventory_item_id
 
 The above exception was the direct cause of the following exception:
 
@@ -24,15 +25,54 @@ Traceback (most recent call last):
     return current_app.ensure_sync(func)(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/app/blueprints/products/sku.py", line 17, in view_sku
-    history = ProductSKUHistory.query.filter_by(sku_id=sku_id).order_by(ProductSKUHistory.timestamp.desc()).all()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1991, in filter_by
-    clauses = [
-              ^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1992, in <listcomp>
-    _entity_namespace_key(from_entity, key) == value
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 2183, in _entity_namespace_key
-    raise exc.InvalidRequestError(
-sqlalchemy.exc.InvalidRequestError: Entity namespace for "product_sku_history" has no property "sku_id"
-2025-07-07 18:37:50,269 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+    history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: product_sku_history.inventory_item_id
+[SQL: SELECT product_sku_history.id AS product_sku_history_id, product_sku_history.inventory_item_id AS product_sku_history_inventory_item_id, product_sku_history.timestamp AS product_sku_history_timestamp, product_sku_history.change_type AS product_sku_history_change_type, product_sku_history.quantity_change AS product_sku_history_quantity_change, product_sku_history.remaining_quantity AS product_sku_history_remaining_quantity, product_sku_history.original_quantity AS product_sku_history_original_quantity, product_sku_history.unit AS product_sku_history_unit, product_sku_history.unit_cost AS product_sku_history_unit_cost, product_sku_history.sale_price AS product_sku_history_sale_price, product_sku_history.customer AS product_sku_history_customer, product_sku_history.fifo_code AS product_sku_history_fifo_code, product_sku_history.fifo_reference_id AS product_sku_history_fifo_reference_id, product_sku_history.fifo_source AS product_sku_history_fifo_source, product_sku_history.is_perishable AS product_sku_history_is_perishable, product_sku_history.shelf_life_days AS product_sku_history_shelf_life_days, product_sku_history.expiration_date AS product_sku_history_expiration_date, product_sku_history.batch_id AS product_sku_history_batch_id, product_sku_history.container_id AS product_sku_history_container_id, product_sku_history.notes AS product_sku_history_notes, product_sku_history.note AS product_sku_history_note, product_sku_history.created_by AS product_sku_history_created_by, product_sku_history.order_id AS product_sku_history_order_id, product_sku_history.reservation_id AS product_sku_history_reservation_id, product_sku_history.is_reserved AS product_sku_history_is_reserved, product_sku_history.sale_location AS product_sku_history_sale_location, product_sku_history.quantity_used AS product_sku_history_quantity_used, product_sku_history.batch_number AS product_sku_history_batch_number, product_sku_history.lot_number AS product_sku_history_lot_number, product_sku_history.temperature_at_time AS product_sku_history_temperature_at_time, product_sku_history.location_id AS product_sku_history_location_id, product_sku_history.location_name AS product_sku_history_location_name, product_sku_history.quality_status AS product_sku_history_quality_status, product_sku_history.compliance_status AS product_sku_history_compliance_status, product_sku_history.quality_checked_by AS product_sku_history_quality_checked_by, product_sku_history.marketplace_order_id AS product_sku_history_marketplace_order_id, product_sku_history.marketplace_source AS product_sku_history_marketplace_source, product_sku_history.organization_id AS product_sku_history_organization_id 
+FROM product_sku_history 
+WHERE product_sku_history.inventory_item_id = ? ORDER BY product_sku_history.timestamp DESC]
+[parameters: (4,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-07-07 18:39:00,292 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:39:04,997 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:40:34,664 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:40:36,853 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:40:39,353 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:40:44,567 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:41:39,253 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 18:41:44,168 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
