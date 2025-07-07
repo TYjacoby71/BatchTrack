@@ -28,8 +28,9 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         from sqlalchemy import and_
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
-                ProductSKUHistory.sku_id == sku.id,
-                ProductSKUHistory.remaining_quantity > 0
+                ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else None
             )
         ).all()
 
@@ -189,7 +190,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
 
                     history = ProductSKUHistory(
-                        sku_id=sku.id,
+                        inventory_item_id=sku.inventory_item_id,
                         change_type=change_type,
                         quantity_change=-deduction_amount,
                         unit=history_unit,
@@ -223,11 +224,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     history_unit = item.unit if item.unit else 'count'
 
                     history = ProductSKUHistory(
-                        sku_id=sku.id,
+                        inventory_item_id=sku.inventory_item_id,
                         change_type=change_type,
                         quantity_change=qty_change,
                         unit=history_unit,
-                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else 0,
+                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition'] else 0,
                         unit_cost=cost_per_unit,
                         notes=notes,
                         created_by=created_by,

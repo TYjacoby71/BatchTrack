@@ -32,6 +32,55 @@ function loadVariants(productId, targetSelectId) {
 }
 
 // Adjust SKU inventory
+function adjustSkuInventory(skuId, data) {
+    return fetch(`/products/inventory/adjust/${skuId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf-token]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .catch(error => {
+        console.error('Error adjusting SKU inventory:', error);
+        throw error;
+    });
+}
+
+// Load size labels for a variant
+function loadSizeLabels(variantId, targetSelectId) {
+    if (!variantId) {
+        const targetSelect = document.getElementById(targetSelectId);
+        if (targetSelect) {
+            targetSelect.innerHTML = '<option value="">Select Size</option>';
+        }
+        return;
+    }
+
+    fetch(`/api/products/variants/${variantId}/sizes`)
+        .then(response => response.json())
+        .then(sizes => {
+            const targetSelect = document.getElementById(targetSelectId);
+            if (targetSelect) {
+                targetSelect.innerHTML = '<option value="">Select Size</option>';
+                sizes.forEach(size => {
+                    const option = document.createElement('option');
+                    option.value = size.size_label;
+                    option.textContent = size.size_label;
+                    targetSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading size labels:', error);
+        });
+}
 function adjustSkuInventory(skuId, adjustmentData) {
     const url = `/api/products/sku/${skuId}/adjust`;
     

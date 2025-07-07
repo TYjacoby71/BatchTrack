@@ -22,6 +22,7 @@ def adjust_sku_inventory(sku_id):
     logger.info(f"Request method: {request.method}")
     logger.info(f"Request is JSON: {request.is_json}")
 
+    # The sku_id parameter IS the inventory_item_id (primary key of ProductSKU)
     sku = ProductSKU.query.filter_by(
         inventory_item_id=sku_id,
         organization_id=current_user.organization_id
@@ -29,10 +30,12 @@ def adjust_sku_inventory(sku_id):
 
     logger.info(f"SKU lookup result: {sku}")
     if sku:
-        logger.info(f"SKU details - ID: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'No product'}, Variant: {sku.variant.name if sku.variant else 'No variant'}")
+        logger.info(f"SKU details - inventory_item_id: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'No product'}, Variant: {sku.variant.name if sku.variant else 'No variant'}")
         logger.info(f"SKU inventory item: {sku.inventory_item}")
         if sku.inventory_item:
             logger.info(f"Current inventory quantity: {sku.inventory_item.quantity}")
+    else:
+        logger.error(f"SKU not found for inventory_item_id: {sku_id}, org: {current_user.organization_id}")
 
     if not sku:
         logger.error(f"SKU not found for ID: {sku_id}, org: {current_user.organization_id}")
@@ -154,10 +157,23 @@ def adjust_sku_inventory(sku_id):
         logger.info(f"Inventory adjustment result: {success}")
 
         if success:
+            # Ensure database commit
+            try:
+                db.session.commit()
+                logger.info("Database committed successfully")
+            except Exception as commit_error:
+                logger.error(f"Database commit failed: {commit_error}")
+                db.session.rollback()
+                raise commit_error
+
             message = 'SKU inventory adjusted successfully'
             logger.info(f"SUCCESS: {message}")
-            # Refresh SKU to get updated quantity
+            
+            # Refresh SKU and inventory item to get updated quantities
             db.session.refresh(sku)
+            if sku.inventory_item:
+                db.session.refresh(sku.inventory_item)
+            
             new_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
             logger.info(f"New quantity after adjustment: {new_quantity}")
 
@@ -169,7 +185,7 @@ def adjust_sku_inventory(sku_id):
                 })
             flash(message, 'success')
         else:
-            error_msg = 'Error adjusting inventory'
+            error_msg = 'Error adjusting inventory - operation failed'
             logger.error(f"FAILURE: {error_msg}")
             if request.is_json:
                 return jsonify({'error': error_msg}), 500
@@ -194,7 +210,7 @@ def adjust_sku_inventory(sku_id):
     logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT END ===")
     if not request.is_json:
         logger.info(f"Redirecting to SKU view: {sku_id}")
-        return redirect(url_for('sku.view_sku', sku_id=sku_id))
+        return redirect(url_for('products.view_sku', sku_id=sku_id))
     return None
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
@@ -344,14 +360,15 @@ def process_sale_webhook():
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Find SKU by code
+    # Find SKU by code with organization scoping
     sku = ProductSKU.query.filter_by(
         sku_code=data['sku_code'],
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        is_active=True
     ).first()
 
     if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
+        return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
         success = process_inventory_adjustment(
@@ -394,14 +411,15 @@ def process_return_webhook():
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Find SKU by code
+    # Find SKU by code with organization scoping
     sku = ProductSKU.query.filter_by(
         sku_code=data['sku_code'],
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        is_active=True
     ).first()
 
     if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
+        return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
         success = process_inventory_adjustment(
@@ -417,6 +435,7 @@ def process_return_webhook():
         )
 
         if success:
+            db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Return processed successfully',
