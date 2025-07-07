@@ -6,7 +6,7 @@
                 <h5 class="modal-title">Edit SKU Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('sku.edit_sku', sku_id=sku.inventory_item_id) }}" id="editSkuForm">
+            <form method="POST" action="{{ url_for('sku.edit_sku', inventory_item_id=sku.inventory_item_id) }}" id="editSkuForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -100,7 +100,7 @@
                 <h5 class="modal-title">ProductSKU Adjustment Modal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.adjust_sku_inventory', sku_id=sku.inventory_item_id) }}">
+            <form method="POST" id="adjustFifoForm" action="{{ url_for('product_inventory.adjust_sku_inventory', inventory_item_id=sku.inventory_item_id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="adjust_fifo">
                 <input type="hidden" id="modalInventoryId" name="inventory_id" value="">
