@@ -9,61 +9,138 @@ class FIFOService:
     @staticmethod
     def get_fifo_entries(inventory_item_id):
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
+        from sqlalchemy import union_all
+        from app.models.product import ProductSKUHistory
+        
         today = datetime.now().date()
         
-        query = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                # Skip expired entries - they can only be spoiled/trashed
-                db.or_(
-                    InventoryHistory.expiration_date.is_(None),  # Non-perishable
-                    InventoryHistory.expiration_date >= today    # Not expired yet
+        # Check what type of item this is
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return []
+        
+        if item.type == 'product':
+            # For products, only query ProductSKUHistory
+            query = ProductSKUHistory.query.filter(
+                and_(
+                    ProductSKUHistory.inventory_item_id == inventory_item_id,
+                    ProductSKUHistory.remaining_quantity > 0,
+                    # Skip expired entries - they can only be spoiled/trashed
+                    db.or_(
+                        ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
+                        ProductSKUHistory.expiration_date >= today    # Not expired yet
+                    )
                 )
             )
-        )
+        else:
+            # For ingredients/containers, query InventoryHistory
+            query = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == inventory_item_id,
+                    InventoryHistory.remaining_quantity > 0,
+                    # Skip expired entries - they can only be spoiled/trashed
+                    db.or_(
+                        InventoryHistory.expiration_date.is_(None),  # Non-perishable
+                        InventoryHistory.expiration_date >= today    # Not expired yet
+                    )
+                )
+            )
         
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
-            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            query = query.filter(
+                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
+                 else InventoryHistory.organization_id == current_user.organization_id)
+            )
         
-        return query.order_by(InventoryHistory.timestamp.asc()).all()
+        return query.order_by(
+            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
+             else InventoryHistory.timestamp.asc())
+        ).all()
 
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
         """Get expired FIFO entries with remaining quantity (for disposal only)"""
+        from app.models.product import ProductSKUHistory
+        
         today = datetime.now().date()
         
-        query = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date.isnot(None),
-                InventoryHistory.expiration_date < today
+        # Check what type of item this is
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return []
+        
+        if item.type == 'product':
+            # For products, only query ProductSKUHistory
+            query = ProductSKUHistory.query.filter(
+                and_(
+                    ProductSKUHistory.inventory_item_id == inventory_item_id,
+                    ProductSKUHistory.remaining_quantity > 0,
+                    ProductSKUHistory.expiration_date.isnot(None),
+                    ProductSKUHistory.expiration_date < today
+                )
             )
-        )
+        else:
+            # For ingredients/containers, query InventoryHistory
+            query = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == inventory_item_id,
+                    InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.expiration_date.isnot(None),
+                    InventoryHistory.expiration_date < today
+                )
+            )
         
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
-            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            query = query.filter(
+                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
+                 else InventoryHistory.organization_id == current_user.organization_id)
+            )
         
-        return query.order_by(InventoryHistory.timestamp.asc()).all()
+        return query.order_by(
+            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
+             else InventoryHistory.timestamp.asc())
+        ).all()
 
     @staticmethod
     def get_all_fifo_entries(inventory_item_id):
         """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
-        query = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
+        from app.models.product import ProductSKUHistory
+        
+        # Check what type of item this is
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return []
+        
+        if item.type == 'product':
+            # For products, only query ProductSKUHistory
+            query = ProductSKUHistory.query.filter(
+                and_(
+                    ProductSKUHistory.inventory_item_id == inventory_item_id,
+                    ProductSKUHistory.remaining_quantity > 0
+                )
             )
-        )
+        else:
+            # For ingredients/containers, query InventoryHistory
+            query = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == inventory_item_id,
+                    InventoryHistory.remaining_quantity > 0
+                )
+            )
         
         # Add organization scoping if user is authenticated
         if current_user and current_user.is_authenticated:
-            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            query = query.filter(
+                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
+                 else InventoryHistory.organization_id == current_user.organization_id)
+            )
         
-        return query.order_by(InventoryHistory.timestamp.asc()).all()
+        return query.order_by(
+            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
+             else InventoryHistory.timestamp.asc())
+        ).all()
 
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
@@ -120,9 +197,10 @@ class FIFOService:
     @staticmethod
     def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
                       cost_per_unit=None, expiration_date=None, shelf_life_days=None, 
-                      batch_id=None, created_by=None):
+                      batch_id=None, created_by=None, **kwargs):
         """
         Add a new FIFO entry for positive inventory changes
+        Routes to appropriate history table based on item type
         """
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
@@ -135,25 +213,50 @@ class FIFOService:
         # Generate FIFO code
         fifo_code = generate_fifo_code(change_type, quantity, batch_id)
 
-        # Create new FIFO entry
-        history = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type=change_type,
-            quantity_change=quantity,
-            unit=unit,
-            remaining_quantity=quantity,
-            unit_cost=cost_per_unit,
-            note=notes,
-            quantity_used=0.0,  # Additions don't consume inventory
-            created_by=created_by,
-            expiration_date=expiration_date,
-            shelf_life_days=shelf_life_days,
-            is_perishable=expiration_date is not None,
-            batch_id=batch_id if change_type == 'finished_batch' else None,
-            used_for_batch_id=batch_id if change_type not in ['restock'] else None,
-            fifo_code=fifo_code,
-            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-        )
+        # Check if this is a product item
+        if item.type == 'product':
+            # Use ProductSKUHistory for products
+            from app.models.product import ProductSKUHistory
+            
+            history = ProductSKUHistory(
+                inventory_item_id=inventory_item_id,
+                change_type=change_type,
+                quantity_change=quantity,
+                unit=unit,
+                remaining_quantity=quantity,
+                unit_cost=cost_per_unit,
+                notes=notes,
+                created_by=created_by,
+                expiration_date=expiration_date,
+                shelf_life_days=shelf_life_days,
+                is_perishable=expiration_date is not None,
+                batch_id=batch_id if change_type == 'finished_batch' else None,
+                fifo_code=fifo_code,
+                customer=kwargs.get('customer'),
+                sale_price=kwargs.get('sale_price'),
+                order_id=kwargs.get('order_id'),
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+            )
+        else:
+            # Use InventoryHistory for raw ingredients/containers
+            history = InventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type=change_type,
+                quantity_change=quantity,
+                unit=unit,
+                remaining_quantity=quantity,
+                unit_cost=cost_per_unit,
+                note=notes,
+                quantity_used=0.0,  # Additions don't consume inventory
+                created_by=created_by,
+                expiration_date=expiration_date,
+                shelf_life_days=shelf_life_days,
+                is_perishable=expiration_date is not None,
+                batch_id=batch_id if change_type == 'finished_batch' else None,
+                used_for_batch_id=batch_id if change_type not in ['restock'] else None,
+                fifo_code=fifo_code,
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+            )
         
         db.session.add(history)
         return history
@@ -164,6 +267,7 @@ class FIFOService:
                                 sale_price=None, order_id=None):
         """
         Create history entries for FIFO deductions
+        Routes to appropriate history table based on item type
         """
         item = InventoryItem.query.get(inventory_item_id)
         history_unit = item.unit if item.unit else 'count'
@@ -177,21 +281,47 @@ class FIFOService:
             # Generate FIFO code for deduction
             fifo_code = generate_fifo_code(change_type, 0, batch_id)
 
-            history = InventoryHistory(
-                inventory_item_id=inventory_item_id,
-                change_type=change_type,
-                quantity_change=-deduction_amount,
-                unit=history_unit,
-                remaining_quantity=0,
-                fifo_reference_id=entry_id,
-                unit_cost=unit_cost,
-                note=f"{used_for_note} (From FIFO #{entry_id})",
-                created_by=created_by,
-                quantity_used=quantity_used_value,
-                used_for_batch_id=batch_id,
-                fifo_code=fifo_code,
-                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-            )
+            # Check if this is a product item
+            if item.type == 'product':
+                # Use ProductSKUHistory for products
+                from app.models.product import ProductSKUHistory
+                
+                history = ProductSKUHistory(
+                    inventory_item_id=inventory_item_id,
+                    change_type=change_type,
+                    quantity_change=-deduction_amount,
+                    unit=history_unit,
+                    remaining_quantity=0,
+                    fifo_reference_id=entry_id,
+                    unit_cost=unit_cost,
+                    notes=f"{used_for_note} (From FIFO #{entry_id})",
+                    created_by=created_by,
+                    quantity_used=quantity_used_value,
+                    batch_id=batch_id,
+                    fifo_code=fifo_code,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id,
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                )
+            else:
+                # Use InventoryHistory for raw ingredients/containers
+                history = InventoryHistory(
+                    inventory_item_id=inventory_item_id,
+                    change_type=change_type,
+                    quantity_change=-deduction_amount,
+                    unit=history_unit,
+                    remaining_quantity=0,
+                    fifo_reference_id=entry_id,
+                    unit_cost=unit_cost,
+                    note=f"{used_for_note} (From FIFO #{entry_id})",
+                    created_by=created_by,
+                    quantity_used=quantity_used_value,
+                    used_for_batch_id=batch_id,
+                    fifo_code=fifo_code,
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                )
+            
             db.session.add(history)
             history_entries.append(history)
         

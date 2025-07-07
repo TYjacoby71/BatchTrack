@@ -176,78 +176,12 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 )
                 db.session.add(history)
 
-            # Handle ProductSKU history separately - but use inventory_item_id for FIFO
-            if item_type == 'product':
-                # Get the actual ProductSKU record
-                from app.models.product import ProductSKU, ProductSKUHistory
-                sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
-                if not sku:
-                    raise ValueError("ProductSKU not found for inventory item")
-
-                # Determine unit for history
-                history_unit = unit or sku.unit or 'count'
-
-                # For sales/deductions, use FIFO deduction to find reference entries
-                fifo_reference_id = None
-                fifo_source = None
-
-                if change_type in ['sold', 'sale', 'shipped', 'used', 'damaged', 'spoiled', 'expired_disposal', 'returned']:
-                    # Get deduction plan to find which lots are being used
-                    success, deduction_plan, _ = FIFOService.calculate_deduction_plan(item_id, abs(qty_change), change_type)
-                    if success and deduction_plan:
-                        # Use the first (oldest) lot as the primary reference
-                        primary_lot = deduction_plan[0]
-                        if len(primary_lot) >= 3:  # Ensure we have entry_id, deduction_amount, unit_cost
-                            entry_id = primary_lot[0]
-                            # Try to find the corresponding ProductSKUHistory entry
-                            ref_history = ProductSKUHistory.query.filter_by(
-                                inventory_item_id=item_id,
-                                id=entry_id
-                            ).first()
-                            if ref_history:
-                                fifo_reference_id = entry_id
-                                fifo_source = f"Lot {ref_history.fifo_code or ref_history.id}"
-                            else:
-                                fifo_source = f"FIFO Entry {entry_id}"
-
-                # For additions, this becomes a new lot
-                elif change_type in ['restock', 'finished_batch', 'manual_addition', 'returned']:
-                    # This will become a new FIFO lot, no reference needed
-                    fifo_source = f"New Lot - {change_type}"
-
-                # Generate FIFO code for tracking
-                from app.utils.fifo_generator import generate_fifo_code
-                
-                # For lot-creating events, pass the new remaining quantity
-                if change_type in ['recount', 'restock', 'finished_batch', 'manual_addition'] and qty_change > 0:
-                    remaining_qty_for_fifo = qty_change  # This becomes the lot quantity
-                else:
-                    remaining_qty_for_fifo = 0  # Not a lot
-                    
-                fifo_code = generate_fifo_code(change_type, remaining_qty_for_fifo, batch_id)
-
-                history = ProductSKUHistory(
-                    inventory_item_id=item_id,
-                    change_type=change_type,
-                    quantity_change=qty_change,
-                    unit=history_unit,
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition', 'returned'] and qty_change > 0 else 0,
-                    unit_cost=cost_per_unit,
-                    notes=notes,
-                    created_by=created_by,
-                    expiration_date=expiration_date,
-                    shelf_life_days=shelf_life_to_use,
-                    is_perishable=expiration_date is not None,
-                    batch_id=batch_id if change_type in ['finished_batch', 'batch_completion'] else None,
-                    customer=customer or ('N/A' if change_type in ['sold', 'shipped'] else None),
-                    sale_price=sale_price,
-                    order_id=order_id,
-                    fifo_code=fifo_code,
-                    fifo_reference_id=fifo_reference_id,
-                    fifo_source=fifo_source,
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-                )
-                db.session.add(history)
+            # Use FIFO service for all deductions - it routes to the correct history table
+            FIFOService.create_deduction_history(
+                item_id, deduction_plan, change_type, notes, 
+                batch_id=batch_id, created_by=created_by, 
+                customer=customer, sale_price=sale_price, order_id=order_id
+            )
         elif qty_change > 0:
             # Additions - use FIFO service
             if change_type == 'refunded' and batch_id:
@@ -256,58 +190,22 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
             else:
-                # Handle ProductSKU history separately - but use inventory_item_id for FIFO
-                if item_type == 'product':
-                    # Get the actual ProductSKU record
-                    from app.models.product import ProductSKU, ProductSKUHistory
-                    sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
-                    if not sku:
-                        raise ValueError("ProductSKU not found for inventory item")
-
-                    # Ensure inventory item is marked as product type
-                    if item.type != 'product':
-                        item.type = 'product'
-
-                    history_unit = item.unit if item.unit else 'count'
-
-                    # Generate FIFO code for tracking
-                    from app.utils.fifo_generator import generate_fifo_code
-                    fifo_code = generate_fifo_code(change_type, qty_change, batch_id)
-
-                    history = ProductSKUHistory(
-                        inventory_item_id=item_id,
-                        change_type=change_type,
-                        quantity_change=qty_change,
-                        unit=history_unit,
-                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition'] else 0,
-                        unit_cost=cost_per_unit,
-                        notes=notes,
-                        created_by=created_by,
-                        expiration_date=expiration_date,
-                        shelf_life_days=shelf_life_to_use,
-                        is_perishable=expiration_date is not None,
-                        batch_id=batch_id if change_type == 'finished_batch' else None,
-                        customer=customer or 'N/A',
-                        sale_price=sale_price,
-                        order_id=order_id,
-                        fifo_code=fifo_code,
-                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-                    )
-                    db.session.add(history)
-                else:
-                    # Use FIFO service for regular inventory items
-                    FIFOService.add_fifo_entry(
-                        inventory_item_id=item_id,
-                        quantity=qty_change,
-                        change_type=change_type,
-                        unit=item.unit,
-                        notes=notes,
-                        cost_per_unit=cost_per_unit,
-                        expiration_date=expiration_date,
-                        shelf_life_days=shelf_life_to_use,
-                        batch_id=batch_id,
-                        created_by=created_by
-                    )
+                # Use FIFO service for all additions - it routes to the correct history table
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=item_id,
+                    quantity=qty_change,
+                    change_type=change_type,
+                    unit=item.unit,
+                    notes=notes,
+                    cost_per_unit=cost_per_unit,
+                    expiration_date=expiration_date,
+                    shelf_life_days=shelf_life_to_use,
+                    batch_id=batch_id,
+                    created_by=created_by,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id
+                )
 
         # Update inventory quantity with rounding
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
