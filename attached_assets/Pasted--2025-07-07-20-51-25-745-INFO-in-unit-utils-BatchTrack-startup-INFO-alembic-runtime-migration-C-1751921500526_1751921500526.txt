@@ -1,13 +1,14 @@
-[2025-07-07 20:48:20,650] INFO in unit_utils: BatchTrack startup
+[2025-07-07 20:51:25,745] INFO in unit_utils: BatchTrack startup
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO  [alembic.runtime.migration] Running upgrade 3478c1df1783 -> eb39c343e536, Clean migration after removing branches
+Found 21 rows with NULL inventory_item_id. Deleting them as they represent invalid data.
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlite3.IntegrityError: NOT NULL constraint failed: _alembic_tmp_product_sku_history.inventory_item_id
+sqlite3.OperationalError: table _alembic_tmp_product_sku already exists
 
 The above exception was the direct cause of the following exception:
 
@@ -68,26 +69,28 @@ Traceback (most recent call last):
     self.get_context().run_migrations(**kw)
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
     step.migration_fn(**kw)
-  File "/home/runner/workspace/migrations/versions/eb39c343e536_clean_migration_after_removing_branches.py", line 30, in upgrade
-    with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
+  File "/home/runner/workspace/migrations/versions/eb39c343e536_clean_migration_after_removing_branches.py", line 34, in upgrade
+    with op.batch_alter_table('product_sku', schema=None) as batch_op:
   File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/contextlib.py", line 144, in __exit__
     next(self.gen)
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/base.py", line 397, in batch_alter_table
     impl.flush()
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/batch.py", line 163, in flush
     batch_impl._create(self.impl)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/batch.py", line 450, in _create
-    op_impl._exec(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/batch.py", line 447, in _create
+    op_impl.create_table(self.new_table)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/ddl/impl.py", line 405, in create_table
+    self._exec(schema.CreateTable(table, **kw))
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/ddl/impl.py", line 246, in _exec
     return conn.execute(construct, params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
     return meth(
            ^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1527, in _execute_ddl
     ret = self._execute_context(
           ^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
@@ -101,7 +104,71 @@ Traceback (most recent call last):
     self.dialect.do_execute(
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
     cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: _alembic_tmp_product_sku_history.inventory_item_id
-[SQL: INSERT INTO _alembic_tmp_product_sku_history (id, timestamp, change_type, quantity_change, remaining_quantity, original_quantity, unit, unit_cost, sale_price, customer, fifo_code, fifo_reference_id, fifo_source, is_perishable, shelf_life_days, expiration_date, batch_id, container_id, notes, note, created_by, order_id, reservation_id, is_reserved, sale_location, quantity_used, batch_number, lot_number, temperature_at_time, location_id, location_name, quality_status, compliance_status, quality_checked_by, marketplace_order_id, marketplace_source, organization_id, inventory_item_id) SELECT product_sku_history.id, product_sku_history.timestamp, product_sku_history.change_type, product_sku_history.quantity_change, product_sku_history.remaining_quantity, product_sku_history.original_quantity, product_sku_history.unit, product_sku_history.unit_cost, product_sku_history.sale_price, product_sku_history.customer, product_sku_history.fifo_code, product_sku_history.fifo_reference_id, product_sku_history.fifo_source, product_sku_history.is_perishable, product_sku_history.shelf_life_days, product_sku_history.expiration_date, product_sku_history.batch_id, product_sku_history.container_id, product_sku_history.notes, product_sku_history.note, product_sku_history.created_by, product_sku_history.order_id, product_sku_history.reservation_id, product_sku_history.is_reserved, product_sku_history.sale_location, product_sku_history.quantity_used, product_sku_history.batch_number, product_sku_history.lot_number, product_sku_history.temperature_at_time, product_sku_history.location_id, product_sku_history.location_name, product_sku_history.quality_status, product_sku_history.compliance_status, product_sku_history.quality_checked_by, product_sku_history.marketplace_order_id, product_sku_history.marketplace_source, product_sku_history.organization_id, product_sku_history.inventory_item_id 
-FROM product_sku_history]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) table _alembic_tmp_product_sku already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_product_sku (
+        product_id INTEGER NOT NULL, 
+        variant_id INTEGER NOT NULL, 
+        size_label VARCHAR(64) NOT NULL, 
+        sku_code VARCHAR(64) NOT NULL, 
+        sku_name VARCHAR(128), 
+        unit VARCHAR(32) NOT NULL, 
+        low_stock_threshold FLOAT, 
+        fifo_id VARCHAR(32), 
+        batch_id INTEGER, 
+        container_id INTEGER, 
+        retail_price FLOAT, 
+        wholesale_price FLOAT, 
+        profit_margin_target FLOAT, 
+        category VARCHAR(64), 
+        subcategory VARCHAR(64), 
+        tags TEXT, 
+        description TEXT, 
+        is_active BOOLEAN, 
+        is_product_active BOOLEAN, 
+        is_discontinued BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        created_by INTEGER, 
+        supplier_name VARCHAR(128), 
+        supplier_sku VARCHAR(64), 
+        supplier_cost FLOAT, 
+        weight FLOAT, 
+        weight_unit VARCHAR(16), 
+        dimensions VARCHAR(64), 
+        barcode VARCHAR(128), 
+        upc VARCHAR(32), 
+        quality_status VARCHAR(32), 
+        compliance_status VARCHAR(32), 
+        quality_checked_by INTEGER, 
+        quality_checked_at DATETIME, 
+        location_id VARCHAR(128), 
+        location_name VARCHAR(128), 
+        temperature_at_time FLOAT, 
+        shopify_product_id VARCHAR(64), 
+        shopify_variant_id VARCHAR(64), 
+        etsy_listing_id VARCHAR(64), 
+        amazon_asin VARCHAR(64), 
+        marketplace_sync_status VARCHAR(32), 
+        marketplace_last_sync DATETIME, 
+        expiration_date DATETIME, 
+        is_perishable BOOLEAN, 
+        shelf_life_days INTEGER, 
+        organization_id INTEGER NOT NULL, 
+        inventory_item_id INTEGER NOT NULL, 
+        CONSTRAINT unique_upc UNIQUE (upc), 
+        CONSTRAINT unique_sku_combination UNIQUE (product_id, variant_id, size_label, fifo_id), 
+        CONSTRAINT fk_product_sku_inventory_item FOREIGN KEY(inventory_item_id) REFERENCES inventory_item (id), 
+        CONSTRAINT unique_barcode UNIQUE (barcode), 
+        FOREIGN KEY(created_by) REFERENCES user (id), 
+        FOREIGN KEY(quality_checked_by) REFERENCES user (id), 
+        FOREIGN KEY(batch_id) REFERENCES batch (id), 
+        UNIQUE (sku_code), 
+        FOREIGN KEY(variant_id) REFERENCES product_variant (id), 
+        FOREIGN KEY(product_id) REFERENCES product (id), 
+        FOREIGN KEY(organization_id) REFERENCES organization (id), 
+        FOREIGN KEY(container_id) REFERENCES inventory_item (id)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
