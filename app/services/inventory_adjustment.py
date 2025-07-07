@@ -146,24 +146,19 @@ def process_inventory_adjustment(
 
     # Handle inventory changes using FIFO service
     if qty_change < 0:
-        # Deductions - use appropriate FIFO service
-        if item_type == 'product':
-            success, deduction_plan, available_qty = FIFOService.calculate_product_sku_deduction_plan(
-                item.id, abs(qty_change), change_type
-            )
-        else:
-            success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
-                target_item_id, abs(qty_change), change_type
-            )
+        # Deductions - use unified FIFO service
+        success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+            item.id if item_type == 'product' else target_item_id, 
+            abs(qty_change), 
+            change_type,
+            item_type
+        )
 
         if not success:
             raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
 
         # Execute the deduction plan
-        if item_type == 'product':
-            FIFOService.execute_product_sku_deduction_plan(deduction_plan)
-        else:
-            FIFOService.execute_deduction_plan(deduction_plan)
+        FIFOService.execute_deduction_plan(deduction_plan, item_type)
 
         # Create history entries for deductions
         if item_type == 'product':
@@ -206,7 +201,7 @@ def process_inventory_adjustment(
             if item_type == 'product':
                 # For ProductSKU refunds, add directly to most recent entry or create new
                 from app.models.product import ProductSKUHistory
-                
+
                 recent_entry = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.sku_id == item.id,
@@ -214,10 +209,10 @@ def process_inventory_adjustment(
                         ProductSKUHistory.remaining_quantity.isnot(None)
                     )
                 ).order_by(ProductSKUHistory.timestamp.desc()).first()
-                
+
                 if recent_entry:
                     recent_entry.remaining_quantity += qty_change
-                
+
                 # Create refund history record
                 history = ProductSKUHistory(
                     sku_id=item.id,

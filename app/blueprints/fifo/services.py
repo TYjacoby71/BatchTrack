@@ -14,54 +14,67 @@ class FIFOService:
     """Centralized FIFO service for inventory management"""
 
     @staticmethod
-    def get_all_fifo_entries(inventory_item_id: int):
-        """Get all FIFO entries with remaining quantity > 0"""
-        return InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
-            )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+    def _get_history_model_and_id_field(item_type):
+        """Get the appropriate history model and ID field for the item type"""
+        if item_type == 'product':
+            from ...models.product import ProductSKUHistory
+            return ProductSKUHistory, 'sku_id'
+        else:
+            return InventoryHistory, 'inventory_item_id'
 
     @staticmethod
-    def get_fresh_fifo_entries(inventory_item_id: int):
+    def get_all_fifo_entries(item_id: int, item_type: str = 'inventory'):
+        """Get all FIFO entries with remaining quantity > 0"""
+        HistoryModel, id_field = FIFOService._get_history_model_and_id_field(item_type)
+        
+        filter_condition = and_(
+            getattr(HistoryModel, id_field) == item_id,
+            HistoryModel.remaining_quantity > 0
+        )
+        
+        return HistoryModel.query.filter(filter_condition).order_by(HistoryModel.timestamp.asc()).all()
+
+    @staticmethod
+    def get_fresh_fifo_entries(item_id: int, item_type: str = 'inventory'):
         """Get non-expired FIFO entries with remaining quantity > 0"""
         today = datetime.now().date()
+        HistoryModel, id_field = FIFOService._get_history_model_and_id_field(item_type)
 
-        return InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                db.or_(
-                    InventoryHistory.expiration_date.is_(None),  # Non-perishable
-                    InventoryHistory.expiration_date >= today    # Not expired yet
-                )
+        filter_condition = and_(
+            getattr(HistoryModel, id_field) == item_id,
+            HistoryModel.remaining_quantity > 0,
+            db.or_(
+                HistoryModel.expiration_date.is_(None),  # Non-perishable
+                HistoryModel.expiration_date >= today    # Not expired yet
             )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+        )
+
+        return HistoryModel.query.filter(filter_condition).order_by(HistoryModel.timestamp.asc()).all()
 
     @staticmethod
-    def get_expired_fifo_entries(inventory_item_id: int):
+    def get_expired_fifo_entries(item_id: int, item_type: str = 'inventory'):
         """Get expired FIFO entries with remaining quantity > 0 (frozen)"""
         today = datetime.now().date()
+        HistoryModel, id_field = FIFOService._get_history_model_and_id_field(item_type)
 
-        return InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date.isnot(None),
-                InventoryHistory.expiration_date < today
-            )
-        ).order_by(InventoryHistory.timestamp.asc()).all()
+        filter_condition = and_(
+            getattr(HistoryModel, id_field) == item_id,
+            HistoryModel.remaining_quantity > 0,
+            HistoryModel.expiration_date.isnot(None),
+            HistoryModel.expiration_date < today
+        )
+
+        return HistoryModel.query.filter(filter_condition).order_by(HistoryModel.timestamp.asc()).all()
 
     @staticmethod
-    def calculate_deduction_plan(inventory_item_id: int, quantity_needed: float, change_type: str):
+    def calculate_deduction_plan(item_id: int, quantity_needed: float, change_type: str, item_type: str = 'inventory'):
         """
         Calculate how to deduct quantity using FIFO order
         Returns: (success, deduction_plan, available_qty)
         """
         # For expired disposal, prioritize expired entries
         if change_type in ['spoil', 'trash', 'expired_disposal']:
-            expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
+            expired_entries = FIFOService.get_expired_fifo_entries(item_id, item_type)
             expired_total = sum(entry.remaining_quantity for entry in expired_entries)
 
             if expired_total >= quantity_needed:
@@ -80,7 +93,7 @@ class FIFOService:
                 return True, deduction_plan, expired_total
 
         # Regular FIFO deduction from fresh entries
-        fresh_entries = FIFOService.get_fresh_fifo_entries(inventory_item_id)
+        fresh_entries = FIFOService.get_fresh_fifo_entries(item_id, item_type)
         fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
 
         if fresh_total < quantity_needed:
@@ -207,92 +220,7 @@ class FIFOService:
                 created_by=created_by
             )
 
-    # PRODUCT SKU FIFO METHODS
-    @staticmethod
-    def get_product_sku_fifo_entries(sku_id: int, include_expired: bool = False):
-        """Get ProductSKU FIFO entries with remaining quantity > 0"""
-        from ...models.product import ProductSKUHistory
-
-        query = ProductSKUHistory.query.filter(
-            and_(
-                ProductSKUHistory.sku_id == sku_id,
-                ProductSKUHistory.remaining_quantity > 0
-            )
-        )
-
-        if not include_expired:
-            today = datetime.now().date()
-            query = query.filter(
-                db.or_(
-                    ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
-                    ProductSKUHistory.expiration_date >= today    # Not expired yet
-                )
-            )
-
-        return query.order_by(ProductSKUHistory.timestamp.asc()).all()
-
-    @staticmethod
-    def calculate_product_sku_deduction_plan(sku_id: int, quantity_needed: float, change_type: str):
-        """Calculate deduction plan for ProductSKU using FIFO"""
-        from ...models.product import ProductSKUHistory
-
-        # For expired disposal, prioritize expired entries
-        if change_type in ['spoil', 'trash', 'expired_disposal']:
-            today = datetime.now().date()
-            expired_entries = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.sku_id == sku_id,
-                    ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.expiration_date.isnot(None),
-                    ProductSKUHistory.expiration_date < today
-                )
-            ).order_by(ProductSKUHistory.timestamp.asc()).all()
-
-            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
-
-            if expired_total >= quantity_needed:
-                deduction_plan = []
-                remaining_needed = quantity_needed
-
-                for entry in expired_entries:
-                    if remaining_needed <= 0:
-                        break
-
-                    deduction_amount = min(entry.remaining_quantity, remaining_needed)
-                    deduction_plan.append((entry.id, deduction_amount, entry.unit_cost))
-                    remaining_needed -= deduction_amount
-
-                return True, deduction_plan, expired_total
-
-        # Regular FIFO deduction from fresh entries
-        fresh_entries = FIFOService.get_product_sku_fifo_entries(sku_id, include_expired=False)
-        fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
-
-        if fresh_total < quantity_needed:
-            return False, [], fresh_total
-
-        deduction_plan = []
-        remaining_needed = quantity_needed
-
-        for entry in fresh_entries:
-            if remaining_needed <= 0:
-                break
-
-            deduction_amount = min(entry.remaining_quantity, remaining_needed)
-            deduction_plan.append((entry.id, deduction_amount, entry.unit_cost))
-            remaining_needed -= deduction_amount
-
-        return True, deduction_plan, fresh_total
-
-    @staticmethod
-    def execute_product_sku_deduction_plan(deduction_plan: List[Tuple[int, float, float]]):
-        """Execute deduction plan for ProductSKU"""
-        from ...models.product import ProductSKUHistory
-
-        for entry_id, deduction_amount, _ in deduction_plan:
-            entry = ProductSKUHistory.query.get(entry_id)
-            if entry:
-                entry.remaining_quantity -= deduction_amount
+    
 
     @staticmethod
     def add_product_sku_fifo_entry(sku_id: int, quantity: float, change_type: str,
