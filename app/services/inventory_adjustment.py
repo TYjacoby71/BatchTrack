@@ -146,16 +146,24 @@ def process_inventory_adjustment(
 
     # Handle inventory changes using FIFO service
     if qty_change < 0:
-        # Deductions - use FIFO service
-        success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
-            target_item_id, abs(qty_change), change_type
-        )
+        # Deductions - use appropriate FIFO service
+        if item_type == 'product':
+            success, deduction_plan, available_qty = FIFOService.calculate_product_sku_deduction_plan(
+                item.id, abs(qty_change), change_type
+            )
+        else:
+            success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+                target_item_id, abs(qty_change), change_type
+            )
 
         if not success:
             raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
 
         # Execute the deduction plan
-        FIFOService.execute_deduction_plan(deduction_plan)
+        if item_type == 'product':
+            FIFOService.execute_product_sku_deduction_plan(deduction_plan)
+        else:
+            FIFOService.execute_deduction_plan(deduction_plan)
 
         # Create history entries for deductions
         if item_type == 'product':
@@ -170,16 +178,17 @@ def process_inventory_adjustment(
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
-                    quantity_change=-deduction_amount,
+                    quantity_change=-deduction_amount,  # Ensure negative for deductions
                     unit=history_unit,
-                    remaining_quantity=0,
+                    remaining_quantity=0,  # Deductions don't create new FIFO entries
                     fifo_reference_id=entry_id,
-                    unit_cost=cost_per_unit,
+                    unit_cost=unit_cost,  # Use unit cost from deduction plan
                     notes=f"{used_for_note} (From FIFO #{entry_id})",
                     created_by=created_by,
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
+                    quantity_used=quantity_used_value,
                     organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                 )
                 db.session.add(history)
@@ -194,9 +203,40 @@ def process_inventory_adjustment(
         # Additions - use FIFO service
         if change_type == 'refunded' and batch_id:
             # Handle refund credits using FIFO service
-            FIFOService.handle_refund_credits(
-                target_item_id, qty_change, batch_id, notes, created_by, cost_per_unit
-            )
+            if item_type == 'product':
+                # For ProductSKU refunds, add directly to most recent entry or create new
+                from app.models.product import ProductSKUHistory
+                
+                recent_entry = ProductSKUHistory.query.filter(
+                    and_(
+                        ProductSKUHistory.sku_id == item.id,
+                        ProductSKUHistory.batch_id == batch_id,
+                        ProductSKUHistory.remaining_quantity.isnot(None)
+                    )
+                ).order_by(ProductSKUHistory.timestamp.desc()).first()
+                
+                if recent_entry:
+                    recent_entry.remaining_quantity += qty_change
+                
+                # Create refund history record
+                history = ProductSKUHistory(
+                    sku_id=item.id,
+                    change_type='refunded',
+                    quantity_change=qty_change,
+                    unit=inventory_item.unit,
+                    remaining_quantity=0,  # Just a record
+                    fifo_reference_id=recent_entry.id if recent_entry else None,
+                    unit_cost=cost_per_unit,
+                    notes=f"{notes} (Credited to FIFO #{recent_entry.id if recent_entry else 'new'})",
+                    batch_id=batch_id,
+                    created_by=created_by,
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
+                )
+                db.session.add(history)
+            else:
+                FIFOService.handle_refund_credits(
+                    target_item_id, qty_change, batch_id, notes, created_by, cost_per_unit
+                )
         else:
             # Regular additions using FIFO service
             if item_type == 'product':
@@ -207,9 +247,10 @@ def process_inventory_adjustment(
                 history = ProductSKUHistory(
                     sku_id=item.id,
                     change_type=change_type,
-                    quantity_change=qty_change,
+                    quantity_change=qty_change,  # Positive for additions
                     unit=history_unit,
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition', 'returned'] else None,
+                    original_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition', 'returned'] else None,
                     unit_cost=cost_per_unit,
                     notes=notes,
                     created_by=created_by,
