@@ -194,7 +194,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
         return self.product.base_unit if self.product else self.unit
     
     @property
-    def current_quantity(self):
+    def quantity(self):
         """Get current quantity from unified inventory"""
         return self.inventory_item.quantity if self.inventory_item else 0.0
     
@@ -212,14 +212,12 @@ class ProductSKU(ScopedModelMixin, db.Model):
     @property
     def is_low_stock(self):
         """Check if current stock is below threshold"""
-        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
-        return current_qty <= self.low_stock_threshold
+        return self.quantity <= self.low_stock_threshold
     
     @property
     def stock_status(self):
         """Get stock status string"""
-        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
-        if current_qty == 0:
+        if self.quantity == 0:
             return "Out of Stock"
         elif self.is_low_stock:
             return "Low Stock"

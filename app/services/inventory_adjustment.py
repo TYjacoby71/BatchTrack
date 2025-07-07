@@ -83,7 +83,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             quantity = conversion['result']['converted_value']
 
         # Determine quantity change and special handling
-        current_quantity = getattr(item, 'current_quantity', None) or getattr(item, 'quantity', 0)
+        current_quantity = item.quantity
 
         if change_type == 'recount':
             qty_change = quantity - current_quantity
