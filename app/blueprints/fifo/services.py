@@ -298,7 +298,7 @@ class FIFOService:
                     change_type=change_type,
                     quantity_change=-deduction_amount,
                     unit=history_unit,
-                    remaining_quantity=0,
+                    remaining_quantity=0.0,  # Deductions ALWAYS have 0 remaining
                     fifo_reference_id=entry_id,
                     unit_cost=unit_cost,
                     notes=f"{used_for_note} (From FIFO #{entry_id})",
@@ -318,7 +318,7 @@ class FIFOService:
                     change_type=change_type,
                     quantity_change=-deduction_amount,
                     unit=history_unit,
-                    remaining_quantity=0,
+                    remaining_quantity=0.0,  # Deductions ALWAYS have 0 remaining
                     fifo_reference_id=entry_id,
                     unit_cost=unit_cost,
                     note=f"{used_for_note} (From FIFO #{entry_id})",
@@ -429,7 +429,7 @@ class FIFOService:
             # Execute the deduction
             FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
 
-            # Create history entries
+            # Create history entries for deductions (these should have remaining_quantity = 0)
             FIFOService.create_deduction_history(
                 inventory_item_id, deduction_plan, 'recount', note, 
                 created_by=user_id
