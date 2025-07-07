@@ -1,110 +1,31 @@
-2025-07-07 20:40:45,475 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:41:58,887 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:44:54,044 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:45:13,244 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:45:21,348 ERROR: Exception on /products/1/variant/Base [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 168, in view_variant
-    size_groups[key]['total_quantity'] += sku.current_quantity
-                                          ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'ProductSKU' object has no attribute 'current_quantity'
-2025-07-07 20:45:56,812 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:46:02,194 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:46:34,692 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:46:39,694 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:48:20,650 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:48:41,817 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:49:11,347 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:49:30,934 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:51:25,745 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:51:48,180 ERROR: Exception on /products/1/variant/Base [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/product_variants.py", line 168, in view_variant
-    size_groups[key]['total_quantity'] += sku.current_quantity
-                                          ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'ProductSKU' object has no attribute 'current_quantity'
-2025-07-07 20:52:58,442 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:04,191 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:07,023 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:43,613 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:46,330 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:49,063 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:53:53,530 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:54:53,170 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:54:58,477 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 20:55:01,277 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:14:43,616 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:14:46,536 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:15:26,067 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:15:33,177 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:18:33,971 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:18:47,272 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:19:54,121 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:20:51,509 ERROR: Exception on /products/sku/4 [GET] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
-Traceback (most recent call last):
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
-    response = self.full_dispatch_request()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
-    rv = self.dispatch_request()
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/products/sku.py", line 20, in view_sku
-    total_quantity = sku.current_quantity or 0
-                     ^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'ProductSKU' object has no attribute 'current_quantity'
-2025-07-07 21:21:05,729 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:21:11,182 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:21:17,103 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:21:24,116 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:21:37,121 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:21:40,516 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:24:05,306 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:24:42,977 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:18]
-2025-07-07 21:24:42,977 INFO: Inventory Item ID: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
-2025-07-07 21:24:42,978 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
-2025-07-07 21:24:42,978 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
-2025-07-07 21:24:42,978 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
-2025-07-07 21:24:42,978 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
-2025-07-07 21:24:42,980 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:31]
-2025-07-07 21:24:42,980 INFO: SKU details - inventory_item_id: 4, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:33]
-2025-07-07 21:24:42,980 INFO: SKU inventory item: <InventoryItem 4> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:34]
-2025-07-07 21:24:42,981 INFO: Current inventory quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:36]
+2025-07-07 21:24:42,981 INFO: Form request data: {'csrf_token': 'ImJmMDMzMGUyZTY5OTkzY2EzMTY5YTcyNWI5ZGIzOWI1MzY2NGFlYTMi.aGw7Eg.8vcK5l61zX2by1HKk64JOxH0IJI', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'sale', 'quantity': '1', 'notes': '', 'order_id': '', 'sale_price': '10.99', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:53]
+2025-07-07 21:24:42,982 INFO: Extracted quantity: 1 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:59]
+2025-07-07 21:24:42,982 INFO: Extracted change_type: sale [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:60]
+2025-07-07 21:24:42,982 INFO: Converting quantity '1' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:86]
+2025-07-07 21:24:42,982 INFO: Converted quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:88]
+2025-07-07 21:24:42,983 INFO: Optional fields extracted: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:102]
+2025-07-07 21:24:42,983 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:103]
+2025-07-07 21:24:42,983 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:104]
+2025-07-07 21:24:42,983 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:105]
+2025-07-07 21:24:42,983 INFO:   - sale_price: 10.99 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:106]
+2025-07-07 21:24:42,983 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:107]
+2025-07-07 21:24:42,983 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:108]
+2025-07-07 21:24:42,983 INFO: === CALLING CENTRALIZED INVENTORY ADJUSTMENT === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:125]
+2025-07-07 21:24:42,984 INFO: Parameters: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:126]
+2025-07-07 21:24:42,984 INFO:   - item_id (inventory_item_id): 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:127]
+2025-07-07 21:24:42,984 INFO:   - quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:128]
+2025-07-07 21:24:42,984 INFO:   - change_type: sale [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:129]
+2025-07-07 21:24:42,985 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:130]
+2025-07-07 21:24:42,985 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:131]
+2025-07-07 21:24:42,985 INFO:   - created_by: 2 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:132]
+2025-07-07 21:24:42,985 INFO:   - item_type: product [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:133]
+2025-07-07 21:24:42,985 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:134]
+2025-07-07 21:24:42,985 INFO:   - sale_price: 10.99 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:135]
+2025-07-07 21:24:42,986 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:136]
+2025-07-07 21:24:42,986 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:137]
+2025-07-07 21:24:42,986 INFO:   - custom_expiration_date: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:138]
+2025-07-07 21:24:42,986 INFO:   - custom_shelf_life_days: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:139]
+2025-07-07 21:24:42,994 ERROR: Exception in SKU inventory adjustment: Error adjusting inventory: (sqlite3.IntegrityError) NOT NULL constraint failed: product_sku_history.sku_id
+[SQL: INSERT INTO product_sku_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, original_quantity, unit, unit_cost, sale_price, customer, fifo_code, fifo_reference_id, fifo_source, is_perishable, shelf_life_days, expiration_date, batch_id, container_id, notes, note, created_by, order_id, reservation_id, is_reserved, sale_location, quantity_used, batch_number, lot_number, temperature_at_time, location_id, location_name, quality_status, compliance_status, quality_checked_by, marketplace_order_id, marketplace_source, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (4, '2025-07-07 21:24:42.993821', 'sale', 1.0, 0.0, None, 'floz', 1.0, 10.99, None, None, None, None, 0, None, None, None, None, '', None, 2, '', None, 0, None, 0.0, None, None, None, None, None, None, None, None, None, None, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:203]
