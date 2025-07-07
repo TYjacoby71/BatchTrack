@@ -87,7 +87,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
         if change_type == 'recount':
             qty_change = quantity - current_quantity
-        elif change_type in ['spoil', 'trash', 'sold', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
+        elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'tester', 'quality_fail', 'expired_disposal']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
             # Special handling: move from current to reserved, don't change total
@@ -191,23 +191,24 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 fifo_reference_id = None
                 fifo_source = None
 
-                if change_type in ['sold', 'shipped', 'used', 'damaged', 'spoiled', 'expired_disposal', 'returned']:
+                if change_type in ['sold', 'sale', 'shipped', 'used', 'damaged', 'spoiled', 'expired_disposal', 'returned']:
                     # Get deduction plan to find which lots are being used
                     success, deduction_plan, _ = FIFOService.calculate_deduction_plan(item_id, abs(qty_change), change_type)
                     if success and deduction_plan:
                         # Use the first (oldest) lot as the primary reference
                         primary_lot = deduction_plan[0]
-                        if hasattr(primary_lot, 'fifo_entry'):
-                            fifo_reference_id = primary_lot.fifo_entry.id
+                        if len(primary_lot) >= 3:  # Ensure we have entry_id, deduction_amount, unit_cost
+                            entry_id = primary_lot[0]
                             # Try to find the corresponding ProductSKUHistory entry
                             ref_history = ProductSKUHistory.query.filter_by(
                                 inventory_item_id=item_id,
-                                id=primary_lot.fifo_entry.id
+                                id=entry_id
                             ).first()
                             if ref_history:
+                                fifo_reference_id = entry_id
                                 fifo_source = f"Lot {ref_history.fifo_code or ref_history.id}"
                             else:
-                                fifo_source = f"FIFO Entry {primary_lot.fifo_entry.id}"
+                                fifo_source = f"FIFO Entry {entry_id}"
 
                 # For additions, this becomes a new lot
                 elif change_type in ['restock', 'finished_batch', 'manual_addition', 'returned']:
@@ -223,7 +224,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     change_type=change_type,
                     quantity_change=qty_change,
                     unit=history_unit,
-                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition', 'returned'] else 0,
+                    remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition', 'returned'] and qty_change > 0 else 0,
                     unit_cost=cost_per_unit,
                     notes=notes,
                     created_by=created_by,
