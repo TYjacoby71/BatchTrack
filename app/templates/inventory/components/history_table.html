@@ -10,7 +10,6 @@
                   <tr>
                     <th style="white-space: nowrap;">Date</th>
                     <th style="white-space: nowrap;">Change Type</th>
-                    <th style="white-space: nowrap;">FIFO Code</th>
                     <th style="white-space: nowrap;">Quantity Change</th>
                     <th style="white-space: nowrap;">Remaining</th>
                     <th style="white-space: nowrap;">Cost per Unit</th>
@@ -64,15 +63,6 @@
                         {{ entry.change_type|title }}
                       {% endif %}
                     </td>
-                    <td>
-                            {% if entry.fifo_code %}
-                                <code class="text-primary">{{ entry.fifo_code }}</code>
-                            {% elif entry.fifo_reference_id %}
-                                <span class="text-muted">Ref: {{ entry.fifo_reference_id }}</span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
                     <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
                     <td>{{ "%.2f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none and entry.change_type in ['restock', 'finished_batch'] else 'NA' }}</td>
                     <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
