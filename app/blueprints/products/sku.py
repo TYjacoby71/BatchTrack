@@ -16,8 +16,8 @@ def view_sku(inventory_item_id):
     # Get SKU history for this specific SKU using inventory_item_id
     history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
 
-    # Calculate total quantity from current_quantity
-    total_quantity = sku.current_quantity or 0
+    # Calculate total quantity from inventory_item
+    total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
 
     return render_template('products/view_sku.html',
                          sku=sku,
