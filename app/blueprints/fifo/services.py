@@ -8,7 +8,6 @@ class FIFOService:
     @staticmethod
     def get_fifo_entries(inventory_item_id):
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
-        from sqlalchemy import union_all
         from app.models.product import ProductSKUHistory
 
         today = datetime.now().date()
@@ -19,7 +18,7 @@ class FIFOService:
             return []
 
         if item.type == 'product':
-            # For products, only query ProductSKUHistory
+            # For products, ONLY query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
@@ -31,6 +30,12 @@ class FIFOService:
                     )
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+
+            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
         else:
             # For ingredients/containers, query InventoryHistory
             query = InventoryHistory.query.filter(
@@ -44,18 +49,12 @@ class FIFOService:
                     )
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
 
-        # Add organization scoping if user is authenticated
-        if current_user and current_user.is_authenticated:
-            query = query.filter(
-                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
-                 else InventoryHistory.organization_id == current_user.organization_id)
-            )
-
-        return query.order_by(
-            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
-             else InventoryHistory.timestamp.asc())
-        ).all()
+            return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
@@ -70,7 +69,7 @@ class FIFOService:
             return []
 
         if item.type == 'product':
-            # For products, only query ProductSKUHistory
+            # For products, ONLY query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
@@ -79,6 +78,12 @@ class FIFOService:
                     ProductSKUHistory.expiration_date < today
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+
+            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
         else:
             # For ingredients/containers, query InventoryHistory
             query = InventoryHistory.query.filter(
@@ -89,18 +94,12 @@ class FIFOService:
                     InventoryHistory.expiration_date < today
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
 
-        # Add organization scoping if user is authenticated
-        if current_user and current_user.is_authenticated:
-            query = query.filter(
-                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
-                 else InventoryHistory.organization_id == current_user.organization_id)
-            )
-
-        return query.order_by(
-            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
-             else InventoryHistory.timestamp.asc())
-        ).all()
+            return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def get_all_fifo_entries(inventory_item_id):
@@ -113,13 +112,19 @@ class FIFOService:
             return []
 
         if item.type == 'product':
-            # For products, only query ProductSKUHistory
+            # For products, ONLY query ProductSKUHistory
             query = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+
+            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
         else:
             # For ingredients/containers, query InventoryHistory
             query = InventoryHistory.query.filter(
@@ -128,18 +133,12 @@ class FIFOService:
                     InventoryHistory.remaining_quantity > 0
                 )
             )
+            
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
 
-        # Add organization scoping if user is authenticated
-        if current_user and current_user.is_authenticated:
-            query = query.filter(
-                (ProductSKUHistory.organization_id == current_user.organization_id if item.type == 'product' 
-                 else InventoryHistory.organization_id == current_user.organization_id)
-            )
-
-        return query.order_by(
-            (ProductSKUHistory.timestamp.asc() if item.type == 'product' 
-             else InventoryHistory.timestamp.asc())
-        ).all()
+            return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
