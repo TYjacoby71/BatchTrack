@@ -3,13 +3,14 @@ from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
+from app.blueprints.fifo.services import FIFOService
 
 product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products/inventory')
 
 @product_inventory_bp.route('/adjust/<int:sku_id>', methods=['POST'])
 @login_required
 def adjust_sku_inventory(sku_id):
-    """Comprehensive SKU inventory adjustment endpoint with FIFO and expired inventory handling"""
+    """SKU inventory adjustment - uses centralized inventory adjustment service"""
     sku = ProductSKU.query.filter_by(
         id=sku_id,
         organization_id=current_user.organization_id
@@ -21,94 +22,63 @@ def adjust_sku_inventory(sku_id):
         flash('SKU not found', 'error')
         return redirect(url_for('products.product_list'))
 
-    # Handle both JSON and form data
+    # Parse request data
     if request.is_json:
         data = request.get_json()
-        quantity = data.get('quantity')
-        change_type = data.get('change_type')
-        notes = data.get('notes')
-        unit = data.get('unit', sku.unit)
-        customer = data.get('customer')
-        sale_price = data.get('sale_price')
-        order_id = data.get('order_id')
-        cost_override = data.get('cost_override')
-        target_expired = data.get('target_expired', False)  # Allow targeting expired inventory
-        is_perishable = data.get('is_perishable', False)
-        shelf_life_days = data.get('shelf_life_days')
-        expiration_date = data.get('expiration_date')
     else:
-        quantity = request.form.get('quantity')
-        change_type = request.form.get('change_type')
-        notes = request.form.get('notes')
-        unit = request.form.get('unit', sku.unit)
-        customer = request.form.get('customer')
-        sale_price = request.form.get('sale_price')
-        order_id = request.form.get('order_id')
-        cost_override = request.form.get('cost_override')
-        target_expired = request.form.get('target_expired', 'false').lower() == 'true'
-        is_perishable = request.form.get('is_perishable') == 'on'
-        shelf_life_days = request.form.get('shelf_life_days')
-        expiration_date = request.form.get('expiration_date')
+        data = request.form.to_dict()
 
-    # Validate required fields
-    if not quantity or not change_type:
-        error_msg = 'Quantity and change type are required'
+    # Extract required fields
+    quantity = data.get('quantity')
+    change_type = data.get('change_type')
+    
+    # Allow empty quantity for recount (will be treated as 0)
+    if quantity is None or quantity == '':
+        if change_type == 'recount':
+            quantity = 0
+        else:
+            error_msg = 'Quantity is required'
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(url_for('sku.view_sku', sku_id=sku_id))
+    
+    if not change_type:
+        error_msg = 'Change type is required'
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
         return redirect(url_for('sku.view_sku', sku_id=sku_id))
 
     try:
-        # Convert numeric values
+        # Convert and validate quantity - allow 0 for recount
         quantity = float(quantity)
-        sale_price_float = float(sale_price) if sale_price else None
-        cost_override_float = float(cost_override) if cost_override else None
-
-        # Handle perishable inventory
+        if quantity < 0 and change_type not in ['recount']:
+            raise ValueError('Quantity cannot be negative')
+        
+        # Extract optional fields
+        notes = data.get('notes', '')
+        unit = data.get('unit', sku.unit)
+        customer = data.get('customer')
+        sale_price = float(data.get('sale_price')) if data.get('sale_price') else None
+        order_id = data.get('order_id')
+        cost_override = float(data.get('cost_override')) if data.get('cost_override') else None
+        
+        # Handle expiration data
         custom_expiration_date = None
         custom_shelf_life_days = None
-
-        if is_perishable and shelf_life_days:
+        if data.get('shelf_life_days'):
             try:
-                custom_shelf_life_days = int(shelf_life_days)
-                # Parse expiration date if provided
-                if expiration_date:
+                custom_shelf_life_days = int(data.get('shelf_life_days'))
+                if data.get('expiration_date'):
                     from datetime import datetime
-                    custom_expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
+                    custom_expiration_date = datetime.strptime(data.get('expiration_date'), '%Y-%m-%d').date()
             except (ValueError, TypeError):
                 pass
 
-        # For disposal operations, auto-target expired inventory if available
-        if change_type in ['spoil', 'trash', 'expired_disposal'] and not target_expired:
-            from ...models import ProductSKUHistory
-            from datetime import datetime
-
-            # Check for expired SKU history entries
-            today = datetime.now().date()
-            expired_entries = ProductSKUHistory.query.filter(
-                ProductSKUHistory.sku_id == sku_id,
-                ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.expiration_date.isnot(None),
-                ProductSKUHistory.expiration_date < today
-            ).all()
-
-            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
-            if expired_total >= quantity:
-                target_expired = True
-
-        # For recount operations, validate the change is within reasonable bounds
-        if change_type == 'recount':
-            # Validate recount quantity is non-negative
-            if quantity < 0:
-                error_msg = 'Recount quantity cannot be negative'
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('products.view_sku', sku_id=sku_id))
-
-        # All operations work with the SKU ID since ProductSKU has unified inventory through inventory_item_id
+        # Use the centralized inventory adjustment service with SKU's inventory_item_id
         success = process_inventory_adjustment(
-            item_id=sku_id,
+            item_id=sku.inventory_item_id,  # Use inventory_item_id directly
             quantity=quantity,
             change_type=change_type,
             unit=unit,
@@ -116,24 +86,20 @@ def adjust_sku_inventory(sku_id):
             created_by=current_user.id,
             item_type='product',
             customer=customer,
-            sale_price=sale_price_float,
+            sale_price=sale_price,
             order_id=order_id,
-            cost_override=cost_override_float,
+            cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days
         )
 
         if success:
-            message = f'SKU inventory adjusted successfully'
-            if target_expired and change_type in ['spoil', 'trash', 'expired_disposal']:
-                message += ' (expired inventory processed first)'
-
+            message = 'SKU inventory adjusted successfully'
             if request.is_json:
                 return jsonify({
                     'success': True,
                     'message': message,
-                    'new_quantity': sku.current_quantity,
-                    'processed_expired': target_expired
+                    'new_quantity': sku.current_quantity
                 })
             flash(message, 'success')
         else:
@@ -162,7 +128,7 @@ def adjust_sku_inventory(sku_id):
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
 @login_required
 def get_sku_fifo_status(sku_id):
-    """Get FIFO status for SKU including expired entries (like raw inventory system)"""
+    """Get FIFO status for SKU using unified inventory system"""
     sku = ProductSKU.query.filter_by(
         id=sku_id,
         organization_id=current_user.organization_id
@@ -171,34 +137,38 @@ def get_sku_fifo_status(sku_id):
     if not sku:
         return jsonify({'error': 'SKU not found'}), 404
 
-    from ...models import ProductSKUHistory
+    from ...models import InventoryHistory
     from datetime import datetime
 
     today = datetime.now().date()
+    inventory_item_id = sku.inventory_item_id
 
     # Get fresh FIFO entries (not expired, with remaining quantity)
-    fresh_entries = ProductSKUHistory.query.filter(
-        ProductSKUHistory.sku_id == sku_id,
-        ProductSKUHistory.remaining_quantity > 0,
+    fresh_entries = InventoryHistory.query.filter(
+        InventoryHistory.inventory_item_id == inventory_item_id,
+        InventoryHistory.remaining_quantity > 0,
+        InventoryHistory.organization_id == current_user.organization_id,
         db.or_(
-            ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
-            ProductSKUHistory.expiration_date >= today    # Not expired yet
+            InventoryHistory.expiration_date.is_(None),  # Non-perishable
+            InventoryHistory.expiration_date >= today    # Not expired yet
         )
-    ).order_by(ProductSKUHistory.timestamp.asc()).all()
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     # Get expired FIFO entries (frozen, with remaining quantity)
-    expired_entries = ProductSKUHistory.query.filter(
-        ProductSKUHistory.sku_id == sku_id,
-        ProductSKUHistory.remaining_quantity > 0,
-        ProductSKUHistory.expiration_date.isnot(None),
-        ProductSKUHistory.expiration_date < today
-    ).order_by(ProductSKUHistory.timestamp.asc()).all()
+    expired_entries = InventoryHistory.query.filter(
+        InventoryHistory.inventory_item_id == inventory_item_id,
+        InventoryHistory.remaining_quantity > 0,
+        InventoryHistory.organization_id == current_user.organization_id,
+        InventoryHistory.expiration_date.isnot(None),
+        InventoryHistory.expiration_date < today
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
     expired_total = sum(entry.remaining_quantity for entry in expired_entries)
 
     return jsonify({
         'sku_id': sku_id,
+        'inventory_item_id': inventory_item_id,
         'total_quantity': sku.current_quantity,
         'fresh_quantity': fresh_total,
         'expired_quantity': expired_total,
@@ -223,7 +193,7 @@ def get_sku_fifo_status(sku_id):
 @product_inventory_bp.route('/dispose-expired/<int:sku_id>', methods=['POST'])
 @login_required
 def dispose_expired_sku(sku_id):
-    """Dispose of expired SKU inventory (like raw inventory system)"""
+    """Dispose of expired SKU inventory using unified inventory system"""
     sku = ProductSKU.query.filter_by(
         id=sku_id,
         organization_id=current_user.organization_id
@@ -233,20 +203,22 @@ def dispose_expired_sku(sku_id):
         return jsonify({'error': 'SKU not found'}), 404
 
     data = request.get_json() if request.is_json else request.form
-    disposal_type = data.get('disposal_type', 'expired_disposal')  # spoil, trash, expired_disposal
+    disposal_type = data.get('disposal_type', 'expired_disposal')
     notes = data.get('notes', 'Expired inventory disposal')
 
-    from ...models import ProductSKUHistory
+    from ...models import InventoryHistory
     from datetime import datetime
 
     today = datetime.now().date()
+    inventory_item_id = sku.inventory_item_id
 
     # Get all expired entries with remaining quantity
-    expired_entries = ProductSKUHistory.query.filter(
-        ProductSKUHistory.sku_id == sku_id,
-        ProductSKUHistory.remaining_quantity > 0,
-        ProductSKUHistory.expiration_date.isnot(None),
-        ProductSKUHistory.expiration_date < today
+    expired_entries = InventoryHistory.query.filter(
+        InventoryHistory.inventory_item_id == inventory_item_id,
+        InventoryHistory.remaining_quantity > 0,
+        InventoryHistory.organization_id == current_user.organization_id,
+        InventoryHistory.expiration_date.isnot(None),
+        InventoryHistory.expiration_date < today
     ).all()
 
     if not expired_entries:
@@ -257,7 +229,7 @@ def dispose_expired_sku(sku_id):
     try:
         # Use centralized service to dispose of expired inventory
         success = process_inventory_adjustment(
-            item_id=sku_id,
+            item_id=inventory_item_id,
             quantity=total_expired,
             change_type=disposal_type,
             unit=sku.unit,

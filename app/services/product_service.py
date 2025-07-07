@@ -56,6 +56,19 @@ class ProductService:
         ).first()
 
         if not sku:
+            # Create inventory item for this SKU
+            from ..models import InventoryItem
+            inventory_item = InventoryItem(
+                name=f"{product.name} - {variant.name} - {size_label}",
+                type='product',
+                unit=unit,
+                quantity=0.0,
+                organization_id=current_user.organization_id,
+                created_by=current_user.id
+            )
+            db.session.add(inventory_item)
+            db.session.flush()
+
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
@@ -65,6 +78,7 @@ class ProductService:
                 size_label=size_label,
                 sku_code=sku_code,
                 unit=unit,
+                inventory_item_id=inventory_item.id,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )

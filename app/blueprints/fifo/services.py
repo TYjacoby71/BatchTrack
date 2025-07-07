@@ -1,186 +1,368 @@
-from ...models import InventoryHistory, db
+
+from ...models import InventoryHistory, db, InventoryItem
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
+from flask_login import current_user
+from app.utils.fifo_generator import generate_fifo_id
 
-def get_fifo_entries(inventory_item_id):
-    """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
-    from datetime import datetime
-    today = datetime.now().date()
-    
-    return InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0,
-            # Skip expired entries - they can only be spoiled/trashed
-            db.or_(
-                InventoryHistory.expiration_date.is_(None),  # Non-perishable
-                InventoryHistory.expiration_date >= today    # Not expired yet
+class FIFOService:
+    @staticmethod
+    def get_fifo_entries(inventory_item_id):
+        """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
+        today = datetime.now().date()
+        
+        query = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0,
+                # Skip expired entries - they can only be spoiled/trashed
+                db.or_(
+                    InventoryHistory.expiration_date.is_(None),  # Non-perishable
+                    InventoryHistory.expiration_date >= today    # Not expired yet
+                )
             )
         )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
-def get_expired_fifo_entries(inventory_item_id):
-    """Get expired FIFO entries with remaining quantity (for disposal only)"""
-    from datetime import datetime
-    today = datetime.now().date()
-    
-    return InventoryHistory.query.filter(
-        and_(
-            InventoryHistory.inventory_item_id == inventory_item_id,
-            InventoryHistory.remaining_quantity > 0,
-            InventoryHistory.expiration_date.isnot(None),
-            InventoryHistory.expiration_date < today
+    @staticmethod
+    def get_expired_fifo_entries(inventory_item_id):
+        """Get expired FIFO entries with remaining quantity (for disposal only)"""
+        today = datetime.now().date()
+        
+        query = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date.isnot(None),
+                InventoryHistory.expiration_date < today
+            )
         )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
-def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
-    """
-    Deducts quantity using FIFO logic, returns deduction plan
-    Args:
-        inventory_item_id: ID of inventory item
-        quantity: Amount to deduct
-        change_type: Type of change (optional)
-        notes: Change notes (optional) 
-        batch_id: Associated batch ID (optional)
-        created_by: User ID who created change (optional)
-    Returns:
-        tuple: (success, deduction_plan)
-            success (bool): True if deduction was successful
-            deduction_plan: List of tuples (entry_id, deduct_amount, unit_cost)
-    """
-    remaining = quantity
-    deduction_plan = []
-    fifo_entries = get_fifo_entries(inventory_item_id)
+    @staticmethod
+    def get_all_fifo_entries(inventory_item_id):
+        """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
+        query = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == inventory_item_id,
+                InventoryHistory.remaining_quantity > 0
+            )
+        )
+        
+        # Add organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated:
+            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        
+        return query.order_by(InventoryHistory.timestamp.asc()).all()
 
-    for entry in fifo_entries:
-        if remaining <= 0:
-            break
+    @staticmethod
+    def calculate_deduction_plan(inventory_item_id, quantity, change_type):
+        """
+        Calculate FIFO deduction plan without executing it
+        Returns: (success, deduction_plan, available_quantity)
+        """
+        # For expired disposal, only look at expired lots
+        if change_type in ['spoil', 'trash', 'expired_disposal']:
+            expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
+            expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+            
+            # If we have enough expired stock, use it
+            if expired_total >= quantity:
+                remaining = quantity
+                deduction_plan = []
+                
+                for entry in expired_entries:
+                    if remaining <= 0:
+                        break
+                    deduction = min(entry.remaining_quantity, remaining)
+                    remaining -= deduction
+                    deduction_plan.append((entry.id, deduction, entry.unit_cost))
+                
+                return True, deduction_plan, expired_total
+        
+        # Regular FIFO (non-expired entries)
+        fifo_entries = FIFOService.get_fifo_entries(inventory_item_id)
+        available_quantity = sum(entry.remaining_quantity for entry in fifo_entries)
+        
+        if available_quantity < quantity:
+            return False, [], available_quantity
+        
+        remaining = quantity
+        deduction_plan = []
+        
+        for entry in fifo_entries:
+            if remaining <= 0:
+                break
+            deduction = min(entry.remaining_quantity, remaining)
+            remaining -= deduction
+            deduction_plan.append((entry.id, deduction, entry.unit_cost))
+        
+        return True, deduction_plan, available_quantity
 
-        deduction = min(entry.remaining_quantity, remaining)
-        remaining -= deduction
-        deduction_plan.append((entry.id, deduction, entry.unit_cost))
+    @staticmethod
+    def execute_deduction_plan(deduction_plan):
+        """Execute a deduction plan by updating remaining quantities"""
+        for entry_id, deduct_amount, _ in deduction_plan:
+            entry = InventoryHistory.query.get(entry_id)
+            if entry:
+                entry.remaining_quantity -= deduct_amount
 
-    if remaining > 0:
-        return False, []
+    @staticmethod
+    def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
+                      cost_per_unit=None, expiration_date=None, shelf_life_days=None, 
+                      batch_id=None, created_by=None):
+        """
+        Add a new FIFO entry for positive inventory changes
+        """
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            raise ValueError("Inventory item not found")
 
-    # Only update remaining quantities
-    for entry_id, deduct_amount, _ in deduction_plan:
-        entry = InventoryHistory.query.get(entry_id)
-        entry.remaining_quantity -= deduct_amount
+        # Use item unit if none provided, default to 'count' for containers
+        if not unit:
+            unit = item.unit if item.unit else 'count'
 
-    return True, deduction_plan
+        # Create new FIFO entry
+        history = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type=change_type,
+            quantity_change=quantity,
+            unit=unit,
+            remaining_quantity=quantity,
+            unit_cost=cost_per_unit,
+            note=notes,
+            quantity_used=0.0,  # Additions don't consume inventory
+            created_by=created_by,
+            expiration_date=expiration_date,
+            shelf_life_days=shelf_life_days,
+            is_perishable=expiration_date is not None,
+            batch_id=batch_id if change_type == 'finished_batch' else None,
+            used_for_batch_id=batch_id if change_type not in ['restock'] else None,
+            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+        )
+        
+        db.session.add(history)
+        return history
 
-def recount_fifo(inventory_item_id, new_quantity, note, user_id):
-    """
-    Handles recounts with proper FIFO integrity and expiration tracking
-    Aligned with inventory_adjustment service standards
-    """
-    from ...models import InventoryItem
-    from flask_login import current_user
-    from datetime import datetime, timedelta
+    @staticmethod
+    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes, 
+                                batch_id=None, created_by=None, customer=None, 
+                                sale_price=None, order_id=None):
+        """
+        Create history entries for FIFO deductions
+        """
+        item = InventoryItem.query.get(inventory_item_id)
+        history_unit = item.unit if item.unit else 'count'
+        
+        history_entries = []
+        
+        for entry_id, deduction_amount, unit_cost in deduction_plan:
+            used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
+            quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
-    item = InventoryItem.query.get(inventory_item_id)
-    current_entries = get_fifo_entries(inventory_item_id)
-    current_total = sum(entry.remaining_quantity for entry in current_entries)
-
-    difference = new_quantity - current_total
-
-    if difference == 0:
-        return True
-
-    # Use same unit logic as inventory_adjustment service
-    if item.type == 'container':
-        history_unit = 'count'  # Containers always use 'count' in history
-    else:
-        history_unit = item.unit  # Ingredients use their assigned unit
-
-    # Handle reduction in quantity
-    if difference < 0:
-        success, deductions = deduct_fifo(inventory_item_id, abs(difference), 'recount', note)
-        if not success:
-            return False
-
-        # Create separate history entries for each FIFO deduction
-        for entry_id, deduct_amount, _ in deductions:
             history = InventoryHistory(
                 inventory_item_id=inventory_item_id,
-                change_type='recount',
-                quantity_change=-deduct_amount,
+                change_type=change_type,
+                quantity_change=-deduction_amount,
                 unit=history_unit,
                 remaining_quantity=0,
                 fifo_reference_id=entry_id,
-                unit_cost=None,  # Recounts don't track cost
-                note=f"{note} (From FIFO #{entry_id})",
-                created_by=user_id,
-                quantity_used=deduct_amount,  # Track amount consumed for recount deductions
-                organization_id=current_user.organization_id if current_user else item.organization_id
+                unit_cost=unit_cost,
+                note=f"{used_for_note} (From FIFO #{entry_id})",
+                created_by=created_by,
+                quantity_used=quantity_used_value,
+                used_for_batch_id=batch_id,
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
             )
             db.session.add(history)
+            history_entries.append(history)
+        
+        return history_entries
 
-    # Handle increase in quantity    
-    else:
-        # Get only restock entries that aren't at capacity
-        unfilled_entries = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                InventoryHistory.change_type == 'restock'  # Only fill restock events
-            )
+    @staticmethod
+    def handle_refund_credits(inventory_item_id, quantity, batch_id, notes, created_by, cost_per_unit):
+        """
+        Handle refund credits by finding original FIFO entries to credit back to
+        """
+        item = InventoryItem.query.get(inventory_item_id)
+        
+        # Find the original deduction entries for this batch
+        original_deductions = InventoryHistory.query.filter(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.used_for_batch_id == batch_id,
+            InventoryHistory.quantity_change < 0,
+            InventoryHistory.fifo_reference_id.isnot(None)
         ).order_by(InventoryHistory.timestamp.desc()).all()
 
-        remaining_to_add = difference
+        remaining_to_credit = quantity
+        credit_histories = []
 
-        # First try to fill existing FIFO entries
-        for entry in unfilled_entries:
-            if remaining_to_add <= 0:
+        # Credit back to the original FIFO entries
+        for deduction in original_deductions:
+            if remaining_to_credit <= 0:
                 break
 
-            available_capacity = entry.quantity_change - entry.remaining_quantity
-            fill_amount = min(available_capacity, remaining_to_add)
+            original_fifo_entry = InventoryHistory.query.get(deduction.fifo_reference_id)
+            if original_fifo_entry:
+                credit_amount = min(remaining_to_credit, abs(deduction.quantity_change))
 
-            if fill_amount > 0:
-                # Log the recount but don't create new FIFO entry
-                history = InventoryHistory(
+                # Credit back to the original FIFO entry's remaining quantity
+                original_fifo_entry.remaining_quantity += credit_amount
+                remaining_to_credit -= credit_amount
+
+                # Create credit history entry
+                credit_unit = item.unit if item.unit else 'count'
+                credit_history = InventoryHistory(
                     inventory_item_id=inventory_item_id,
-                    change_type='recount',
-                    quantity_change=fill_amount,
-                    unit=history_unit,
-                    remaining_quantity=0,  # Not a FIFO entry
-                    fifo_reference_id=entry.id,
-                    note=f"Recount restored to FIFO entry #{entry.id}",
-                    created_by=user_id,
-                    quantity_used=None,  # Additions don't consume inventory - always null
-                    organization_id=current_user.organization_id if current_user else item.organization_id
+                    change_type='refunded',
+                    quantity_change=credit_amount,
+                    unit=credit_unit,
+                    remaining_quantity=0,  # Credits don't create new FIFO entries
+                    unit_cost=cost_per_unit,
+                    fifo_reference_id=original_fifo_entry.id,
+                    note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
+                    created_by=created_by,
+                    quantity_used=0.0,  # Credits don't consume inventory
+                    used_for_batch_id=batch_id,
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
                 )
-                db.session.add(history)
+                db.session.add(credit_history)
+                credit_histories.append(credit_history)
 
-                # Update the original FIFO entry
-                entry.remaining_quantity += fill_amount
-                remaining_to_add -= fill_amount
-
-        # Only create new FIFO entry if we couldn't fill existing ones
-        if remaining_to_add > 0:
-            history = InventoryHistory(
+        # If there's still quantity to credit (shouldn't happen in normal cases)
+        if remaining_to_credit > 0:
+            excess_history = FIFOService.add_fifo_entry(
                 inventory_item_id=inventory_item_id,
-                change_type='restock',  # Use restock type for new FIFO entries
-                quantity_change=remaining_to_add,
-                unit=history_unit,
-                remaining_quantity=remaining_to_add,
-                note=f"New stock from recount after filling existing FIFO entries",
-                created_by=user_id,
-                quantity_used=0.0,  # Restocks don't consume inventory - always 0
-                timestamp=datetime.utcnow(),
-                organization_id=current_user.organization_id if current_user else item.organization_id
+                quantity=remaining_to_credit,
+                change_type='restock',
+                unit=item.unit,
+                notes=f"{notes} (Excess credit - no original FIFO found)",
+                cost_per_unit=cost_per_unit,
+                batch_id=batch_id,
+                created_by=created_by
             )
-            db.session.add(history)
+            credit_histories.append(excess_history)
 
-    db.session.commit()
-    return True
+        return credit_histories
 
+    @staticmethod
+    def recount_fifo(inventory_item_id, new_quantity, note, user_id):
+        """
+        Handles recounts with proper FIFO integrity and expiration tracking
+        """
+        item = InventoryItem.query.get(inventory_item_id)
+        current_entries = FIFOService.get_fifo_entries(inventory_item_id)
+        current_total = sum(entry.remaining_quantity for entry in current_entries)
+
+        difference = new_quantity - current_total
+
+        if difference == 0:
+            return True
+
+        # Use same unit logic as inventory_adjustment service
+        history_unit = 'count' if item.type == 'container' else item.unit
+
+        # Handle reduction in quantity
+        if difference < 0:
+            success, deduction_plan, _ = FIFOService.calculate_deduction_plan(
+                inventory_item_id, abs(difference), 'recount'
+            )
+            
+            if not success:
+                return False
+
+            # Execute the deduction
+            FIFOService.execute_deduction_plan(deduction_plan)
+            
+            # Create history entries
+            FIFOService.create_deduction_history(
+                inventory_item_id, deduction_plan, 'recount', note, 
+                created_by=user_id
+            )
+
+        # Handle increase in quantity    
+        else:
+            # Get only restock entries that aren't at capacity
+            unfilled_entries = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == inventory_item_id,
+                    InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
+                    InventoryHistory.change_type == 'restock'
+                )
+            ).order_by(InventoryHistory.timestamp.desc()).all()
+
+            remaining_to_add = difference
+
+            # First try to fill existing FIFO entries
+            for entry in unfilled_entries:
+                if remaining_to_add <= 0:
+                    break
+
+                available_capacity = entry.quantity_change - entry.remaining_quantity
+                fill_amount = min(available_capacity, remaining_to_add)
+
+                if fill_amount > 0:
+                    # Log the recount but don't create new FIFO entry
+                    history = InventoryHistory(
+                        inventory_item_id=inventory_item_id,
+                        change_type='recount',
+                        quantity_change=fill_amount,
+                        unit=history_unit,
+                        remaining_quantity=0,  # Not a FIFO entry
+                        fifo_reference_id=entry.id,
+                        note=f"Recount restored to FIFO entry #{entry.id}",
+                        created_by=user_id,
+                        quantity_used=0.0,
+                        organization_id=current_user.organization_id if current_user else item.organization_id
+                    )
+                    db.session.add(history)
+
+                    # Update the original FIFO entry
+                    entry.remaining_quantity += fill_amount
+                    remaining_to_add -= fill_amount
+
+            # Only create new FIFO entry if we couldn't fill existing ones
+            if remaining_to_add > 0:
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=inventory_item_id,
+                    quantity=remaining_to_add,
+                    change_type='restock',
+                    unit=history_unit,
+                    notes=f"New stock from recount after filling existing FIFO entries",
+                    created_by=user_id
+                )
+
+        db.session.commit()
+        return True
+
+# Legacy function aliases for backward compatibility
+def get_fifo_entries(inventory_item_id):
+    return FIFOService.get_fifo_entries(inventory_item_id)
+
+def get_expired_fifo_entries(inventory_item_id):
+    return FIFOService.get_expired_fifo_entries(inventory_item_id)
+
+def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
+    """Legacy function - use FIFOService.calculate_deduction_plan and execute_deduction_plan instead"""
+    success, deduction_plan, _ = FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
+    if success:
+        FIFOService.execute_deduction_plan(deduction_plan)
+    return success, deduction_plan
+
+def recount_fifo(inventory_item_id, new_quantity, note, user_id):
+    return FIFOService.recount_fifo(inventory_item_id, new_quantity, note, user_id)
 
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""
     from ...blueprints.expiration.services import ExpirationService
-    
-    # Delegate to expiration service
     ExpirationService.update_fifo_expiration_data(inventory_item_id, shelf_life_days)

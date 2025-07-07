@@ -5,7 +5,8 @@ from flask_login import current_user
 from sqlalchemy import func, and_
 
 from ..models import db, InventoryItem, InventoryHistory
-from .inventory_adjustment import process_inventory_adjustment, deduct_fifo
+from .inventory_adjustment import process_inventory_adjustment
+from app.blueprints.fifo.services import FIFOService
 
 class POSIntegrationService:
     """Service for integrating with POS systems like Shopify, Etsy, etc."""
