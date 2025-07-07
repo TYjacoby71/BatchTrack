@@ -32,16 +32,29 @@ def adjust_sku_inventory(sku_id):
     quantity = data.get('quantity')
     change_type = data.get('change_type')
     
-    if not quantity or not change_type:
-        error_msg = 'Quantity and change type are required'
+    # Allow empty quantity for recount (will be treated as 0)
+    if quantity is None or quantity == '':
+        if change_type == 'recount':
+            quantity = 0
+        else:
+            error_msg = 'Quantity is required'
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(url_for('sku.view_sku', sku_id=sku_id))
+    
+    if not change_type:
+        error_msg = 'Change type is required'
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
         return redirect(url_for('sku.view_sku', sku_id=sku_id))
 
     try:
-        # Convert and validate quantity
+        # Convert and validate quantity - allow 0 for recount
         quantity = float(quantity)
+        if quantity < 0 and change_type not in ['recount']:
+            raise ValueError('Quantity cannot be negative')
         
         # Extract optional fields
         notes = data.get('notes', '')

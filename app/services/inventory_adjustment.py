@@ -147,24 +147,27 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Execute the deduction plan
             FIFOService.execute_deduction_plan(deduction_plan)
 
-            # Create history entries for deductions
+            # Handle ProductSKU history separately - but use inventory_item_id for FIFO
             if item_type == 'product':
-                # Handle ProductSKU history separately
-                from app.models.product import ProductSKUHistory
+                # Get the actual ProductSKU record
+                from app.models.product import ProductSKU, ProductSKUHistory
+                sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
+                if not sku:
+                    raise ValueError("ProductSKU not found for inventory item")
+
                 history_unit = item.unit if item.unit else 'count'
 
                 for entry_id, deduction_amount, unit_cost in deduction_plan:
                     used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
-                    quantity_used_value = deduction_amount if change_type in ['spoil', 'trash', 'batch', 'use'] else 0.0
 
                     history = ProductSKUHistory(
-                        sku_id=item.id,
+                        sku_id=sku.id,
                         change_type=change_type,
                         quantity_change=-deduction_amount,
                         unit=history_unit,
-                        remaining_quantity=0,
+                        remaining_quantity=0,  # Not used for deductions
                         fifo_reference_id=entry_id,
-                        unit_cost=cost_per_unit,
+                        unit_cost=unit_cost,
                         notes=f"{used_for_note} (From FIFO #{entry_id})",
                         created_by=created_by,
                         customer=customer,
@@ -173,13 +176,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                         organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                     )
                     db.session.add(history)
-            else:
-                # Use FIFO service for regular inventory items
-                FIFOService.create_deduction_history(
-                    item_id, deduction_plan, change_type, notes,
-                    batch_id, created_by, customer, sale_price, order_id
-                )
-
         elif qty_change > 0:
             # Additions - use FIFO service
             if change_type == 'refunded' and batch_id:
@@ -188,18 +184,22 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
             else:
-                # Regular additions using FIFO service
+                # Handle ProductSKU history separately - but use inventory_item_id for FIFO
                 if item_type == 'product':
-                    # Handle ProductSKU history separately
-                    from app.models.product import ProductSKUHistory
+                    # Get the actual ProductSKU record
+                    from app.models.product import ProductSKU, ProductSKUHistory
+                    sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
+                    if not sku:
+                        raise ValueError("ProductSKU not found for inventory item")
+
                     history_unit = item.unit if item.unit else 'count'
 
                     history = ProductSKUHistory(
-                        sku_id=item.id,
+                        sku_id=sku.id,
                         change_type=change_type,
                         quantity_change=qty_change,
                         unit=history_unit,
-                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else None,
+                        remaining_quantity=qty_change if change_type in ['restock', 'finished_batch'] else 0,
                         unit_cost=cost_per_unit,
                         notes=notes,
                         created_by=created_by,
