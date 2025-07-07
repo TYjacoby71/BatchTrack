@@ -189,19 +189,25 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 for entry_id, deduction_amount, unit_cost in deduction_plan:
                     used_for_note = "canceled" if change_type == 'refunded' and batch_id else notes
 
+                    # Generate FIFO code for tracking
+                    fifo_code = f"{change_type.upper()}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    
                     history = ProductSKUHistory(
                         inventory_item_id=sku.inventory_item_id,
                         change_type=change_type,
                         quantity_change=-deduction_amount,
                         unit=history_unit,
                         remaining_quantity=0,  # Not used for deductions
+                        original_quantity=0,  # Deductions don't add original quantity
                         fifo_reference_id=entry_id,
                         unit_cost=unit_cost,
                         notes=f"{used_for_note} (From FIFO #{entry_id})",
                         created_by=created_by,
-                        customer=customer,
+                        customer=customer or 'N/A',
                         sale_price=sale_price,
                         order_id=order_id,
+                        fifo_code=fifo_code,
+                        fifo_source=f"FIFO_LOT_{entry_id}",
                         organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                     )
                     db.session.add(history)
@@ -227,12 +233,16 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
                     history_unit = item.unit if item.unit else 'count'
 
+                    # Generate FIFO code for tracking
+                    fifo_code = f"{change_type.upper()}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    
                     history = ProductSKUHistory(
                         inventory_item_id=item_id,
                         change_type=change_type,
                         quantity_change=qty_change,
                         unit=history_unit,
                         remaining_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition'] else 0,
+                        original_quantity=qty_change if change_type in ['restock', 'finished_batch', 'manual_addition'] else None,
                         unit_cost=cost_per_unit,
                         notes=notes,
                         created_by=created_by,
@@ -240,9 +250,10 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                         shelf_life_days=shelf_life_to_use,
                         is_perishable=expiration_date is not None,
                         batch_id=batch_id if change_type == 'finished_batch' else None,
-                        customer=customer,
+                        customer=customer or 'N/A',
                         sale_price=sale_price,
                         order_id=order_id,
+                        fifo_code=fifo_code,
                         organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
                     )
                     db.session.add(history)
