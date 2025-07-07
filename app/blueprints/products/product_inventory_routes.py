@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 product_inventory_bp = Blueprint('product_inventory', __name__, url_prefix='/products/inventory')
 
-@product_inventory_bp.route('/adjust/<int:sku_id>', methods=['POST'])
+@product_inventory_bp.route('/adjust/<int:inventory_item_id>', methods=['POST'])
 @login_required
-def adjust_sku_inventory(sku_id):
+def adjust_sku_inventory(inventory_item_id):
     """SKU inventory adjustment - uses centralized inventory adjustment service"""
     logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT START ===")
-    logger.info(f"SKU ID: {sku_id}")
+    logger.info(f"Inventory Item ID: {inventory_item_id}")
     logger.info(f"User: {current_user.id} ({current_user.username if hasattr(current_user, 'username') else 'unknown'})")
     logger.info(f"Organization: {current_user.organization_id}")
     logger.info(f"Request method: {request.method}")
@@ -24,7 +24,7 @@ def adjust_sku_inventory(sku_id):
 
     # The sku_id parameter IS the inventory_item_id (primary key of ProductSKU)
     sku = ProductSKU.query.filter_by(
-        inventory_item_id=sku_id,
+        inventory_item_id=inventory_item_id,
         organization_id=current_user.organization_id
     ).first()
 
@@ -35,10 +35,10 @@ def adjust_sku_inventory(sku_id):
         if sku.inventory_item:
             logger.info(f"Current inventory quantity: {sku.inventory_item.quantity}")
     else:
-        logger.error(f"SKU not found for inventory_item_id: {sku_id}, org: {current_user.organization_id}")
+        logger.error(f"SKU not found for inventory_item_id: {inventory_item_id}, org: {current_user.organization_id}")
 
     if not sku:
-        logger.error(f"SKU not found for ID: {sku_id}, org: {current_user.organization_id}")
+        logger.error(f"SKU not found for ID: {inventory_item_id}, org: {current_user.organization_id}")
         if request.is_json:
             return jsonify({'error': 'SKU not found'}), 404
         flash('SKU not found', 'error')
@@ -71,7 +71,7 @@ def adjust_sku_inventory(sku_id):
             if request.is_json:
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, 'error')
-            return redirect(url_for('sku.view_sku', sku_id=sku_id))
+            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
 
     if not change_type:
         error_msg = 'Change type is required'
@@ -79,7 +79,7 @@ def adjust_sku_inventory(sku_id):
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return redirect(url_for('sku.view_sku', sku_id=sku_id))
+        return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
 
     try:
         # Convert and validate quantity - allow 0 for recount
@@ -168,12 +168,12 @@ def adjust_sku_inventory(sku_id):
 
             message = 'SKU inventory adjusted successfully'
             logger.info(f"SUCCESS: {message}")
-            
+
             # Refresh SKU and inventory item to get updated quantities
             db.session.refresh(sku)
             if sku.inventory_item:
                 db.session.refresh(sku.inventory_item)
-            
+
             new_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
             logger.info(f"New quantity after adjustment: {new_quantity}")
 
@@ -209,8 +209,8 @@ def adjust_sku_inventory(sku_id):
     # Redirect for form submissions
     logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT END ===")
     if not request.is_json:
-        logger.info(f"Redirecting to SKU view: {sku_id}")
-        return redirect(url_for('products.sku_view', sku_id=sku_id))
+        logger.info(f"Redirecting to SKU view: {inventory_item_id}")
+        return redirect(url_for('products.sku_view', sku_id=inventory_item_id))
     return None
 
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')

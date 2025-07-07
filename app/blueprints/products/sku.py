@@ -7,11 +7,11 @@ from ...utils.unit_utils import get_global_unit_list
 # Create the sku blueprint
 sku_bp = Blueprint('sku', __name__)
 
-@sku_bp.route('/sku/<int:sku_id>')
+@sku_bp.route('/sku/<int:inventory_item_id>')
 @login_required
-def view_sku(sku_id):
+def view_sku(inventory_item_id):
     """View individual SKU details"""
-    sku = ProductSKU.query.filter_by(inventory_item_id=sku_id).first_or_404()
+    sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
     history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
@@ -26,12 +26,12 @@ def view_sku(sku_id):
                          get_global_unit_list=get_global_unit_list,
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true')
 
-@sku_bp.route('/sku/<int:sku_id>/edit', methods=['POST'])
+@sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
-def edit_sku(sku_id):
+def edit_sku(inventory_item_id):
     """Edit SKU details"""
     sku = ProductSKU.query.filter_by(
-        inventory_item_id=sku_id,
+        inventory_item_id=inventory_item_id,
         organization_id=current_user.organization_id
     ).first_or_404()
     
@@ -75,6 +75,6 @@ def edit_sku(sku_id):
         db.session.rollback()
         flash(f'Error updating SKU: {str(e)}', 'error')
     
-    return redirect(url_for('sku.view_sku', sku_id=sku.inventory_item_id))
+    return redirect(url_for('sku.view_sku', inventory_item_id=sku.inventory_item_id))
 
 # Legacy adjustment route removed - all adjustments must go through centralized service
