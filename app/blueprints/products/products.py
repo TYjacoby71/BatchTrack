@@ -348,9 +348,5 @@ def delete_product(product_id):
 
 # Legacy adjust_sku route removed - use product_inventory routes instead
 
-# API routes moved to product_api.py for better organization
-```
-
-```python
+# API routes moved to product_api.py for better organizationpython
 # Applying the requested changes to fix route references in products.py
-```
