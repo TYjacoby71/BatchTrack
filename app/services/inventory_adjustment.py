@@ -154,25 +154,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Execute the deduction plan using FIFO service
             FIFOService.execute_deduction_plan(deduction_plan, item_id)
 
-            # Create history entries for each deduction
-            for entry_id, deduction_amount, unit_cost in deduction_plan:
-                # Create a new history entry for the deduction
-                history = InventoryHistory(
-                    inventory_item_id=item_id,
-                    change_type=change_type,
-                    quantity_change=-deduction_amount,
-                    unit=item.unit,
-                    remaining_quantity=0,  # Deductions don't add remaining quantity
-                    unit_cost=unit_cost,
-                    fifo_reference_id=entry_id,
-                    note=f"{notes} (From FIFO #{entry_id})" if notes else f"From FIFO #{entry_id}",
-                    created_by=created_by,
-                    quantity_used=deduction_amount,  # Track actual consumption
-                    used_for_batch_id=batch_id,
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
-                )
-                db.session.add(history)
-
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
                 item_id, deduction_plan, change_type, notes, 
