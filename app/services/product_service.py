@@ -60,7 +60,7 @@ class ProductService:
             from ..models import InventoryItem
             inventory_item = InventoryItem(
                 name=f"{product.name} - {variant.name} - {size_label}",
-                type='product',
+                type='product',  # Critical: mark as product type
                 unit=unit,
                 quantity=0.0,
                 organization_id=current_user.organization_id,
