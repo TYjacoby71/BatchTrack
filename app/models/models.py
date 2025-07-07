@@ -173,7 +173,7 @@ class Batch(ScopedModelMixin, db.Model):
     projected_yield = db.Column(db.Float)
     projected_yield_unit = db.Column(db.String(50))
     # Product assignment for finish batch
-    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=True)
+    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.inventory_item_id'), nullable=True)
     final_quantity = db.Column(db.Float)
     output_unit = db.Column(db.String(50))
     scale = db.Column(db.Float, default=1.0)
