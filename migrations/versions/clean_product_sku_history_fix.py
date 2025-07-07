@@ -25,6 +25,10 @@ def upgrade():
     
     # Only proceed if we still have sku_id and don't have inventory_item_id
     if 'sku_id' in columns and 'inventory_item_id' not in columns:
+        # Get existing foreign key constraints
+        existing_fks = inspector.get_foreign_keys('product_sku_history')
+        existing_indexes = inspector.get_indexes('product_sku_history')
+        
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
             # Add the new inventory_item_id column
             batch_op.add_column(sa.Column('inventory_item_id', sa.Integer(), nullable=True))
@@ -44,25 +48,27 @@ def upgrade():
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
             batch_op.alter_column('inventory_item_id', nullable=False)
             
-            # Drop old indexes
-            try:
-                batch_op.drop_index('idx_sku_remaining')
-            except:
-                pass
-            try:
-                batch_op.drop_index('idx_sku_timestamp')
-            except:
-                pass
+            # Drop old indexes if they exist
+            for idx in existing_indexes:
+                if idx['name'] in ['idx_sku_remaining', 'idx_sku_timestamp']:
+                    try:
+                        batch_op.drop_index(idx['name'])
+                    except:
+                        pass
             
             # Create new indexes
             batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
             batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
             
-            # Drop old foreign key and column
-            try:
-                batch_op.drop_constraint('product_sku_history_ibfk_1', type_='foreignkey')
-            except:
-                pass
+            # Drop old foreign keys if they exist
+            for fk in existing_fks:
+                if 'sku_id' in fk['constrained_columns']:
+                    try:
+                        batch_op.drop_constraint(fk['name'], type_='foreignkey')
+                    except:
+                        pass
+            
+            # Drop the old sku_id column
             batch_op.drop_column('sku_id')
 
 
