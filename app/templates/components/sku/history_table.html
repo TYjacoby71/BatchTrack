@@ -12,6 +12,7 @@
                         <th>Type</th>
                         <th>Qty Change</th>
                         <th>Remaining</th>
+                        <th>FIFO Code</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
@@ -48,6 +49,27 @@
                         <td>
                             {% if entry.remaining_quantity is not none %}
                                 {{ "%.1f"|format(entry.remaining_quantity) }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.fifo_reference_id %}
+                                <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
+                                    {% if entry.fifo_source %}
+                                        {{ entry.fifo_source }}
+                                    {% else %}
+                                        Lot #{{ entry.fifo_reference_id }}
+                                    {% endif %}
+                                </a>
+                            {% elif entry.batch_id %}
+                                <span class="text-info">
+                                    Batch #{{ entry.batch_id }}
+                                </span>
+                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
+                                <span class="text-success">
+                                    New Lot
+                                </span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
