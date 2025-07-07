@@ -94,7 +94,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     """Product SKU model - represents sellable units of inventory"""
     __tablename__ = 'product_sku'
     
-    id = db.Column(db.Integer, primary_key=True)
+    # INVENTORY ITEM REFERENCE - unified inventory control (PRIMARY KEY)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
     
     # CORE PRODUCT IDENTIFICATION
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
@@ -102,9 +103,6 @@ class ProductSKU(ScopedModelMixin, db.Model):
     size_label = db.Column(db.String(64), nullable=False, default='Bulk')
     sku_code = db.Column(db.String(64), unique=True, nullable=False)
     sku_name = db.Column(db.String(128), nullable=True)
-    
-    # INVENTORY ITEM REFERENCE - unified inventory control
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     
     # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)
     unit = db.Column(db.String(32), nullable=False)
@@ -286,7 +284,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'product_sku_history'
     
     id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('product_sku.inventory_item_id'), nullable=False)
     
     # Change tracking
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -344,7 +342,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     marketplace_source = db.Column(db.String(32), nullable=True)
     
     # Relationships
-    sku = db.relationship('ProductSKU', backref='history_entries')
+    sku = db.relationship('ProductSKU', foreign_keys=[inventory_item_id], backref='history_entries')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     user = db.relationship('User', foreign_keys=[created_by])
