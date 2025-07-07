@@ -6,7 +6,7 @@ import secrets
 import base64
 from datetime import datetime
 
-BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+BASE36_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def get_fifo_prefix(change_type, is_lot=False):
     """
@@ -62,9 +62,8 @@ def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
     # Get prefix
     prefix = get_fifo_prefix(change_type, is_lot)
     
-    # Generate base32 suffix (8 characters)
-    random_bytes = secrets.token_bytes(5)  # 5 bytes = 8 base32 chars
-    suffix = base64.b32encode(random_bytes).decode('ascii').rstrip('=')
+    # Generate base36 suffix (8 characters)
+    suffix = int_to_base36(secrets.randbits(32))[:8].upper()
     
     return f"{prefix}-{suffix}"
 
@@ -110,16 +109,36 @@ def validate_fifo_code(fifo_code):
     if parsed['is_batch']:
         return True
     
-    # For other codes, check base32 format
+    # For other codes, check base36 format
     try:
         if parsed['suffix']:
-            # Check if all characters are valid base32
+            # Check if all characters are valid base36
             for char in parsed['suffix']:
-                if char not in BASE32_CHARS:
+                if char not in BASE36_CHARS:
                     return False
         return True
     except:
         return False
+
+def int_to_base36(num):
+    """Convert integer to base36 string"""
+    if num == 0:
+        return '0'
+    
+    digits = []
+    while num:
+        num, remainder = divmod(num, 36)
+        digits.append(BASE36_CHARS[remainder])
+    
+    return ''.join(reversed(digits))
+
+def base36_to_int(base36_str):
+    """Convert base36 string to integer"""
+    return int(base36_str, 36)
+
+def get_change_type_prefix(change_type):
+    """Legacy function - use get_fifo_prefix instead"""
+    return get_fifo_prefix(change_type, False)
 
 # Legacy function for backward compatibility
 def generate_fifo_id(change_type):
