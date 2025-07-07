@@ -11,10 +11,7 @@
                         <th>Date</th>
                         <th>Type</th>
                         <th>Qty Change</th>
-                        <th>Old Qty</th>
-                        <th>New Qty</th>
                         <th>Remaining</th>
-                        <th>Original</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
@@ -49,23 +46,8 @@
                             </span>
                         </td>
                         <td>
-                            {% if entry.quantity_change < 0 %}
-                                {{ "%.1f"|format(entry.remaining_quantity + (-entry.quantity_change)) }}
-                            {% else %}
-                                {{ "%.1f"|format(entry.remaining_quantity - entry.quantity_change) if entry.remaining_quantity is not none else 'N/A' }}
-                            {% endif %}
-                        </td>
-                        <td>{{ "%.1f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else 'N/A' }}</td>
-                        <td>
                             {% if entry.remaining_quantity is not none %}
                                 {{ "%.1f"|format(entry.remaining_quantity) }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.original_quantity is not none %}
-                                {{ "%.1f"|format(entry.original_quantity) }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
