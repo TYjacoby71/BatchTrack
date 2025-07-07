@@ -291,7 +291,6 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     
     # FIFO tracking
     remaining_quantity = db.Column(db.Float, default=0.0)
-    original_quantity = db.Column(db.Float, nullable=True)
     unit = db.Column(db.String(32), nullable=False)
     
     # Transaction details

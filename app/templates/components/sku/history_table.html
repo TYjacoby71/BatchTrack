@@ -1,4 +1,3 @@
-
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">Product History</h5>
@@ -12,10 +11,8 @@
                         <th>Date</th>
                         <th>Type</th>
                         <th>Qty Change</th>
-                        <th>Old Qty</th>
-                        <th>New Qty</th>
                         <th>Remaining</th>
-                        <th>Original</th>
+                        <th>FIFO Code</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
@@ -50,14 +47,6 @@
                             </span>
                         </td>
                         <td>
-                            {% if entry.quantity_change < 0 %}
-                                {{ "%.1f"|format(entry.remaining_quantity + (-entry.quantity_change)) }}
-                            {% else %}
-                                {{ "%.1f"|format(entry.remaining_quantity - entry.quantity_change) if entry.remaining_quantity is not none else 'N/A' }}
-                            {% endif %}
-                        </td>
-                        <td>{{ "%.1f"|format(entry.remaining_quantity) if entry.remaining_quantity is not none else 'N/A' }}</td>
-                        <td>
                             {% if entry.remaining_quantity is not none %}
                                 {{ "%.1f"|format(entry.remaining_quantity) }}
                             {% else %}
@@ -65,8 +54,22 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if entry.original_quantity is not none %}
-                                {{ "%.1f"|format(entry.original_quantity) }}
+                            {% if entry.fifo_reference_id %}
+                                <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
+                                    {% if entry.fifo_source %}
+                                        {{ entry.fifo_source }}
+                                    {% else %}
+                                        Lot #{{ entry.fifo_reference_id }}
+                                    {% endif %}
+                                </a>
+                            {% elif entry.batch_id %}
+                                <span class="text-info">
+                                    Batch #{{ entry.batch_id }}
+                                </span>
+                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
+                                <span class="text-success">
+                                    New Lot
+                                </span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

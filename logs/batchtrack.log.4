@@ -1,4 +1,4 @@
-2025-07-07 21:34:24,065 ERROR: Full traceback: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:204]
+2025-07-07 21:35:19,607 ERROR: Full traceback: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:204]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
     self.dialect.do_execute(
@@ -72,11 +72,11 @@ Traceback (most recent call last):
     cursor.execute(statement, parameters)
 sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: product_sku_history.sku_id
 [SQL: INSERT INTO product_sku_history (inventory_item_id, timestamp, change_type, quantity_change, remaining_quantity, original_quantity, unit, unit_cost, sale_price, customer, fifo_code, fifo_reference_id, fifo_source, is_perishable, shelf_life_days, expiration_date, batch_id, container_id, notes, note, created_by, order_id, reservation_id, is_reserved, sale_location, quantity_used, batch_number, lot_number, temperature_at_time, location_id, location_name, quality_status, compliance_status, quality_checked_by, marketplace_order_id, marketplace_source, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: (4, '2025-07-07 21:34:24.063870', 'sale', 1.0, 0.0, None, 'floz', 1.0, 10.99, None, None, None, None, 0, None, None, None, None, '', None, 2, '', None, 0, None, 0.0, None, None, None, None, None, None, None, None, None, None, 1)]
+[parameters: (4, '2025-07-07 21:35:19.606228', 'sale', 1.0, 0.0, None, 'floz', 1.0, 10.99, None, None, None, None, 0, None, None, None, None, '', None, 2, '', None, 0, None, 0.0, None, None, None, None, None, None, None, None, None, None, 1)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
-2025-07-07 21:34:24,074 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:210]
-2025-07-07 21:34:24,074 INFO: Redirecting to SKU view: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:212]
-2025-07-07 21:34:24,075 ERROR: Exception on /products/adjust/4 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
+2025-07-07 21:35:19,616 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:210]
+2025-07-07 21:35:19,616 INFO: Redirecting to SKU view: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:212]
+2025-07-07 21:35:19,616 ERROR: Exception on /products/adjust/4 [POST] [in /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py:875]
 Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
     response = self.full_dispatch_request()
@@ -108,12 +108,14 @@ Traceback (most recent call last):
   File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
     raise BuildError(endpoint, values, method, self)
 werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.sku_view' with values ['sku_id']. Did you mean 'products.view_product' instead?
-2025-07-07 21:34:36,156 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:34:44,653 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:35:02,077 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-07 21:35:19,588 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:18]
-2025-07-07 21:35:19,588 INFO: Inventory Item ID: 4 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
-2025-07-07 21:35:19,588 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
-2025-07-07 21:35:19,588 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
-2025-07-07 21:35:19,589 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
-2025-07-07 21:35:19,589 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
+2025-07-07 21:37:11,464 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:38:02,467 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:43:13,743 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:43:18,514 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:43:24,633 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:43:31,505 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:46:22,543 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:47:14,953 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:47:16,070 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:47:53,544 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-07 21:47:54,502 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
