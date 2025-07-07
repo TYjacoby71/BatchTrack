@@ -67,31 +67,7 @@ def edit_sku(sku_id):
         else:
             sku.shelf_life_days = None
         
-        # Handle recount if provided
-        recount_quantity = request.form.get('recount_quantity')
-        if recount_quantity:
-            from ...services.inventory_adjustment import process_inventory_adjustment
-            recount_notes = request.form.get('recount_notes', 'Inventory recount from SKU edit')
-            
-            try:
-                success = process_inventory_adjustment(
-                    item_id=sku.inventory_item_id,
-                    quantity=float(recount_quantity),
-                    change_type='recount',
-                    unit=sku.unit,
-                    notes=recount_notes,
-                    created_by=current_user.id,
-                    item_type='product'
-                )
-                
-                if success:
-                    flash('SKU updated and inventory recounted successfully', 'success')
-                else:
-                    flash('SKU updated but recount failed', 'warning')
-            except Exception as e:
-                flash(f'SKU updated but recount error: {str(e)}', 'warning')
-        else:
-            flash('SKU updated successfully', 'success')
+        flash('SKU updated successfully', 'success')
         
         db.session.commit()
         

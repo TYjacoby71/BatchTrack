@@ -316,12 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (variantFilter) variantFilter.addEventListener('input', filterVariants);
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
 
-    // Global functions
-    window.loadVariants = function() {
-        // Reload the page to refresh variant data
-        location.reload();
-    };
-
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');
         if (!form) return;
