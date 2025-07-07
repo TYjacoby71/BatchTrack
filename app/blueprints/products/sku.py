@@ -13,8 +13,8 @@ def view_sku(sku_id):
     """View individual SKU details"""
     sku = ProductSKU.query.get_or_404(sku_id)
 
-    # Get SKU history for this specific SKU
-    history = ProductSKUHistory.query.filter_by(sku_id=sku_id).order_by(ProductSKUHistory.timestamp.desc()).all()
+    # Get SKU history for this specific SKU using inventory_item_id
+    history = ProductSKUHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).order_by(ProductSKUHistory.timestamp.desc()).all()
 
     # Calculate total quantity from current_quantity
     total_quantity = sku.current_quantity or 0
