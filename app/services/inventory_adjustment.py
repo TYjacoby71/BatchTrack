@@ -217,7 +217,14 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
                 # Generate FIFO code for tracking
                 from app.utils.fifo_generator import generate_fifo_code
-                fifo_code = generate_fifo_code(change_type, qty_change, batch_id)
+                
+                # For lot-creating events, pass the new remaining quantity
+                if change_type in ['recount', 'restock', 'finished_batch', 'manual_addition'] and qty_change > 0:
+                    remaining_qty_for_fifo = qty_change  # This becomes the lot quantity
+                else:
+                    remaining_qty_for_fifo = 0  # Not a lot
+                    
+                fifo_code = generate_fifo_code(change_type, remaining_qty_for_fifo, batch_id)
 
                 history = ProductSKUHistory(
                     inventory_item_id=item_id,
