@@ -344,14 +344,15 @@ def process_sale_webhook():
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Find SKU by code
+    # Find SKU by code with organization scoping
     sku = ProductSKU.query.filter_by(
         sku_code=data['sku_code'],
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        is_active=True
     ).first()
 
     if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
+        return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
         success = process_inventory_adjustment(
@@ -394,14 +395,15 @@ def process_return_webhook():
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Find SKU by code
+    # Find SKU by code with organization scoping
     sku = ProductSKU.query.filter_by(
         sku_code=data['sku_code'],
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        is_active=True
     ).first()
 
     if not sku:
-        return jsonify({'error': 'SKU not found'}), 404
+        return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
         success = process_inventory_adjustment(
