@@ -588,57 +588,111 @@ class FIFOService:
         return True
 
     @staticmethod
-    def release_reservation(inventory_item_id, quantity, order_id=None, notes="Reservation released"):
+    def release_reservation(inventory_item_id, quantity, notes=None, order_id=None):
         """
-        Release a reservation back to available stock
-        This restores the reserved quantity to available FIFO entries
+        Release (unreserve) inventory by restoring quantity to FIFO entries
         """
+        from app.models.product import ProductSKUHistory
+        from app.models import InventoryItem
+        from flask_login import current_user
+        from flask import current_app
+
+        current_app.logger.info(f"=== FIFO SERVICE: RELEASE RESERVATION ===")
+        current_app.logger.info(f"Inventory Item ID: {inventory_item_id}")
+        current_app.logger.info(f"Quantity to release: {quantity}")
+        current_app.logger.info(f"Order ID: {order_id}")
 
         item = InventoryItem.query.get(inventory_item_id)
         if not item or item.type != 'product':
-            raise ValueError("Reservations only supported for products")
+            raise ValueError("Release reservation only supported for products")
 
-        # Find reservation allocation entries for this order
-        query = ProductSKUHistory.query.filter(
+        # Find all reservation deduction entries (negative quantity_change)
+        reservation_deductions = ProductSKUHistory.query.filter(
             ProductSKUHistory.inventory_item_id == inventory_item_id,
-            ProductSKUHistory.change_type == 'reserved_allocation',
-            ProductSKUHistory.remaining_quantity > 0
+            ProductSKUHistory.change_type == 'reserved',
+            ProductSKUHistory.quantity_change < 0,  # Only deduction entries
+            ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         )
 
         if order_id:
-            query = query.filter(ProductSKUHistory.order_id == order_id)
+            reservation_deductions = reservation_deductions.filter(ProductSKUHistory.order_id == order_id)
 
-        reservation_entries = query.order_by(ProductSKUHistory.timestamp.asc()).all()
+        reservation_deductions = reservation_deductions.order_by(ProductSKUHistory.timestamp.desc()).all()  # Reverse FIFO for release
+
+        current_app.logger.info(f"Found {len(reservation_deductions)} reservation deduction entries")
 
         remaining_to_release = quantity
+        restored_entries = []
 
-        for entry in reservation_entries:
+        for deduction_entry in reservation_deductions:
             if remaining_to_release <= 0:
                 break
 
-            release_amount = min(entry.remaining_quantity, remaining_to_release)
+            # How much can we release from this deduction?
+            deduction_amount = abs(deduction_entry.quantity_change)
+            release_from_this_entry = min(deduction_amount, remaining_to_release)
 
-            # Reduce the reservation allocation
-            entry.remaining_quantity -= release_amount
-            remaining_to_release -= release_amount
+            current_app.logger.info(f"Processing deduction entry ID {deduction_entry.id}: {deduction_amount} units")
+            current_app.logger.info(f"Releasing {release_from_this_entry} units from this entry")
 
-            # Find the original FIFO entries that were reserved and restore them
-            # This is done by finding the corresponding reservation deduction entries
-            original_deductions = ProductSKUHistory.query.filter(
+            # Find the original FIFO entry that was deducted from
+            if deduction_entry.fifo_reference_id:
+                original_fifo_entry = ProductSKUHistory.query.get(deduction_entry.fifo_reference_id)
+                if original_fifo_entry:
+                    # Restore quantity to the original FIFO entry
+                    original_fifo_entry.remaining_quantity += release_from_this_entry
+                    current_app.logger.info(f"Restored {release_from_this_entry} to FIFO entry ID {original_fifo_entry.id}")
+                    current_app.logger.info(f"FIFO entry {original_fifo_entry.id} now has {original_fifo_entry.remaining_quantity} remaining")
+
+                    restored_entries.append({
+                        'fifo_entry_id': original_fifo_entry.id,
+                        'restored_quantity': release_from_this_entry
+                    })
+
+            # Reduce the amount we still need to release
+            remaining_to_release -= release_from_this_entry
+
+            # Update or remove the deduction entry
+            if release_from_this_entry >= deduction_amount:
+                # This deduction is fully reversed, remove it
+                current_app.logger.info(f"Fully reversing deduction entry ID {deduction_entry.id}")
+                db.session.delete(deduction_entry)
+            else:
+                # Partially reverse the deduction
+                deduction_entry.quantity_change += release_from_this_entry  # Make it less negative
+                current_app.logger.info(f"Partially reversing deduction entry ID {deduction_entry.id}, new quantity_change: {deduction_entry.quantity_change}")
+
+        # Create unreserved history entry
+        unreserved_entry = ProductSKUHistory(
+            inventory_item_id=inventory_item_id,
+            change_type='unreserved',
+            quantity_change=quantity,  # Positive for release
+            unit=item.unit,
+            remaining_quantity=0.0,  # Unreserved entries don't create new FIFO quantity
+            notes=notes or f"Released reservation of {quantity} {item.unit}",
+            order_id=order_id,
+            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id,
+            created_by=current_user.id if current_user and current_user.is_authenticated else None
+        )
+
+        db.session.add(unreserved_entry)
+        current_app.logger.info(f"Created unreserved history entry: {quantity} {item.unit}")
+
+        # Remove any reservation allocation entries for this order
+        if order_id:
+            allocation_entries = ProductSKUHistory.query.filter(
                 ProductSKUHistory.inventory_item_id == inventory_item_id,
-                ProductSKUHistory.change_type == 'reserved',
-                ProductSKUHistory.order_id == entry.order_id,
-                ProductSKUHistory.quantity_change < 0
+                ProductSKUHistory.change_type == 'reserved_allocation',
+                ProductSKUHistory.order_id == order_id,
+                ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
             ).all()
 
-            # Restore quantity to the original FIFO entries
-            for deduction in original_deductions[:int(release_amount)]:  # Simplified restoration
-                if deduction.fifo_reference_id:
-                    original_entry = ProductSKUHistory.query.get(deduction.fifo_reference_id)
-                    if original_entry:
-                        original_entry.remaining_quantity += min(1, release_amount)  # Restore unit by unit
+            for allocation in allocation_entries:
+                current_app.logger.info(f"Removing reservation allocation entry ID {allocation.id}")
+                db.session.delete(allocation)
 
         db.session.commit()
+        current_app.logger.info(f"=== RELEASE RESERVATION COMPLETE ===")
         return True
 
     @staticmethod
