@@ -1,3 +1,9 @@
+from datetime import datetime, timedelta
+from sqlalchemy import and_, desc, func
+from flask_login import current_user
+from app.extensions import db
+from app.models import InventoryHistory, InventoryItem
+from app.models.product import ProductSKUHistory
 from ...models import InventoryHistory, db, InventoryItem
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
@@ -5,56 +11,60 @@ from flask_login import current_user
 from app.utils.fifo_generator import generate_fifo_code, generate_batch_fifo_code
 
 class FIFOService:
+    """
+    Centralized FIFO (First In, First Out) inventory management service
+
+    This service handles:
+    - FIFO inventory tracking for both raw materials and products
+    - Expiration management
+    - Reservations and sales
+    - Refunds and returns
+    - Inventory recounts
+
+    Supports both InventoryHistory (ingredients/containers) and ProductSKUHistory (products)
+
+    Key Methods:
+    - get_fifo_entries: Query available inventory
+    - calculate_deduction_plan: Plan how to deduct inventory
+    - execute_deduction_plan: Execute the deduction
+    - add_fifo_entry: Add new inventory
+    - handle_refund_credits: Process refunds
+    - recount_fifo: Reconcile inventory counts
+    - release_reservation: Cancel reservations
+    - convert_reservation_to_sale: Convert reservations to sales
+    """
     @staticmethod
-    def get_fifo_entries(inventory_item_id):
-        """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
-        from app.models.product import ProductSKUHistory
-
-        today = datetime.now().date()
-
-        # Check what type of item this is
+    def _base_fifo_query(inventory_item_id, include_expired=False):
+        """Base query helper for FIFO entries to reduce duplication"""
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
-            return []
+            return None, []
 
+        # Use appropriate history table based on item type
         if item.type == 'product':
-            # For products, ONLY query ProductSKUHistory
-            query = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.inventory_item_id == inventory_item_id,
-                    ProductSKUHistory.remaining_quantity > 0,
-                    # Skip expired entries - they can only be spoiled/trashed
-                    db.or_(
-                        ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
-                        ProductSKUHistory.expiration_date >= today    # Not expired yet
-                    )
-                )
-            )
-
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
-
-            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
+            history_table = ProductSKUHistory
         else:
-            # For ingredients/containers, query InventoryHistory
-            query = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == inventory_item_id,
-                    InventoryHistory.remaining_quantity > 0,
-                    # Skip expired entries - they can only be spoiled/trashed
-                    db.or_(
-                        InventoryHistory.expiration_date.is_(None),  # Non-perishable
-                        InventoryHistory.expiration_date >= today    # Not expired yet
-                    )
-                )
+            history_table = InventoryHistory
+
+        query = history_table.query.filter(
+            history_table.inventory_item_id == inventory_item_id,
+            history_table.remaining_quantity > 0
+        )
+
+        if not include_expired and item.is_perishable:
+            today = datetime.now().date()
+            query = query.filter(
+                (history_table.expiration_date == None) | 
+                (history_table.expiration_date >= today)
             )
 
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+        return item, query.order_by(history_table.timestamp.asc()).all()
 
-            return query.order_by(InventoryHistory.timestamp.asc()).all()
+    @staticmethod
+    def get_fifo_entries(inventory_item_id, include_expired=False):
+        """Get FIFO entries for an inventory item (non-expired by default)"""
+        item, entries = FIFOService._base_fifo_query(inventory_item_id, include_expired)
+        return entries if entries else []
 
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
@@ -103,42 +113,9 @@ class FIFOService:
 
     @staticmethod
     def get_all_fifo_entries(inventory_item_id):
-        """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
-        from app.models.product import ProductSKUHistory
-
-        # Check what type of item this is
-        item = InventoryItem.query.get(inventory_item_id)
-        if not item:
-            return []
-
-        if item.type == 'product':
-            # For products, ONLY query ProductSKUHistory
-            query = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.inventory_item_id == inventory_item_id,
-                    ProductSKUHistory.remaining_quantity > 0
-                )
-            )
-
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
-
-            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
-        else:
-            # For ingredients/containers, query InventoryHistory
-            query = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == inventory_item_id,
-                    InventoryHistory.remaining_quantity > 0
-                )
-            )
-
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
-
-            return query.order_by(InventoryHistory.timestamp.asc()).all()
+        """Get all FIFO entries including expired ones"""
+        item, entries = FIFOService._base_fifo_query(inventory_item_id, include_expired=True)
+        return entries if entries else []
 
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
@@ -355,6 +332,68 @@ class FIFOService:
         return history_entries
 
     @staticmethod
+    def _consume_quantity(entries, total_to_consume):
+        """Helper to consume quantity from FIFO entries"""
+        consumption_plan = []
+        remaining_to_consume = total_to_consume
+
+        for entry in entries:
+            if remaining_to_consume <= 0:
+                break
+
+            available = entry.remaining_quantity
+            consume_amount = min(remaining_to_consume, available)
+
+            if consume_amount > 0:
+                consumption_plan.append((entry, consume_amount))
+                remaining_to_consume -= consume_amount
+
+        return consumption_plan, remaining_to_consume
+
+    @staticmethod
+    def handle_refund_credits(inventory_item_id, quantity, change_type, notes=None, **kwargs):
+        """Handle refund credits by restoring FIFO entries"""
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return False
+
+        # Use appropriate history table based on item type
+        if item.type == 'product':
+            history_table = ProductSKUHistory
+        else:
+            history_table = InventoryHistory
+
+        # Find the most recent deduction entries that can be credited
+        recent_deductions = history_table.query.filter(
+            history_table.inventory_item_id == inventory_item_id,
+            history_table.quantity_change < 0,
+            history_table.quantity_used > 0
+        ).order_by(history_table.timestamp.desc()).limit(10).all()
+
+        consumption_plan, remaining = FIFOService._consume_quantity(recent_deductions, quantity)
+
+        for entry, credit_amount in consumption_plan:
+            # Restore the remaining quantity
+            entry.remaining_quantity += credit_amount
+            entry.quantity_used -= credit_amount
+
+        # Create credit history entry
+        FIFOService.add_fifo_entry(
+            inventory_item_id=inventory_item_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=item.unit,
+            notes=notes,
+            **kwargs
+        )
+
+        # Update item quantity
+        item.quantity += quantity
+        db.session.commit()
+
+        return True
+
+    @staticmethod
     def handle_refund_credits(inventory_item_id, quantity, batch_id, notes, created_by, cost_per_unit):
         """
         Handle refund credits by finding original FIFO entries to credit back to
@@ -561,35 +600,35 @@ class FIFOService:
         This restores the reserved quantity to available FIFO entries
         """
         from app.models.product import ProductSKUHistory
-        
+
         item = InventoryItem.query.get(inventory_item_id)
         if not item or item.type != 'product':
             raise ValueError("Reservations only supported for products")
-        
+
         # Find reservation allocation entries for this order
         query = ProductSKUHistory.query.filter(
             ProductSKUHistory.inventory_item_id == inventory_item_id,
             ProductSKUHistory.change_type == 'reserved_allocation',
             ProductSKUHistory.remaining_quantity > 0
         )
-        
+
         if order_id:
             query = query.filter(ProductSKUHistory.order_id == order_id)
-            
+
         reservation_entries = query.order_by(ProductSKUHistory.timestamp.asc()).all()
-        
+
         remaining_to_release = quantity
-        
+
         for entry in reservation_entries:
             if remaining_to_release <= 0:
                 break
-                
+
             release_amount = min(entry.remaining_quantity, remaining_to_release)
-            
+
             # Reduce the reservation allocation
             entry.remaining_quantity -= release_amount
             remaining_to_release -= release_amount
-            
+
             # Find the original FIFO entries that were reserved and restore them
             # This is done by finding the corresponding reservation deduction entries
             original_deductions = ProductSKUHistory.query.filter(
@@ -598,14 +637,14 @@ class FIFOService:
                 ProductSKUHistory.order_id == entry.order_id,
                 ProductSKUHistory.quantity_change < 0
             ).all()
-            
+
             # Restore quantity to the original FIFO entries
             for deduction in original_deductions[:int(release_amount)]:  # Simplified restoration
                 if deduction.fifo_reference_id:
                     original_entry = ProductSKUHistory.query.get(deduction.fifo_reference_id)
                     if original_entry:
                         original_entry.remaining_quantity += min(1, release_amount)  # Restore unit by unit
-        
+
         db.session.commit()
         return True
 
@@ -616,11 +655,11 @@ class FIFOService:
         This removes the reservation allocation and creates a sale history entry
         """
         from app.models.product import ProductSKUHistory
-        
+
         item = InventoryItem.query.get(inventory_item_id)
         if not item or item.type != 'product':
             raise ValueError("Reservations only supported for products")
-        
+
         # Find and reduce reservation allocation
         reservation_entry = ProductSKUHistory.query.filter(
             ProductSKUHistory.inventory_item_id == inventory_item_id,
@@ -628,13 +667,13 @@ class FIFOService:
             ProductSKUHistory.order_id == order_id,
             ProductSKUHistory.remaining_quantity >= quantity
         ).first()
-        
+
         if not reservation_entry:
             raise ValueError("Reservation not found or insufficient reserved quantity")
-        
+
         # Reduce reservation allocation
         reservation_entry.remaining_quantity -= quantity
-        
+
         # Create sale history entry (this will be a deduction with 0 remaining_quantity)
         sale_history = ProductSKUHistory(
             inventory_item_id=inventory_item_id,
@@ -647,33 +686,11 @@ class FIFOService:
             sale_price=sale_price,
             organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         )
-        
+
         db.session.add(sale_history)
-        
+
         # Update total inventory quantity
         item.quantity -= quantity
-        
+
         db.session.commit()
         return True
-
-# Legacy function aliases for backward compatibility
-def get_fifo_entries(inventory_item_id):
-    return FIFOService.get_fifo_entries(inventory_item_id)
-
-def get_expired_fifo_entries(inventory_item_id):
-    return FIFOService.get_expired_fifo_entries(inventory_item_id)
-
-def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
-    """Legacy function - use FIFOService.calculate_deduction_plan and execute_deduction_plan instead"""
-    success, deduction_plan, _ = FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
-    if success:
-        FIFOService.execute_deduction_plan(deduction_plan)
-    return success, deduction_plan
-
-def recount_fifo(inventory_item_id, new_quantity, note, user_id):
-    return FIFOService.recount_fifo(inventory_item_id, new_quantity, note, user_id)
-
-def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
-    """Updates perishable status for all FIFO entries with remaining quantity"""
-    from ...blueprints.expiration.services import ExpirationService
-    ExpirationService.update_fifo_expiration_data(inventory_item_id, shelf_life_days)
