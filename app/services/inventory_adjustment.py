@@ -90,8 +90,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
-        # Reserve inventory - reduce available but keep total inventory
-        # This creates reservation entries and deducts from FIFO
+            # Reserve inventory - reduce available but keep total inventory
+            # This creates reservation entries and deducts from FIFO
             success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
                 item_id, quantity, change_type
             )
@@ -122,6 +122,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             # Reserved quantity is calculated dynamically from FIFO entries
             # DO NOT change item.quantity for reservations!
+            qty_change = 0  # No change to total inventory for reservations
         elif change_type == 'returned':
             qty_change = quantity
         else:
