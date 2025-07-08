@@ -165,6 +165,9 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 notes=notes,
                 order_id=order_id
             )
+            
+            # No direct quantity change for unreserved - handled by FIFO service
+            qty_change = 0
         else:
             qty_change = quantity
 
