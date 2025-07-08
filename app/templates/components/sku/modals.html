@@ -178,6 +178,56 @@
     </div>
 </div>
 
+<!-- Recount Modal -->
+<div class="modal fade" id="recountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Recount Inventory</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('product_inventory.adjust_sku_inventory', inventory_item_id=sku.inventory_item_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="change_type" value="recount">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Available Quantity</label>
+                            <input type="number" name="available_quantity" class="form-control" step="0.01" min="0" 
+                                   value="{{ sku.available_quantity_for_sale }}" required>
+                            <small class="text-muted">Current: {{ "%.2f"|format(sku.available_quantity_for_sale) }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Reserved Quantity</label>
+                            <input type="number" name="reserved_quantity" class="form-control" step="0.01" min="0" 
+                                   value="{{ sku.reserved_quantity }}" required>
+                            <small class="text-muted">Current: {{ "%.2f"|format(sku.reserved_quantity) }}</small>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label class="form-label">Total Quantity</label>
+                            <input type="text" class="form-control" id="totalQuantityDisplay" readonly>
+                            <small class="text-muted">Available + Reserved = Total</small>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label class="form-label">Recount Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="Reason for discrepancy..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 // Handle unit cost override in edit modal
 document.addEventListener('DOMContentLoaded', function() {
@@ -366,4 +416,28 @@ window.openInventoryActionModal = function(action) {
         new bootstrap.Modal(modal).show();
     }
 };
+
+// Recount modal total calculation
+document.addEventListener('DOMContentLoaded', function() {
+    const availableInput = document.querySelector('input[name="available_quantity"]');
+    const reservedInput = document.querySelector('input[name="reserved_quantity"]');
+    const totalDisplay = document.getElementById('totalQuantityDisplay');
+
+    function updateTotal() {
+        if (availableInput && reservedInput && totalDisplay) {
+            const available = parseFloat(availableInput.value) || 0;
+            const reserved = parseFloat(reservedInput.value) || 0;
+            const total = available + reserved;
+            totalDisplay.value = total.toFixed(2);
+        }
+    }
+
+    if (availableInput && reservedInput) {
+        availableInput.addEventListener('input', updateTotal);
+        reservedInput.addEventListener('input', updateTotal);
+
+        // Calculate initial total
+        updateTotal();
+    }
+});
 </script>
