@@ -301,10 +301,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         quantityInput.required = true;
                         break;
                     case 'recount':
-                        quantityHelp.textContent = 'Enter the new total quantity after recount.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
-                        break;
+                        // Close the FIFO modal and open the dedicated recount modal
+                        const fifoModal = bootstrap.Modal.getInstance(document.getElementById('adjustFifoModal'));
+                        if (fifoModal) {
+                            fifoModal.hide();
+                        }
+                        const recountModal = new bootstrap.Modal(document.getElementById('recountModal'));
+                        recountModal.show();
+                        return; // Exit early since we're switching modals
                     case 'reserved':
                         quantityHelp.textContent = 'Enter the quantity to reserve for this order.';
                         quantityGroup.style.display = 'block';
