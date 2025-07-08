@@ -80,7 +80,7 @@ def adjust_sku_inventory(inventory_item_id):
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+        return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
     try:
         # Convert and validate quantity - allow 0 for recount
