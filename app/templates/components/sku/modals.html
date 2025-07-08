@@ -131,7 +131,7 @@
                             </optgroup>
                         </select>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="quantityGroup">
                         <label for="quantity" class="form-label">Quantity</label>
                         <input type="number" class="form-control" id="quantity" name="quantity" 
                                step="any" min="0" required>
@@ -146,8 +146,9 @@
 
                     <!-- POS Integration Fields -->
                     <div class="mb-3" id="orderIdGroup" style="display: none;">
-                        <label for="order_id" class="form-label">Order ID (for sales/reservations)</label>
-                        <input type="text" name="order_id" id="order_id" class="form-control" placeholder="External order ID (Shopify, Etsy, etc.)">
+                        <label for="order_id" class="form-label">Order ID</label>
+                        <input type="text" name="order_id" id="order_id" class="form-control" placeholder="Required for reservations" required>
+                        <small class="form-text text-muted">Required to track and manage reservations</small>
                     </div>
 
                     <div class="mb-3" id="salePriceGroup" style="display: none;">
@@ -222,42 +223,75 @@ document.addEventListener('DOMContentLoaded', function() {
             const value = this.value;
             const quantityHelp = document.getElementById('quantityHelp');
 
-            // Update quantity help text based on adjustment type
+            // Get quantity group for hiding/showing
+            const quantityGroup = document.getElementById('quantityGroup');
+            const quantityInput = document.getElementById('quantity');
+
+            // Update quantity help text and visibility based on adjustment type
             if (quantityHelp) {
                 switch(value) {
                     case 'sale':
                     case 'gift':
                     case 'sample':
                         quantityHelp.textContent = 'Enter the quantity sold/given away.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                         break;
                     case 'damaged':
                     case 'spoil':
                     case 'trash':
                     case 'expired':
                         quantityHelp.textContent = 'Enter the quantity lost/damaged/expired.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                         break;
                     case 'manual_addition':
                         quantityHelp.textContent = 'Enter the quantity to add to existing stock.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                         break;
                     case 'recount':
                         quantityHelp.textContent = 'Enter the new total quantity after recount.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                         break;
                     case 'reserved':
                         quantityHelp.textContent = 'Enter the quantity to reserve for this order.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                         break;
                     case 'unreserved':
-                        quantityHelp.textContent = 'Enter the quantity to release from reservation.';
+                        quantityHelp.textContent = 'All reservations for this order will be released.';
+                        quantityGroup.style.display = 'none';
+                        quantityInput.required = false;
+                        quantityInput.value = '';
                         break;
                     default:
                         quantityHelp.textContent = 'Select an adjustment type to see quantity instructions.';
+                        quantityGroup.style.display = 'block';
+                        quantityInput.required = true;
                 }
             }
 
-            // Show/hide order ID field for sales and reservations
-            if (value === 'sale' || value === 'reserved') {
+            // Show/hide order ID field for sales, reservations, and unreserve
+            if (value === 'sale' || value === 'reserved' || value === 'unreserved') {
                 orderIdGroup.style.display = 'block';
+                // Make order ID required for reservations and unreserve
+                const orderIdInput = document.getElementById('order_id');
+                if (value === 'reserved' || value === 'unreserved') {
+                    orderIdInput.required = true;
+                    if (value === 'unreserved') {
+                        orderIdInput.placeholder = 'Enter order ID to release all reservations';
+                    } else {
+                        orderIdInput.placeholder = 'Required for reservations';
+                    }
+                } else {
+                    orderIdInput.required = false;
+                    orderIdInput.placeholder = 'Optional order reference';
+                }
             } else {
                 orderIdGroup.style.display = 'none';
+                document.getElementById('order_id').required = false;
             }
 
             // Show sale price field only for sales

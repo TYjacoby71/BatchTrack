@@ -118,6 +118,15 @@ def adjust_sku_inventory(inventory_item_id):
         logger.info(f"  - order_id: {order_id}")
         logger.info(f"  - cost_override: {cost_override}")
 
+        # Validate order ID for reservations
+        if change_type == 'reserved' and not order_id:
+            error_msg = 'Order ID is required for reservations'
+            logger.error(f"Order ID validation failed for reservation: {error_msg}")
+            if request.is_json:
+                return jsonify({'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+
         # Handle expiration data
         custom_expiration_date = None
         custom_shelf_life_days = None
@@ -131,6 +140,69 @@ def adjust_sku_inventory(inventory_item_id):
                     logger.info(f"Custom expiration date: {custom_expiration_date}")
             except (ValueError, TypeError) as e:
                 logger.warning(f"Error parsing expiration data: {e}")
+
+        # Handle unreserve specially - release all reservations for order ID
+        if change_type == 'unreserved':
+            if not order_id:
+                error_msg = 'Order ID is required to release reservations'
+                logger.error(f"Order ID validation failed for unreserve: {error_msg}")
+                if request.is_json:
+                    return jsonify({'error': error_msg}), 400
+                flash(error_msg, 'error')
+                return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+
+            logger.info(f"=== RELEASING ALL RESERVATIONS FOR ORDER: {order_id} ===")
+            
+            # Find all active reservations for this order
+            from app.models.product import ProductSKUHistory
+            reservations = ProductSKUHistory.query.filter(
+                ProductSKUHistory.inventory_item_id == inventory_item_id,
+                ProductSKUHistory.change_type == 'reserved_allocation',
+                ProductSKUHistory.order_id == order_id,
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.organization_id == current_user.organization_id
+            ).all()
+
+            if not reservations:
+                error_msg = f'No active reservations found for order ID: {order_id}'
+                logger.error(error_msg)
+                if request.is_json:
+                    return jsonify({'error': error_msg}), 400
+                flash(error_msg, 'error')
+                return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+
+            # Calculate total quantity to release
+            total_to_release = sum(res.remaining_quantity for res in reservations)
+            logger.info(f"Releasing {total_to_release} units from {len(reservations)} reservation entries")
+
+            # Use FIFO service to release the reservation
+            try:
+                from app.blueprints.fifo.services import FIFOService
+                success = FIFOService.release_reservation(
+                    inventory_item_id=inventory_item_id,
+                    quantity=total_to_release,
+                    order_id=order_id,
+                    notes=notes or f"Released all reservations for order {order_id}",
+                    created_by=current_user.id
+                )
+
+                if success:
+                    db.session.commit()
+                    flash(f'Released {total_to_release} units from order {order_id}', 'success')
+                else:
+                    flash('Error releasing reservations', 'error')
+            except Exception as e:
+                db.session.rollback()
+                error_msg = f'Error releasing reservations: {str(e)}'
+                logger.error(error_msg)
+                if request.is_json:
+                    return jsonify({'error': error_msg}), 500
+                flash(error_msg, 'error')
+
+            logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT END ===")
+            if not request.is_json:
+                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+            return None
 
         # Handle recount separately with available + reserved split
         if change_type == 'recount':
