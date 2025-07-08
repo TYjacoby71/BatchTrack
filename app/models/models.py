@@ -337,6 +337,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
+        from flask_login import current_user
+
+        if not current_user.is_authenticated:
+            return self.quantity
 
         today = datetime.now().date()
         expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
@@ -344,7 +348,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryHistory.expiration_date < today,
+                InventoryHistory.organization_id == current_user.organization_id
             )).scalar() or 0
 
         return max(0, self.quantity - expired_total)
@@ -357,6 +362,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
+        from flask_login import current_user
+
+        if not current_user.is_authenticated:
+            return 0
 
         today = datetime.now().date()
         return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
@@ -364,7 +373,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryHistory.expiration_date < today,
+                InventoryHistory.organization_id == current_user.organization_id
             )).scalar() or 0
 
     @property
@@ -373,14 +383,19 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if self.type != 'product':
             return 0
         
-        # Sum up all reservation allocations
+        # Sum up all reservation allocations with organization scoping
         from app.models.product import ProductSKUHistory
+        from flask_login import current_user
         
+        if not current_user.is_authenticated:
+            return 0
+            
         reserved_total = db.session.query(db.func.sum(ProductSKUHistory.remaining_quantity))\
             .filter(
                 ProductSKUHistory.inventory_item_id == self.id,
                 ProductSKUHistory.change_type.in_(['reserved_allocation']),
-                ProductSKUHistory.remaining_quantity > 0
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.organization_id == current_user.organization_id
             ).scalar() or 0
             
         return reserved_total
