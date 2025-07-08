@@ -189,16 +189,29 @@ class FIFOService:
         """Execute a deduction plan by updating remaining quantities"""
         from app.models.product import ProductSKUHistory
 
+        # Check what type of item this is
+        item = InventoryItem.query.get(inventory_item_id) if inventory_item_id else None
+        
         for entry_id, deduct_amount, _ in deduction_plan:
-            # Try InventoryHistory first
-            entry = InventoryHistory.query.get(entry_id)
-            if entry:
-                entry.remaining_quantity -= deduct_amount
-            else:
-                # Try ProductSKUHistory for products
+            if item and item.type == 'product':
+                # For products, only look in ProductSKUHistory
                 entry = ProductSKUHistory.query.get(entry_id)
                 if entry:
                     entry.remaining_quantity -= deduct_amount
+                    print(f"Updated ProductSKUHistory entry {entry_id}: remaining_quantity now {entry.remaining_quantity}")
+                else:
+                    print(f"ERROR: Could not find ProductSKUHistory entry {entry_id}")
+            else:
+                # For raw ingredients/containers, only look in InventoryHistory
+                entry = InventoryHistory.query.get(entry_id)
+                if entry:
+                    entry.remaining_quantity -= deduct_amount
+                    print(f"Updated InventoryHistory entry {entry_id}: remaining_quantity now {entry.remaining_quantity}")
+                else:
+                    print(f"ERROR: Could not find InventoryHistory entry {entry_id}")
+        
+        # Commit the changes immediately to ensure they persist
+        db.session.commit()
 
     @staticmethod
     def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
