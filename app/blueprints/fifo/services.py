@@ -4,7 +4,6 @@ from flask_login import current_user
 from app.extensions import db
 from app.models import InventoryHistory, InventoryItem
 from app.models.product import ProductSKUHistory
-from ...models import InventoryHistory, db, InventoryItem
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
 from flask_login import current_user
@@ -69,7 +68,6 @@ class FIFOService:
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
         """Get expired FIFO entries with remaining quantity (for disposal only)"""
-        from app.models.product import ProductSKUHistory
 
         today = datetime.now().date()
 
@@ -164,7 +162,6 @@ class FIFOService:
     @staticmethod
     def execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
-        from app.models.product import ProductSKUHistory
 
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id) if inventory_item_id else None
@@ -212,7 +209,6 @@ class FIFOService:
         # Check if this is a product item
         if item.type == 'product':
             # Use ProductSKUHistory for products
-            from app.models.product import ProductSKUHistory
 
             # Special handling for reservation allocations
             if change_type == 'reserved_allocation':
@@ -288,7 +284,6 @@ class FIFOService:
             # Check if this is a product item
             if item.type == 'product':
                 # Use ProductSKUHistory for products
-                from app.models.product import ProductSKUHistory
 
                 history = ProductSKUHistory(
                     inventory_item_id=inventory_item_id,
@@ -464,7 +459,6 @@ class FIFOService:
         """
         Handles recounts with proper FIFO integrity and expiration tracking
         """
-        from app.models.product import ProductSKUHistory
 
         item = InventoryItem.query.get(inventory_item_id)
         current_entries = FIFOService.get_fifo_entries(inventory_item_id)
@@ -599,7 +593,6 @@ class FIFOService:
         Release a reservation back to available stock
         This restores the reserved quantity to available FIFO entries
         """
-        from app.models.product import ProductSKUHistory
 
         item = InventoryItem.query.get(inventory_item_id)
         if not item or item.type != 'product':
@@ -654,7 +647,6 @@ class FIFOService:
         Convert a reservation to an actual sale
         This removes the reservation allocation and creates a sale history entry
         """
-        from app.models.product import ProductSKUHistory
 
         item = InventoryItem.query.get(inventory_item_id)
         if not item or item.type != 'product':
