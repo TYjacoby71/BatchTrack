@@ -454,52 +454,29 @@ class FIFOService:
 
         # Handle increase in quantity    
         else:
-            # Handle product vs raw inventory differently
+            # Handle product vs raw inventory with IDENTICAL logic
             if item.type == 'product':
-                # For products, look in ProductSKUHistory for entries with available capacity
-                # This includes both positive additions (restocks) and negative deductions (sales) that have remaining space
+                # For products, look in ProductSKUHistory - EXACT SAME LOGIC AS RAW INVENTORY
                 unfilled_entries = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
-                        ProductSKUHistory.remaining_quantity > 0,  # Has available capacity
-                        db.or_(
-                            # Positive entries that aren't fully filled
-                            and_(
-                                ProductSKUHistory.quantity_change > 0,
-                                ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change
-                            ),
-                            # Negative entries (sales/gifts) that have refund capacity
-                            and_(
-                                ProductSKUHistory.quantity_change < 0,
-                                ProductSKUHistory.remaining_quantity > 0
-                            )
-                        )
+                        ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change,
+                        ProductSKUHistory.quantity_change > 0  # Only positive entries can be filled
                     )
-                ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                ).order_by(ProductSKUHistory.timestamp.asc()).all()
             else:
-                # For raw inventory, look in InventoryHistory for entries with available capacity
+                # For raw inventory, look in InventoryHistory - ORIGINAL LOGIC
                 unfilled_entries = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
-                        InventoryHistory.remaining_quantity > 0,  # Has available capacity
-                        db.or_(
-                            # Positive entries that aren't fully filled
-                            and_(
-                                InventoryHistory.quantity_change > 0,
-                                InventoryHistory.remaining_quantity < InventoryHistory.quantity_change
-                            ),
-                            # Negative entries (sales/usage) that have refund capacity
-                            and_(
-                                InventoryHistory.quantity_change < 0,
-                                InventoryHistory.remaining_quantity > 0
-                            )
-                        )
+                        InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
+                        InventoryHistory.quantity_change > 0  # Only positive entries can be filled
                     )
-                ).order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                ).order_by(InventoryHistory.timestamp.asc()).all()
 
             remaining_to_add = difference
 
-            # First try to fill existing FIFO entries
+            # First try to fill existing FIFO entries - IDENTICAL LOGIC FOR BOTH
             for entry in unfilled_entries:
                 if remaining_to_add <= 0:
                     break
@@ -512,28 +489,37 @@ class FIFOService:
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
-                    # For products, don't create individual restoration entries during recount
-                    # The calling code will create a single recount summary entry
-                    if item.type != 'product':
-                        # Only log restoration for raw inventory
+                    # Create restoration history entry - SAME LOGIC FOR BOTH SYSTEMS
+                    if item.type == 'product':
+                        history = ProductSKUHistory(
+                            inventory_item_id=inventory_item_id,
+                            change_type='recount',
+                            quantity_change=fill_amount,
+                            unit=history_unit,
+                            remaining_quantity=0.0,  # Not a FIFO entry, just restoration record
+                            fifo_reference_id=entry.id,
+                            notes=f"Recount restored to FIFO entry #{entry.id}",
+                            created_by=user_id,
+                            quantity_used=0.0,
+                            organization_id=current_user.organization_id if current_user else item.organization_id
+                        )
+                    else:
                         history = InventoryHistory(
                             inventory_item_id=inventory_item_id,
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=0,  # Not a FIFO entry
+                            remaining_quantity=0,  # Not a FIFO entry, just restoration record
                             fifo_reference_id=entry.id,
                             note=f"Recount restored to FIFO entry #{entry.id}",
                             created_by=user_id,
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
                         )
-                        db.session.add(history)
+                    db.session.add(history)
 
-            # Only create new FIFO entry if we couldn't fill existing ones
+            # Only create new FIFO entry if we couldn't fill existing ones - SAME FOR BOTH
             if remaining_to_add > 0:
-                # For all items, create new FIFO entry with proper recount change_type
-                # This ensures consistent FIFO code generation
                 FIFOService.add_fifo_entry(
                     inventory_item_id=inventory_item_id,
                     quantity=remaining_to_add,
