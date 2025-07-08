@@ -383,20 +383,20 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if self.type != 'product':
             return 0
         
-        # Sum up all reservation allocations with organization scoping
+        # Sum up all reservation deductions with organization scoping
         from app.models.product import ProductSKUHistory
         from flask_login import current_user
         
         if not current_user.is_authenticated:
             return 0
             
-        # Get the total reserved amount from reservation allocations (tracking entries)
-        # These track how much is currently reserved
-        reserved_total = db.session.query(db.func.sum(ProductSKUHistory.remaining_quantity))\
+        # Get the total reserved amount from reservation deductions
+        # These represent quantity deducted from available FIFO but not yet sold
+        reserved_total = db.session.query(db.func.sum(db.func.abs(ProductSKUHistory.quantity_change)))\
             .filter(
                 ProductSKUHistory.inventory_item_id == self.id,
-                ProductSKUHistory.change_type == 'reserved_allocation',
-                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.change_type == 'reserved',
+                ProductSKUHistory.quantity_change < 0,
                 ProductSKUHistory.organization_id == current_user.organization_id
             ).scalar() or 0
             
