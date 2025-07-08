@@ -310,7 +310,7 @@ class FIFOService:
                     change_type=change_type,
                     quantity_change=-deduction_amount,
                     unit=history_unit,
-                    remaining_quantity=None,  # Deductions have NA remaining (not applicable)
+                    remaining_quantity=0.0,  # Deductions ALWAYS have 0 remaining
                     fifo_reference_id=entry_id,
                     unit_cost=unit_cost,
                     notes=f"{used_for_note} (From FIFO #{entry_id})",
@@ -330,7 +330,7 @@ class FIFOService:
                     change_type=change_type,
                     quantity_change=-deduction_amount,
                     unit=history_unit,
-                    remaining_quantity=None,  # Deductions have NA remaining (not applicable)
+                    remaining_quantity=0.0,  # Deductions ALWAYS have 0 remaining
                     fifo_reference_id=entry_id,
                     unit_cost=unit_cost,
                     note=f"{used_for_note} (From FIFO #{entry_id})",
@@ -384,7 +384,7 @@ class FIFOService:
                     change_type='refunded',
                     quantity_change=credit_amount,
                     unit=credit_unit,
-                    remaining_quantity=None,  # Credits have NA remaining (not applicable)
+                    remaining_quantity=0,  # Credits don't create new FIFO entries
                     unit_cost=cost_per_unit,
                     fifo_reference_id=original_fifo_entry.id,
                     note=f"{notes} (Credited to FIFO #{original_fifo_entry.id})",
@@ -493,7 +493,7 @@ class FIFOService:
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=None,  # Not a FIFO entry - NA
+                            remaining_quantity=0,  # Not a FIFO entry
                             fifo_reference_id=entry.id,
                             notes=f"Recount restored to FIFO entry #{entry.id}",
                             created_by=user_id,
@@ -506,7 +506,7 @@ class FIFOService:
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=None,  # Not a FIFO entry - NA
+                            remaining_quantity=0,  # Not a FIFO entry
                             fifo_reference_id=entry.id,
                             note=f"Recount restored to FIFO entry #{entry.id}",
                             created_by=user_id,
