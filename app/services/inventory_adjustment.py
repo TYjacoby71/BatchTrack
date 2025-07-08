@@ -28,7 +28,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         from sqlalchemy import and_
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
-                ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
+                ProductSKUHistory.inventory_item_id == item_id,
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else None
             )
