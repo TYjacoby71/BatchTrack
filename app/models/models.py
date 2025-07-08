@@ -367,6 +367,33 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.expiration_date < today
             )).scalar() or 0
 
+    @property
+    def reserved_quantity(self):
+        """Get currently reserved quantity for products"""
+        if self.type != 'product':
+            return 0
+        
+        # Sum up all reservation allocations
+        from app.models.product import ProductSKUHistory
+        
+        reserved_total = db.session.query(db.func.sum(ProductSKUHistory.remaining_quantity))\
+            .filter(
+                ProductSKUHistory.inventory_item_id == self.id,
+                ProductSKUHistory.change_type.in_(['reserved_allocation']),
+                ProductSKUHistory.remaining_quantity > 0
+            ).scalar() or 0
+            
+        return reserved_total
+
+    @property
+    def available_quantity_for_sale(self):
+        """Get quantity available for new sales/reservations (excludes reserved and expired)"""
+        total = self.quantity
+        reserved = self.reserved_quantity
+        expired = self.expired_quantity if self.is_perishable else 0
+        
+        return max(0, total - reserved - expired)
+
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
     id = db.Column(db.Integer, primary_key=True)

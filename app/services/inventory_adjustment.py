@@ -90,17 +90,47 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
-            # Special handling: move from current to reserved, don't change total
-            if hasattr(item, 'reserved_quantity'):
-                item.reserved_quantity = (item.reserved_quantity or 0) + quantity
-                if hasattr(item, 'current_quantity'):
-                    item.current_quantity = (item.current_quantity or 0) - quantity
-                else:
-                    item.quantity = (item.quantity or 0) - quantity
-                # Create history entry but don't change total inventory
-                qty_change = 0
-            else:
-                raise ValueError("Item type doesn't support reservations")
+            # Special case: reservations don't change quantity but need special FIFO tracking
+            # First check if we have enough available (non-reserved) stock
+            available_entries = FIFOService.get_fifo_entries(item_id)
+            available_quantity = sum(entry.remaining_quantity for entry in available_entries)
+
+            if available_quantity < quantity:
+                raise ValueError(f"Insufficient available stock for reservation. Available: {available_quantity}, Requested: {quantity}")
+
+            # Create a deduction plan to "reserve" from available FIFO entries
+            success, deduction_plan, _ = FIFOService.calculate_deduction_plan(
+                item_id, quantity, 'reserved'
+            )
+
+            if not success:
+                raise ValueError("Cannot create reservation - insufficient FIFO stock")
+
+            # Execute the deduction plan (reduces remaining_quantity in FIFO entries)
+            FIFOService.execute_deduction_plan(deduction_plan, item_id)
+
+            # Create reservation history entries using FIFO service
+            FIFOService.create_deduction_history(
+                item_id, deduction_plan, change_type, notes, 
+                batch_id=batch_id, created_by=created_by, 
+                customer=customer, sale_price=sale_price, order_id=order_id
+            )
+
+            # Also create a positive reservation entry to track the reserved amount
+            # This entry has remaining_quantity = quantity to track reserved stock
+            FIFOService.add_fifo_entry(
+                inventory_item_id=item_id,
+                quantity=0,  # Zero quantity change to total inventory
+                change_type='reserved_allocation',
+                unit=item.unit,
+                notes=f"Reserved allocation: {notes}",
+                cost_per_unit=cost_per_unit,
+                batch_id=batch_id,
+                created_by=created_by,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
         elif change_type == 'returned':
             qty_change = quantity
         else:

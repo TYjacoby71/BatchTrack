@@ -205,9 +205,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     @property
     def reserved_quantity(self):
-        """Reserved quantity - for compatibility"""
-        # This could be calculated from ProductSKUHistory if needed
-        return 0.0
+        """Get currently reserved quantity from inventory item"""
+        return self.inventory_item.reserved_quantity if self.inventory_item else 0.0
     
     @property
     def is_low_stock(self):
@@ -226,9 +225,8 @@ class ProductSKU(ScopedModelMixin, db.Model):
     
     @property
     def available_for_sale(self):
-        """Calculate available quantity for sale"""
-        current_qty = self.inventory_item.quantity if self.inventory_item else 0.0
-        return max(0, current_qty - (self.reserved_quantity or 0))
+        """Calculate available quantity for sale (excludes reserved and expired)"""
+        return self.inventory_item.available_quantity_for_sale if self.inventory_item else 0.0
     
     # RELATIONSHIPS
     product = db.relationship('Product', back_populates='skus')
