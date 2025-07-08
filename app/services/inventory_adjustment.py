@@ -108,11 +108,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type == 'reserved':
             # Reserve inventory - reduce available but keep total inventory
             # This creates reservation entries and deducts from FIFO
-            
-            # Require order_id for reservations
-            if not order_id:
-                raise ValueError("Order ID is required for reservations")
-            
             success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
                 item_id, quantity, change_type
             )
@@ -131,16 +126,14 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             )
 
             # Create reservation allocation entry to track what was reserved
-            # This creates a special LOT for tracking reserved quantities
             FIFOService.add_fifo_entry(
                 inventory_item_id=item_id,
-                quantity=quantity,  # Track the reserved quantity as a special LOT
+                quantity=0,  # Don't change total inventory for reservations
                 change_type='reserved_allocation',
                 unit=unit,
-                notes=f"RESERVATION LOT for order {order_id}",
+                notes=f"Reserved for order {order_id}" if order_id else "Reserved inventory",
                 created_by=created_by,
-                order_id=order_id,
-                remaining_quantity=quantity  # This LOT represents reserved stock
+                order_id=order_id
             )
 
             # Reserved quantity is calculated dynamically from FIFO entries
@@ -172,7 +165,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 notes=notes,
                 order_id=order_id
             )
-            qty_change = 0  # No direct quantity change for unreserved
         else:
             qty_change = quantity
 
