@@ -141,6 +141,30 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             qty_change = 0  # No change to total inventory for reservations
         elif change_type == 'returned':
             qty_change = quantity
+        elif change_type == 'unreserved':
+            current_app.logger.info("=== UNRESERVED (RELEASE RESERVATION) ===")
+
+            # Check current reserved quantity before releasing
+            item = InventoryItem.query.get(item_id)
+            if not item:
+                current_app.logger.error(f"Item not found: {item_id}")
+                return False
+
+            current_reserved = item.reserved_quantity
+            current_app.logger.info(f"Current reserved quantity: {current_reserved}")
+            current_app.logger.info(f"Attempting to release: {quantity}")
+
+            if quantity > current_reserved:
+                current_app.logger.error(f"Cannot release {quantity} - only {current_reserved} reserved")
+                raise ValueError(f"Cannot release {quantity} units. Only {current_reserved} units are currently reserved.")
+
+            # For unreserving, we need to restore the quantity to FIFO entries
+            success = FIFOService.release_reservation(
+                inventory_item_id=item_id,
+                quantity=quantity,
+                notes=notes,
+                order_id=order_id
+            )
         else:
             qty_change = quantity
 

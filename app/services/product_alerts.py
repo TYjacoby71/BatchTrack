@@ -39,7 +39,7 @@ class ProductAlertService:
     def get_product_stock_summary() -> Dict:
         """Get summary of product stock issues"""
         # Get all active SKUs with their inventory data
-        low_stock_skus = ProductSKU.query.join(InventoryItem).filter(
+        low_stock_skus = ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
             ProductSKU.is_active == True,
             InventoryItem.quantity <= ProductSKU.low_stock_threshold,
             InventoryItem.quantity > 0,
@@ -47,7 +47,7 @@ class ProductAlertService:
             InventoryItem.organization_id == current_user.organization_id
         ).all()
 
-        out_of_stock_skus = ProductSKU.query.join(InventoryItem).filter(
+        out_of_stock_skus = ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
             ProductSKU.is_active == True,
             InventoryItem.quantity <= 0,
             ProductSKU.organization_id == current_user.organization_id,
