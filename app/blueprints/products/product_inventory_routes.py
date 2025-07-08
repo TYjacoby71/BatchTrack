@@ -89,7 +89,7 @@ def adjust_sku_inventory(inventory_item_id):
         logger.info(f"Converted quantity: {quantity}")
 
         # For deduction types, ensure quantity is positive here but will be made negative by centralized service
-        if change_type in ['sale', 'spoil', 'trash', 'damaged', 'expired', 'gift', 'sample']:
+        if change_type in ['sale', 'spoil', 'trash', 'damaged', 'expired', 'gift', 'sample', 'tester']:
             if quantity < 0:
                 logger.error(f"Quantity should be positive for deduction type: {change_type}")
                 raise ValueError('Quantity should be positive for deduction operations')
