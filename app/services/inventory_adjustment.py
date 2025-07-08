@@ -90,8 +90,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
-            # Reserve inventory - reduce available but keep total inventory
-            # This creates reservation entries and deducts from FIFO
+        # Reserve inventory - reduce available but keep total inventory
+        # This creates reservation entries and deducts from FIFO
             success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
                 item_id, quantity, change_type
             )
@@ -112,7 +112,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Create reservation allocation entry to track what was reserved
             FIFOService.add_fifo_entry(
                 inventory_item_id=item_id,
-                quantity=quantity,  # Track reserved amount
+                quantity=0,  # Don't change total inventory for reservations
                 change_type='reserved_allocation',
                 unit=unit,
                 notes=f"Reserved for order {order_id}" if order_id else "Reserved inventory",
@@ -120,9 +120,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 order_id=order_id
             )
 
-            # For reservations, we don't change the main inventory quantity
-            # but we need to set qty_change to 0 to avoid the undefined variable error
-            qty_change = 0
+            # Reserved quantity is calculated dynamically from FIFO entries
+            # DO NOT change item.quantity for reservations!
         elif change_type == 'returned':
             qty_change = quantity
         else:
