@@ -271,7 +271,7 @@ def get_sku_fifo_status(sku_id):
             InventoryHistory.expiration_date.is_(None),  # Non-perishable
             InventoryHistory.expiration_date >= today    # Not expired yet
         )
-    ).order_by(InventoryHistory.timestamp.asc()).all()ll()
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     # Get expired FIFO entries (frozen, with remaining quantity)
     expired_entries = InventoryHistory.query.filter(
