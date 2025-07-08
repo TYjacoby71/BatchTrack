@@ -142,32 +142,35 @@ def adjust_sku_inventory(inventory_item_id):
                 # Update the inventory item quantity directly
                 sku.inventory_item.quantity = quantity
                 
-                # Calculate the actual change
+                # Calculate the actual change for summary entry
                 qty_change = quantity - original_quantity
                 
-                # Generate FIFO code for the recount
-                from app.utils.fifo_generator import generate_fifo_code
-                if qty_change > 0:
-                    fifo_code = generate_fifo_code('recount', qty_change, None)
-                else:
-                    fifo_code = generate_fifo_code('recount', 0, None)
+                # Only create summary entry if there was an actual change
+                if qty_change != 0:
+                    # Use the proper FIFO service instead of manual generation
+                    if qty_change > 0:
+                        # For positive changes, create a proper FIFO entry
+                        FIFOService.add_fifo_entry(
+                            inventory_item_id=inventory_item_id,
+                            quantity=qty_change,
+                            change_type='recount',
+                            unit=unit or sku.unit or 'count',
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            cost_per_unit=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
+                            created_by=current_user.id
+                        )
+                    else:
+                        # For negative changes, create summary history using FIFO service
+                        # This ensures consistent FIFO code generation
+                        FIFOService.create_deduction_history(
+                            inventory_item_id=inventory_item_id,
+                            deduction_plan=[(0, abs(qty_change), sku.inventory_item.cost_per_unit if sku.inventory_item else None)],
+                            change_type='recount',
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            created_by=current_user.id
+                        )
                 
-                # Create single ProductSKUHistory entry for the recount
-                history = ProductSKUHistory(
-                    inventory_item_id=inventory_item_id,
-                    change_type='recount',
-                    quantity_change=qty_change,
-                    unit=unit or sku.unit or 'count',
-                    remaining_quantity=qty_change if qty_change > 0 else 0,
-                    unit_cost=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
-                    notes=notes or f"Product recount: {original_quantity} → {quantity}",
-                    created_by=current_user.id,
-                    fifo_code=fifo_code,
-                    organization_id=current_user.organization_id
-                )
-                db.session.add(history)
                 db.session.commit()
-
                 flash('Product inventory recounted successfully', 'success')
             else:
                 flash('Error performing recount', 'error')
@@ -388,6 +391,7 @@ def process_sale_webhook():
         return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
+        # Use centralized inventory adjustment which properly calls FIFO service
         success = process_inventory_adjustment(
             item_id=sku.inventory_item_id,
             quantity=float(data['quantity']),
@@ -402,6 +406,7 @@ def process_sale_webhook():
         )
 
         if success:
+            db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Sale processed successfully',
@@ -439,6 +444,7 @@ def process_return_webhook():
         return jsonify({'error': 'SKU not found or inactive'}), 404
 
     try:
+        # Use centralized inventory adjustment which properly calls FIFO service
         success = process_inventory_adjustment(
             item_id=sku.inventory_item_id,
             quantity=float(data['quantity']),
@@ -491,6 +497,7 @@ def reserve_inventory(sku_id):
         return jsonify({'error': 'Quantity is required'}), 400
 
     try:
+        # Use centralized inventory adjustment which properly calls FIFO service
         success = process_inventory_adjustment(
             item_id=sku.inventory_item_id,
             quantity=float(quantity),
@@ -503,6 +510,7 @@ def reserve_inventory(sku_id):
         )
 
         if success:
+            db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Inventory reserved successfully',
@@ -594,6 +602,7 @@ def add_from_batch():
                     unit=batch.output_unit or target_sku.unit
                 )
 
+            # Use centralized inventory adjustment which properly calls FIFO service
             success = process_inventory_adjustment(
                 item_id=bulk_sku.inventory_item_id,
                 quantity=bulk_quantity,
@@ -660,11 +669,11 @@ def add_inventory_from_batch():
             size_label=size_label or 'Bulk'
         )
 
-        # Use the inventory adjustment service to add inventory
+        # Use the centralized inventory adjustment service which properly calls FIFO service
         success = process_inventory_adjustment(
             item_id=sku.inventory_item_id,
             quantity=quantity,
-            change_type='batch_completion',
+            change_type='finished_batch',  # Use standard change_type for batch completion
             unit=sku.unit,
             notes=f'Added from batch {batch_id}',
             batch_id=batch_id,
