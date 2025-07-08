@@ -475,6 +475,8 @@ class FIFOService:
                 ).order_by(InventoryHistory.timestamp.asc()).all()
 
             remaining_to_add = difference
+            print(f"DEBUG: Recount increase - starting with remaining_to_add: {remaining_to_add}")
+            print(f"DEBUG: Found {len(unfilled_entries)} unfilled entries")
 
             # First try to fill existing FIFO entries - IDENTICAL LOGIC FOR BOTH
             for entry in unfilled_entries:
@@ -485,6 +487,7 @@ class FIFOService:
                 fill_amount = min(available_capacity, remaining_to_add)
 
                 if fill_amount > 0:
+                    print(f"DEBUG: Filling entry {entry.id} with {fill_amount}, remaining_to_add becomes {remaining_to_add - fill_amount}")
                     # Update the original FIFO entry
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
@@ -518,14 +521,16 @@ class FIFOService:
                         )
                     db.session.add(history)
 
-            # Only create new FIFO entry if we couldn't fill existing ones - SAME FOR BOTH
+            # Only create new FIFO entry if we still have quantity that couldn't be filled into existing entries
+            print(f"DEBUG: After filling existing entries, remaining_to_add: {remaining_to_add}")
             if remaining_to_add > 0:
+                print(f"DEBUG: Creating new FIFO entry for remaining {remaining_to_add}")
                 FIFOService.add_fifo_entry(
                     inventory_item_id=inventory_item_id,
                     quantity=remaining_to_add,
                     change_type='recount',  # Use 'recount' to generate LOT prefix for positive additions
                     unit=history_unit,
-                    notes=f"New stock from recount",
+                    notes=f"New stock from recount (could not fill existing entries)",
                     created_by=user_id
                 )
 
