@@ -125,16 +125,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 sale_price=sale_price, order_id=order_id
             )
 
-            # Create reservation allocation entry to track what was reserved
-            FIFOService.add_fifo_entry(
-                inventory_item_id=item_id,
-                quantity=0,  # Don't change total inventory for reservations
-                change_type='reserved_allocation',
-                unit=unit,
-                notes=f"Reserved for order {order_id}" if order_id else "Reserved inventory",
-                created_by=created_by,
-                order_id=order_id
-            )
+            # Reservations are tracked by the deduction history entries with change_type='reserved'
+            # No separate allocation entry needed
 
             # Reserved quantity is calculated dynamically from FIFO entries
             # DO NOT change item.quantity for reservations!
