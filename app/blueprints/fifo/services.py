@@ -440,14 +440,17 @@ class FIFOService:
             if not success:
                 return False
 
-            # Execute the deduction
+            # Execute the deduction (only update remaining quantities)
             FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
 
-            # Create history entries for deductions (these should have remaining_quantity = 0)
-            FIFOService.create_deduction_history(
-                inventory_item_id, deduction_plan, 'recount', note, 
-                created_by=user_id
-            )
+            # For products, don't create individual deduction entries during recount
+            # The calling code will create a single recount summary entry
+            if item.type != 'product':
+                # Only create deduction history entries for raw inventory
+                FIFOService.create_deduction_history(
+                    inventory_item_id, deduction_plan, 'recount', note, 
+                    created_by=user_id
+                )
 
         # Handle increase in quantity    
         else:
@@ -486,21 +489,10 @@ class FIFOService:
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
-                    # Log the recount but don't create new FIFO entry
-                    if item.type == 'product':
-                        history = ProductSKUHistory(
-                            inventory_item_id=inventory_item_id,
-                            change_type='recount',
-                            quantity_change=fill_amount,
-                            unit=history_unit,
-                            remaining_quantity=0,  # Not a FIFO entry
-                            fifo_reference_id=entry.id,
-                            notes=f"Recount restored to FIFO entry #{entry.id}",
-                            created_by=user_id,
-                            quantity_used=0.0,
-                            organization_id=current_user.organization_id if current_user else item.organization_id
-                        )
-                    else:
+                    # For products, don't create individual restoration entries during recount
+                    # The calling code will create a single recount summary entry
+                    if item.type != 'product':
+                        # Only log restoration for raw inventory
                         history = InventoryHistory(
                             inventory_item_id=inventory_item_id,
                             change_type='recount',
@@ -513,18 +505,31 @@ class FIFOService:
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
                         )
-                    db.session.add(history)
+                        db.session.add(history)
 
             # Only create new FIFO entry if we couldn't fill existing ones
             if remaining_to_add > 0:
-                FIFOService.add_fifo_entry(
-                    inventory_item_id=inventory_item_id,
-                    quantity=remaining_to_add,
-                    change_type='restock',
-                    unit=history_unit,
-                    notes=f"New stock from recount after filling existing FIFO entries",
-                    created_by=user_id
-                )
+                # For products, don't create individual restock entries during recount
+                # The calling code will create a single recount summary entry
+                if item.type != 'product':
+                    FIFOService.add_fifo_entry(
+                        inventory_item_id=inventory_item_id,
+                        quantity=remaining_to_add,
+                        change_type='restock',
+                        unit=history_unit,
+                        notes=f"New stock from recount after filling existing FIFO entries",
+                        created_by=user_id
+                    )
+                else:
+                    # For products, create a single new FIFO entry for the remaining quantity
+                    FIFOService.add_fifo_entry(
+                        inventory_item_id=inventory_item_id,
+                        quantity=remaining_to_add,
+                        change_type='restock',
+                        unit=history_unit,
+                        notes=f"New stock from recount",
+                        created_by=user_id
+                    )
 
         db.session.commit()
         return True
