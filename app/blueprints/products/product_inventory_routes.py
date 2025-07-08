@@ -154,7 +154,6 @@ def adjust_sku_inventory(inventory_item_id):
             logger.info(f"=== RELEASING ALL RESERVATIONS FOR ORDER: {order_id} ===")
             
             # Find all active reservations for this order
-            from app.models.product import ProductSKUHistory
             reservations = ProductSKUHistory.query.filter(
                 ProductSKUHistory.inventory_item_id == inventory_item_id,
                 ProductSKUHistory.change_type == 'reserved_allocation',
@@ -177,7 +176,6 @@ def adjust_sku_inventory(inventory_item_id):
 
             # Use FIFO service to release the reservation
             try:
-                from app.blueprints.fifo.services import FIFOService
                 success = FIFOService.release_reservation(
                     inventory_item_id=inventory_item_id,
                     quantity=total_to_release,
