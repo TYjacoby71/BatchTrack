@@ -390,24 +390,48 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if not current_user.is_authenticated:
             return 0
             
-        reserved_total = db.session.query(db.func.sum(ProductSKUHistory.remaining_quantity))\
+        # Get the total reserved amount from reservation deductions
+        # These are the actual reserved quantities that were deducted from available stock
+        reserved_total = db.session.query(db.func.sum(ProductSKUHistory.quantity_change))\
             .filter(
                 ProductSKUHistory.inventory_item_id == self.id,
-                ProductSKUHistory.change_type.in_(['reserved_allocation']),
-                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.change_type == 'reserved',
                 ProductSKUHistory.organization_id == current_user.organization_id
             ).scalar() or 0
             
-        return reserved_total
+        # Return the absolute value since reserved quantities are stored as negative
+        return abs(reserved_total)
 
     @property
     def available_quantity_for_sale(self):
         """Get quantity available for new sales/reservations (excludes reserved and expired)"""
-        total = self.quantity
-        reserved = self.reserved_quantity
-        expired = self.expired_quantity if self.is_perishable else 0
+        if self.type != 'product':
+            return self.available_quantity
+            
+        # For products, calculate based on FIFO entries with remaining quantity
+        from app.models.product import ProductSKUHistory
+        from flask_login import current_user
+        from datetime import datetime
         
-        return max(0, total - reserved - expired)
+        if not current_user.is_authenticated:
+            return 0
+            
+        today = datetime.now().date()
+        
+        # Get all non-expired FIFO entries with remaining quantity
+        available_fifo = db.session.query(db.func.sum(ProductSKUHistory.remaining_quantity))\
+            .filter(
+                ProductSKUHistory.inventory_item_id == self.id,
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.change_type.notin_(['reserved_allocation']),  # Exclude reservation tracking entries
+                ProductSKUHistory.organization_id == current_user.organization_id,
+                db.or_(
+                    ProductSKUHistory.expiration_date.is_(None),
+                    ProductSKUHistory.expiration_date >= today
+                )
+            ).scalar() or 0
+            
+        return max(0, available_fifo)
 
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
