@@ -23,6 +23,7 @@ class FIFOService:
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0,
+                    ProductSKUHistory.fifo_reference_id.is_(None),  # Exclude tracking records
                     # Skip expired entries - they can only be spoiled/trashed
                     db.or_(
                         ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
@@ -42,6 +43,7 @@ class FIFOService:
                 and_(
                     InventoryHistory.inventory_item_id == inventory_item_id,
                     InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.fifo_reference_id.is_(None),  # Exclude tracking records
                     # Skip expired entries - they can only be spoiled/trashed
                     db.or_(
                         InventoryHistory.expiration_date.is_(None),  # Non-perishable
@@ -74,6 +76,7 @@ class FIFOService:
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0,
+                    ProductSKUHistory.fifo_reference_id.is_(None),  # Exclude tracking records
                     ProductSKUHistory.expiration_date.isnot(None),
                     ProductSKUHistory.expiration_date < today
                 )
@@ -90,6 +93,7 @@ class FIFOService:
                 and_(
                     InventoryHistory.inventory_item_id == inventory_item_id,
                     InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.fifo_reference_id.is_(None),  # Exclude tracking records
                     InventoryHistory.expiration_date.isnot(None),
                     InventoryHistory.expiration_date < today
                 )
@@ -116,7 +120,8 @@ class FIFOService:
             query = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
-                    ProductSKUHistory.remaining_quantity > 0
+                    ProductSKUHistory.remaining_quantity > 0,
+                    ProductSKUHistory.fifo_reference_id.is_(None)  # Exclude tracking records
                 )
             )
 
@@ -130,7 +135,8 @@ class FIFOService:
             query = InventoryHistory.query.filter(
                 and_(
                     InventoryHistory.inventory_item_id == inventory_item_id,
-                    InventoryHistory.remaining_quantity > 0
+                    InventoryHistory.remaining_quantity > 0,
+                    InventoryHistory.fifo_reference_id.is_(None)  # Exclude tracking records
                 )
             )
 
@@ -461,7 +467,8 @@ class FIFOService:
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
                         ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change,
-                        ProductSKUHistory.quantity_change > 0  # Only positive entries can be filled
+                        ProductSKUHistory.quantity_change > 0,  # Only positive entries can be filled
+                        ProductSKUHistory.organization_id == (current_user.organization_id if current_user else item.organization_id)
                     )
                 ).order_by(ProductSKUHistory.timestamp.asc()).all()
             else:
@@ -470,13 +477,17 @@ class FIFOService:
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
                         InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                        InventoryHistory.quantity_change > 0  # Only positive entries can be filled
+                        InventoryHistory.quantity_change > 0,  # Only positive entries can be filled
+                        InventoryHistory.organization_id == (current_user.organization_id if current_user else item.organization_id)
                     )
                 ).order_by(InventoryHistory.timestamp.asc()).all()
 
             remaining_to_add = difference
             print(f"DEBUG: Recount increase - starting with remaining_to_add: {remaining_to_add}")
             print(f"DEBUG: Found {len(unfilled_entries)} unfilled entries")
+            
+            for entry in unfilled_entries:
+                print(f"DEBUG: Unfilled entry {entry.id}: quantity_change={entry.quantity_change}, remaining_quantity={entry.remaining_quantity}, capacity={entry.quantity_change - entry.remaining_quantity}")
 
             # First try to fill existing FIFO entries - IDENTICAL LOGIC FOR BOTH
             for entry in unfilled_entries:
@@ -493,15 +504,16 @@ class FIFOService:
                     remaining_to_add -= fill_amount
 
                     # Create restoration history entry - SAME LOGIC FOR BOTH SYSTEMS
+                    # This is a TRACKING RECORD ONLY, not a new FIFO entry
                     if item.type == 'product':
                         history = ProductSKUHistory(
                             inventory_item_id=inventory_item_id,
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=0.0,  # Not a FIFO entry, just restoration record
+                            remaining_quantity=0.0,  # TRACKING RECORD - not a FIFO entry
                             fifo_reference_id=entry.id,
-                            notes=f"Recount restored to FIFO entry #{entry.id}",
+                            notes=f"Recount restoration to FIFO #{entry.id} - tracking record",
                             created_by=user_id,
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
@@ -512,9 +524,9 @@ class FIFOService:
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=0,  # Not a FIFO entry, just restoration record
+                            remaining_quantity=0.0,  # TRACKING RECORD - not a FIFO entry
                             fifo_reference_id=entry.id,
-                            note=f"Recount restored to FIFO entry #{entry.id}",
+                            note=f"Recount restoration to FIFO #{entry.id} - tracking record",
                             created_by=user_id,
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
