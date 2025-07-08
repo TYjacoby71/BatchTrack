@@ -30,7 +30,7 @@ class FIFOService:
                     )
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -49,7 +49,7 @@ class FIFOService:
                     )
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -78,7 +78,7 @@ class FIFOService:
                     ProductSKUHistory.expiration_date < today
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -94,7 +94,7 @@ class FIFOService:
                     InventoryHistory.expiration_date < today
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -119,7 +119,7 @@ class FIFOService:
                     ProductSKUHistory.remaining_quantity > 0
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -133,7 +133,7 @@ class FIFOService:
                     InventoryHistory.remaining_quantity > 0
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -191,7 +191,7 @@ class FIFOService:
 
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id) if inventory_item_id else None
-        
+
         for entry_id, deduct_amount, _ in deduction_plan:
             if item and item.type == 'product':
                 # For products, only look in ProductSKUHistory
@@ -209,7 +209,7 @@ class FIFOService:
                     print(f"Updated InventoryHistory entry {entry_id}: remaining_quantity now {entry.remaining_quantity}")
                 else:
                     print(f"ERROR: Could not find InventoryHistory entry {entry_id}")
-        
+
         # Commit the changes immediately to ensure they persist
         db.session.commit()
 
@@ -418,7 +418,7 @@ class FIFOService:
         Handles recounts with proper FIFO integrity and expiration tracking
         """
         from app.models.product import ProductSKUHistory
-        
+
         item = InventoryItem.query.get(inventory_item_id)
         current_entries = FIFOService.get_fifo_entries(inventory_item_id)
         current_total = sum(entry.remaining_quantity for entry in current_entries)
@@ -454,29 +454,29 @@ class FIFOService:
 
         # Handle increase in quantity    
         else:
-            # Handle product vs raw inventory differently
+            # Handle product vs raw inventory with IDENTICAL logic
             if item.type == 'product':
-                # For products, look in ProductSKUHistory
+                # For products, look in ProductSKUHistory - EXACT SAME LOGIC AS RAW INVENTORY
                 unfilled_entries = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
                         ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change,
-                        ProductSKUHistory.change_type == 'restock'
+                        ProductSKUHistory.quantity_change > 0  # Only positive entries can be filled
                     )
-                ).order_by(ProductSKUHistory.timestamp.desc()).all()
+                ).order_by(ProductSKUHistory.timestamp.asc()).all()
             else:
-                # For raw inventory, look in InventoryHistory
+                # For raw inventory, look in InventoryHistory - ORIGINAL LOGIC
                 unfilled_entries = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
                         InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                        InventoryHistory.change_type == 'restock'
+                        InventoryHistory.quantity_change > 0  # Only positive entries can be filled
                     )
-                ).order_by(InventoryHistory.timestamp.desc()).all()
+                ).order_by(InventoryHistory.timestamp.asc()).all()
 
             remaining_to_add = difference
 
-            # First try to fill existing FIFO entries
+            # First try to fill existing FIFO entries - IDENTICAL LOGIC FOR BOTH
             for entry in unfilled_entries:
                 if remaining_to_add <= 0:
                     break
@@ -489,28 +489,37 @@ class FIFOService:
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
-                    # For products, don't create individual restoration entries during recount
-                    # The calling code will create a single recount summary entry
-                    if item.type != 'product':
-                        # Only log restoration for raw inventory
+                    # Create restoration history entry - SAME LOGIC FOR BOTH SYSTEMS
+                    if item.type == 'product':
+                        history = ProductSKUHistory(
+                            inventory_item_id=inventory_item_id,
+                            change_type='recount',
+                            quantity_change=fill_amount,
+                            unit=history_unit,
+                            remaining_quantity=0.0,  # Not a FIFO entry, just restoration record
+                            fifo_reference_id=entry.id,
+                            notes=f"Recount restored to FIFO entry #{entry.id}",
+                            created_by=user_id,
+                            quantity_used=0.0,
+                            organization_id=current_user.organization_id if current_user else item.organization_id
+                        )
+                    else:
                         history = InventoryHistory(
                             inventory_item_id=inventory_item_id,
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=0,  # Not a FIFO entry
+                            remaining_quantity=0,  # Not a FIFO entry, just restoration record
                             fifo_reference_id=entry.id,
                             note=f"Recount restored to FIFO entry #{entry.id}",
                             created_by=user_id,
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
                         )
-                        db.session.add(history)
+                    db.session.add(history)
 
-            # Only create new FIFO entry if we couldn't fill existing ones
+            # Only create new FIFO entry if we couldn't fill existing ones - SAME FOR BOTH
             if remaining_to_add > 0:
-                # For all items, create new FIFO entry with proper recount change_type
-                # This ensures consistent FIFO code generation
                 FIFOService.add_fifo_entry(
                     inventory_item_id=inventory_item_id,
                     quantity=remaining_to_add,
