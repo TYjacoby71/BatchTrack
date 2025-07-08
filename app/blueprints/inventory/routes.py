@@ -467,9 +467,9 @@ def edit_inventory(id):
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
-        from app.blueprints.fifo.services import recount_fifo
+        from app.blueprints.fifo.services import FIFOService
         notes = "Manual quantity update via inventory edit"
-        success = recount_fifo(item.id, new_quantity, notes, current_user.id)
+        success = FIFOService.recount_fifo(item.id, new_quantity, notes, current_user.id)
         if not success:
             flash('Error updating quantity', 'error')
             return redirect(url_for('inventory.view_inventory', id=id))
