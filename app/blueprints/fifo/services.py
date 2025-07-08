@@ -30,7 +30,7 @@ class FIFOService:
                     )
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -49,7 +49,7 @@ class FIFOService:
                     )
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -78,7 +78,7 @@ class FIFOService:
                     ProductSKUHistory.expiration_date < today
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -94,7 +94,7 @@ class FIFOService:
                     InventoryHistory.expiration_date < today
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -119,7 +119,7 @@ class FIFOService:
                     ProductSKUHistory.remaining_quantity > 0
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
@@ -133,7 +133,7 @@ class FIFOService:
                     InventoryHistory.remaining_quantity > 0
                 )
             )
-            
+
             # Add organization scoping if user is authenticated
             if current_user and current_user.is_authenticated:
                 query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
@@ -191,7 +191,7 @@ class FIFOService:
 
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id) if inventory_item_id else None
-        
+
         for entry_id, deduct_amount, _ in deduction_plan:
             if item and item.type == 'product':
                 # For products, only look in ProductSKUHistory
@@ -209,7 +209,7 @@ class FIFOService:
                     print(f"Updated InventoryHistory entry {entry_id}: remaining_quantity now {entry.remaining_quantity}")
                 else:
                     print(f"ERROR: Could not find InventoryHistory entry {entry_id}")
-        
+
         # Commit the changes immediately to ensure they persist
         db.session.commit()
 
@@ -418,7 +418,7 @@ class FIFOService:
         Handles recounts with proper FIFO integrity and expiration tracking
         """
         from app.models.product import ProductSKUHistory
-        
+
         item = InventoryItem.query.get(inventory_item_id)
         current_entries = FIFOService.get_fifo_entries(inventory_item_id)
         current_total = sum(entry.remaining_quantity for entry in current_entries)
@@ -456,23 +456,46 @@ class FIFOService:
         else:
             # Handle product vs raw inventory differently
             if item.type == 'product':
-                # For products, look in ProductSKUHistory
+                # For products, look in ProductSKUHistory for entries with available capacity
+                # This includes both positive additions (restocks) and negative deductions (sales) that have remaining space
                 unfilled_entries = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
-                        ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change,
-                        ProductSKUHistory.change_type == 'restock'
+                        ProductSKUHistory.remaining_quantity > 0,  # Has available capacity
+                        db.or_(
+                            # Positive entries that aren't fully filled
+                            and_(
+                                ProductSKUHistory.quantity_change > 0,
+                                ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change
+                            ),
+                            # Negative entries (sales/gifts) that have refund capacity
+                            and_(
+                                ProductSKUHistory.quantity_change < 0,
+                                ProductSKUHistory.remaining_quantity > 0
+                            )
+                        )
                     )
-                ).order_by(ProductSKUHistory.timestamp.desc()).all()
+                ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
             else:
-                # For raw inventory, look in InventoryHistory
+                # For raw inventory, look in InventoryHistory for entries with available capacity
                 unfilled_entries = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
-                        InventoryHistory.remaining_quantity < InventoryHistory.quantity_change,
-                        InventoryHistory.change_type == 'restock'
+                        InventoryHistory.remaining_quantity > 0,  # Has available capacity
+                        db.or_(
+                            # Positive entries that aren't fully filled
+                            and_(
+                                InventoryHistory.quantity_change > 0,
+                                InventoryHistory.remaining_quantity < InventoryHistory.quantity_change
+                            ),
+                            # Negative entries (sales/usage) that have refund capacity
+                            and_(
+                                InventoryHistory.quantity_change < 0,
+                                InventoryHistory.remaining_quantity > 0
+                            )
+                        )
                     )
-                ).order_by(InventoryHistory.timestamp.desc()).all()
+                ).order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
 
             remaining_to_add = difference
 
