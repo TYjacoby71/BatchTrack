@@ -237,12 +237,20 @@ class FIFOService:
             # Use ProductSKUHistory for products
             from app.models.product import ProductSKUHistory
 
+            # Special handling for reservation allocations
+            if change_type == 'reserved_allocation':
+                # For reserved allocations, we track the reserved quantity in remaining_quantity
+                # but don't affect the total inventory (quantity_change = 0)
+                remaining_qty = kwargs.get('reserved_quantity', quantity)  # Track reserved amount
+            else:
+                remaining_qty = quantity
+
             history = ProductSKUHistory(
                 inventory_item_id=inventory_item_id,
                 change_type=change_type,
                 quantity_change=quantity,
                 unit=unit,
-                remaining_quantity=quantity,
+                remaining_quantity=remaining_qty,
                 unit_cost=cost_per_unit,
                 notes=notes,
                 created_by=created_by,
@@ -543,6 +551,108 @@ class FIFOService:
                     created_by=user_id
                 )
 
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def release_reservation(inventory_item_id, quantity, order_id=None, notes="Reservation released"):
+        """
+        Release a reservation back to available stock
+        This restores the reserved quantity to available FIFO entries
+        """
+        from app.models.product import ProductSKUHistory
+        
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item or item.type != 'product':
+            raise ValueError("Reservations only supported for products")
+        
+        # Find reservation allocation entries for this order
+        query = ProductSKUHistory.query.filter(
+            ProductSKUHistory.inventory_item_id == inventory_item_id,
+            ProductSKUHistory.change_type == 'reserved_allocation',
+            ProductSKUHistory.remaining_quantity > 0
+        )
+        
+        if order_id:
+            query = query.filter(ProductSKUHistory.order_id == order_id)
+            
+        reservation_entries = query.order_by(ProductSKUHistory.timestamp.asc()).all()
+        
+        remaining_to_release = quantity
+        
+        for entry in reservation_entries:
+            if remaining_to_release <= 0:
+                break
+                
+            release_amount = min(entry.remaining_quantity, remaining_to_release)
+            
+            # Reduce the reservation allocation
+            entry.remaining_quantity -= release_amount
+            remaining_to_release -= release_amount
+            
+            # Find the original FIFO entries that were reserved and restore them
+            # This is done by finding the corresponding reservation deduction entries
+            original_deductions = ProductSKUHistory.query.filter(
+                ProductSKUHistory.inventory_item_id == inventory_item_id,
+                ProductSKUHistory.change_type == 'reserved',
+                ProductSKUHistory.order_id == entry.order_id,
+                ProductSKUHistory.quantity_change < 0
+            ).all()
+            
+            # Restore quantity to the original FIFO entries
+            for deduction in original_deductions[:int(release_amount)]:  # Simplified restoration
+                if deduction.fifo_reference_id:
+                    original_entry = ProductSKUHistory.query.get(deduction.fifo_reference_id)
+                    if original_entry:
+                        original_entry.remaining_quantity += min(1, release_amount)  # Restore unit by unit
+        
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def convert_reservation_to_sale(inventory_item_id, quantity, order_id, sale_price=None, notes="Reservation converted to sale"):
+        """
+        Convert a reservation to an actual sale
+        This removes the reservation allocation and creates a sale history entry
+        """
+        from app.models.product import ProductSKUHistory
+        
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item or item.type != 'product':
+            raise ValueError("Reservations only supported for products")
+        
+        # Find and reduce reservation allocation
+        reservation_entry = ProductSKUHistory.query.filter(
+            ProductSKUHistory.inventory_item_id == inventory_item_id,
+            ProductSKUHistory.change_type == 'reserved_allocation',
+            ProductSKUHistory.order_id == order_id,
+            ProductSKUHistory.remaining_quantity >= quantity
+        ).first()
+        
+        if not reservation_entry:
+            raise ValueError("Reservation not found or insufficient reserved quantity")
+        
+        # Reduce reservation allocation
+        reservation_entry.remaining_quantity -= quantity
+        
+        # Create sale history entry (this will be a deduction with 0 remaining_quantity)
+        sale_history = ProductSKUHistory(
+            inventory_item_id=inventory_item_id,
+            change_type='sale',
+            quantity_change=-quantity,
+            unit=item.unit,
+            remaining_quantity=0.0,  # Sales don't create remaining quantity
+            notes=f"{notes} (from reservation)",
+            order_id=order_id,
+            sale_price=sale_price,
+            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+        )
+        
+        db.session.add(sale_history)
+        
+        # Update total inventory quantity
+        item.quantity -= quantity
+        
         db.session.commit()
         return True
 
