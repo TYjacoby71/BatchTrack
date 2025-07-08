@@ -509,27 +509,16 @@ class FIFOService:
 
             # Only create new FIFO entry if we couldn't fill existing ones
             if remaining_to_add > 0:
-                # For products, don't create individual restock entries during recount
-                # The calling code will create a single recount summary entry
-                if item.type != 'product':
-                    FIFOService.add_fifo_entry(
-                        inventory_item_id=inventory_item_id,
-                        quantity=remaining_to_add,
-                        change_type='restock',
-                        unit=history_unit,
-                        notes=f"New stock from recount after filling existing FIFO entries",
-                        created_by=user_id
-                    )
-                else:
-                    # For products, create a single new FIFO entry for the remaining quantity
-                    FIFOService.add_fifo_entry(
-                        inventory_item_id=inventory_item_id,
-                        quantity=remaining_to_add,
-                        change_type='restock',
-                        unit=history_unit,
-                        notes=f"New stock from recount",
-                        created_by=user_id
-                    )
+                # For all items, create new FIFO entry with proper recount change_type
+                # This ensures consistent FIFO code generation
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=inventory_item_id,
+                    quantity=remaining_to_add,
+                    change_type='recount',  # Use 'recount' to generate LOT prefix for positive additions
+                    unit=history_unit,
+                    notes=f"New stock from recount",
+                    created_by=user_id
+                )
 
         db.session.commit()
         return True
