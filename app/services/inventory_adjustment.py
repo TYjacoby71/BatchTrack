@@ -117,12 +117,10 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 unit=unit,
                 notes=f"Reserved for order {order_id}" if order_id else "Reserved inventory",
                 created_by=created_by,
-                order_id=order_id,
-                reserved_quantity=quantity  # Track how much is reserved
+                order_id=order_id
             )
 
-            # Update reserved quantity but NOT total inventory quantity
-            item.reserved_quantity = (item.reserved_quantity or 0) + quantity
+            # Reserved quantity is calculated dynamically from FIFO entries
             # DO NOT change item.quantity for reservations!
         elif change_type == 'returned':
             qty_change = quantity
