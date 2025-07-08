@@ -87,7 +87,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
         if change_type == 'recount':
             qty_change = quantity - current_quantity
-        elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged']:
+        elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
             # Special handling: move from current to reserved, don't change total
