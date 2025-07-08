@@ -88,7 +88,12 @@ def adjust_sku_inventory(inventory_item_id):
         quantity = float(quantity)
         logger.info(f"Converted quantity: {quantity}")
 
-        if quantity < 0 and change_type not in ['recount']:
+        # For deduction types, ensure quantity is positive here but will be made negative by centralized service
+        if change_type in ['sale', 'spoil', 'trash', 'damaged', 'expired', 'gift', 'sample', 'tester']:
+            if quantity < 0:
+                logger.error(f"Quantity should be positive for deduction type: {change_type}")
+                raise ValueError('Quantity should be positive for deduction operations')
+        elif quantity < 0 and change_type not in ['recount']:
             logger.error(f"Negative quantity not allowed for change_type: {change_type}")
             raise ValueError('Quantity cannot be negative')
 
@@ -134,17 +139,17 @@ def adjust_sku_inventory(inventory_item_id):
 
             # Store original quantity for history calculation
             original_quantity = sku.inventory_item.quantity or 0
-            
+
             # Use the same recount logic as raw inventory - absolute adjustment
             success = FIFOService.recount_fifo(inventory_item_id, quantity, notes or "Product recount", current_user.id)
 
             if success:
                 # Update the inventory item quantity directly
                 sku.inventory_item.quantity = quantity
-                
+
                 # Calculate the actual change for summary entry
                 qty_change = quantity - original_quantity
-                
+
                 # Only create summary entry if there was an actual change
                 if qty_change != 0:
                     # Use the proper FIFO service instead of manual generation
@@ -169,7 +174,7 @@ def adjust_sku_inventory(inventory_item_id):
                             notes=f"Product recount: {original_quantity} → {quantity}",
                             created_by=current_user.id
                         )
-                
+
                 db.session.commit()
                 flash('Product inventory recounted successfully', 'success')
             else:
