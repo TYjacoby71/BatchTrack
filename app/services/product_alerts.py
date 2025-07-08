@@ -38,8 +38,21 @@ class ProductAlertService:
     @staticmethod
     def get_product_stock_summary() -> Dict:
         """Get summary of product stock issues"""
-        low_stock_skus = ProductAlertService.get_low_stock_skus()
-        out_of_stock_skus = ProductAlertService.get_out_of_stock_skus()
+        # Get all active SKUs with their inventory data
+        low_stock_skus = ProductSKU.query.join(InventoryItem).filter(
+            ProductSKU.is_active == True,
+            InventoryItem.quantity <= ProductSKU.low_stock_threshold,
+            InventoryItem.quantity > 0,
+            ProductSKU.organization_id == current_user.organization_id,
+            InventoryItem.organization_id == current_user.organization_id
+        ).all()
+
+        out_of_stock_skus = ProductSKU.query.join(InventoryItem).filter(
+            ProductSKU.is_active == True,
+            InventoryItem.quantity <= 0,
+            ProductSKU.organization_id == current_user.organization_id,
+            InventoryItem.organization_id == current_user.organization_id
+        ).all()
 
         # Group by product name to avoid duplicates
         low_stock_products = {}

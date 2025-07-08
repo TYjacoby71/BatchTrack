@@ -38,20 +38,20 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
         item_name = item.name
-        
+
         # For products, check if inventory = available + reserved + expired
         # This accounts for reservations that reduce FIFO remaining quantities
         available_qty = item.available_quantity_for_sale
         reserved_qty = item.reserved_quantity
         expired_qty = item.expired_quantity if item.is_perishable else 0
-        
+
         expected_total = available_qty + reserved_qty + expired_qty
-        
+
         # Allow small floating point differences (0.001)
         if abs(current_qty - expected_total) > 0.001:
             error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != available ({available_qty}) + reserved ({reserved_qty}) + expired ({expired_qty}) = {expected_total}"
             return False, error_msg, current_qty, expected_total
-            
+
         return True, "", current_qty, expected_total
     else:
         item = InventoryItem.query.get(item_id)
