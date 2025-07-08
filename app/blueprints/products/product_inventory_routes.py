@@ -132,20 +132,58 @@ def adjust_sku_inventory(inventory_item_id):
             except (ValueError, TypeError) as e:
                 logger.warning(f"Error parsing expiration data: {e}")
 
-        # Handle recount separately like raw inventory system
+        # Handle recount separately with available + reserved split
         if change_type == 'recount':
-            logger.info("=== USING DIRECT FIFO RECOUNT (like raw inventory) ===")
-            logger.info(f"Recounting inventory item {inventory_item_id} to {quantity}")
+            logger.info("=== DUAL RECOUNT: Available + Reserved ===")
+            
+            # Get separate counts for available and reserved
+            available_qty = float(data.get('available_quantity', 0))
+            reserved_qty = float(data.get('reserved_quantity', 0))
+            
+            logger.info(f"Recounting inventory item {inventory_item_id}: {available_qty} available, {reserved_qty} reserved")
 
-            # Store original quantity for history calculation
-            original_quantity = sku.inventory_item.quantity or 0
+            # Store original quantities
+            original_available = sku.inventory_item.quantity or 0
+            original_reserved = sku.reserved_quantity or 0
 
-            # Use the same recount logic as raw inventory - absolute adjustment
-            success = FIFOService.recount_fifo(inventory_item_id, quantity, notes or "Product recount", current_user.id)
-
-            if success:
-                # Update the inventory item quantity directly
-                sku.inventory_item.quantity = quantity
+            # 1. Clear all existing reservation allocations
+            from app.models.product import ProductSKUHistory
+            existing_reservations = ProductSKUHistory.query.filter(
+                ProductSKUHistory.inventory_item_id == inventory_item_id,
+                ProductSKUHistory.change_type == 'reserved_allocation',
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.organization_id == current_user.organization_id
+            ).all()
+            
+            for reservation in existing_reservations:
+                reservation.remaining_quantity = 0  # Clear existing reservations
+                
+            # 2. Set available quantity (this becomes the new item.quantity)
+            sku.inventory_item.quantity = available_qty
+            
+            # 3. Create new reservation allocation if needed
+            if reserved_qty > 0:
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=inventory_item_id,
+                    quantity=0,  # No change to total inventory
+                    change_type='reserved_allocation',
+                    unit=unit or sku.unit or 'count',
+                    notes=f"Recount: Found {reserved_qty} reserved units",
+                    created_by=current_user.id,
+                    reserved_quantity=reserved_qty
+                )
+            
+            # 4. Create recount summary entry
+            total_change = (available_qty + reserved_qty) - (original_available + original_reserved)
+            if total_change != 0:
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=inventory_item_id,
+                    quantity=total_change,
+                    change_type='recount',
+                    unit=unit or sku.unit or 'count',
+                    notes=f"Recount: {original_available}+{original_reserved} → {available_qty}+{reserved_qty}",
+                    created_by=current_user.id
+                )
 
                 # Calculate the actual change for summary entry
                 qty_change = quantity - original_quantity
