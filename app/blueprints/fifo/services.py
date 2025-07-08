@@ -189,8 +189,9 @@ class FIFOService:
 
     @staticmethod
     def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
-                      cost_per_unit=None, expiration_date=None, shelf_life_days=None, 
-                      batch_id=None, created_by=None, **kwargs):
+                       cost_per_unit=None, expiration_date=None, shelf_life_days=None,
+                       batch_id=None, created_by=None, customer=None, sale_price=None, order_id=None,
+                       remaining_quantity=None):
         """
         Add a new FIFO entry for positive inventory changes
         Routes to appropriate history table based on item type
