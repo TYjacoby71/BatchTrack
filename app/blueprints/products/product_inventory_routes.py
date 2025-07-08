@@ -142,32 +142,44 @@ def adjust_sku_inventory(inventory_item_id):
                 # Update the inventory item quantity directly
                 sku.inventory_item.quantity = quantity
                 
-                # Calculate the actual change
+                # Calculate the actual change for summary entry
                 qty_change = quantity - original_quantity
                 
-                # Generate FIFO code for the recount
-                from app.utils.fifo_generator import generate_fifo_code
-                if qty_change > 0:
-                    fifo_code = generate_fifo_code('recount', qty_change, None)
-                else:
-                    fifo_code = generate_fifo_code('recount', 0, None)
+                # Only create summary entry if there was an actual change
+                if qty_change != 0:
+                    # Use the proper FIFO service instead of manual generation
+                    if qty_change > 0:
+                        # For positive changes, create a proper FIFO entry
+                        FIFOService.add_fifo_entry(
+                            inventory_item_id=inventory_item_id,
+                            quantity=qty_change,
+                            change_type='recount',
+                            unit=unit or sku.unit or 'count',
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            cost_per_unit=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
+                            created_by=current_user.id
+                        )
+                    else:
+                        # For negative changes, the FIFO service already handled the deduction
+                        # Just create a summary history entry with proper FIFO code
+                        from app.utils.fifo_generator import generate_fifo_code
+                        fifo_code = generate_fifo_code('recount', 0, None)
+                        
+                        history = ProductSKUHistory(
+                            inventory_item_id=inventory_item_id,
+                            change_type='recount',
+                            quantity_change=qty_change,
+                            unit=unit or sku.unit or 'count',
+                            remaining_quantity=0,  # Summary entries don't create remaining quantity
+                            unit_cost=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            created_by=current_user.id,
+                            fifo_code=fifo_code,
+                            organization_id=current_user.organization_id
+                        )
+                        db.session.add(history)
                 
-                # Create single ProductSKUHistory entry for the recount
-                history = ProductSKUHistory(
-                    inventory_item_id=inventory_item_id,
-                    change_type='recount',
-                    quantity_change=qty_change,
-                    unit=unit or sku.unit or 'count',
-                    remaining_quantity=qty_change if qty_change > 0 else 0,
-                    unit_cost=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
-                    notes=notes or f"Product recount: {original_quantity} → {quantity}",
-                    created_by=current_user.id,
-                    fifo_code=fifo_code,
-                    organization_id=current_user.organization_id
-                )
-                db.session.add(history)
                 db.session.commit()
-
                 flash('Product inventory recounted successfully', 'success')
             else:
                 flash('Error performing recount', 'error')
