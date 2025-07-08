@@ -213,8 +213,9 @@ class FIFOService:
             # Special handling for reservation allocations
             if change_type == 'reserved_allocation':
                 # For reserved allocations, we track the reserved quantity in remaining_quantity
-                # but don't affect the total inventory (quantity_change = 0)
+                # quantity_change = 0 means no change to total inventory
                 remaining_qty = kwargs.get('reserved_quantity', quantity)  # Track reserved amount
+                quantity = 0  # No change to inventory totals for reservations
             else:
                 remaining_qty = quantity
 
@@ -662,11 +663,11 @@ class FIFOService:
                 deduction_entry.quantity_change += release_from_this_entry  # Make it less negative
                 current_app.logger.info(f"Partially reversing deduction entry ID {deduction_entry.id}, new quantity_change: {deduction_entry.quantity_change}")
 
-        # Create unreserved history entry
+        # Create unreserved history entry and restore available quantity
         unreserved_entry = ProductSKUHistory(
             inventory_item_id=inventory_item_id,
             change_type='unreserved',
-            quantity_change=quantity,  # Positive for release
+            quantity_change=quantity,  # Positive for release - restores available stock
             unit=item.unit,
             remaining_quantity=0.0,  # Unreserved entries don't create new FIFO quantity
             notes=notes or f"Released reservation of {quantity} {item.unit}",
@@ -677,6 +678,10 @@ class FIFOService:
 
         db.session.add(unreserved_entry)
         current_app.logger.info(f"Created unreserved history entry: {quantity} {item.unit}")
+        
+        # Restore available quantity to item.quantity
+        item.quantity += quantity
+        current_app.logger.info(f"Restored {quantity} to available inventory. New available: {item.quantity}")
 
         # Remove any reservation allocation entries for this order
         if order_id:
