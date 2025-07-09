@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 
 {% block title %}Reservations - Admin{% endblock %}
@@ -40,10 +39,10 @@
                                 </thead>
                                 <tbody>
                                     {% for res in reservations %}
-                                    {% set now = moment() %}
+                                    {% set now = current_time %}
                                     {% set is_expired = res.expires_at and res.expires_at < now %}
                                     {% set is_expiring_soon = res.expires_at and not is_expired and (res.expires_at - now).total_seconds() < 3600 %}
-                                    
+
                                     <tr {% if is_expired %}class="table-danger"{% elif is_expiring_soon %}class="table-warning"{% endif %}>
                                         <td>
                                             <code>{{ res.order_id }}</code>
@@ -121,11 +120,11 @@ function refreshReservations() {
 function updateExpirationTimes() {
     const now = new Date();
     const expirationElements = document.querySelectorAll('.expiration-time');
-    
+
     expirationElements.forEach(element => {
         const expiresAt = new Date(element.dataset.expires);
         const timeDiff = expiresAt - now;
-        
+
         if (timeDiff <= 0) {
             element.className = 'expiration-time text-danger';
             element.innerHTML = 'EXPIRED';

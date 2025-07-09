@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from sqlalchemy import and_, func, desc
@@ -39,7 +38,7 @@ def list_reservations():
             sku_name = reservation.product_item.name
             if sku_name not in reservation_groups:
                 reservation_groups[sku_name] = []
-            
+
             # Add reservation with additional data for display
             reservation_data = {
                 'order_id': reservation.order_id,
