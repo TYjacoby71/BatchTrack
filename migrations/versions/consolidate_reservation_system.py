@@ -16,6 +16,14 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
+    # Add customer column to existing reservation table
+    try:
+        with op.batch_alter_table('reservation', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('customer', sa.String(length=128), nullable=True))
+    except Exception as e:
+        print(f"Customer column might already exist: {e}")
+        pass
+    
     # Create reservation table if it doesn't exist
     try:
         op.create_table('reservation',
