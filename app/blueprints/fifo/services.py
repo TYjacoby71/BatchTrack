@@ -451,6 +451,89 @@ class FIFOService:
         return credit_histories
 
     @staticmethod
+    def handle_unreserved(inventory_item_id, quantity, order_id, notes, created_by):
+        """
+        Handle unreserved operations by crediting back to source lots from reservations
+        """
+        from app.models.reservation import Reservation
+        from app.models.product import ProductSKUHistory
+        
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return False
+        
+        # Find active reservations for this order
+        reservations = Reservation.query.filter_by(
+            product_item_id=inventory_item_id,
+            order_id=order_id,
+            status='active'
+        ).all()
+        
+        remaining_to_unreserve = quantity
+        
+        # Credit back to original FIFO entries
+        for reservation in reservations:
+            if remaining_to_unreserve <= 0:
+                break
+                
+            unreserve_amount = min(reservation.quantity, remaining_to_unreserve)
+            
+            # Find the original FIFO entry
+            if item.type == 'product':
+                original_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+            else:
+                original_entry = InventoryHistory.query.get(reservation.source_fifo_id)
+                
+            if original_entry:
+                # Credit back to the original FIFO entry
+                original_entry.remaining_quantity += unreserve_amount
+                
+                # Create history entry for the unreserved operation
+                fifo_code = generate_fifo_code('unreserved', 0, None)
+                
+                if item.type == 'product':
+                    history = ProductSKUHistory(
+                        inventory_item_id=inventory_item_id,
+                        change_type='unreserved',
+                        quantity_change=unreserve_amount,
+                        unit=item.unit,
+                        remaining_quantity=0,  # Unreserved entries don't create new FIFO
+                        fifo_reference_id=original_entry.id,
+                        unit_cost=reservation.unit_cost,
+                        notes=f"{notes} (Credited back to FIFO #{original_entry.id})",
+                        created_by=created_by,
+                        order_id=order_id,
+                        fifo_code=fifo_code,
+                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                    )
+                else:
+                    history = InventoryHistory(
+                        inventory_item_id=inventory_item_id,
+                        change_type='unreserved',
+                        quantity_change=unreserve_amount,
+                        unit=item.unit,
+                        remaining_quantity=0,  # Unreserved entries don't create new FIFO
+                        fifo_reference_id=original_entry.id,
+                        unit_cost=reservation.unit_cost,
+                        note=f"{notes} (Credited back to FIFO #{original_entry.id})",
+                        created_by=created_by,
+                        quantity_used=0.0,
+                        fifo_code=fifo_code,
+                        organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                    )
+                
+                db.session.add(history)
+                
+                # Update reservation status
+                reservation.quantity -= unreserve_amount
+                if reservation.quantity <= 0:
+                    reservation.status = 'released'
+                    
+                remaining_to_unreserve -= unreserve_amount
+        
+        return remaining_to_unreserve == 0
+
+    @staticmethod
     def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         """
         Handles recounts with proper FIFO integrity and expiration tracking
