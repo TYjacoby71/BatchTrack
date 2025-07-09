@@ -28,6 +28,7 @@ def upgrade():
             sa.Column('unit', sa.String(length=32), nullable=False),
             sa.Column('unit_cost', sa.Float(), nullable=True),
             sa.Column('sale_price', sa.Float(), nullable=True),
+            sa.Column('customer', sa.String(length=128), nullable=True),
             sa.Column('source_fifo_id', sa.Integer(), nullable=True),
             sa.Column('source_batch_id', sa.Integer(), nullable=True),
             sa.Column('status', sa.String(length=32), nullable=True),
