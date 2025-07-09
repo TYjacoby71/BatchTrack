@@ -8,7 +8,7 @@ from ...services.pos_integration import POSIntegrationService
 
 reservation_bp = Blueprint('reservations', __name__)
 
-@reservation_bp.route('/admin/reservations')
+@reservation_bp.route('/')
 @login_required
 def list_reservations():
     """List all reservations with filtering options"""
