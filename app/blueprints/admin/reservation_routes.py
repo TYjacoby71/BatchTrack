@@ -31,6 +31,29 @@ def list_reservations():
 
     reservations = query.order_by(desc(Reservation.created_at)).limit(100).all()
 
+    # Group reservations by SKU name for display
+    reservation_groups = {}
+    for reservation in reservations:
+        if reservation.product_item:
+            sku_name = reservation.product_item.name
+            if sku_name not in reservation_groups:
+                reservation_groups[sku_name] = []
+            
+            # Add reservation with additional data for display
+            reservation_data = {
+                'order_id': reservation.order_id,
+                'quantity': reservation.quantity,
+                'unit': reservation.unit,
+                'batch_id': reservation.source_batch_id,
+                'created_at': reservation.created_at,
+                'expires_at': reservation.expires_at,
+                'sale_price': reservation.sale_price,
+                'source': reservation.source,
+                'notes': reservation.notes,
+                'status': reservation.status
+            }
+            reservation_groups[sku_name].append(reservation_data)
+
     # Get summary stats
     stats = {
         'total_active': Reservation.query.filter(
@@ -54,7 +77,7 @@ def list_reservations():
     }
 
     return render_template('admin/reservations.html', 
-                         reservations=reservations, 
+                         reservation_groups=reservation_groups, 
                          stats=stats,
                          status_filter=status_filter,
                          order_id_filter=order_id_filter)

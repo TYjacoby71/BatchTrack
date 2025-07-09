@@ -155,7 +155,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     item_id, deduction_plan, order_id, notes,
                     created_by=created_by, customer=customer, sale_price=sale_price
                 )
-            
+
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
                 item_id, deduction_plan, change_type, notes, 

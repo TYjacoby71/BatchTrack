@@ -30,18 +30,37 @@
                                     <tr>
                                         <th>Order ID</th>
                                         <th>Quantity</th>
+                                        <th>Price</th>
                                         <th>Batch/Lot ID</th>
-                                        <th>Created At</th>
+                                        <th>Created</th>
+                                        <th>Expires</th>
+                                        <th>Source</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for res in reservations %}
-                                    <tr>
+                                    {% set now = moment() %}
+                                    {% set is_expired = res.expires_at and res.expires_at < now %}
+                                    {% set is_expiring_soon = res.expires_at and not is_expired and (res.expires_at - now).total_seconds() < 3600 %}
+                                    
+                                    <tr {% if is_expired %}class="table-danger"{% elif is_expiring_soon %}class="table-warning"{% endif %}>
                                         <td>
                                             <code>{{ res.order_id }}</code>
+                                            {% if res.notes %}
+                                                <br><small class="text-muted">{{ res.notes[:50] }}{% if res.notes|length > 50 %}...{% endif %}</small>
+                                            {% endif %}
                                         </td>
-                                        <td>{{ res.quantity }} {{ res.unit }}</td>
+                                        <td>
+                                            <strong>{{ res.quantity }}</strong> {{ res.unit }}
+                                        </td>
+                                        <td>
+                                            {% if res.sale_price %}
+                                                ${{ "%.2f"|format(res.sale_price) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>
                                             {% if res.batch_id %}
                                                 <span class="badge badge-info">{{ res.batch_id }}</span>
@@ -49,7 +68,21 @@
                                                 <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ res.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <small>{{ res.created_at.strftime('%m/%d %H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            {% if res.expires_at %}
+                                                <small class="expiration-time" data-expires="{{ res.expires_at.isoformat() }}">
+                                                    {{ res.expires_at.strftime('%m/%d %H:%M') }}
+                                                </small>
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ res.source }}</small>
+                                        </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
                                                 <button class="btn btn-outline-success" 
@@ -85,9 +118,34 @@ function refreshReservations() {
     window.location.reload();
 }
 
+function updateExpirationTimes() {
+    const now = new Date();
+    const expirationElements = document.querySelectorAll('.expiration-time');
+    
+    expirationElements.forEach(element => {
+        const expiresAt = new Date(element.dataset.expires);
+        const timeDiff = expiresAt - now;
+        
+        if (timeDiff <= 0) {
+            element.className = 'expiration-time text-danger';
+            element.innerHTML = 'EXPIRED';
+            element.closest('tr').classList.add('table-danger');
+        } else if (timeDiff < 3600000) { // Less than 1 hour
+            const minutes = Math.floor(timeDiff / 60000);
+            element.className = 'expiration-time text-warning';
+            element.innerHTML = `${minutes}m remaining`;
+            element.closest('tr').classList.add('table-warning');
+        } else {
+            const hours = Math.floor(timeDiff / 3600000);
+            element.className = 'expiration-time text-success';
+            element.innerHTML = `${hours}h remaining`;
+        }
+    });
+}
+
 function confirmSale(orderId) {
     if (confirm(`Confirm sale for order ${orderId}? This will convert the reservation to a completed sale.`)) {
-        fetch(`/admin/reservations/api/confirm-sale/${orderId}`, {
+        fetch(`/admin/reservations/api/reservations/${orderId}/confirm_sale`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -114,7 +172,7 @@ function confirmSale(orderId) {
 
 function releaseReservation(orderId) {
     if (confirm(`Release reservation for order ${orderId}? This will return the inventory to available stock.`)) {
-        fetch(`/admin/reservations/api/release/${orderId}`, {
+        fetch(`/admin/reservations/api/reservations/${orderId}/release`, {
             method: 'POST'
         })
         .then(response => response.json())
@@ -132,5 +190,10 @@ function releaseReservation(orderId) {
         });
     }
 }
+
+// Update expiration times every 30 seconds
+setInterval(updateExpirationTimes, 30000);
+// Update immediately on page load
+document.addEventListener('DOMContentLoaded', updateExpirationTimes);
 </script>
 {% endblock %}
