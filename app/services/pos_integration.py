@@ -167,11 +167,12 @@ class POSIntegrationService:
                     reservation.mark_released()
                     print(f"DEBUG POS: Marked reservation as released")
 
-                    # Credit back via FIFO with original reference
+                    # Credit back to ORIGINAL product's FIFO history
                     reserved_item = reservation.reserved_item
+                    original_product_item = reservation.product_item
 
-                    # Log the release in FIFO
-                    print(f"DEBUG POS: Adding FIFO entry for release")
+                    # 1. Log the release in reserved item FIFO (for audit)
+                    print(f"DEBUG POS: Adding FIFO entry for reserved item release")
                     try:
                         FIFOService.add_fifo_entry(
                             inventory_item_id=reserved_item.id,
@@ -184,10 +185,30 @@ class POSIntegrationService:
                             order_id=order_id,
                             fifo_reference_id=reservation.source_fifo_id
                         )
-                        print(f"DEBUG POS: FIFO entry added successfully")
+                        print(f"DEBUG POS: Reserved item FIFO entry added successfully")
                     except Exception as fifo_error:
-                        print(f"DEBUG POS: Error adding FIFO entry: {str(fifo_error)}")
+                        print(f"DEBUG POS: Error adding reserved item FIFO entry: {str(fifo_error)}")
                         raise fifo_error
+
+                    # 2. Credit back to ORIGINAL product's ProductSKUHistory
+                    if original_product_item and original_product_item.type == 'product':
+                        print(f"DEBUG POS: Adding credit back to original product FIFO")
+                        try:
+                            FIFOService.add_fifo_entry(
+                                inventory_item_id=original_product_item.id,
+                                quantity=reservation.quantity,  # POSITIVE - adding back
+                                change_type='unreserved',
+                                unit=reservation.unit,
+                                notes=f"Credited back from released reservation for order {order_id}",
+                                cost_per_unit=reservation.unit_cost,
+                                created_by=current_user.id if current_user.is_authenticated else None,
+                                order_id=order_id,
+                                fifo_reference_id=reservation.source_fifo_id
+                            )
+                            print(f"DEBUG POS: Original product credit FIFO entry added successfully")
+                        except Exception as fifo_error:
+                            print(f"DEBUG POS: Error adding original product credit FIFO entry: {str(fifo_error)}")
+                            raise fifo_error
 
                     total_released += reservation.quantity
                     print(f"DEBUG POS: Total released so far: {total_released}")
