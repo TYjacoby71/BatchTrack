@@ -1,202 +1,179 @@
-
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
-from ...models import db, InventoryItem
-from ...models.product import ProductSKUHistory
+from sqlalchemy import and_, func, desc
+from datetime import datetime, timedelta
+
+from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
-from sqlalchemy import and_
-import logging
 
-logger = logging.getLogger(__name__)
+reservation_bp = Blueprint('reservations', __name__)
 
-reservation_admin_bp = Blueprint('reservation_admin', __name__, url_prefix='/admin/reservations')
-
-@reservation_admin_bp.route('/')
+@reservation_bp.route('/admin/reservations')
 @login_required
-def reservation_list():
-    """Admin view of all active reservations"""
-    # Get all active reservations grouped by SKU
-    active_reservations = db.session.query(
-        ProductSKUHistory.inventory_item_id,
-        InventoryItem.name,
-        ProductSKUHistory.order_id,
-        ProductSKUHistory.remaining_quantity,
-        ProductSKUHistory.unit,
-        ProductSKUHistory.fifo_reference_id,
-        ProductSKUHistory.timestamp,
-        ProductSKUHistory.created_by
-    ).join(InventoryItem).filter(
-        and_(
-            ProductSKUHistory.change_type == 'reserved_allocation',
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.organization_id == current_user.organization_id,
-            InventoryItem.type == 'product-reserved'
-        )
-    ).order_by(ProductSKUHistory.timestamp.desc()).all()
+def list_reservations():
+    """List all reservations with filtering options"""
+    status_filter = request.args.get('status', 'active')
+    order_id_filter = request.args.get('order_id', '')
 
-    # Group by SKU
-    reservation_groups = {}
-    for res in active_reservations:
-        sku_name = res.name.replace(' (Reserved)', '')
-        if sku_name not in reservation_groups:
-            reservation_groups[sku_name] = []
-        
-        reservation_groups[sku_name].append({
-            'order_id': res.order_id,
-            'quantity': res.remaining_quantity,
-            'unit': res.unit,
-            'batch_id': res.fifo_reference_id,
-            'created_at': res.timestamp,
-            'created_by': res.created_by
-        })
+    query = Reservation.query
+
+    # Apply filters
+    if status_filter != 'all':
+        query = query.filter(Reservation.status == status_filter)
+
+    if order_id_filter:
+        query = query.filter(Reservation.order_id.contains(order_id_filter))
+
+    # Organization scoping
+    if current_user.organization_id:
+        query = query.filter(Reservation.organization_id == current_user.organization_id)
+
+    reservations = query.order_by(desc(Reservation.created_at)).limit(100).all()
+
+    # Get summary stats
+    stats = {
+        'total_active': Reservation.query.filter(
+            and_(
+                Reservation.status == 'active',
+                Reservation.organization_id == current_user.organization_id
+            )
+        ).count(),
+        'total_expired': Reservation.query.filter(
+            and_(
+                Reservation.status == 'expired',
+                Reservation.organization_id == current_user.organization_id
+            )
+        ).count(),
+        'total_converted': Reservation.query.filter(
+            and_(
+                Reservation.status == 'converted_to_sale',
+                Reservation.organization_id == current_user.organization_id
+            )
+        ).count()
+    }
 
     return render_template('admin/reservations.html', 
-                         reservation_groups=reservation_groups)
+                         reservations=reservations, 
+                         stats=stats,
+                         status_filter=status_filter,
+                         order_id_filter=order_id_filter)
 
-@reservation_admin_bp.route('/api/by-sku/<int:sku_id>')
+@reservation_bp.route('/api/reservations/create', methods=['POST'])
 @login_required
-def get_sku_reservations(sku_id):
-    """Get reservations for a specific SKU"""
-    # Find the reserved item for this SKU
-    original_item = InventoryItem.query.get(sku_id)
-    if not original_item:
-        return jsonify({'error': 'SKU not found'}), 404
-
-    reserved_item_name = f"{original_item.name} (Reserved)"
-    reserved_item = InventoryItem.query.filter_by(
-        name=reserved_item_name,
-        type='product-reserved',
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not reserved_item:
-        return jsonify({'reservations': []})
-
-    # Get active reservations
-    reservations = ProductSKUHistory.query.filter(
-        and_(
-            ProductSKUHistory.inventory_item_id == reserved_item.id,
-            ProductSKUHistory.change_type == 'reserved_allocation',
-            ProductSKUHistory.remaining_quantity > 0
-        )
-    ).order_by(ProductSKUHistory.timestamp.desc()).all()
-
-    result = []
-    for res in reservations:
-        result.append({
-            'order_id': res.order_id,
-            'quantity': res.remaining_quantity,
-            'unit': res.unit,
-            'batch_id': res.fifo_reference_id,
-            'created_at': res.timestamp.isoformat(),
-            'notes': res.notes
-        })
-
-    return jsonify({'reservations': result})
-
-@reservation_admin_bp.route('/api/release/<order_id>', methods=['POST'])
-@login_required
-def release_reservation_admin(order_id):
-    """Admin endpoint to release a reservation"""
-    success, message = POSIntegrationService.release_reservation(order_id)
-    
-    if success:
-        return jsonify({'success': True, 'message': message})
-    else:
-        return jsonify({'success': False, 'error': message}), 400
-
-@reservation_admin_bp.route('/api/confirm-sale/<order_id>', methods=['POST'])
-@login_required
-def confirm_sale_admin(order_id):
-    """Admin endpoint to convert reservation to sale"""
-    data = request.get_json() or {}
-    notes = data.get('notes', 'Manual sale confirmation')
-    
-    success, message = POSIntegrationService.confirm_sale(order_id, notes)
-    
-    if success:
-        return jsonify({'success': True, 'message': message})
-    else:
-        return jsonify({'success': False, 'error': message}), 400
-
-@reservation_admin_bp.route('/webhook/shopify/reserve', methods=['POST'])
-def shopify_reserve_webhook():
-    """Shopify webhook for creating reservations"""
-    if not request.is_json:
-        return jsonify({'error': 'JSON data required'}), 400
-
-    data = request.get_json()
-    
-    # Validate webhook data
-    required_fields = ['sku_id', 'quantity', 'order_id']
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields'}), 400
-
+def create_reservation():
+    """Create a new reservation via API"""
     try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['item_id', 'quantity', 'order_id']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Create the reservation
         success, message = POSIntegrationService.reserve_inventory(
-            item_id=int(data['sku_id']),
+            item_id=data['item_id'],
             quantity=float(data['quantity']),
             order_id=data['order_id'],
-            source='shopify',
-            notes=data.get('notes')
+            source=data.get('source', 'manual'),
+            notes=data.get('notes', ''),
+            sale_price=data.get('sale_price'),
+            expires_in_hours=data.get('expires_in_hours')
         )
 
         if success:
             return jsonify({'success': True, 'message': message})
         else:
-            return jsonify({'success': False, 'error': message}), 400
+            return jsonify({'error': message}), 400
 
     except Exception as e:
-        logger.error(f"Error in Shopify reserve webhook: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@reservation_admin_bp.route('/webhook/shopify/cancel', methods=['POST'])
-def shopify_cancel_webhook():
-    """Shopify webhook for canceling reservations"""
-    if not request.is_json:
-        return jsonify({'error': 'JSON data required'}), 400
-
-    data = request.get_json()
-    order_id = data.get('order_id')
-    
-    if not order_id:
-        return jsonify({'error': 'order_id required'}), 400
-
+@reservation_bp.route('/api/reservations/<order_id>/release', methods=['POST'])
+@login_required
+def release_reservation(order_id):
+    """Release a reservation by order ID"""
     try:
         success, message = POSIntegrationService.release_reservation(order_id)
-        
+
         if success:
             return jsonify({'success': True, 'message': message})
         else:
-            return jsonify({'success': False, 'error': message}), 400
+            return jsonify({'error': message}), 400
 
     except Exception as e:
-        logger.error(f"Error in Shopify cancel webhook: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@reservation_admin_bp.route('/webhook/shopify/fulfill', methods=['POST'])
-def shopify_fulfill_webhook():
-    """Shopify webhook for fulfilling orders (convert reservation to sale)"""
-    if not request.is_json:
-        return jsonify({'error': 'JSON data required'}), 400
-
-    data = request.get_json()
-    order_id = data.get('order_id')
-    
-    if not order_id:
-        return jsonify({'error': 'order_id required'}), 400
-
+@reservation_bp.route('/api/reservations/<order_id>/confirm_sale', methods=['POST'])
+@login_required
+def confirm_sale(order_id):
+    """Convert reservation to sale"""
     try:
-        success, message = POSIntegrationService.confirm_sale(
-            order_id, 
-            notes=f"Shopify fulfillment: {data.get('notes', '')}"
-        )
-        
+        data = request.get_json() or {}
+        notes = data.get('notes', '')
+
+        success, message = POSIntegrationService.confirm_sale(order_id, notes)
+
         if success:
             return jsonify({'success': True, 'message': message})
         else:
-            return jsonify({'success': False, 'error': message}), 400
+            return jsonify({'error': message}), 400
 
     except Exception as e:
-        logger.error(f"Error in Shopify fulfill webhook: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@reservation_bp.route('/api/reservations/<order_id>/details')
+@login_required
+def get_reservation_details(order_id):
+    """Get detailed information about a reservation"""
+    try:
+        from ...services.reservation_service import ReservationService
+        details = ReservationService.get_reservation_details_for_order(order_id)
+        return jsonify({'reservations': details})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@reservation_bp.route('/api/reservations/cleanup_expired', methods=['POST'])
+@login_required
+def cleanup_expired():
+    """Clean up expired reservations"""
+    try:
+        count = POSIntegrationService.cleanup_expired_reservations()
+        return jsonify({'success': True, 'message': f'Cleaned up {count} expired reservations'})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@reservation_bp.route('/api/inventory/<int:item_id>/reservations')
+@login_required
+def get_item_reservations(item_id):
+    """Get all reservations for a specific inventory item"""
+    try:
+        reservations = Reservation.query.filter(
+            and_(
+                Reservation.product_item_id == item_id,
+                Reservation.organization_id == current_user.organization_id
+            )
+        ).order_by(desc(Reservation.created_at)).all()
+
+        result = []
+        for reservation in reservations:
+            result.append({
+                'id': reservation.id,
+                'order_id': reservation.order_id,
+                'quantity': reservation.quantity,
+                'unit': reservation.unit,
+                'status': reservation.status,
+                'source': reservation.source,
+                'created_at': reservation.created_at.isoformat() if reservation.created_at else None,
+                'expires_at': reservation.expires_at.isoformat() if reservation.expires_at else None,
+                'sale_price': reservation.sale_price,
+                'notes': reservation.notes
+            })
+
+        return jsonify({'reservations': result})
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
