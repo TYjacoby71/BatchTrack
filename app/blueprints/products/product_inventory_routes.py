@@ -485,7 +485,8 @@ def process_return_webhook():
 def create_manual_reservation():
     """Create a manual reservation (requires reserve_inventory permission)"""
     # Check permission
-    if not current_user.can_reserve_inventory():
+    from ...utils.permissions import has_permission
+    if not has_permission('inventory.reserve'):
         if request.is_json:
             return jsonify({'error': 'Insufficient permissions to create reservations'}), 403
         flash('You do not have permission to create reservations', 'error')

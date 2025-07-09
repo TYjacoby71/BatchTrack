@@ -76,15 +76,6 @@ class User(UserMixin, db.Model):
             return False
         return self.role.has_permission(permission_name)
 
-    def can_reserve_inventory(self):
-        """Check if user can create manual reservations"""
-        # Organization owners can always reserve
-        if self.organization and self.organization.owner and self.organization.owner.id == self.id:
-            return True
-
-        # Check for specific reserve inventory permission
-        return self.has_permission('reserve_inventory')
-
     def __repr__(self):
         return f'<User {self.username}>'
 
