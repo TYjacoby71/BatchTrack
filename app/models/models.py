@@ -337,10 +337,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
-        from flask_login import current_user
-
-        if not current_user.is_authenticated:
-            return self.quantity
 
         today = datetime.now().date()
         expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
@@ -348,8 +344,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today,
-                InventoryHistory.organization_id == current_user.organization_id
+                InventoryHistory.expiration_date < today
             )).scalar() or 0
 
         return max(0, self.quantity - expired_total)
@@ -362,10 +357,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
-        from flask_login import current_user
-
-        if not current_user.is_authenticated:
-            return 0
 
         today = datetime.now().date()
         return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
@@ -373,49 +364,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today,
-                InventoryHistory.organization_id == current_user.organization_id
+                InventoryHistory.expiration_date < today
             )).scalar() or 0
-
-    @property
-    def reserved_quantity(self):
-        """Get currently reserved quantity for products"""
-        if self.type != 'product':
-            return 0
-        
-        # Sum up all reservation deductions with organization scoping
-        from app.models.product import ProductSKUHistory
-        from flask_login import current_user
-        
-        if not current_user.is_authenticated:
-            return 0
-            
-        # Get the total reserved amount from reservation deductions
-        # These represent quantity deducted from available FIFO but not yet sold
-        reserved_total = db.session.query(db.func.sum(db.func.abs(ProductSKUHistory.quantity_change)))\
-            .filter(
-                ProductSKUHistory.inventory_item_id == self.id,
-                ProductSKUHistory.change_type == 'reserved',
-                ProductSKUHistory.quantity_change < 0,
-                ProductSKUHistory.organization_id == current_user.organization_id
-            ).scalar() or 0
-            
-        return max(0, reserved_total)
-
-    @property
-    def available_quantity_for_sale(self):
-        """Get quantity available for new sales/reservations (excludes reserved and expired)"""
-        if self.type != 'product':
-            return self.available_quantity
-            
-        # For products, available = total - reserved - expired
-        # This ensures: total = available + reserved + expired
-        total_qty = self.quantity
-        reserved_qty = self.reserved_quantity
-        expired_qty = self.expired_quantity
-        
-        available = total_qty - reserved_qty - expired_qty
-        return max(0, available)
 
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""

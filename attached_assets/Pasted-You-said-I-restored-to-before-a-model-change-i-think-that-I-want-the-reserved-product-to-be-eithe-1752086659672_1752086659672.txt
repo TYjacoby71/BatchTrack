@@ -1,0 +1,112 @@
+You said:
+I restored to before a model change 
+
+i think that I want the reserved product to be either a tag or a item type. are there enough properties in  a reserved item to justify its own inventroy item type? 
+
+componded? item type product-reserved? 
+
+it seems like it would be easier to disrelate the inventroy than to solve the fifo and recount issues that exist if they are the same
+
+
+ChatGPT said:
+You're right to be thinking this through carefully — this is one of those architecture-level decisions that either creates clarity or multiplies edge cases forever.
+
+Let’s answer your question directly and then give a strong recommendation.
+
+🧠 Your Question
+Are there enough properties in a reserved product to justify its own inventory item type?
+
+✅ Yes — if you want clean separation, then yes, reservations should be their own inventory type.
+Here’s why:
+
+✅ Why a Separate Inventory Type for Reserved Makes Sense
+Reason	Explanation
+Different semantics	Reserved items aren’t physically available for production or sale — they are logically allocated.
+Different lifecycle	Reserved items don’t participate in normal FIFO deductions until converted to a sale.
+Different adjustment flows	Reserved items must reference order_id, while regular items don’t.
+Different recount rules	Reserved stock is not counted in standard physical recounts unless reviewing specific orders.
+No spoilage	Reserved stock doesn’t expire the same way unless tied to a physical perishable claim.
+No dual-ownership logic	Keeping reserved and available under the same inventory item means recounts, spoilage, and deductions always have to split logic by change_type — messy and error-prone.
+
+🧾 Clean Design: Split the Inventory Item
+Instead of doing this:
+
+python
+Copy
+Edit
+InventoryItem:
+  id: 1
+  type: 'product'
+  quantity: 30  ← includes both reserved and available
+Do this:
+
+python
+Copy
+Edit
+InventoryItem(id=101)
+  type: 'product'
+  name: 'Royal Tallow 4oz'
+  quantity: 25
+
+InventoryItem(id=102)
+  type: 'product-reserved'
+  name: 'Royal Tallow 4oz (Reserved)'
+  quantity: 5
+Both map back to the same SKU
+
+Reserved inventory is always logged in its own FIFO stream
+
+Recounts, reservations, and releases only touch one or the other
+
+You can even visually group them under one product in the UI
+
+📦 What This Enables
+✅ Simpler Recount
+Recount of available inventory doesn’t even look at reserved
+
+✅ Accurate FIFO
+FIFO always deducts from the product type, not product-reserved
+
+✅ Better Shopify Sync
+Shopify reads available stock from product, not product-reserved
+
+Order fulfillment converts product-reserved → product deduction FIFO
+
+🔧 How to Implement This Cleanly
+Change	What to Do
+✅ InventoryItem.type	Add new enum: 'product-reserved'
+✅ FIFOService	Treat product-reserved entries as their own stream
+✅ Reservation logic	On reservation, create FIFO entry against product-reserved inventory item ID
+✅ SKU Display	In UI, group product and product-reserved as children of the same SKU
+✅ Recount logic	Only operate on inventory items with type product unless user enters reservation release mode
+✅ BatchTrace	ProductSKU → links to both items; InventoryItem carries type
+✅ Order fulfillment	Deduct from reserved FIFO (via reservation ID) or fallback to available FIFO if released
+
+🧠 Naming Pattern Options
+Option	Example
+Item Type	product, product-reserved
+Tag (supplementary)	reserved tag on InventoryItem or SKU
+Display	Name stays the same; grouped in UI under “Reserved Inventory” section
+
+🧭 Final Recommendation
+✅ Yes — split into a separate InventoryItem with type product-reserved
+
+It will:
+
+Massively simplify your FIFO and recount logic
+
+Let you track reservations per order without breaking physical on-hand logic
+
+Make the system future-proof for preorders, hold requests, and large wholesale workflows
+
+Match how major platforms (e.g., Shopify + NetSuite) model inventory segmentation
+
+Let me know if you'd like:
+
+A one-click migration plan to split reserved inventory from existing InventoryItems
+
+A UI/UX grouping mockup of Available vs Reserved stock under one SKU
+
+An auto-promotion trigger: "Convert reserved to available" (i.e. if reservation expires or order is canceled)
+
+This is the cleanest path forward for both product growth and user sanity.

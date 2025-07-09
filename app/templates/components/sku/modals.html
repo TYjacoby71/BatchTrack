@@ -131,7 +131,7 @@
                             </optgroup>
                         </select>
                     </div>
-                    <div class="mb-3" id="quantityGroup">
+                    <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
                         <input type="number" class="form-control" id="quantity" name="quantity" 
                                step="any" min="0" required>
@@ -146,9 +146,8 @@
 
                     <!-- POS Integration Fields -->
                     <div class="mb-3" id="orderIdGroup" style="display: none;">
-                        <label for="order_id" class="form-label">Order ID</label>
-                        <input type="text" name="order_id" id="order_id" class="form-control" placeholder="Required for reservations" required>
-                        <small class="form-text text-muted">Required to track and manage reservations</small>
+                        <label for="order_id" class="form-label">Order ID (for sales/reservations)</label>
+                        <input type="text" name="order_id" id="order_id" class="form-control" placeholder="External order ID (Shopify, Etsy, etc.)">
                     </div>
 
                     <div class="mb-3" id="salePriceGroup" style="display: none;">
@@ -172,56 +171,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Apply Adjustment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Recount Modal -->
-<div class="modal fade" id="recountModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Recount Inventory</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ url_for('product_inventory.adjust_sku_inventory', inventory_item_id=sku.inventory_item_id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="change_type" value="recount">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">Available Quantity</label>
-                            <input type="number" name="available_quantity" class="form-control" step="0.01" min="0" 
-                                   value="{{ sku.available_quantity_for_sale }}" required>
-                            <small class="text-muted">Current: {{ "%.2f"|format(sku.available_quantity_for_sale) }}</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Reserved Quantity</label>
-                            <input type="number" name="reserved_quantity" class="form-control" step="0.01" min="0" 
-                                   value="{{ sku.reserved_quantity }}" required>
-                            <small class="text-muted">Current: {{ "%.2f"|format(sku.reserved_quantity) }}</small>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label class="form-label">Total Quantity</label>
-                            <input type="text" class="form-control" id="totalQuantityDisplay" readonly>
-                            <small class="text-muted">Available + Reserved = Total</small>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label class="form-label">Recount Notes</label>
-                            <textarea name="notes" class="form-control" rows="2" 
-                                      placeholder="Reason for discrepancy..."></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -273,79 +222,42 @@ document.addEventListener('DOMContentLoaded', function() {
             const value = this.value;
             const quantityHelp = document.getElementById('quantityHelp');
 
-            // Get quantity group for hiding/showing
-            const quantityGroup = document.getElementById('quantityGroup');
-            const quantityInput = document.getElementById('quantity');
-
-            // Update quantity help text and visibility based on adjustment type
+            // Update quantity help text based on adjustment type
             if (quantityHelp) {
                 switch(value) {
                     case 'sale':
                     case 'gift':
                     case 'sample':
                         quantityHelp.textContent = 'Enter the quantity sold/given away.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
                         break;
                     case 'damaged':
                     case 'spoil':
                     case 'trash':
                     case 'expired':
                         quantityHelp.textContent = 'Enter the quantity lost/damaged/expired.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
                         break;
                     case 'manual_addition':
                         quantityHelp.textContent = 'Enter the quantity to add to existing stock.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
                         break;
                     case 'recount':
-                        // Close the FIFO modal and open the dedicated recount modal
-                        const fifoModal = bootstrap.Modal.getInstance(document.getElementById('adjustFifoModal'));
-                        if (fifoModal) {
-                            fifoModal.hide();
-                        }
-                        const recountModal = new bootstrap.Modal(document.getElementById('recountModal'));
-                        recountModal.show();
-                        return; // Exit early since we're switching modals
+                        quantityHelp.textContent = 'Enter the new total quantity after recount.';
+                        break;
                     case 'reserved':
                         quantityHelp.textContent = 'Enter the quantity to reserve for this order.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
                         break;
                     case 'unreserved':
-                        quantityHelp.textContent = 'All reservations for this order will be released.';
-                        quantityGroup.style.display = 'none';
-                        quantityInput.required = false;
-                        quantityInput.value = '';
+                        quantityHelp.textContent = 'Enter the quantity to release from reservation.';
                         break;
                     default:
                         quantityHelp.textContent = 'Select an adjustment type to see quantity instructions.';
-                        quantityGroup.style.display = 'block';
-                        quantityInput.required = true;
                 }
             }
 
-            // Show/hide order ID field for sales, reservations, and unreserve
-            if (value === 'sale' || value === 'reserved' || value === 'unreserved') {
+            // Show/hide order ID field for sales and reservations
+            if (value === 'sale' || value === 'reserved') {
                 orderIdGroup.style.display = 'block';
-                // Make order ID required for reservations and unreserve
-                const orderIdInput = document.getElementById('order_id');
-                if (value === 'reserved' || value === 'unreserved') {
-                    orderIdInput.required = true;
-                    if (value === 'unreserved') {
-                        orderIdInput.placeholder = 'Enter order ID to release all reservations';
-                    } else {
-                        orderIdInput.placeholder = 'Required for reservations';
-                    }
-                } else {
-                    orderIdInput.required = false;
-                    orderIdInput.placeholder = 'Optional order reference';
-                }
             } else {
                 orderIdGroup.style.display = 'none';
-                document.getElementById('order_id').required = false;
             }
 
             // Show sale price field only for sales
@@ -420,28 +332,4 @@ window.openInventoryActionModal = function(action) {
         new bootstrap.Modal(modal).show();
     }
 };
-
-// Recount modal total calculation
-document.addEventListener('DOMContentLoaded', function() {
-    const availableInput = document.querySelector('input[name="available_quantity"]');
-    const reservedInput = document.querySelector('input[name="reserved_quantity"]');
-    const totalDisplay = document.getElementById('totalQuantityDisplay');
-
-    function updateTotal() {
-        if (availableInput && reservedInput && totalDisplay) {
-            const available = parseFloat(availableInput.value) || 0;
-            const reserved = parseFloat(reservedInput.value) || 0;
-            const total = available + reserved;
-            totalDisplay.value = total.toFixed(2);
-        }
-    }
-
-    if (availableInput && reservedInput) {
-        availableInput.addEventListener('input', updateTotal);
-        reservedInput.addEventListener('input', updateTotal);
-
-        // Calculate initial total
-        updateTotal();
-    }
-});
 </script>

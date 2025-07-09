@@ -60,22 +60,19 @@ def adjust_sku_inventory(inventory_item_id):
     logger.info(f"Extracted quantity: {quantity} (type: {type(quantity)})")
     logger.info(f"Extracted change_type: {change_type}")
 
-    # Allow empty quantity for recount and unreserved operations
+    # Allow empty quantity for recount (will be treated as 0)
     if quantity is None or quantity == '':
         logger.info(f"Empty quantity detected. Change type: {change_type}")
         if change_type == 'recount':
             quantity = 0
             logger.info("Set quantity to 0 for recount operation")
-        elif change_type == 'unreserved':
-            quantity = 0  # Will be calculated from reservations
-            logger.info("Empty quantity allowed for unreserved operation")
         else:
             error_msg = 'Quantity is required'
             logger.error(f"Quantity validation failed: {error_msg}")
             if request.is_json:
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, 'error')
-            return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
 
     if not change_type:
         error_msg = 'Change type is required'
@@ -83,7 +80,7 @@ def adjust_sku_inventory(inventory_item_id):
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+        return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
 
     try:
         # Convert and validate quantity - allow 0 for recount
@@ -121,15 +118,6 @@ def adjust_sku_inventory(inventory_item_id):
         logger.info(f"  - order_id: {order_id}")
         logger.info(f"  - cost_override: {cost_override}")
 
-        # Validate order ID for reservations
-        if change_type == 'reserved' and not order_id:
-            error_msg = 'Order ID is required for reservations'
-            logger.error(f"Order ID validation failed for reservation: {error_msg}")
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            flash(error_msg, 'error')
-            return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
-
         # Handle expiration data
         custom_expiration_date = None
         custom_shelf_life_days = None
@@ -144,122 +132,53 @@ def adjust_sku_inventory(inventory_item_id):
             except (ValueError, TypeError) as e:
                 logger.warning(f"Error parsing expiration data: {e}")
 
-        # Handle unreserve specially - release all reservations for order ID
-        if change_type == 'unreserved':
-            if not order_id:
-                error_msg = 'Order ID is required to release reservations'
-                logger.error(f"Order ID validation failed for unreserve: {error_msg}")
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
-
-            logger.info(f"=== RELEASING ALL RESERVATIONS FOR ORDER: {order_id} ===")
-
-            # Find all active reservations for this order
-            reservations = ProductSKUHistory.query.filter(
-                ProductSKUHistory.inventory_item_id == inventory_item_id,
-                ProductSKUHistory.change_type == 'reserved_allocation',
-                ProductSKUHistory.order_id == order_id,
-                ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == current_user.organization_id
-            ).all()
-
-            if not reservations:
-                error_msg = f'No active reservations found for order ID: {order_id}'
-                logger.error(error_msg)
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 400
-                flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
-
-            # Calculate total quantity to release
-            total_to_release = sum(res.remaining_quantity for res in reservations)
-            logger.info(f"Releasing {total_to_release} units from {len(reservations)} reservation entries")
-
-            # Use FIFO service to release the reservation
-            try:
-                success = FIFOService.release_reservation(
-                    inventory_item_id=inventory_item_id,
-                    quantity=total_to_release,
-                    order_id=order_id,
-                    notes=notes or f"Released all reservations for order {order_id}",
-                    created_by=current_user.id
-                )
-
-                if success:
-                    db.session.commit()
-                    flash(f'Released {total_to_release} units from order {order_id}', 'success')
-                else:
-                    flash('Error releasing reservations', 'error')
-            except Exception as e:
-                db.session.rollback()
-                error_msg = f'Error releasing reservations: {str(e)}'
-                logger.error(error_msg)
-                if request.is_json:
-                    return jsonify({'error': error_msg}), 500
-                flash(error_msg, 'error')
-
-            logger.info(f"=== PRODUCT INVENTORY ADJUSTMENT END ===")
-            if not request.is_json:
-                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
-            return None
-
-        # Handle recount separately with available + reserved split
+        # Handle recount separately like raw inventory system
         if change_type == 'recount':
-            logger.info("=== DUAL RECOUNT: Available + Reserved ===")
+            logger.info("=== USING DIRECT FIFO RECOUNT (like raw inventory) ===")
+            logger.info(f"Recounting inventory item {inventory_item_id} to {quantity}")
 
-            # Get separate counts for available and reserved
-            available_qty = float(data.get('available_quantity', 0))
-            reserved_qty = float(data.get('reserved_quantity', 0))
+            # Store original quantity for history calculation
+            original_quantity = sku.inventory_item.quantity or 0
 
-            logger.info(f"Recounting inventory item {inventory_item_id}: {available_qty} available, {reserved_qty} reserved")
+            # Use the same recount logic as raw inventory - absolute adjustment
+            success = FIFOService.recount_fifo(inventory_item_id, quantity, notes or "Product recount", current_user.id)
 
-            # Store original quantities
-            original_available = sku.inventory_item.quantity or 0
-            original_reserved = sku.reserved_quantity or 0
+            if success:
+                # Update the inventory item quantity directly
+                sku.inventory_item.quantity = quantity
 
-            # 1. Clear all existing reservation allocations
-            from app.models.product import ProductSKUHistory
-            existing_reservations = ProductSKUHistory.query.filter(
-                ProductSKUHistory.inventory_item_id == inventory_item_id,
-                ProductSKUHistory.change_type == 'reserved_allocation',
-                ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == current_user.organization_id
-            ).all()
+                # Calculate the actual change for summary entry
+                qty_change = quantity - original_quantity
 
-            for reservation in existing_reservations:
-                reservation.remaining_quantity = 0  # Clear existing reservations
+                # Only create summary entry if there was an actual change
+                if qty_change != 0:
+                    # Use the proper FIFO service instead of manual generation
+                    if qty_change > 0:
+                        # For positive changes, create a proper FIFO entry
+                        FIFOService.add_fifo_entry(
+                            inventory_item_id=inventory_item_id,
+                            quantity=qty_change,
+                            change_type='recount',
+                            unit=unit or sku.unit or 'count',
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            cost_per_unit=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
+                            created_by=current_user.id
+                        )
+                    else:
+                        # For negative changes, create summary history using FIFO service
+                        # This ensures consistent FIFO code generation
+                        FIFOService.create_deduction_history(
+                            inventory_item_id=inventory_item_id,
+                            deduction_plan=[(0, abs(qty_change), sku.inventory_item.cost_per_unit if sku.inventory_item else None)],
+                            change_type='recount',
+                            notes=f"Product recount: {original_quantity} → {quantity}",
+                            created_by=current_user.id
+                        )
 
-            # 2. Set available quantity (this becomes the new item.quantity)
-            sku.inventory_item.quantity = available_qty
-
-            # 3. Create new reservation allocation if needed
-            if reserved_qty > 0:
-                FIFOService.add_fifo_entry(
-                    inventory_item_id=inventory_item_id,
-                    quantity=0,  # No change to total inventory
-                    change_type='reserved_allocation',
-                    unit=unit or sku.unit or 'count',
-                    notes=f"Recount: Found {reserved_qty} reserved units",
-                    created_by=current_user.id,
-                    reserved_quantity=reserved_qty
-                )
-
-            # 4. Create recount summary entry
-            total_change = (available_qty + reserved_qty) - (original_available + original_reserved)
-            if total_change != 0:
-                FIFOService.add_fifo_entry(
-                    inventory_item_id=inventory_item_id,
-                    quantity=total_change,
-                    change_type='recount',
-                    unit=unit or sku.unit or 'count',
-                    notes=f"Recount: {original_available}+{original_reserved} → {available_qty}+{reserved_qty}",
-                    created_by=current_user.id
-                )
-
-            db.session.commit()
-            flash('Product inventory recounted successfully', 'success')
+                db.session.commit()
+                flash('Product inventory recounted successfully', 'success')
+            else:
+                flash('Error performing recount', 'error')
         else:
             # Use centralized adjustment service for non-recount operations
             try:

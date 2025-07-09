@@ -107,8 +107,7 @@ class ProductService:
         ).filter(
             ProductSKU.is_active == True,
             Product.is_active == True,
-            Product.organization_id == current_user.organization_id,
-            InventoryItem.organization_id == current_user.organization_id
+            Product.organization_id == current_user.organization_id
         ).group_by(
             Product.id,
             Product.name,
