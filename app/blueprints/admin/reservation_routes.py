@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
+from ...utils.permissions import has_permission
 
 reservation_bp = Blueprint('reservations', __name__)
 
