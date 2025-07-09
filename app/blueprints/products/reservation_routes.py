@@ -41,8 +41,17 @@ def list_reservations():
 
             # Add reservation with additional data for display
             batch_label = None
+            lot_number = None
+            
             if reservation.source_batch_id and reservation.source_batch:
                 batch_label = reservation.source_batch.label_code
+            
+            # Get lot information from FIFO entry if available
+            if reservation.source_fifo_id:
+                from ...models import FIFOInventoryItem
+                fifo_entry = FIFOInventoryItem.query.get(reservation.source_fifo_id)
+                if fifo_entry and fifo_entry.lot_number:
+                    lot_number = fifo_entry.lot_number
             
             reservation_data = {
                 'order_id': reservation.order_id,
@@ -50,6 +59,7 @@ def list_reservations():
                 'unit': reservation.unit,
                 'batch_id': reservation.source_batch_id,
                 'batch_label': batch_label,
+                'lot_number': lot_number,
                 'source_batch_id': reservation.source_batch_id,  # Keep both for compatibility
                 'created_at': reservation.created_at,
                 'expires_at': reservation.expires_at,

@@ -61,7 +61,12 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if res.batch_label %}
+                                            {% if res.lot_number %}
+                                                <span class="badge badge-primary">Lot {{ res.lot_number }}</span>
+                                                {% if res.batch_label %}
+                                                    <br><small class="text-muted">{{ res.batch_label }}</small>
+                                                {% endif %}
+                                            {% elif res.batch_label %}
                                                 <span class="badge badge-info">{{ res.batch_label }}</span>
                                             {% elif res.source_batch_id %}
                                                 <span class="badge badge-info">Batch {{ res.source_batch_id }}</span>
