@@ -60,19 +60,22 @@ def adjust_sku_inventory(inventory_item_id):
     logger.info(f"Extracted quantity: {quantity} (type: {type(quantity)})")
     logger.info(f"Extracted change_type: {change_type}")
 
-    # Allow empty quantity for recount (will be treated as 0)
+    # Allow empty quantity for recount and unreserved operations
     if quantity is None or quantity == '':
         logger.info(f"Empty quantity detected. Change type: {change_type}")
         if change_type == 'recount':
             quantity = 0
             logger.info("Set quantity to 0 for recount operation")
+        elif change_type == 'unreserved':
+            quantity = 0  # Will be calculated from reservations
+            logger.info("Empty quantity allowed for unreserved operation")
         else:
             error_msg = 'Quantity is required'
             logger.error(f"Quantity validation failed: {error_msg}")
             if request.is_json:
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, 'error')
-            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+            return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
     if not change_type:
         error_msg = 'Change type is required'
@@ -152,7 +155,7 @@ def adjust_sku_inventory(inventory_item_id):
                 return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
             logger.info(f"=== RELEASING ALL RESERVATIONS FOR ORDER: {order_id} ===")
-            
+
             # Find all active reservations for this order
             reservations = ProductSKUHistory.query.filter(
                 ProductSKUHistory.inventory_item_id == inventory_item_id,
@@ -168,7 +171,7 @@ def adjust_sku_inventory(inventory_item_id):
                 if request.is_json:
                     return jsonify({'error': error_msg}), 400
                 flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
             # Calculate total quantity to release
             total_to_release = sum(res.remaining_quantity for res in reservations)
@@ -205,11 +208,11 @@ def adjust_sku_inventory(inventory_item_id):
         # Handle recount separately with available + reserved split
         if change_type == 'recount':
             logger.info("=== DUAL RECOUNT: Available + Reserved ===")
-            
+
             # Get separate counts for available and reserved
             available_qty = float(data.get('available_quantity', 0))
             reserved_qty = float(data.get('reserved_quantity', 0))
-            
+
             logger.info(f"Recounting inventory item {inventory_item_id}: {available_qty} available, {reserved_qty} reserved")
 
             # Store original quantities
@@ -224,13 +227,13 @@ def adjust_sku_inventory(inventory_item_id):
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.organization_id == current_user.organization_id
             ).all()
-            
+
             for reservation in existing_reservations:
                 reservation.remaining_quantity = 0  # Clear existing reservations
-                
+
             # 2. Set available quantity (this becomes the new item.quantity)
             sku.inventory_item.quantity = available_qty
-            
+
             # 3. Create new reservation allocation if needed
             if reserved_qty > 0:
                 FIFOService.add_fifo_entry(
@@ -242,7 +245,7 @@ def adjust_sku_inventory(inventory_item_id):
                     created_by=current_user.id,
                     reserved_quantity=reserved_qty
                 )
-            
+
             # 4. Create recount summary entry
             total_change = (available_qty + reserved_qty) - (original_available + original_reserved)
             if total_change != 0:
