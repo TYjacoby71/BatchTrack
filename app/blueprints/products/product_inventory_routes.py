@@ -125,7 +125,7 @@ def adjust_sku_inventory(inventory_item_id):
             if request.is_json:
                 return jsonify({'error': error_msg}), 400
             flash(error_msg, 'error')
-            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+            return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
         # Handle expiration data
         custom_expiration_date = None
@@ -149,7 +149,7 @@ def adjust_sku_inventory(inventory_item_id):
                 if request.is_json:
                     return jsonify({'error': error_msg}), 400
                 flash(error_msg, 'error')
-                return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+                return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
             logger.info(f"=== RELEASING ALL RESERVATIONS FOR ORDER: {order_id} ===")
             
