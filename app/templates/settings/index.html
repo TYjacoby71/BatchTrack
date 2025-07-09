@@ -141,6 +141,10 @@
                                 <input type="text" class="form-control" value="{{ current_user.organization_id }}" readonly>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Role</label>
+                                <input type="text" class="form-control" value="{{ current_user.user_role.name if current_user.user_role else 'No Role Assigned' }}" readonly>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">First Name</label>
                                 <input type="text" class="form-control" id="firstName" 
                                        value="{{ current_user.first_name or '' }}"
