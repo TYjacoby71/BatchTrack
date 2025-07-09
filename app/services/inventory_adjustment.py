@@ -9,7 +9,6 @@ from app.blueprints.fifo.services import FIFOService
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
     Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including frozen expired)
-    For products: validates that available + reserved + expired = inventory total
     Returns: (is_valid, error_message, inventory_qty, fifo_total)
     """
     # Handle different item types
@@ -38,21 +37,6 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
         item_name = item.name
-
-        # For products, check if inventory = available + reserved + expired
-        # This accounts for reservations that reduce FIFO remaining quantities
-        available_qty = item.available_quantity_for_sale
-        reserved_qty = item.reserved_quantity
-        expired_qty = item.expired_quantity if item.is_perishable else 0
-
-        expected_total = available_qty + reserved_qty + expired_qty
-
-        # Allow small floating point differences (0.001)
-        if abs(current_qty - expected_total) > 0.001:
-            error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != available ({available_qty}) + reserved ({reserved_qty}) + expired ({expired_qty}) = {expected_total}"
-            return False, error_msg, current_qty, expected_total
-
-        return True, "", current_qty, expected_total
     else:
         item = InventoryItem.query.get(item_id)
         if not item:
@@ -64,12 +48,12 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         current_qty = item.quantity
         item_name = item.name
 
-        # Allow small floating point differences (0.001)
-        if abs(current_qty - fifo_total) > 0.001:
-            error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != FIFO total ({fifo_total}) [includes frozen expired]"
-            return False, error_msg, current_qty, fifo_total
+    # Allow small floating point differences (0.001)
+    if abs(current_qty - fifo_total) > 0.001:
+        error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != FIFO total ({fifo_total}) [includes frozen expired]"
+        return False, error_msg, current_qty, fifo_total
 
-        return True, "", current_qty, fifo_total
+    return True, "", current_qty, fifo_total
 
 def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
                                  created_by=None, batch_id=None, cost_override=None,
@@ -106,59 +90,19 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
-            # Reserve inventory - create reservation allocation without affecting item.quantity
-            # item.quantity now represents only available stock, so reservations are tracked separately
-            
-            # Check if we have enough available stock
-            if quantity > item.quantity:
-                raise ValueError(f"Insufficient available inventory for reservation. Available: {item.quantity}, Requested: {quantity}")
-
-            # Create reservation allocation entry (tracks reserved amount separately)
-            FIFOService.add_fifo_entry(
-                inventory_item_id=item_id,
-                quantity=0,  # No change to total inventory
-                change_type='reserved_allocation',
-                unit=item.unit,
-                notes=notes or f"Reserved {quantity} units",
-                created_by=created_by,
-                customer=customer,
-                sale_price=sale_price,
-                order_id=order_id,
-                reserved_quantity=quantity  # Track the reserved amount
-            )
-
-            # Reduce available stock by the reserved amount
-            # This makes the stock unavailable for other sales while keeping FIFO integrity
-            qty_change = -quantity
+            # Special handling: move from current to reserved, don't change total
+            if hasattr(item, 'reserved_quantity'):
+                item.reserved_quantity = (item.reserved_quantity or 0) + quantity
+                if hasattr(item, 'current_quantity'):
+                    item.current_quantity = (item.current_quantity or 0) - quantity
+                else:
+                    item.quantity = (item.quantity or 0) - quantity
+                # Create history entry but don't change total inventory
+                qty_change = 0
+            else:
+                raise ValueError("Item type doesn't support reservations")
         elif change_type == 'returned':
             qty_change = quantity
-        elif change_type == 'unreserved':
-            current_app.logger.info("=== UNRESERVED (RELEASE RESERVATION) ===")
-
-            # Check current reserved quantity before releasing
-            item = InventoryItem.query.get(item_id)
-            if not item:
-                current_app.logger.error(f"Item not found: {item_id}")
-                return False
-
-            current_reserved = item.reserved_quantity
-            current_app.logger.info(f"Current reserved quantity: {current_reserved}")
-            current_app.logger.info(f"Attempting to release: {quantity}")
-
-            if quantity > current_reserved:
-                current_app.logger.error(f"Cannot release {quantity} - only {current_reserved} reserved")
-                raise ValueError(f"Cannot release {quantity} units. Only {current_reserved} units are currently reserved.")
-
-            # For unreserving, we need to restore the quantity to FIFO entries
-            success = FIFOService.release_reservation(
-                inventory_item_id=item_id,
-                quantity=quantity,
-                notes=notes,
-                order_id=order_id
-            )
-            
-            # No direct quantity change for unreserved - handled by FIFO service
-            qty_change = 0
         else:
             qty_change = quantity
 

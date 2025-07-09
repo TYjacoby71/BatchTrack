@@ -148,8 +148,6 @@ class ExpirationService:
         today = datetime.now().date()
 
         # FIFO entries expiring soon
-        from flask_login import current_user
-        
         expiring_fifo = db.session.query(
             InventoryHistory.inventory_item_id,
             InventoryItem.name,
@@ -161,8 +159,7 @@ class ExpirationService:
             and_(
                 InventoryHistory.expiration_date != None,
                 InventoryHistory.expiration_date.between(today, future_date),
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == current_user.organization_id
+                InventoryHistory.remaining_quantity > 0
             )
         ).all()
 
