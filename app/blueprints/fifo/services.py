@@ -257,12 +257,49 @@ class FIFOService:
         return history
 
     @staticmethod
-    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes, 
-                                batch_id=None, created_by=None, customer=None, 
-                                sale_price=None, order_id=None):
+    def create_reservation_tracking(inventory_item_id, deduction_plan, order_id, notes, 
+                                   created_by=None, customer=None, sale_price=None):
         """
-        Create history entries for FIFO deductions
-        Routes to appropriate history table based on item type
+        Create reservation entries with FIFO lot tracking
+        """
+        from app.models.reservation import Reservation
+        from app.services.reservation_service import ReservationService
+
+        # Get the product item and reserved item
+        product_item = InventoryItem.query.get(inventory_item_id)
+        if not product_item or product_item.type != 'product':
+            return False
+
+        reserved_item = ReservationService.get_reserved_item_for_product(inventory_item_id)
+        if not reserved_item:
+            return False
+
+        # Create reservation entries for each FIFO lot
+        for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+            reservation = Reservation(
+                order_id=order_id,
+                product_item_id=inventory_item_id,
+                reserved_item_id=reserved_item.id,
+                quantity=qty_deducted,
+                unit=product_item.unit,
+                unit_cost=cost_per_unit,
+                sale_price=sale_price,
+                source_fifo_id=fifo_entry_id,
+                status='active',
+                notes=notes,
+                created_by=created_by,
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else None
+            )
+            db.session.add(reservation)
+
+        return True
+
+    @staticmethod
+    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes, 
+                                batch_id=None, created_by=None, customer=None, sale_price=None, order_id=None):
+        """
+        Create history entries for deductions using FIFO order
+        Routes to correct history table based on item type
         """
         item = InventoryItem.query.get(inventory_item_id)
         history_unit = item.unit if item.unit else 'count'

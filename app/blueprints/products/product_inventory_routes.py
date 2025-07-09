@@ -480,6 +480,61 @@ def process_return_webhook():
 
 # Removed duplicate route - functionality consolidated into /inventory/add-from-batch
 
+@product_inventory_bp.route('/create-reservation', methods=['POST'])
+@login_required
+def create_manual_reservation():
+    """Create a manual reservation (admin only)"""
+    data = request.get_json() if request.is_json else request.form
+    
+    inventory_item_id = data.get('inventory_item_id')
+    quantity = data.get('quantity')
+    order_id = data.get('order_id')
+    customer = data.get('customer')
+    sale_price = data.get('sale_price')
+    notes = data.get('notes', '')
+    
+    if not all([inventory_item_id, quantity, order_id]):
+        error_msg = 'Inventory item, quantity, and order ID are required'
+        if request.is_json:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+    
+    try:
+        # Use centralized inventory adjustment for reservation
+        success = process_inventory_adjustment(
+            item_id=int(inventory_item_id),
+            quantity=float(quantity),
+            change_type='reserved',
+            unit=None,  # Will use item's unit
+            notes=f"Manual reservation: {notes}",
+            created_by=current_user.id,
+            item_type='product',
+            customer=customer,
+            sale_price=float(sale_price) if sale_price else None,
+            order_id=order_id
+        )
+        
+        if success:
+            if request.is_json:
+                return jsonify({'success': True, 'message': 'Reservation created successfully'})
+            flash('Reservation created successfully', 'success')
+        else:
+            if request.is_json:
+                return jsonify({'error': 'Failed to create reservation'}), 500
+            flash('Failed to create reservation', 'error')
+            
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f'Error creating reservation: {str(e)}'
+        logger.error(error_msg)
+        if request.is_json:
+            return jsonify({'error': error_msg}), 500
+        flash(error_msg, 'error')
+    
+    if not request.is_json:
+        return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+
 @product_inventory_bp.route('/inventory/add-from-batch', methods=['POST'])
 @login_required
 def add_inventory_from_batch():
