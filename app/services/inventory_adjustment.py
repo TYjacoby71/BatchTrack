@@ -90,17 +90,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
-            # Special handling: move from current to reserved, don't change total
-            if hasattr(item, 'reserved_quantity'):
-                item.reserved_quantity = (item.reserved_quantity or 0) + quantity
-                if hasattr(item, 'current_quantity'):
-                    item.current_quantity = (item.current_quantity or 0) - quantity
-                else:
-                    item.quantity = (item.quantity or 0) - quantity
-                # Create history entry but don't change total inventory
-                qty_change = 0
-            else:
-                raise ValueError("Item type doesn't support reservations")
+            # Handle reservation creation - deduct from available inventory
+            qty_change = -abs(quantity)
+        elif change_type == 'release_reservation':
+            # Handle reservation release - credit back to inventory
+            qty_change = quantity
         elif change_type == 'returned':
             qty_change = quantity
         else:
@@ -154,6 +148,14 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Execute the deduction plan using FIFO service
             FIFOService.execute_deduction_plan(deduction_plan, item_id)
 
+            # Handle reservations specially
+            if change_type == 'reserved':
+                # Create reservation tracking with FIFO lot details
+                FIFOService.create_reservation_tracking(
+                    item_id, deduction_plan, order_id, notes,
+                    created_by=created_by, customer=customer, sale_price=sale_price
+                )
+            
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
                 item_id, deduction_plan, change_type, notes, 

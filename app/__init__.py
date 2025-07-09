@@ -62,11 +62,13 @@ def create_app():
     from .routes import bulk_stock_routes
     from .routes import fault_log_routes
     from .routes import tag_manager_routes
-    # Register blueprints
-    from .blueprints.admin import admin_bp
+    # Register admin blueprints
+    from .blueprints.admin.admin_routes import admin_bp
     from .blueprints.admin.reservation_routes import reservation_bp
-    app.register_blueprint(admin_bp,  url_prefix='/admin')
+    from .blueprints.admin.reservation_api_routes import reservation_api_bp
+    app.register_blueprint(admin_bp)
     app.register_blueprint(reservation_bp, url_prefix='/admin/reservations')
+    app.register_blueprint(reservation_api_bp)
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -162,11 +164,23 @@ def create_app():
 
     @app.context_processor
     def inject_permissions():
-        try:
-            from .utils.permissions import has_permission, has_role
-            return dict(has_permission=has_permission, has_role=has_role)
-        except ImportError:
-            return dict(has_permission=lambda x: True, has_role=has_role)
+        from .utils.permissions import has_permission, has_role, is_organization_owner
+        from .services.reservation_service import ReservationService
+
+        def get_reservation_summary(inventory_item_id):
+            """Get reservation summary for template use"""
+            from .models import ProductSKU
+            sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
+            if sku:
+                return ReservationService.get_reservation_summary_for_sku(sku)
+            return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
+
+        return dict(
+            has_permission=has_permission,
+            has_role=has_role,
+            is_organization_owner=is_organization_owner,
+            get_reservation_summary=get_reservation_summary
+        )
 
     # Add main routes
     @app.route('/')
