@@ -146,30 +146,36 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             if not success:
                 raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
 
-            # Execute the deduction plan using FIFO service
-            FIFOService.execute_deduction_plan(deduction_plan, item_id)
-
-            # Handle reservations specially
+            # Handle reservations specially - create reservations FIRST before any FIFO changes
             if change_type == 'reserved':
                 # Only products can be reserved
                 if item.type != 'product':
                     raise ValueError("Only products can be reserved, not raw inventory")
                 
-                # Create reservation tracking with FIFO lot details
+                # Create reservation tracking with FIFO lot details BEFORE executing deductions
                 from app.services.reservation_service import ReservationService
-                for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
-                    reservation, error = ReservationService.create_reservation(
-                        inventory_item_id=item_id,
-                        quantity=qty_deducted,
-                        order_id=order_id,
-                        source_fifo_id=fifo_entry_id,
-                        unit_cost=cost_per_unit,
-                        customer=customer,
-                        sale_price=sale_price,
-                        notes=notes or f"Reserved for order {order_id}"
-                    )
-                    if error:
-                        raise ValueError(f"Failed to create reservation: {error}")
+                reservations_created = []
+                try:
+                    for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+                        reservation, error = ReservationService.create_reservation(
+                            inventory_item_id=item_id,
+                            quantity=qty_deducted,
+                            order_id=order_id,
+                            source_fifo_id=fifo_entry_id,
+                            unit_cost=cost_per_unit,
+                            customer=customer,
+                            sale_price=sale_price,
+                            notes=notes or f"Reserved for order {order_id}"
+                        )
+                        if error:
+                            raise ValueError(f"Failed to create reservation: {error}")
+                        reservations_created.append(reservation)
+                except Exception as e:
+                    # If reservation creation fails, don't execute FIFO deductions
+                    raise ValueError(f"Reservation creation failed, no inventory changes made: {str(e)}")
+
+            # Execute the deduction plan using FIFO service ONLY after reservations are created successfully
+            FIFOService.execute_deduction_plan(deduction_plan, item_id)
 
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
