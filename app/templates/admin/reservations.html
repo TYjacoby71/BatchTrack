@@ -153,7 +153,7 @@ function updateExpirationTimes() {
 
 function confirmSale(orderId) {
     if (confirm(`Confirm sale for order ${orderId}? This will convert the reservation to a completed sale.`)) {
-        fetch(`/admin/reservations/api/reservations/${orderId}/confirm_sale`, {
+        fetch(`/reservations/api/reservations/${orderId}/confirm_sale`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ function confirmSale(orderId) {
 
 function releaseReservation(orderId) {
     if (confirm(`Release reservation for order ${orderId}? This will return the inventory to available stock.`)) {
-        fetch(`/admin/reservations/api/reservations/${orderId}/release`, {
+        fetch(`/reservations/api/reservations/${orderId}/release`, {
             method: 'POST'
         })
         .then(response => response.json())

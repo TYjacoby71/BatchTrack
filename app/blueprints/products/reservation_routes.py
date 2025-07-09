@@ -42,25 +42,25 @@ def list_reservations():
             # Add reservation with additional data for display
             batch_label = None
             lot_number = None
-            
+
             if reservation.source_batch_id and reservation.source_batch:
                 batch_label = reservation.source_batch.label_code
-            
+
             # Get lot information from FIFO entry if available
             if reservation.source_fifo_id:
                 from ...models import InventoryHistory
                 from ...models.product import ProductSKUHistory
-                
+
                 # Try to get lot information from either InventoryHistory or ProductSKUHistory
                 fifo_entry = None
                 if reservation.product_item and reservation.product_item.type == 'product':
                     fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
                 else:
                     fifo_entry = InventoryHistory.query.get(reservation.source_fifo_id)
-                
+
                 if fifo_entry and hasattr(fifo_entry, 'lot_number') and fifo_entry.lot_number:
                     lot_number = fifo_entry.lot_number
-            
+
             reservation_data = {
                 'order_id': reservation.order_id,
                 'quantity': reservation.quantity,
