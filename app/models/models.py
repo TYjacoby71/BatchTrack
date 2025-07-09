@@ -72,9 +72,9 @@ class User(UserMixin, db.Model):
 
     def has_permission(self, permission_name):
         """Check if user has a specific permission"""
-        if not self.role:
+        if not self.user_role:
             return False
-        return self.role.has_permission(permission_name)
+        return self.user_role.has_permission(permission_name)
 
     def __repr__(self):
         return f'<User {self.username}>'
