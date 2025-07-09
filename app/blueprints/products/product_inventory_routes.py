@@ -480,26 +480,33 @@ def process_return_webhook():
 
 # Removed duplicate route - functionality consolidated into /inventory/add-from-batch
 
-@product_inventory_bp.route('/create-reservation', methods=['POST'])
+@product_inventory_bp.route('/create_manual_reservation', methods=['POST'])
 @login_required
 def create_manual_reservation():
-    """Create a manual reservation (admin only)"""
+    """Create a manual reservation (requires reserve_inventory permission)"""
+    # Check permission
+    if not current_user.can_reserve_inventory():
+        if request.is_json:
+            return jsonify({'error': 'Insufficient permissions to create reservations'}), 403
+        flash('You do not have permission to create reservations', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
     data = request.get_json() if request.is_json else request.form
-    
+
     inventory_item_id = data.get('inventory_item_id')
     quantity = data.get('quantity')
     order_id = data.get('order_id')
     customer = data.get('customer')
     sale_price = data.get('sale_price')
     notes = data.get('notes', '')
-    
+
     if not all([inventory_item_id, quantity, order_id]):
         error_msg = 'Inventory item, quantity, and order ID are required'
         if request.is_json:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
         return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
-    
+
     try:
         # Use centralized inventory adjustment for reservation
         success = process_inventory_adjustment(
@@ -514,7 +521,7 @@ def create_manual_reservation():
             sale_price=float(sale_price) if sale_price else None,
             order_id=order_id
         )
-        
+
         if success:
             if request.is_json:
                 return jsonify({'success': True, 'message': 'Reservation created successfully'})
@@ -523,7 +530,7 @@ def create_manual_reservation():
             if request.is_json:
                 return jsonify({'error': 'Failed to create reservation'}), 500
             flash('Failed to create reservation', 'error')
-            
+
     except Exception as e:
         db.session.rollback()
         error_msg = f'Error creating reservation: {str(e)}'
@@ -531,7 +538,7 @@ def create_manual_reservation():
         if request.is_json:
             return jsonify({'error': error_msg}), 500
         flash(error_msg, 'error')
-    
+
     if not request.is_json:
         return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 

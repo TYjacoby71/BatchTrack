@@ -70,6 +70,24 @@ class User(UserMixin, db.Model):
         """Check if user is the owner of their organization"""
         return self.is_owner
 
+    def has_permission(self, permission_name):
+        """Check if user has a specific permission"""
+        if not self.role:
+            return False
+        return self.role.has_permission(permission_name)
+
+    def can_reserve_inventory(self):
+        """Check if user can create manual reservations"""
+        # Organization owners can always reserve
+        if self.organization and self.organization.owner and self.organization.owner.id == self.id:
+            return True
+
+        # Check for specific reserve inventory permission
+        return self.has_permission('reserve_inventory')
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
 class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)

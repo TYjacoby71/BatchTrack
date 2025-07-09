@@ -15,6 +15,9 @@ reservation_api_bp = Blueprint('reservation_api', __name__, url_prefix='/api/res
 @login_required
 def create_reservation():
     """Create a new reservation - deducts from available inventory"""
+    # Check permission
+    if not current_user.can_reserve_inventory():
+        return jsonify({'error': 'Insufficient permissions to create reservations'}), 403
     data = request.get_json()
     
     # Validate required fields
