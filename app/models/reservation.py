@@ -23,6 +23,7 @@ class Reservation(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     unit_cost = db.Column(db.Float, nullable=True)
     sale_price = db.Column(db.Float, nullable=True)
+    customer = db.Column(db.String(128), nullable=True)
     
     # SOURCE TRACKING (which FIFO batch this came from)
     source_fifo_id = db.Column(db.Integer, nullable=True)  # Reference to the original FIFO entry
