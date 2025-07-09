@@ -215,4 +215,3 @@ def create_app():
     register_commands(app)
 
     return app
-```
