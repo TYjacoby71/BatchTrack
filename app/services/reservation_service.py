@@ -14,7 +14,7 @@ class ReservationService:
         This should only be called AFTER FIFO deduction has been calculated and executed
         """
         from app.models.product import ProductSKUHistory
-        
+
         product_item = InventoryItem.query.get(inventory_item_id)
         if not product_item or product_item.type != 'product':
             return None, "Item is not a product or not found"
@@ -55,7 +55,7 @@ class ReservationService:
         This is the ONLY method that should handle unreserved operations
         """
         from app.models.product import ProductSKUHistory
-        
+
         # Find active reservations for this order
         reservations = Reservation.query.filter_by(
             order_id=order_id,
@@ -66,12 +66,12 @@ class ReservationService:
             return False, f"No active reservations found for order {order_id}"
 
         total_released = 0
-        
+
         for reservation in reservations:
             # Validate this is a product reservation
             if not reservation.product_item or reservation.product_item.type != 'product':
                 continue
-                
+
             # Find the original ProductSKUHistory entry to credit back to
             source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
             if not source_entry:
@@ -101,13 +101,13 @@ class ReservationService:
 
             # Update inventory item quantity
             reservation.product_item.quantity += reservation.quantity
-            
+
             # Update reserved item quantity
             reservation.reserved_item.quantity -= reservation.quantity
 
             # Mark reservation as released
             reservation.mark_released()
-            
+
             total_released += reservation.quantity
 
         try:
@@ -116,58 +116,6 @@ class ReservationService:
         except Exception as e:
             db.session.rollback()
             return False, f"Error releasing reservations: {str(e)}"
-
-    @staticmethod
-    def create_reservation(inventory_item_id, quantity, order_id, customer=None, sale_price=None, notes=""):
-        """Create a new product reservation"""
-        product_item = InventoryItem.query.get(inventory_item_id)
-        if not product_item:
-            return None, "Product item not found"
-
-        if product_item.quantity < quantity:
-            return None, "Insufficient quantity available"
-
-        # Check if a reserved item exists; create one if not
-        reserved_item = ReservationService.get_reserved_item_for_product(inventory_item_id)
-        if not reserved_item:
-            return None, "Failed to get or create reserved item"
-
-        # Adjust quantities in both the product item and the reserved item
-        product_item.quantity -= quantity
-        reserved_item.quantity += quantity
-
-        # Record the transaction in inventory history
-        history_entry = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            change_type='reserved',
-            quantity_change=-quantity,
-            remaining_quantity=product_item.quantity,
-            unit=product_item.unit,
-            note=f"Reserved {quantity} for order {order_id}",
-            created_by=current_user.id if current_user.is_authenticated else None
-        )
-        db.session.add(history_entry)
-
-        # Create the reservation record
-        reservation = Reservation(
-            product_item_id=inventory_item_id,
-            reserved_item_id=reserved_item.id,
-            quantity=quantity,
-            order_id=order_id,
-            customer=customer,
-            sale_price=sale_price,
-            status='active',
-            notes=notes,
-            source_fifo_id = history_entry.id
-        )
-        db.session.add(reservation)
-
-        try:
-            db.session.commit()
-            return reservation, None
-        except Exception as e:
-            db.session.rollback()
-            return None, str(e)
 
     @staticmethod
     def cancel_reservation(reservation_id):
