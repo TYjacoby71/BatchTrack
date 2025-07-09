@@ -1,87 +1,121 @@
 from flask import current_app
 from flask_login import current_user
-from ..models import db, InventoryItem, InventoryHistory, Reservation
-from .inventory_adjustment import process_inventory_adjustment
+from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
 
 class ReservationService:
-    """Service for managing product reservations"""
+    """Service for managing product reservations - ONLY handles products, never raw inventory"""
 
     @staticmethod
-    def handle_unreserved(inventory_item_id, quantity, order_id, notes, created_by):
+    def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):
         """
-        Handle unreserved operations by crediting back to source lots from reservations
+        Create a new product reservation by deducting from specific FIFO lot
+        This should only be called AFTER FIFO deduction has been calculated and executed
         """
         from app.models.product import ProductSKUHistory
+        
+        product_item = InventoryItem.query.get(inventory_item_id)
+        if not product_item or product_item.type != 'product':
+            return None, "Item is not a product or not found"
 
-        item = InventoryItem.query.get(inventory_item_id)
-        if not item:
-            return False
+        # Get or create reserved item
+        reserved_item = ReservationService.get_reserved_item_for_product(inventory_item_id)
+        if not reserved_item:
+            return None, "Failed to get or create reserved item"
 
+        # Create the reservation record tracking the FIFO source
+        reservation = Reservation(
+            product_item_id=inventory_item_id,
+            reserved_item_id=reserved_item.id,
+            quantity=quantity,
+            unit=product_item.unit,
+            unit_cost=unit_cost,
+            sale_price=sale_price,
+            order_id=order_id,
+            customer=customer,
+            source=source,
+            status='active',
+            notes=notes,
+            source_fifo_id=source_fifo_id,  # Track which FIFO lot this came from
+            created_by=current_user.id if current_user.is_authenticated else None,
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
+        )
+        db.session.add(reservation)
+
+        # Update reserved item quantity
+        reserved_item.quantity += quantity
+
+        return reservation, None
+
+    @staticmethod
+    def release_reservation(order_id):
+        """
+        Release reservations by crediting back to original FIFO lots
+        This is the ONLY method that should handle unreserved operations
+        """
+        from app.models.product import ProductSKUHistory
+        
         # Find active reservations for this order
         reservations = Reservation.query.filter_by(
-            product_item_id=inventory_item_id,
             order_id=order_id,
             status='active'
         ).all()
 
         if not reservations:
-            print(f"No active reservations found for item {inventory_item_id}, order {order_id}")
-            return False
+            return False, f"No active reservations found for order {order_id}"
 
-        remaining_to_unreserve = quantity
-
-        # Credit back to original FIFO entries
+        total_released = 0
+        
         for reservation in reservations:
-            if remaining_to_unreserve <= 0:
-                break
+            # Validate this is a product reservation
+            if not reservation.product_item or reservation.product_item.type != 'product':
+                continue
+                
+            # Find the original ProductSKUHistory entry to credit back to
+            source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+            if not source_entry:
+                print(f"Warning: Source FIFO entry {reservation.source_fifo_id} not found for reservation")
+                continue
 
-            unreserve_amount = min(reservation.quantity, remaining_to_unreserve)
+            # Credit back to the original lot's remaining_quantity
+            source_entry.remaining_quantity += reservation.quantity
+            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
 
-            # Find the original FIFO entry and credit it back
-            original_entry = InventoryHistory.query.get(reservation.source_fifo_id)
+            # Create ProductSKUHistory entry showing the credit back
+            credit_entry = ProductSKUHistory(
+                inventory_item_id=reservation.product_item_id,
+                quantity_change=reservation.quantity,  # POSITIVE - adding back
+                remaining_quantity=0,  # This is an audit entry, not a FIFO lot
+                change_type='unreserved',
+                unit=reservation.unit,
+                unit_cost=reservation.unit_cost,
+                notes=f"Released reservation - credited back to lot {reservation.source_fifo_id}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                order_id=order_id,
+                fifo_reference_id=reservation.source_fifo_id,
+                fifo_code=generate_fifo_code(),
+                organization_id=current_user.organization_id if current_user.is_authenticated else None
+            )
+            db.session.add(credit_entry)
 
+            # Update inventory item quantity
+            reservation.product_item.quantity += reservation.quantity
+            
+            # Update reserved item quantity
+            reservation.reserved_item.quantity -= reservation.quantity
 
-            if original_entry:
-                # Credit back to the original FIFO entry
-                original_entry.remaining_quantity += unreserve_amount
-                print(f"Credited {unreserve_amount} back to lot {original_entry.fifo_code}")
-
-                # Create history entry for the unreserved operation
-
-                history_entry = InventoryHistory(
-                    inventory_item_id=inventory_item_id,
-                    change_type='unreserved',
-                    quantity_change=unreserve_amount,
-                    remaining_quantity=0,  # This is a summary entry
-                    unit=item.unit,
-                    note=f"{notes} - credited back to lot {original_entry.fifo_code}",
-                    created_by=created_by,
-                    fifo_reference_id=original_entry.id,
-                    fifo_code=generate_fifo_code()
-                )
-
-
-                db.session.add(history_entry)
-
-                # Update reservation status
-                reservation.quantity -= unreserve_amount
-                if reservation.quantity <= 0:
-                    reservation.status = 'released'
-
-                remaining_to_unreserve -= unreserve_amount
-
-        # Update inventory quantity
-        item.quantity += quantity
+            # Mark reservation as released
+            reservation.mark_released()
+            
+            total_released += reservation.quantity
 
         try:
             db.session.commit()
-            return True
+            return True, f"Released {total_released} units for order {order_id}"
         except Exception as e:
             db.session.rollback()
-            print(f"Error in handle_unreserved: {e}")
-            return False
+            return False, f"Error releasing reservations: {str(e)}"
 
     @staticmethod
     def create_reservation(inventory_item_id, quantity, order_id, customer=None, sale_price=None, notes=""):

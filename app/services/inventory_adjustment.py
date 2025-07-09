@@ -93,16 +93,9 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Handle reservation creation - deduct from available inventory
             qty_change = -abs(quantity)
         elif change_type == 'unreserved':
-        # Handle unreserved operations using reservation service
-            from app.services.reservation_service import ReservationService
-            success = ReservationService.handle_unreserved(
-                inventory_item_id=item_id,
-                quantity=abs(quantity),  # Ensure positive for crediting back
-                order_id=order_id,
-                notes=notes or f"Unreserved inventory for order {order_id}",
-                created_by=created_by
-            )
-            return success
+            # Unreserved operations should only be handled by ReservationService.release_reservation()
+            # This should not be called directly through inventory adjustment
+            raise ValueError("Unreserved operations must use ReservationService.release_reservation()")
         elif change_type == 'returned':
             qty_change = quantity
         else:
@@ -158,11 +151,25 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             # Handle reservations specially
             if change_type == 'reserved':
+                # Only products can be reserved
+                if item.type != 'product':
+                    raise ValueError("Only products can be reserved, not raw inventory")
+                
                 # Create reservation tracking with FIFO lot details
-                FIFOService.create_reservation_tracking(
-                    item_id, deduction_plan, order_id, notes,
-                    created_by=created_by, customer=customer, sale_price=sale_price
-                )
+                from app.services.reservation_service import ReservationService
+                for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+                    reservation, error = ReservationService.create_reservation(
+                        inventory_item_id=item_id,
+                        quantity=qty_deducted,
+                        order_id=order_id,
+                        source_fifo_id=fifo_entry_id,
+                        unit_cost=cost_per_unit,
+                        customer=customer,
+                        sale_price=sale_price,
+                        notes=notes or f"Reserved for order {order_id}"
+                    )
+                    if error:
+                        raise ValueError(f"Failed to create reservation: {error}")
 
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
@@ -177,13 +184,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 FIFOService.handle_refund_credits(
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
-            elif change_type in ['release_reservation']:
-                # Handle unreserved operations - credit back to source lots
-                success = FIFOService.handle_unreserved_credit(
-                    item_id, qty_change, order_id, notes, created_by
-                )
-                if not success:
-                    raise ValueError("Could not find source lot to credit back to")
+            
             else:
                 # Use FIFO service for all additions - it routes to the correct history table
                 FIFOService.add_fifo_entry(

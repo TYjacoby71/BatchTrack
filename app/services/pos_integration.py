@@ -6,6 +6,7 @@ from sqlalchemy import func, and_
 from ..models import db, InventoryItem, InventoryHistory, Reservation
 from .inventory_adjustment import process_inventory_adjustment
 from app.blueprints.fifo.services import FIFOService
+from app.services.reservation_service import ReservationService
 
 class POSIntegrationService:
     """Service for integrating with POS systems like Shopify, Etsy, etc."""
@@ -140,85 +141,17 @@ class POSIntegrationService:
         """
         try:
             print(f"DEBUG POS: Starting release_reservation for order_id: {order_id}")
+            print(f"DEBUG POS: Delegating to ReservationService.release_reservation")
 
-            # Find active reservations for this order
-            active_reservations = Reservation.query.filter(
-                and_(
-                    Reservation.order_id == order_id,
-                    Reservation.status == 'active'
-                )
-            ).all()
+            # Use the centralized reservation service
+            success, message = ReservationService.release_reservation(order_id)
 
-            print(f"DEBUG POS: Found {len(active_reservations)} active reservations")
+            if success:
+                print(f"DEBUG POS: Success - {message}")
+            else:
+                print(f"DEBUG POS: Failed - {message}")
 
-            if not active_reservations:
-                return False, f"No active reservations found for order {order_id}"
-
-            total_released = 0.0
-
-            for i, reservation in enumerate(active_reservations):
-                print(f"DEBUG POS: Processing reservation {i+1}")
-                print(f"DEBUG POS: Reservation ID: {reservation.id}")
-                print(f"DEBUG POS: Reserved Item: {reservation.reserved_item}")
-                print(f"DEBUG POS: Source FIFO ID: {reservation.source_fifo_id}")
-
-                if reservation.reserved_item:
-                    # Mark reservation as released
-                    reservation.mark_released()
-                    print(f"DEBUG POS: Marked reservation as released")
-
-                    # Credit back to ORIGINAL product's FIFO history
-                    reserved_item = reservation.reserved_item
-                    original_product_item = reservation.product_item
-
-                    # 1. Log the release in reserved item FIFO (for audit)
-                    print(f"DEBUG POS: Adding FIFO entry for reserved item release")
-                    try:
-                        FIFOService.add_fifo_entry(
-                            inventory_item_id=reserved_item.id,
-                            quantity=-reservation.quantity,
-                            change_type='unreserved',
-                            unit=reservation.unit,
-                            notes=f"Released reservation for order {order_id}",
-                            cost_per_unit=reservation.unit_cost,
-                            created_by=current_user.id if current_user.is_authenticated else None,
-                            order_id=order_id,
-                            fifo_reference_id=reservation.source_fifo_id
-                        )
-                        print(f"DEBUG POS: Reserved item FIFO entry added successfully")
-                    except Exception as fifo_error:
-                        print(f"DEBUG POS: Error adding reserved item FIFO entry: {str(fifo_error)}")
-                        raise fifo_error
-
-                    # 2. Credit back to ORIGINAL product using reservation service
-                    if original_product_item and original_product_item.type == 'product':
-                        print(f"DEBUG POS: Using reservation service to credit back to original product")
-                        try:
-                            from app.services.reservation_service import ReservationService
-                            success = ReservationService.handle_unreserved(
-                                inventory_item_id=original_product_item.id,
-                                quantity=reservation.quantity,
-                                order_id=order_id,
-                                notes=f"Credited back from released reservation for order {order_id}",
-                                created_by=current_user.id if current_user.is_authenticated else None
-                            )
-                            if success:
-                                print(f"DEBUG POS: Original product credit successful")
-                            else:
-                                print(f"DEBUG POS: Original product credit failed")
-                        except Exception as service_error:
-                            print(f"DEBUG POS: Error using reservation service: {str(service_error)}")
-                            raise service_error
-
-                    total_released += reservation.quantity
-                    print(f"DEBUG POS: Total released so far: {total_released}")
-                else:
-                    print(f"DEBUG POS: WARNING - No reserved_item found for reservation {reservation.id}")
-
-            print(f"DEBUG POS: Committing database changes")
-            db.session.commit()
-            print(f"DEBUG POS: Success - Released {total_released} units")
-            return True, f"Released {total_released} units for order {order_id}"
+            return success, message
 
         except Exception as e:
             print(f"DEBUG POS: Exception in release_reservation: {str(e)}")
