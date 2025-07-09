@@ -64,9 +64,9 @@ def create_app():
     from .routes import tag_manager_routes
     # Register blueprints
     from .blueprints.admin import admin_bp
-    from .blueprints.admin.reservation_routes import reservation_admin_bp
+    from .blueprints.admin.reservation_routes import reservation_bp
     app.register_blueprint(admin_bp,  url_prefix='/admin')
-    app.register_blueprint(reservation_admin_bp, url_prefix='/admin/reservations')
+    app.register_blueprint(reservation_bp, url_prefix='/admin/reservations')
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
