@@ -89,7 +89,7 @@ def seed_roles():
                 'alerts.show_timer_alerts', 'alerts.show_batch_alerts', 'alerts.show_expiration_alerts',
                 'alerts.show_low_stock_alerts', 'alerts.max_dashboard_alerts',
                 'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve',
+                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
                 'products.view', 'products.edit', 'products.create',
                 'recipes.view', 'recipes.edit', 'recipes.create',
                 'settings.view', 'settings.edit', 'dashboard.view',
@@ -130,14 +130,18 @@ def seed_roles():
             role = Role(name=role_data['name'], description=role_data['description'])
             db.session.add(role)
             db.session.commit()
+        else:
+            role = existing_role
+            # Clear existing permissions and re-add them
+            role.permissions.clear()
 
-            # Add permissions to role
-            for perm_name in role_data['permissions']:
-                permission = Permission.query.filter_by(name=perm_name).first()
-                if permission:
-                    role.permissions.append(permission)
+        # Add permissions to role
+        for perm_name in role_data['permissions']:
+            permission = Permission.query.filter_by(name=perm_name).first()
+            if permission and permission not in role.permissions:
+                role.permissions.append(permission)
 
-            db.session.commit()
+        db.session.commit()
 
 def seed_roles_and_permissions():
     """Seed both roles and permissions"""
