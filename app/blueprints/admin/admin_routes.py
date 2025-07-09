@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, url_for, request, flash, render_template
 from flask_login import login_required
-from ...models import ProductInventory, db, User
+from ...models import db, User
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -19,7 +19,8 @@ def cleanup_tools():
 def archive_zeroed_inventory():
     """Archive all inventory entries with zero quantity"""
     try:
-        zero_rows = ProductInventory.query.filter(ProductInventory.quantity <= 0).all()
+        from ...models import InventoryItem
+        zero_rows = InventoryItem.query.filter(InventoryItem.quantity <= 0).all()
         count = len(zero_rows)
         for row in zero_rows:
             db.session.delete(row)

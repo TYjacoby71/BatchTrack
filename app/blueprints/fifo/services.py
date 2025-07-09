@@ -215,8 +215,9 @@ class FIFOService:
 
     @staticmethod
     def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
-                      cost_per_unit=None, expiration_date=None, shelf_life_days=None, 
-                      batch_id=None, created_by=None, **kwargs):
+                      cost_per_unit=None, created_by=None, batch_id=None, 
+                      expiration_date=None, shelf_life_days=None, order_id=None,
+                      source=None, fifo_reference_id=None, **kwargs):
         """
         Add a new FIFO entry for positive inventory changes
         Routes to appropriate history table based on item type
@@ -253,7 +254,7 @@ class FIFOService:
                 fifo_code=fifo_code,
                 customer=kwargs.get('customer'),
                 sale_price=kwargs.get('sale_price'),
-                order_id=kwargs.get('order_id'),
+                order_id=order_id,
                 organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
             )
         else:

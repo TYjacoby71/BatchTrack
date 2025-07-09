@@ -62,6 +62,11 @@ def create_app():
     from .routes import bulk_stock_routes
     from .routes import fault_log_routes
     from .routes import tag_manager_routes
+    # Register blueprints
+    from .blueprints.admin import admin_bp
+    from .blueprints.admin.reservation_routes import reservation_bp
+    app.register_blueprint(admin_bp,  url_prefix='/admin')
+    app.register_blueprint(reservation_bp, url_prefix='/admin/reservations')
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -92,7 +97,6 @@ def create_app():
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(admin_bp,  url_prefix='/admin')
     app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
@@ -115,7 +119,7 @@ def create_app():
     # Setup logging
     from .utils.unit_utils import setup_logging
     setup_logging(app)
-    
+
     # Enable debug logging in development
     if app.debug:
         import logging

@@ -1,9 +1,10 @@
+
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple
 from flask_login import current_user
 from sqlalchemy import func, and_
 
-from ..models import db, InventoryItem, InventoryHistory
+from ..models import db, InventoryItem, InventoryHistory, Reservation
 from .inventory_adjustment import process_inventory_adjustment
 from app.blueprints.fifo.services import FIFOService
 
@@ -11,14 +12,18 @@ class POSIntegrationService:
     """Service for integrating with POS systems like Shopify, Etsy, etc."""
 
     @staticmethod
-    def reserve_inventory(item_id: int, quantity: float, order_id: str, notes: str = None) -> tuple[bool, str]:
+    def reserve_inventory(item_id: int, quantity: float, order_id: str, source: str = "shopify", 
+                         notes: str = None, sale_price: float = None, expires_in_hours: int = None) -> tuple[bool, str]:
         """
-        Reserve inventory for pending orders using separate reserved inventory item
+        Reserve inventory using new reservation model - acts like regular deduction
         Args:
-            item_id: Inventory item ID
+            item_id: Inventory item ID (product type)
             quantity: Quantity to reserve
-            order_id: Order identifier
+            order_id: Order identifier (required)
+            source: Source system ("shopify", "manual", etc.)
             notes: Optional notes
+            sale_price: Expected sale price
+            expires_in_hours: Hours until reservation expires
 
         Returns:
             (success, message)
@@ -26,11 +31,11 @@ class POSIntegrationService:
         try:
             # Get the original inventory item
             original_item = InventoryItem.query.get(item_id)
-            if not original_item:
-                return False, "Item not found"
+            if not original_item or original_item.type != 'product':
+                return False, "Product item not found"
 
-            # Check if we have enough available inventory
-            available = original_item.quantity
+            # Check if we have enough available inventory (ignoring expired lots)
+            available = original_item.available_quantity  # This should exclude expired
             if available < quantity:
                 return False, f"Insufficient inventory. Available: {available}, Requested: {quantity}"
 
@@ -58,40 +63,69 @@ class POSIntegrationService:
                 db.session.add(reserved_item)
                 db.session.flush()
 
-            # Deduct from original item
-            original_success = process_inventory_adjustment(
+            # Get the source FIFO entry for tracking
+            fifo_entries = FIFOService.get_fifo_entries(item_id)
+            source_fifo_id = None
+            source_batch_id = None
+            
+            if fifo_entries:
+                # Use the oldest available entry for reference
+                oldest_entry = fifo_entries[0]
+                source_fifo_id = oldest_entry.id
+                source_batch_id = getattr(oldest_entry, 'batch_id', None)
+
+            # 1. DEDUCT from original item using regular FIFO (no remaining_quantity tracking)
+            deduction_success = process_inventory_adjustment(
                 item_id=item_id,
                 quantity=quantity,
                 change_type='reserved',
-                notes=f"Reserved for order {order_id}. {notes or ''}",
+                notes=f"Reserved for order {order_id} ({source}). {notes or ''}",
                 order_id=order_id,
                 created_by=current_user.id if current_user.is_authenticated else None
             )
 
-            if not original_success:
+            if not deduction_success:
                 return False, "Failed to deduct from available inventory"
 
-            # Add to reserved item
-            reserved_success = process_inventory_adjustment(
-                item_id=reserved_item.id,
+            # 2. CREATE reservation line item (this is now the source of truth)
+            expires_at = None
+            if expires_in_hours:
+                expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+
+            reservation = Reservation(
+                order_id=order_id,
+                product_item_id=item_id,
+                reserved_item_id=reserved_item.id,
+                quantity=quantity,
+                unit=original_item.unit,
+                unit_cost=original_item.cost_per_unit,
+                sale_price=sale_price,
+                source_fifo_id=source_fifo_id,
+                source_batch_id=source_batch_id,
+                source=source,
+                expires_at=expires_at,
+                notes=notes,
+                created_by=current_user.id if current_user.is_authenticated else None,
+                organization_id=current_user.organization_id if current_user.is_authenticated else original_item.organization_id
+            )
+            db.session.add(reservation)
+
+            # 3. UPDATE reserved item quantity (for display purposes)
+            reserved_item.quantity += quantity
+
+            # 4. LOG the reservation in FIFO for audit (no remaining_quantity)
+            FIFOService.add_fifo_entry(
+                inventory_item_id=reserved_item.id,
                 quantity=quantity,
                 change_type='reserved_allocation',
-                notes=f"Reserved allocation for order {order_id}. {notes or ''}",
+                unit=original_item.unit,
+                notes=f"Reserved for order {order_id} from batch. {notes or ''}",
+                cost_per_unit=original_item.cost_per_unit,
+                created_by=current_user.id if current_user.is_authenticated else None,
                 order_id=order_id,
-                created_by=current_user.id if current_user.is_authenticated else None
+                source=source,
+                fifo_reference_id=source_fifo_id
             )
-
-            if not reserved_success:
-                # Rollback the original deduction
-                process_inventory_adjustment(
-                    item_id=item_id,
-                    quantity=quantity,
-                    change_type='unreserved',
-                    notes=f"Rollback failed reservation for order {order_id}",
-                    order_id=order_id,
-                    created_by=current_user.id if current_user.is_authenticated else None
-                )
-                return False, "Failed to allocate to reserved inventory"
 
             db.session.commit()
             return True, f"Reserved {quantity} units for order {order_id}"
@@ -103,121 +137,123 @@ class POSIntegrationService:
     @staticmethod
     def release_reservation(order_id: str) -> tuple[bool, str]:
         """
-        Release all reservations for an order by moving from reserved back to available
+        Release all reservations for an order - credit back to available inventory
         Args:
             order_id: Order identifier to release
 
         Returns:
             (success, message)
         """
-        # Find all reserved items for this order
-        reserved_entries = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.change_type == 'reserved_allocation',
-                InventoryHistory.order_id == order_id,
-                InventoryHistory.remaining_quantity > 0
-            )
-        ).all()
+        try:
+            # Find all active reservations for this order
+            active_reservations = Reservation.query.filter(
+                and_(
+                    Reservation.order_id == order_id,
+                    Reservation.status == 'active'
+                )
+            ).all()
 
-        if not reserved_entries:
-            return False, f"No active reservations found for order {order_id}"
+            if not active_reservations:
+                return False, f"No active reservations found for order {order_id}"
 
-        total_released = 0
-        for entry in reserved_entries:
-            reserved_item = InventoryItem.query.get(entry.inventory_item_id)
-            if not reserved_item or reserved_item.type != 'product-reserved':
-                continue
+            total_released = 0
+            for reservation in active_reservations:
+                # Get the items
+                original_item = reservation.product_item
+                reserved_item = reservation.reserved_item
 
-            # Find the original product item
-            original_name = reserved_item.name.replace(" (Reserved)", "")
-            original_item = InventoryItem.query.filter_by(
-                name=original_name,
-                type='product',
-                organization_id=reserved_item.organization_id
-            ).first()
+                if not original_item or not reserved_item:
+                    continue
 
-            if not original_item:
-                continue
+                # Credit back to original inventory
+                credit_success = process_inventory_adjustment(
+                    item_id=original_item.id,
+                    quantity=reservation.quantity,
+                    change_type='unreserved',
+                    notes=f"Released reservation for order {order_id}",
+                    order_id=order_id,
+                    created_by=current_user.id if current_user.is_authenticated else None
+                )
 
-            quantity_to_release = entry.remaining_quantity
+                if credit_success:
+                    # Update reserved item quantity
+                    reserved_item.quantity -= reservation.quantity
 
-            # Deduct from reserved item
-            reserved_success = process_inventory_adjustment(
-                item_id=reserved_item.id,
-                quantity=quantity_to_release,
-                change_type='unreserved',
-                notes=f"Released reservation for order {order_id}",
-                order_id=order_id,
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
+                    # Mark reservation as released
+                    reservation.mark_released()
 
-            if not reserved_success:
-                continue
+                    # Log the release in FIFO
+                    FIFOService.add_fifo_entry(
+                        inventory_item_id=reserved_item.id,
+                        quantity=-reservation.quantity,
+                        change_type='unreserved',
+                        unit=reservation.unit,
+                        notes=f"Released reservation for order {order_id}",
+                        cost_per_unit=reservation.unit_cost,
+                        created_by=current_user.id if current_user.is_authenticated else None,
+                        order_id=order_id,
+                        fifo_reference_id=reservation.source_fifo_id
+                    )
 
-            # Add back to original item
-            original_success = process_inventory_adjustment(
-                item_id=original_item.id,
-                quantity=quantity_to_release,
-                change_type='unreserved',
-                notes=f"Released reservation for order {order_id}",
-                order_id=order_id,
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
+                    total_released += reservation.quantity
 
-            if original_success:
-                total_released += quantity_to_release
+            db.session.commit()
+            return True, f"Released {total_released} units for order {order_id}"
 
-        db.session.commit()
-        return True, f"Released {total_released} units for order {order_id}"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error releasing reservation: {str(e)}"
 
     @staticmethod
     def confirm_sale(order_id: str, notes: str = None) -> Tuple[bool, str]:
         """
-        Confirm a sale (convert reservation to actual sale)
+        Convert reservation to actual sale (Shopify fulfillment webhook)
         """
-        reservations = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.order_id == order_id,
-                InventoryHistory.change_type == 'reserved',
-                InventoryHistory.is_reserved == True
-            )
-        ).all()
-
-        if not reservations:
-            return False, "No active reservations found for this order"
-
-        total_sold = 0
-        for reservation in reservations:
-            # Convert reservation to sale
-            item = InventoryItem.query.get(reservation.inventory_item_id)
-            if item:
-                # Update inventory quantity (already deducted from FIFO)
-                item.quantity -= abs(reservation.quantity_change)
-                item.frozen_quantity -= abs(reservation.quantity_change)
-                total_sold += abs(reservation.quantity_change)
-
-                # Create sale history
-                sale_history = InventoryHistory(
-                    inventory_item_id=reservation.inventory_item_id,
-                    change_type='sale',
-                    quantity_change=reservation.quantity_change,  # Keep negative
-                    unit=reservation.unit,
-                    remaining_quantity=0,  # Sales don't create new FIFO entries
-                    fifo_reference_id=reservation.fifo_reference_id,
-                    unit_cost=reservation.unit_cost,
-                    note=f"Sale confirmed for order {order_id}. {notes or ''}",
-                    created_by=current_user.id if current_user.is_authenticated else None,
-                    quantity_used=abs(reservation.quantity_change),  # Track actual consumption
-                    order_id=order_id
+        try:
+            # Find active reservations for this order
+            active_reservations = Reservation.query.filter(
+                and_(
+                    Reservation.order_id == order_id,
+                    Reservation.status == 'active'
                 )
-                db.session.add(sale_history)
+            ).all()
 
-            # Mark reservation as completed
-            reservation.is_reserved = False
-            reservation.note += " (Converted to sale)"
+            if not active_reservations:
+                return False, "No active reservations found for this order"
 
-        db.session.commit()
-        return True, f"Confirmed sale of {total_sold} units"
+            total_sold = 0
+            for reservation in active_reservations:
+                reserved_item = reservation.reserved_item
+                if not reserved_item:
+                    continue
+
+                # Update reserved inventory quantity
+                reserved_item.quantity -= reservation.quantity
+
+                # Mark reservation as converted to sale
+                reservation.mark_converted_to_sale()
+
+                # Create sale entry for audit trail (no remaining_quantity)
+                FIFOService.add_fifo_entry(
+                    inventory_item_id=reserved_item.id,
+                    quantity=-reservation.quantity,
+                    change_type='sale',
+                    unit=reservation.unit,
+                    notes=f"Sale confirmed for order {order_id}. {notes or ''}",
+                    cost_per_unit=reservation.unit_cost,
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    order_id=order_id,
+                    fifo_reference_id=reservation.source_fifo_id
+                )
+
+                total_sold += reservation.quantity
+
+            db.session.commit()
+            return True, f"Confirmed sale of {total_sold} units for order {order_id}"
+
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error confirming sale: {str(e)}"
 
     @staticmethod
     def cleanup_expired_reservations() -> int:
@@ -225,65 +261,63 @@ class POSIntegrationService:
         Clean up expired reservations
         Returns: Number of reservations cleaned up
         """
-        expired = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.change_type == 'reserved',
-                InventoryHistory.is_reserved == True,
-                InventoryHistory.expiration_date < datetime.utcnow()
-            )
-        ).all()
+        try:
+            # Find expired reservations
+            expired_reservations = Reservation.query.filter(
+                and_(
+                    Reservation.status == 'active',
+                    Reservation.expires_at.isnot(None),
+                    Reservation.expires_at < datetime.utcnow()
+                )
+            ).all()
 
-        count = 0
-        for reservation in expired:
-            success, _ = POSIntegrationService.release_reservation(reservation.order_id)
-            if success:
-                count += 1
+            count = 0
+            for reservation in expired_reservations:
+                # Release the expired reservation
+                success, _ = POSIntegrationService.release_reservation(reservation.order_id)
+                if success:
+                    reservation.mark_expired()
+                    count += 1
 
-        return count
+            db.session.commit()
+            return count
+
+        except Exception as e:
+            db.session.rollback()
+            return 0
 
     @staticmethod
     def get_available_quantity(item_id: int) -> float:
         """
-        Get available quantity for POS systems
+        Get available quantity for POS systems (excludes expired lots only)
         """
         item = InventoryItem.query.get(item_id)
         if not item:
             return 0.0
-        return item.calculated_available_quantity
+        return item.available_quantity  # This should exclude expired, not reserved
 
     @staticmethod
-    def process_damage_return_fifo(item_id: int, damage_qty: float, return_qty: float, notes: str = None):
-        """
-        Process damage and return in FIFO order automatically
-        Args:
-            item_id: Inventory item ID
-            damage_qty: Quantity damaged (will be deducted from oldest FIFO)
-            return_qty: Quantity returned (will be added to newest FIFO or create new)
-            notes: Optional notes
-        """
-        try:
-            # Process damage first (FIFO deduction)
-            if damage_qty > 0:
-                process_inventory_adjustment(
-                    item_id=item_id,
-                    quantity=damage_qty,
-                    change_type='damaged',
-                    notes=f"Damaged goods. {notes or ''}",
-                    created_by=current_user.id if current_user.is_authenticated else None
-                )
+    def get_reservations_for_order(order_id: str) -> List[Reservation]:
+        """Get all reservations for a specific order"""
+        return Reservation.query.filter_by(order_id=order_id).all()
 
-            # Process return (add back to inventory)
-            if return_qty > 0:
-                process_inventory_adjustment(
-                    item_id=item_id,
-                    quantity=return_qty,
-                    change_type='manual_addition',  # Creates new FIFO entry
-                    notes=f"Returned goods. {notes or ''}",
-                    created_by=current_user.id if current_user.is_authenticated else None
-                )
+    @staticmethod
+    def get_active_reservations_for_item(item_id: int) -> List[Reservation]:
+        """Get active reservations for a specific product"""
+        return Reservation.query.filter(
+            and_(
+                Reservation.product_item_id == item_id,
+                Reservation.status == 'active'
+            )
+        ).all()
 
-            return True, "Damage and return processed successfully"
-
-        except Exception as e:
-            db.session.rollback()
-            return False, str(e)
+    @staticmethod
+    def get_total_reserved_for_item(item_id: int) -> float:
+        """Get total reserved quantity for a product"""
+        result = db.session.query(func.sum(Reservation.quantity)).filter(
+            and_(
+                Reservation.product_item_id == item_id,
+                Reservation.status == 'active'
+            )
+        ).scalar()
+        return result or 0.0

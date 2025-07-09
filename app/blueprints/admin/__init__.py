@@ -1,6 +1,6 @@
-
 from flask import Blueprint
 
-admin_bp = Blueprint('admin', __name__, template_folder='templates')
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-# Routes will be imported when needed
+from . import admin_routes
+from . import reservation_routes

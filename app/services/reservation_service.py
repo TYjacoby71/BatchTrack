@@ -1,12 +1,12 @@
 
 from flask import current_app
 from flask_login import current_user
-from ..models import db, InventoryItem, InventoryHistory
+from ..models import db, InventoryItem, InventoryHistory, Reservation
 from .inventory_adjustment import process_inventory_adjustment
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 class ReservationService:
-    """Service for managing product reservations using separate inventory items"""
+    """Service for managing product reservations using new reservation model"""
     
     @staticmethod
     def get_reserved_item_for_product(product_item_id):
@@ -61,14 +61,24 @@ class ReservationService:
         if not sku.inventory_item:
             return 0.0
         
-        # Get available quantity
-        available_qty = sku.inventory_item.quantity
+        # Get available quantity (excludes expired)
+        available_qty = sku.inventory_item.available_quantity
         
-        # Get reserved quantity
-        reserved_item = ReservationService.get_reserved_item_for_product(sku.inventory_item.id)
-        reserved_qty = reserved_item.quantity if reserved_item else 0.0
+        # Get reserved quantity from active reservations
+        reserved_qty = ReservationService.get_total_reserved_for_item(sku.inventory_item.id)
         
         return available_qty + reserved_qty
+    
+    @staticmethod
+    def get_total_reserved_for_item(item_id):
+        """Get total reserved quantity for a product from active reservations"""
+        result = db.session.query(func.sum(Reservation.quantity)).filter(
+            and_(
+                Reservation.product_item_id == item_id,
+                Reservation.status == 'active'
+            )
+        ).scalar()
+        return result or 0.0
     
     @staticmethod
     def get_reservation_summary_for_sku(sku):
@@ -81,39 +91,62 @@ class ReservationService:
                 'reservations': []
             }
         
-        available_qty = sku.inventory_item.quantity
-        reserved_item = ReservationService.get_reserved_item_for_product(sku.inventory_item.id)
-        reserved_qty = reserved_item.quantity if reserved_item else 0.0
+        available_qty = sku.inventory_item.available_quantity
         
-        # Get active reservations by order
-        reservations = []
-        if reserved_item:
-            reservation_entries = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == reserved_item.id,
-                    InventoryHistory.change_type == 'reserved_allocation',
-                    InventoryHistory.remaining_quantity > 0,
-                    InventoryHistory.order_id.isnot(None)
-                )
-            ).all()
-            
-            # Group by order_id
-            order_reservations = {}
-            for entry in reservation_entries:
-                order_id = entry.order_id
-                if order_id not in order_reservations:
-                    order_reservations[order_id] = {
-                        'order_id': order_id,
-                        'quantity': 0.0,
-                        'created_at': entry.timestamp
-                    }
-                order_reservations[order_id]['quantity'] += entry.remaining_quantity
-            
-            reservations = list(order_reservations.values())
+        # Get active reservations grouped by order
+        active_reservations = Reservation.query.filter(
+            and_(
+                Reservation.product_item_id == sku.inventory_item.id,
+                Reservation.status == 'active'
+            )
+        ).all()
+        
+        # Group by order_id for display
+        order_reservations = {}
+        total_reserved = 0.0
+        
+        for reservation in active_reservations:
+            order_id = reservation.order_id
+            if order_id not in order_reservations:
+                order_reservations[order_id] = {
+                    'order_id': order_id,
+                    'quantity': 0.0,
+                    'created_at': reservation.created_at,
+                    'expires_at': reservation.expires_at,
+                    'source': reservation.source,
+                    'sale_price': reservation.sale_price
+                }
+            order_reservations[order_id]['quantity'] += reservation.quantity
+            total_reserved += reservation.quantity
+        
+        reservations = list(order_reservations.values())
         
         return {
             'available': available_qty,
-            'reserved': reserved_qty,
-            'total': available_qty + reserved_qty,
+            'reserved': total_reserved,
+            'total': available_qty + total_reserved,
             'reservations': reservations
         }
+
+    @staticmethod
+    def get_reservation_details_for_order(order_id):
+        """Get detailed reservation information for an order"""
+        reservations = Reservation.query.filter_by(order_id=order_id).all()
+        
+        details = []
+        for reservation in reservations:
+            details.append({
+                'id': reservation.id,
+                'product_name': reservation.product_item.name if reservation.product_item else 'Unknown',
+                'quantity': reservation.quantity,
+                'unit': reservation.unit,
+                'unit_cost': reservation.unit_cost,
+                'sale_price': reservation.sale_price,
+                'status': reservation.status,
+                'created_at': reservation.created_at,
+                'expires_at': reservation.expires_at,
+                'source': reservation.source,
+                'source_batch_id': reservation.source_batch_id
+            })
+        
+        return details
