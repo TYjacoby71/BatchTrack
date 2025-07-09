@@ -61,8 +61,12 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if res.batch_id %}
-                                                <span class="badge badge-info">{{ res.batch_id }}</span>
+                                            {% if res.batch_label %}
+                                                <span class="badge badge-info">{{ res.batch_label }}</span>
+                                            {% elif res.source_batch_id %}
+                                                <span class="badge badge-info">Batch {{ res.source_batch_id }}</span>
+                                            {% elif res.batch_id %}
+                                                <span class="badge badge-info">Batch {{ res.batch_id }}</span>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}

@@ -40,11 +40,17 @@ def list_reservations():
                 reservation_groups[sku_name] = []
 
             # Add reservation with additional data for display
+            batch_label = None
+            if reservation.source_batch_id and reservation.source_batch:
+                batch_label = reservation.source_batch.label_code
+            
             reservation_data = {
                 'order_id': reservation.order_id,
                 'quantity': reservation.quantity,
                 'unit': reservation.unit,
                 'batch_id': reservation.source_batch_id,
+                'batch_label': batch_label,
+                'source_batch_id': reservation.source_batch_id,  # Keep both for compatibility
                 'created_at': reservation.created_at,
                 'expires_at': reservation.expires_at,
                 'sale_price': reservation.sale_price,
