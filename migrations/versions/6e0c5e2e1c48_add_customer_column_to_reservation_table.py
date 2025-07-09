@@ -1,3 +1,4 @@
+
 """Add customer column to reservation table
 
 Revision ID: 6e0c5e2e1c48
@@ -17,8 +18,12 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    # Add customer column to existing reservation table
+    with op.batch_alter_table('reservation', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('customer', sa.String(length=128), nullable=True))
 
 
 def downgrade():
-    pass
+    # Remove customer column
+    with op.batch_alter_table('reservation', schema=None) as batch_op:
+        batch_op.drop_column('customer')
