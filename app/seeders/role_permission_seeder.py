@@ -79,7 +79,7 @@ def seed_roles():
         {
             'name': 'developer',
             'description': 'Full system access and development privileges',
-            'permissions': ['dev.dashboard', 'dev.system_admin', 'dev.all_organizations']
+            'permissions': ['dev.dashboard', 'dev.system_admin', 'dev.all_organizations', 'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve']
         },
         {
             'name': 'organization_owner',
