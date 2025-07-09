@@ -1,16 +1,5 @@
 from flask import Blueprint
 
-# Import all product-related blueprints
-from .products import products_bp
-from .api import products_api_bp
-from .product_variants import product_variants_bp
-from .product_inventory_routes import product_inventory_bp
+products_bp = Blueprint('products', __name__, url_prefix='/products')
 
-def register_blueprints(app):
-    app.register_blueprint(products_bp)
-    app.register_blueprint(products_api_bp)
-    app.register_blueprint(product_variants_bp)
-    app.register_blueprint(product_inventory_bp)
-
-# Export all blueprints for external import
-__all__ = ['products_bp', 'products_api_bp', 'product_inventory_bp', 'product_variants_bp', 'register_blueprints']
+from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
