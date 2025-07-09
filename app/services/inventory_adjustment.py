@@ -92,9 +92,17 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         elif change_type == 'reserved':
             # Handle reservation creation - deduct from available inventory
             qty_change = -abs(quantity)
-        elif change_type in ['unreserved', 'release_reservation']:
-            # Handle reservation release - credit back to inventory
-            qty_change = quantity
+        elif change_type == 'unreserved':
+        # Handle unreserved operations using reservation service
+            from app.services.reservation_service import ReservationService
+            success = ReservationService.handle_unreserved(
+                inventory_item_id=item_id,
+                quantity=abs(quantity),  # Ensure positive for crediting back
+                order_id=order_id,
+                notes=notes or f"Unreserved inventory for order {order_id}",
+                created_by=created_by
+            )
+            return success
         elif change_type == 'returned':
             qty_change = quantity
         else:
@@ -169,7 +177,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 FIFOService.handle_refund_credits(
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
-            elif change_type in ['unreserved', 'release_reservation']:
+            elif change_type in ['release_reservation']:
                 # Handle unreserved operations - credit back to source lots
                 success = FIFOService.handle_unreserved_credit(
                     item_id, qty_change, order_id, notes, created_by
