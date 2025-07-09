@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple
 from flask_login import current_user
@@ -67,7 +66,7 @@ class POSIntegrationService:
             fifo_entries = FIFOService.get_fifo_entries(item_id)
             source_fifo_id = None
             source_batch_id = None
-            
+
             if fifo_entries:
                 # Use the oldest available entry for reference
                 oldest_entry = fifo_entries[0]
@@ -135,17 +134,14 @@ class POSIntegrationService:
             return False, f"Error reserving inventory: {str(e)}"
 
     @staticmethod
-    def release_reservation(order_id: str) -> tuple[bool, str]:
+    def release_reservation(order_id: str):
         """
-        Release all reservations for an order - credit back to available inventory
-        Args:
-            order_id: Order identifier to release
-
-        Returns:
-            (success, message)
+        Release reservation - returns inventory to available stock via FIFO credit
         """
         try:
-            # Find all active reservations for this order
+            print(f"DEBUG POS: Starting release_reservation for order_id: {order_id}")
+
+            # Find active reservations for this order
             active_reservations = Reservation.query.filter(
                 and_(
                     Reservation.order_id == order_id,
@@ -153,54 +149,60 @@ class POSIntegrationService:
                 )
             ).all()
 
+            print(f"DEBUG POS: Found {len(active_reservations)} active reservations")
+
             if not active_reservations:
                 return False, f"No active reservations found for order {order_id}"
 
-            total_released = 0
-            for reservation in active_reservations:
-                # Get the items
-                original_item = reservation.product_item
-                reserved_item = reservation.reserved_item
+            total_released = 0.0
 
-                if not original_item or not reserved_item:
-                    continue
+            for i, reservation in enumerate(active_reservations):
+                print(f"DEBUG POS: Processing reservation {i+1}")
+                print(f"DEBUG POS: Reservation ID: {reservation.id}")
+                print(f"DEBUG POS: Reserved Item: {reservation.reserved_item}")
+                print(f"DEBUG POS: Source FIFO ID: {reservation.source_fifo_id}")
 
-                # Credit back to original inventory
-                credit_success = process_inventory_adjustment(
-                    item_id=original_item.id,
-                    quantity=reservation.quantity,
-                    change_type='unreserved',
-                    notes=f"Released reservation for order {order_id}",
-                    order_id=order_id,
-                    created_by=current_user.id if current_user.is_authenticated else None
-                )
-
-                if credit_success:
-                    # Update reserved item quantity
-                    reserved_item.quantity -= reservation.quantity
-
+                if reservation.reserved_item:
                     # Mark reservation as released
                     reservation.mark_released()
+                    print(f"DEBUG POS: Marked reservation as released")
+
+                    # Credit back via FIFO with original reference
+                    reserved_item = reservation.reserved_item
 
                     # Log the release in FIFO
-                    FIFOService.add_fifo_entry(
-                        inventory_item_id=reserved_item.id,
-                        quantity=-reservation.quantity,
-                        change_type='unreserved',
-                        unit=reservation.unit,
-                        notes=f"Released reservation for order {order_id}",
-                        cost_per_unit=reservation.unit_cost,
-                        created_by=current_user.id if current_user.is_authenticated else None,
-                        order_id=order_id,
-                        fifo_reference_id=reservation.source_fifo_id
-                    )
+                    print(f"DEBUG POS: Adding FIFO entry for release")
+                    try:
+                        FIFOService.add_fifo_entry(
+                            inventory_item_id=reserved_item.id,
+                            quantity=-reservation.quantity,
+                            change_type='unreserved',
+                            unit=reservation.unit,
+                            notes=f"Released reservation for order {order_id}",
+                            cost_per_unit=reservation.unit_cost,
+                            created_by=current_user.id if current_user.is_authenticated else None,
+                            order_id=order_id,
+                            fifo_reference_id=reservation.source_fifo_id
+                        )
+                        print(f"DEBUG POS: FIFO entry added successfully")
+                    except Exception as fifo_error:
+                        print(f"DEBUG POS: Error adding FIFO entry: {str(fifo_error)}")
+                        raise fifo_error
 
                     total_released += reservation.quantity
+                    print(f"DEBUG POS: Total released so far: {total_released}")
+                else:
+                    print(f"DEBUG POS: WARNING - No reserved_item found for reservation {reservation.id}")
 
+            print(f"DEBUG POS: Committing database changes")
             db.session.commit()
+            print(f"DEBUG POS: Success - Released {total_released} units")
             return True, f"Released {total_released} units for order {order_id}"
 
         except Exception as e:
+            print(f"DEBUG POS: Exception in release_reservation: {str(e)}")
+            import traceback
+            traceback.print_exc()
             db.session.rollback()
             return False, f"Error releasing reservation: {str(e)}"
 

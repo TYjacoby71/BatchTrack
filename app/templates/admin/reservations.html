@@ -1,9 +1,11 @@
-
 {% extends "layout.html" %}
 
 {% block title %}Reservations - Admin{% endblock %}
 
 {% block content %}
+<!-- CSRF Token for JavaScript -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -40,10 +42,10 @@
                                 </thead>
                                 <tbody>
                                     {% for res in reservations %}
-                                    {% set now = moment() %}
+                                    {% set now = current_time %}
                                     {% set is_expired = res.expires_at and res.expires_at < now %}
                                     {% set is_expiring_soon = res.expires_at and not is_expired and (res.expires_at - now).total_seconds() < 3600 %}
-                                    
+
                                     <tr {% if is_expired %}class="table-danger"{% elif is_expiring_soon %}class="table-warning"{% endif %}>
                                         <td>
                                             <code>{{ res.order_id }}</code>
@@ -62,8 +64,17 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if res.batch_id %}
-                                                <span class="badge badge-info">{{ res.batch_id }}</span>
+                                            {% if res.lot_number %}
+                                                <span class="badge badge-primary">Lot {{ res.lot_number }}</span>
+                                                {% if res.batch_label %}
+                                                    <br><small class="text-muted">{{ res.batch_label }}</small>
+                                                {% endif %}
+                                            {% elif res.batch_label %}
+                                                <span class="badge badge-info">{{ res.batch_label }}</span>
+                                            {% elif res.source_batch_id %}
+                                                <span class="badge badge-info">Batch {{ res.source_batch_id }}</span>
+                                            {% elif res.batch_id %}
+                                                <span class="badge badge-info">Batch {{ res.batch_id }}</span>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}
@@ -121,11 +132,11 @@ function refreshReservations() {
 function updateExpirationTimes() {
     const now = new Date();
     const expirationElements = document.querySelectorAll('.expiration-time');
-    
+
     expirationElements.forEach(element => {
         const expiresAt = new Date(element.dataset.expires);
         const timeDiff = expiresAt - now;
-        
+
         if (timeDiff <= 0) {
             element.className = 'expiration-time text-danger';
             element.innerHTML = 'EXPIRED';
@@ -145,7 +156,7 @@ function updateExpirationTimes() {
 
 function confirmSale(orderId) {
     if (confirm(`Confirm sale for order ${orderId}? This will convert the reservation to a completed sale.`)) {
-        fetch(`/admin/reservations/api/reservations/${orderId}/confirm_sale`, {
+        fetch(`/reservations/api/reservations/${orderId}/confirm_sale`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -172,10 +183,21 @@ function confirmSale(orderId) {
 
 function releaseReservation(orderId) {
     if (confirm(`Release reservation for order ${orderId}? This will return the inventory to available stock.`)) {
-        fetch(`/admin/reservations/api/reservations/${orderId}/release`, {
-            method: 'POST'
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        fetch(`/reservations/api/reservations/${orderId}/release`, {
+            method: 'POST',
+			headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken  // Include CSRF token in headers
+            },
         })
-        .then(response => response.json())
+        .then(response => {
+			if (!response.ok) {
+                console.error('Release failed:', response);
+                return response.json().then(err => {throw err;});
+            }
+			return response.json();
+		})
         .then(data => {
             if (data.success) {
                 alert(data.message);
@@ -186,7 +208,7 @@ function releaseReservation(orderId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error releasing reservation');
+            alert('Error releasing reservation: ' + error);
         });
     }
 }

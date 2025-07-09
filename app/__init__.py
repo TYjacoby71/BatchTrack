@@ -64,10 +64,12 @@ def create_app():
     from .routes import tag_manager_routes
     # Register admin blueprints
     from .blueprints.admin.admin_routes import admin_bp
-    from .blueprints.admin.reservation_routes import reservation_bp
-    from .blueprints.admin.reservation_api_routes import reservation_api_bp
     app.register_blueprint(admin_bp)
-    app.register_blueprint(reservation_bp, url_prefix='/admin/reservations')
+    
+    # Register reservation blueprints (now under products)
+    from .blueprints.products.reservation_routes import reservation_bp
+    from .blueprints.api.reservation_routes import reservation_api_bp
+    app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
 
     # Register all blueprints
