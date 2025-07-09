@@ -3,6 +3,9 @@
 {% block title %}Reservations - Admin{% endblock %}
 
 {% block content %}
+<!-- CSRF Token for JavaScript -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -180,10 +183,21 @@ function confirmSale(orderId) {
 
 function releaseReservation(orderId) {
     if (confirm(`Release reservation for order ${orderId}? This will return the inventory to available stock.`)) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         fetch(`/reservations/api/reservations/${orderId}/release`, {
-            method: 'POST'
+            method: 'POST',
+			headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken  // Include CSRF token in headers
+            },
         })
-        .then(response => response.json())
+        .then(response => {
+			if (!response.ok) {
+                console.error('Release failed:', response);
+                return response.json().then(err => {throw err;});
+            }
+			return response.json();
+		})
         .then(data => {
             if (data.success) {
                 alert(data.message);
@@ -194,7 +208,7 @@ function releaseReservation(orderId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error releasing reservation');
+            alert('Error releasing reservation: ' + error);
         });
     }
 }
