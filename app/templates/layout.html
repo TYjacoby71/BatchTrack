@@ -120,7 +120,7 @@
                     {% if has_role('developer') or has_role('organization_owner') or has_role('manager') %}
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Admin Tools</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('reservation_bp.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}
 
                     {% if has_role('developer') or is_organization_owner() %}
