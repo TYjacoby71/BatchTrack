@@ -171,11 +171,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 )
             elif change_type in ['unreserved', 'release_reservation']:
                 # Handle unreserved operations - credit back to source lots
-                success = FIFOService.handle_unreserved(
+                success = FIFOService.handle_unreserved_credit(
                     item_id, qty_change, order_id, notes, created_by
                 )
                 if not success:
-                    raise ValueError("Could not find reservations to unreserve")
+                    raise ValueError("Could not find source lot to credit back to")
             else:
                 # Use FIFO service for all additions - it routes to the correct history table
                 FIFOService.add_fifo_entry(

@@ -190,25 +190,28 @@ class POSIntegrationService:
                         print(f"DEBUG POS: Error adding reserved item FIFO entry: {str(fifo_error)}")
                         raise fifo_error
 
-                    # 2. Credit back to ORIGINAL product's ProductSKUHistory
-                    if original_product_item and original_product_item.type == 'product':
-                        print(f"DEBUG POS: Adding credit back to original product FIFO")
+                    # 2. Credit back to ORIGINAL source lot using proper service
+                    if original_product_item and original_product_item.type == 'product' and reservation.source_fifo_id:
+                        print(f"DEBUG POS: Using inventory adjustment service to credit back to source lot")
                         try:
-                            FIFOService.add_fifo_entry(
-                                inventory_item_id=original_product_item.id,
-                                quantity=reservation.quantity,  # POSITIVE - adding back
+                            success = process_inventory_adjustment(
+                                item_id=original_product_item.id,
+                                quantity=reservation.quantity,
                                 change_type='unreserved',
                                 unit=reservation.unit,
                                 notes=f"Credited back from released reservation for order {order_id}",
-                                cost_per_unit=reservation.unit_cost,
                                 created_by=current_user.id if current_user.is_authenticated else None,
-                                order_id=order_id,
-                                fifo_reference_id=reservation.source_fifo_id
+                                item_type='product',
+                                order_id=order_id
                             )
-                            print(f"DEBUG POS: Original product credit FIFO entry added successfully")
-                        except Exception as fifo_error:
-                            print(f"DEBUG POS: Error adding original product credit FIFO entry: {str(fifo_error)}")
-                            raise fifo_error
+                            
+                            if not success:
+                                raise Exception("Failed to credit back to source via inventory adjustment")
+                            
+                            print(f"DEBUG POS: Successfully credited back to source lot via inventory adjustment service")
+                        except Exception as adj_error:
+                            print(f"DEBUG POS: Error crediting back via inventory adjustment: {str(adj_error)}")
+                            raise adj_error
 
                     total_released += reservation.quantity
                     print(f"DEBUG POS: Total released so far: {total_released}")

@@ -141,6 +141,55 @@ class FIFOService:
             return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
+    def handle_unreserved_credit(inventory_item_id, quantity, order_id, notes, created_by):
+        """
+        Handle unreserved credit by adding back to the original source lot's remaining_quantity
+        This acts like a refund - targets the specific lot and restores its capacity
+        """
+        from app.models.product import ProductSKUHistory
+        from app.models import Reservation
+        
+        # Find the active reservation to get source_fifo_id
+        reservation = Reservation.query.filter_by(
+            order_id=order_id,
+            product_item_id=inventory_item_id,
+            status='active'
+        ).first()
+        
+        if not reservation or not reservation.source_fifo_id:
+            print(f"DEBUG FIFO: No reservation or source_fifo_id found for order {order_id}")
+            return False
+        
+        # Find the source FIFO entry
+        source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+        if not source_entry:
+            print(f"DEBUG FIFO: Source FIFO entry {reservation.source_fifo_id} not found")
+            return False
+        
+        # Credit back to the source lot's remaining_quantity (like a refund)
+        source_entry.remaining_quantity += quantity
+        print(f"DEBUG FIFO: Credited {quantity} back to source lot {reservation.source_fifo_id}")
+        print(f"DEBUG FIFO: Source lot remaining_quantity now: {source_entry.remaining_quantity}")
+        
+        # Create audit entry showing the credit back
+        credit_entry = ProductSKUHistory(
+            inventory_item_id=inventory_item_id,
+            quantity_used=0,  # No new quantity used
+            remaining_quantity=quantity,  # Show the credit amount
+            change_type='unreserved',
+            unit=source_entry.unit,
+            unit_cost=source_entry.unit_cost,
+            notes=f"Credited back to lot {reservation.source_fifo_id}: {notes}",
+            created_by=created_by,
+            order_id=order_id,
+            organization_id=current_user.organization_id if current_user and current_user.is_authenticated else source_entry.organization_id,
+            fifo_reference_id=reservation.source_fifo_id  # Reference to the source lot
+        )
+        db.session.add(credit_entry)
+        
+        return True
+
+    @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
         """
         Calculate FIFO deduction plan without executing it
