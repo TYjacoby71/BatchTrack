@@ -12,24 +12,49 @@ class FIFOService:
 
         today = datetime.now().date()
 
-        # Use unified InventoryHistory for all item types
-        query = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                # Skip expired entries - they can only be spoiled/trashed
-                db.or_(
-                    InventoryHistory.expiration_date.is_(None),  # Non-perishable
-                    InventoryHistory.expiration_date >= today    # Not expired yet
+        # Check what type of item this is
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return []
+
+        if item.type == 'product':
+            # For products, ONLY query ProductSKUHistory
+            query = ProductSKUHistory.query.filter(
+                and_(
+                    ProductSKUHistory.inventory_item_id == inventory_item_id,
+                    ProductSKUHistory.remaining_quantity > 0,
+                    # Skip expired entries - they can only be spoiled/trashed
+                    db.or_(
+                        ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
+                        ProductSKUHistory.expiration_date >= today    # Not expired yet
+                    )
                 )
             )
-        )
 
-        # Add organization scoping if user is authenticated
-        if current_user and current_user.is_authenticated:
-            query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
 
-        return query.order_by(InventoryHistory.timestamp.asc()).all()
+            return query.order_by(ProductSKUHistory.timestamp.asc()).all()
+        else:
+            # For ingredients/containers, query InventoryHistory
+            query = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == inventory_item_id,
+                    InventoryHistory.remaining_quantity > 0,
+                    # Skip expired entries - they can only be spoiled/trashed
+                    db.or_(
+                        InventoryHistory.expiration_date.is_(None),  # Non-perishable
+                        InventoryHistory.expiration_date >= today    # Not expired yet
+                    )
+                )
+            )
+
+            # Add organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated:
+                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+
+            return query.order_by(InventoryHistory.timestamp.asc()).all()
 
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
