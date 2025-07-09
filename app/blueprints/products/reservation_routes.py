@@ -48,9 +48,17 @@ def list_reservations():
             
             # Get lot information from FIFO entry if available
             if reservation.source_fifo_id:
-                from ...models import FIFOInventoryItem
-                fifo_entry = FIFOInventoryItem.query.get(reservation.source_fifo_id)
-                if fifo_entry and fifo_entry.lot_number:
+                from ...models import InventoryHistory
+                from ...models.product import ProductSKUHistory
+                
+                # Try to get lot information from either InventoryHistory or ProductSKUHistory
+                fifo_entry = None
+                if reservation.product_item and reservation.product_item.type == 'product':
+                    fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+                else:
+                    fifo_entry = InventoryHistory.query.get(reservation.source_fifo_id)
+                
+                if fifo_entry and hasattr(fifo_entry, 'lot_number') and fifo_entry.lot_number:
                     lot_number = fifo_entry.lot_number
             
             reservation_data = {
