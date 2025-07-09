@@ -46,6 +46,9 @@ def seed_permissions():
         
         # Settings permissions
         {'name': 'settings.view', 'description': 'View settings', 'category': 'settings'},
+        
+        # Admin permissions
+        {'name': 'admin.reservations', 'description': 'Manage reservations', 'category': 'admin'},
         {'name': 'settings.edit', 'description': 'Edit settings', 'category': 'settings'},
         
         # Dashboard permissions
