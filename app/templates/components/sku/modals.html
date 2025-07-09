@@ -126,8 +126,6 @@
                             <optgroup label="Manual Adjustments" id="manualGroup" style="display: none;">
                                 <option value="manual_addition">Add Existing Stock</option>
                                 <option value="recount">Recount (Set Total)</option>
-                                <option value="reserved">Reserve for Order</option>
-                                <option value="unreserved">Release Reservation</option>
                             </optgroup>
                         </select>
                     </div>
@@ -244,9 +242,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'reserved':
                         quantityHelp.textContent = 'Enter the quantity to reserve for this order.';
-                        break;
-                    case 'unreserved':
-                        quantityHelp.textContent = 'Enter the quantity to release from reservation.';
                         break;
                     default:
                         quantityHelp.textContent = 'Select an adjustment type to see quantity instructions.';
