@@ -258,38 +258,8 @@ def adjust_sku_inventory(inventory_item_id):
                     created_by=current_user.id
                 )
 
-                # Calculate the actual change for summary entry
-                qty_change = quantity - original_quantity
-
-                # Only create summary entry if there was an actual change
-                if qty_change != 0:
-                    # Use the proper FIFO service instead of manual generation
-                    if qty_change > 0:
-                        # For positive changes, create a proper FIFO entry
-                        FIFOService.add_fifo_entry(
-                            inventory_item_id=inventory_item_id,
-                            quantity=qty_change,
-                            change_type='recount',
-                            unit=unit or sku.unit or 'count',
-                            notes=f"Product recount: {original_quantity} → {quantity}",
-                            cost_per_unit=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
-                            created_by=current_user.id
-                        )
-                    else:
-                        # For negative changes, create summary history using FIFO service
-                        # This ensures consistent FIFO code generation
-                        FIFOService.create_deduction_history(
-                            inventory_item_id=inventory_item_id,
-                            deduction_plan=[(0, abs(qty_change), sku.inventory_item.cost_per_unit if sku.inventory_item else None)],
-                            change_type='recount',
-                            notes=f"Product recount: {original_quantity} → {quantity}",
-                            created_by=current_user.id
-                        )
-
-                db.session.commit()
-                flash('Product inventory recounted successfully', 'success')
-            else:
-                flash('Error performing recount', 'error')
+            db.session.commit()
+            flash('Product inventory recounted successfully', 'success')
         else:
             # Use centralized adjustment service for non-recount operations
             try:
