@@ -53,7 +53,7 @@ class BatchService:
 
             for container_usage in batch.containers:
                 container = container_usage.container
-                final_qty = container_overrides.get(container.container_id, container_usage.quantity_used or 0)
+                final_qty = container_overrides.get(container.id, container_usage.quantity_used or 0)
 
                 if final_qty > 0:
                     # Calculate container capacity in output units
