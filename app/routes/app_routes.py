@@ -132,17 +132,17 @@ def dismiss_alert():
     try:
         data = request.get_json()
         alert_type = data.get('alert_type')
-        
+
         if not alert_type:
             return jsonify({'error': 'Alert type is required'}), 400
-        
+
         # Store dismissed alerts in session
         dismissed_alerts = session.get('dismissed_alerts', [])
         if alert_type not in dismissed_alerts:
             dismissed_alerts.append(alert_type)
             session['dismissed_alerts'] = dismissed_alerts
             session.permanent = True
-        
+
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -165,7 +165,7 @@ def api_dashboard_alerts():
 @login_required
 def user_dashboard():
     # Get low stock and expiration alerts
-    low_stock_ingredients = get_low_stock_ingredients()
+    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
     expiration_summary = ExpirationService.get_expiration_summary()
 
     # Get dismissed alerts from session

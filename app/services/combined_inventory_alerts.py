@@ -10,18 +10,23 @@ class CombinedInventoryAlertService:
     @staticmethod
     def get_low_stock_ingredients():
         """Get all raw ingredients/containers that are below their low stock threshold"""
-        return InventoryItem.query.filter(
+        from flask_login import current_user
+        query = InventoryItem.query.filter(
             and_(
                 InventoryItem.low_stock_threshold > 0,
                 InventoryItem.quantity <= InventoryItem.low_stock_threshold,
                 ~InventoryItem.type.in_(['product', 'product-reserved'])
             )
-        ).all()
+        )
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+        return query.all()
 
     @staticmethod
     def get_low_stock_skus():
         """Get all product SKUs that are below their low stock threshold"""
-        return db.session.query(ProductSKU).join(
+        from flask_login import current_user
+        query = db.session.query(ProductSKU).join(
             InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
         ).filter(
             and_(
@@ -29,19 +34,26 @@ class CombinedInventoryAlertService:
                 ProductSKU.low_stock_threshold > 0,
                 ProductSKU.is_active == True
             )
-        ).all()
+        )
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+        return query.all()
 
     @staticmethod
     def get_out_of_stock_skus():
         """Get all product SKUs that are out of stock"""
-        return db.session.query(ProductSKU).join(
+        from flask_login import current_user
+        query = db.session.query(ProductSKU).join(
             InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
         ).filter(
             and_(
                 InventoryItem.quantity == 0,
                 ProductSKU.is_active == True
             )
-        ).all()
+        )
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+        return query.all()
 
     @staticmethod
     def get_unified_stock_summary() -> Dict:
