@@ -153,7 +153,7 @@ def view_variant(product_id, variant_name):
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
-    # Group SKUs by size_label
+    # Group SKUs by size_label - derive totals from authoritative inventory data
     size_groups = {}
     for sku in skus:
         display_size_label = sku.size_label or "Bulk"
@@ -163,16 +163,16 @@ def view_variant(product_id, variant_name):
             size_groups[key] = {
                 'size_label': display_size_label,
                 'unit': sku.unit,
-                'total_quantity': 0,
+                'total_quantity': 0.0,
                 'skus': []
             }
 
-        # Use inventory_item.quantity if available - this should be the authoritative source
+        # Always derive from inventory_item.quantity as the single source of truth
+        current_quantity = 0.0
         if sku.inventory_item and sku.inventory_item.quantity is not None:
-            size_groups[key]['total_quantity'] += sku.inventory_item.quantity
-        else:
-            size_groups[key]['total_quantity'] += 0
+            current_quantity = float(sku.inventory_item.quantity)
         
+        size_groups[key]['total_quantity'] += current_quantity
         size_groups[key]['skus'].append(sku)
 
     # Get available containers for manual stock addition
