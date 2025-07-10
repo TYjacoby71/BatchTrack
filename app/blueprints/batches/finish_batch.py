@@ -100,15 +100,13 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
 
         # Process inventory adjustment to add the intermediate ingredient
         process_inventory_adjustment(
-            inventory_item=inventory_item,
+            item_id=inventory_item.id,
+            quantity=final_quantity,
             change_type='finished_batch',
-            quantity_change=final_quantity,
             unit=output_unit,
-            reason=f'Batch {batch.label_code} completed',
-            reference_id=batch.id,
-            reference_type='batch',
-            expiration_date=expiration_date,
-            user_id=current_user.id
+            notes=f'Batch {batch.label_code} completed',
+            created_by=current_user.id,
+            custom_expiration_date=expiration_date
         )
 
         logger.info(f"Created intermediate ingredient: {ingredient_name}, quantity: {final_quantity} {output_unit}")
@@ -221,15 +219,13 @@ def _create_container_sku(product, variant, container, expiration_date, batch):
 
         # Add to inventory
         process_inventory_adjustment(
-            inventory_item=inventory_item,
+            item_id=inventory_item.id,
+            quantity=1,  # One container
             change_type='finished_batch',
-            quantity_change=1,  # One container
             unit=inventory_item.unit,
-            reason=f'Batch {batch.label_code} completed',
-            reference_id=batch.id,
-            reference_type='batch',
-            expiration_date=expiration_date,
-            user_id=current_user.id
+            notes=f'Batch {batch.label_code} completed',
+            created_by=current_user.id,
+            custom_expiration_date=expiration_date
         )
 
         return product_sku
@@ -280,15 +276,13 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
 
         # Add bulk quantity to inventory
         process_inventory_adjustment(
-            inventory_item=bulk_sku.inventory_item,
+            item_id=bulk_sku.inventory_item.id,
+            quantity=quantity,
             change_type='finished_batch',
-            quantity_change=quantity,
             unit=unit,
-            reason=f'Batch {batch.label_code} completed - bulk quantity',
-            reference_id=batch.id,
-            reference_type='batch',
-            expiration_date=expiration_date,
-            user_id=current_user.id
+            notes=f'Batch {batch.label_code} completed - bulk quantity',
+            created_by=current_user.id,
+            custom_expiration_date=expiration_date
         )
 
         return bulk_sku
