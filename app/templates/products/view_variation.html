@@ -28,9 +28,9 @@
               {% set total_packaged = 0 %}
               {% for group_key, group in size_groups.items() %}
                 {% if group.size_label == 'Bulk' or not group.size_label %}
-                  {% set total_bulk = total_bulk + group.total_quantity %}
+                  {% set total_bulk = total_bulk + (group.total_quantity or 0) %}
                 {% else %}
-                  {% set total_packaged = total_packaged + group.total_quantity %}
+                  {% set total_packaged = total_packaged + (group.total_quantity or 0) %}
                 {% endif %}
               {% endfor %}
               <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.base_unit }}
@@ -44,27 +44,25 @@
             <div class="col-md-3">
               {% set variant_total_cost = 0 %}
               {% for group_key, group in size_groups.items() %}
-                {% set group_total_cost = 0 %}
                 {% for sku in group.skus %}
-                  {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                  {% if sku.inventory_item and sku.inventory_item.quantity and sku.inventory_item.quantity > 0 %}
                     {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                    {% set group_total_cost = group_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
+                    {% set line_cost = cost_per_unit * sku.inventory_item.quantity %}
+                    {% set variant_total_cost = variant_total_cost + line_cost %}
                   {% endif %}
                 {% endfor %}
-                {% set variant_total_cost = variant_total_cost + group_total_cost %}
               {% endfor %}
               <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
             </div>
             <div class="col-md-3">
               {% set variant_total_value = 0 %}
               {% for group_key, group in size_groups.items() %}
-                {% set group_total_value = 0 %}
                 {% for sku in group.skus %}
-                  {% if sku.inventory_item and sku.inventory_item.quantity > 0 and sku.retail_price %}
-                    {% set group_total_value = group_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                  {% if sku.inventory_item and sku.inventory_item.quantity and sku.inventory_item.quantity > 0 and sku.retail_price %}
+                    {% set line_value = sku.retail_price * sku.inventory_item.quantity %}
+                    {% set variant_total_value = variant_total_value + line_value %}
                   {% endif %}
                 {% endfor %}
-                {% set variant_total_value = variant_total_value + group_total_value %}
               {% endfor %}
               <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
             </div>
@@ -107,11 +105,13 @@
                   {% set group_total_cost = 0 %}
                   {% set group_total_value = 0 %}
                   {% for sku in group.skus %}
-                    {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                    {% if sku.inventory_item and sku.inventory_item.quantity and sku.inventory_item.quantity > 0 %}
                       {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                      {% set group_total_cost = group_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
+                      {% set line_cost = cost_per_unit * sku.inventory_item.quantity %}
+                      {% set group_total_cost = group_total_cost + line_cost %}
                       {% if sku.retail_price %}
-                        {% set group_total_value = group_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                        {% set line_value = sku.retail_price * sku.inventory_item.quantity %}
+                        {% set group_total_value = group_total_value + line_value %}
                       {% endif %}
                     {% endif %}
                   {% endfor %}
