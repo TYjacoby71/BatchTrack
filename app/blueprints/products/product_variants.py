@@ -15,13 +15,13 @@ def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
         from ...models.product import Product, ProductVariant, ProductSKU
-        
+
         # First try to get the Product record
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first()
-        
+
         # If no Product record exists, try to find it via ProductSKU and create Product
         if not product:
             # Look for existing SKU with this product_id
@@ -29,18 +29,18 @@ def add_variant(product_id):
                 id=product_id,
                 organization_id=current_user.organization_id
             ).first()
-            
+
             if not base_sku:
                 return jsonify({'error': 'Product not found'}), 404
-            
+
             # For legacy data, the product_id in the URL might be a SKU ID
             # Try to find or create the actual Product record
             if base_sku.product_id:
                 product = Product.query.get(base_sku.product_id)
-            
+
             if not product:
                 return jsonify({'error': 'Product record not found'}), 404
-        
+
         # Get variant name from request
         if request.is_json:
             data = request.get_json()
@@ -77,9 +77,22 @@ def add_variant(product_id):
         # Generate SKU code using the service
         from ...services.product_service import ProductService
         sku_code = ProductService.generate_sku_code(product.name, variant_name, 'Bulk')
-        
+
+        # Create inventory item for the SKU first
+        inventory_item = InventoryItem(
+            name=f"{product.name} - {variant_name} - Bulk",
+            type='product',
+            unit=product.base_unit,
+            quantity=0.0,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        db.session.add(inventory_item)
+        db.session.flush()  # Get the inventory_item ID
+
         # Create the ProductSKU for this variant
         new_sku = ProductSKU(
+            inventory_item_id=inventory_item.id,
             product_id=product.id,
             variant_id=new_variant.id,
             size_label='Bulk',
@@ -87,7 +100,6 @@ def add_variant(product_id):
             unit=product.base_unit,
             low_stock_threshold=product.low_stock_threshold,
             description=description,
-            current_quantity=0.0,
             is_active=True,
             is_product_active=True,
             organization_id=current_user.organization_id,
@@ -118,26 +130,26 @@ def view_variant(product_id, variant_name):
     """View individual product variation details"""
     # Get the product using the new Product model
     from ...models.product import Product, ProductVariant
-    
+
     product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-    
+
     # Get the variant by name
     variant = ProductVariant.query.filter_by(
         product_id=product.id,
         name=variant_name
     ).first()
-    
+
     if not variant:
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Get all SKUs for this product/variant combination
     skus = ProductSKU.query.filter_by(
         product_id=product.id,
@@ -200,27 +212,27 @@ def view_variant(product_id, variant_name):
 def edit_variant(product_id, variant_name):
     """Edit product variation details"""
     from ...models.product import Product, ProductVariant
-    
+
     # Get the product using the new Product model
     product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-    
+
     # Get the variant
     variant = ProductVariant.query.filter_by(
         product_id=product.id,
         name=variant_name
     ).first()
-    
+
     if not variant:
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     name = request.form.get('name')
     description = request.form.get('description')
 
@@ -259,27 +271,27 @@ def edit_variant(product_id, variant_name):
 def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
     from ...models.product import Product, ProductVariant
-    
+
     # Get the product using the new Product model
     product = Product.query.filter_by(
         id=product_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
-    
+
     # Get the variant
     variant = ProductVariant.query.filter_by(
         product_id=product.id,
         name=variant_name
     ).first()
-    
+
     if not variant:
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
-    
+
     # Get all SKUs for this variant
     skus = ProductSKU.query.filter_by(
         product_id=product.id,
@@ -292,7 +304,7 @@ def delete_variant(product_id, variant_name):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if any SKUs have inventory
-    has_inventory = any(sku.current_quantity > 0 for sku in skus)
+    has_inventory = any(sku.inventory_item.quantity > 0 for sku in skus)
     if has_inventory:
         flash('Cannot delete variant with existing inventory', 'error')
         return redirect(url_for('products.view_variant', 
