@@ -91,21 +91,37 @@ class BatchService:
         Returns: total_containerized_volume
         """
         total_containerized = 0
-        container_type = "extra" if is_extra else "regular"
 
+        # Group containers by container_id to combine regular and extra
+        combined_containers = {}
+        
         for container in containers:
-            final_quantity = container_overrides.get(container.container_id, container.quantity_used)
+            container_id = container.container_id
+            if container_id not in combined_containers:
+                combined_containers[container_id] = {
+                    'container': container.container,
+                    'total_used': container.quantity_used or 0,
+                    'is_extra': is_extra
+                }
+            else:
+                combined_containers[container_id]['total_used'] += container.quantity_used or 0
+                if is_extra:
+                    combined_containers[container_id]['is_extra'] = True
+
+        # Process combined containers
+        for container_id, data in combined_containers.items():
+            final_quantity = container_overrides.get(container_id, data['total_used'])
             if final_quantity > 0:
                 # Track how much product capacity these containers represent
-                container_capacity = (container.container.storage_amount or 1) * final_quantity
+                container_capacity = (data['container'].storage_amount or 1) * final_quantity
                 total_containerized += container_capacity
 
                 # Generate size label: "[storage_amount] [storage_unit] [container_name]"
                 # e.g., "4 floz Admin 4oz Glass Jars"
-                if container.container.storage_amount and container.container.storage_unit:
-                    container_size_label = f"{container.container.storage_amount} {container.container.storage_unit} {container.container.name}"
+                if data['container'].storage_amount and data['container'].storage_unit:
+                    container_size_label = f"{data['container'].storage_amount} {data['container'].storage_unit} {data['container'].name}"
                 else:
-                    container_size_label = f"1 unit {container.container.name}"
+                    container_size_label = f"1 unit {data['container'].name}"
 
                 # Get or create SKU for this container type - stored as count units
                 container_sku = ProductService.get_or_create_sku(
@@ -116,12 +132,13 @@ class BatchService:
                 )
 
                 # Add inventory for containers - quantity is the number of containers (count)
+                container_type = "combined"
                 success = process_inventory_adjustment(
                     item_id=container_sku.id,
                     quantity=final_quantity,  # Number of containers, not capacity
                     change_type='finished_batch',
                     unit='count',
-                    notes=f"From batch {batch.label_code} - {final_quantity} {container_type} {container.container.name} containers",
+                    notes=f"From batch {batch.label_code} - {final_quantity} {container_type} {data['container'].name} containers",
                     batch_id=batch.id,
                     created_by=current_user.id,
                     item_type='product',
@@ -133,7 +150,7 @@ class BatchService:
                     inventory_entries.append({
                         'sku_id': container_sku.id,
                         'quantity': final_quantity,  # Number of containers
-                        'container_name': container.container.name,
+                        'container_name': data['container'].name,
                         'container_count': final_quantity,
                         'type': f'{container_type}_container'
                     })

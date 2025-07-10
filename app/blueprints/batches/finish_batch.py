@@ -156,53 +156,33 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
     """Process container allocations and create SKUs"""
     container_skus = []
 
-    # Process regular containers
-    for container in batch.batch_containers:
-        container_id = str(container.container_id)
-        override_key = f"container_override_{container_id}"
-        final_quantity = int(form_data.get(override_key, container.quantity_used))
+    # Process containers by container_final_X keys from the combined form
+    container_final_keys = [k for k in form_data.keys() if k.startswith('container_final_')]
+    
+    for key in container_final_keys:
+        container_id = key.replace('container_final_', '')
+        final_quantity = int(form_data.get(key, 0))
 
         if final_quantity > 0:
-            # Pass the container object and quantity separately
-            container_sku = _create_container_sku(
-                product=product, 
-                variant=variant, 
-                container_item=container.container,  # This is the InventoryItem object
-                quantity=final_quantity,
-                batch=batch,
-                expiration_date=expiration_date
-            )
+            from ...models import InventoryItem
+            container = InventoryItem.query.get(int(container_id))
+            
+            if container:
+                # Pass the container object and quantity separately
+                container_sku = _create_container_sku(
+                    product=product, 
+                    variant=variant, 
+                    container_item=container,  # This is the InventoryItem object
+                    quantity=final_quantity,
+                    batch=batch,
+                    expiration_date=expiration_date
+                )
 
-            container_skus.append({
-                'sku': container_sku,
-                'quantity': final_quantity,
-                'container_capacity': container.container.storage_amount or 1
-            })
-
-    # Process extra containers
-    extra_container_ids = [k.replace('extra_container_', '') for k in form_data.keys() if k.startswith('extra_container_') and form_data[k]]
-
-    for container_id in extra_container_ids:
-        from ...models import InventoryItem
-        container = InventoryItem.query.get(int(container_id))
-        quantity = int(form_data.get(f'extra_container_{container_id}', 0))
-
-        if container and quantity > 0:
-            # Pass the container object and quantity separately
-            container_sku = _create_container_sku(
-                product=product,
-                variant=variant,
-                container_item=container,  # This is the InventoryItem object
-                quantity=quantity,
-                batch=batch,
-                expiration_date=expiration_date
-            )
-
-            container_skus.append({
-                'sku': container_sku,
-                'quantity': quantity,
-                'container_capacity': container.storage_amount or 1
-            })
+                container_skus.append({
+                    'sku': container_sku,
+                    'quantity': final_quantity,
+                    'container_capacity': container.storage_amount or 1
+                })
 
     return container_skus
 

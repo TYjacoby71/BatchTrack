@@ -119,60 +119,85 @@
                     </tr>
                   </thead>
                   <tbody id="containerTableBody">
-                    <!-- Regular containers -->
+                    <!-- Combined containers grouped by container ID -->
+                    {% set combined_containers = {} %}
+                    
+                    <!-- Process regular containers -->
                     {% for container in batch.containers %}
-                    <tr>
-                      <td>{{ container.container.name }}</td>
-                      <td>{{ container.container.storage_amount or 0 }} {{ container.container.storage_unit or 'count' }}</td>
-                      <td>{{ container.quantity_used or container.container_quantity }}</td>
-                      <td>
-                        <input type="number" 
-                               name="container_final_{{ container.container_id }}" 
-                               class="form-control form-control-sm container-final-input"
-                               value="{{ container.quantity_used or container.container_quantity }}" 
-                               min="0" 
-                               max="{{ container.quantity_used or container.container_quantity }}"
-                               data-container-id="{{ container.container_id }}"
-                               data-container-size="{{ container.container.storage_amount or 0 }}"
-                               data-used-quantity="{{ container.quantity_used or container.container_quantity }}"
-                               onchange="updateContainerSummary()">
-                        <input type="hidden" name="container_type_{{ container.container_id }}" value="regular">
-                      </td>
-                      <td class="container-capacity">
-                        {{ (container.container.storage_amount or 0) * (container.quantity_used or container.container_quantity) }} {{ container.container.storage_unit or 'count' }}
-                      </td>
-                    </tr>
+                      {% set container_id = container.container_id %}
+                      {% if container_id not in combined_containers %}
+                        {% set _ = combined_containers.update({container_id: {
+                          'container': container.container,
+                          'total_used': container.quantity_used or container.container_quantity,
+                          'max_available': container.quantity_used or container.container_quantity,
+                          'types': ['regular']
+                        }}) %}
+                      {% else %}
+                        {% set _ = combined_containers[container_id].update({
+                          'total_used': combined_containers[container_id]['total_used'] + (container.quantity_used or container.container_quantity),
+                          'max_available': combined_containers[container_id]['max_available'] + (container.quantity_used or container.container_quantity)
+                        }) %}
+                        {% set _ = combined_containers[container_id]['types'].append('regular') %}
+                      {% endif %}
                     {% endfor %}
 
-                    <!-- Extra containers (if they exist in the model) -->
+                    <!-- Process extra containers -->
                     {% if batch.extra_containers %}
-                    {% for extra_container in batch.extra_containers %}
-                    <tr class="table-warning">
-                      <td>{{ extra_container.container.name }}</td>
-                      <td>{{ extra_container.container.storage_amount or 0 }} {{ extra_container.container.storage_unit or 'count' }}</td>
-                      <td>{{ extra_container.quantity_used or extra_container.container_quantity }}</td>
+                      {% for extra_container in batch.extra_containers %}
+                        {% set container_id = extra_container.container_id %}
+                        {% if container_id not in combined_containers %}
+                          {% set _ = combined_containers.update({container_id: {
+                            'container': extra_container.container,
+                            'total_used': extra_container.quantity_used or extra_container.container_quantity,
+                            'max_available': extra_container.quantity_used or extra_container.container_quantity,
+                            'types': ['extra'],
+                            'reason': extra_container.reason if extra_container.reason else None
+                          }}) %}
+                        {% else %}
+                          {% set _ = combined_containers[container_id].update({
+                            'total_used': combined_containers[container_id]['total_used'] + (extra_container.quantity_used or extra_container.container_quantity),
+                            'max_available': combined_containers[container_id]['max_available'] + (extra_container.quantity_used or extra_container.container_quantity)
+                          }) %}
+                          {% set _ = combined_containers[container_id]['types'].append('extra') %}
+                          {% if extra_container.reason and 'reason' not in combined_containers[container_id] %}
+                            {% set _ = combined_containers[container_id].update({'reason': extra_container.reason}) %}
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
+
+                    <!-- Display combined containers -->
+                    {% for container_id, data in combined_containers.items() %}
+                    <tr {% if 'extra' in data.types %}class="table-warning"{% endif %}>
+                      <td>
+                        {{ data.container.name }}
+                        {% if 'extra' in data.types %}
+                          <small class="text-muted">(includes extra)</small>
+                        {% endif %}
+                      </td>
+                      <td>{{ data.container.storage_amount or 0 }} {{ data.container.storage_unit or 'count' }}</td>
+                      <td>{{ data.total_used }}</td>
                       <td>
                         <input type="number" 
-                               name="container_final_{{ extra_container.container_id }}" 
+                               name="container_final_{{ container_id }}" 
                                class="form-control form-control-sm container-final-input"
-                               value="{{ extra_container.quantity_used or extra_container.container_quantity }}" 
+                               value="{{ data.total_used }}" 
                                min="0" 
-                               max="{{ extra_container.quantity_used or extra_container.container_quantity }}"
-                               data-container-id="{{ extra_container.container_id }}"
-                               data-container-size="{{ extra_container.container.storage_amount or 0 }}"
-                               data-used-quantity="{{ extra_container.quantity_used or extra_container.container_quantity }}"
+                               max="{{ data.max_available }}"
+                               data-container-id="{{ container_id }}"
+                               data-container-size="{{ data.container.storage_amount or 0 }}"
+                               data-used-quantity="{{ data.total_used }}"
                                onchange="updateContainerSummary()">
-                        <input type="hidden" name="container_type_{{ extra_container.container_id }}" value="extra">
-                        {% if extra_container.reason %}
-                        <input type="hidden" name="container_reason_{{ extra_container.container_id }}" value="{{ extra_container.reason }}">
+                        <input type="hidden" name="container_type_{{ container_id }}" value="combined">
+                        {% if data.get('reason') %}
+                        <input type="hidden" name="container_reason_{{ container_id }}" value="{{ data.reason }}">
                         {% endif %}
                       </td>
                       <td class="container-capacity">
-                        {{ (extra_container.container.storage_amount or 0) * (extra_container.quantity_used or extra_container.container_quantity) }} {{ extra_container.container.storage_unit or 'count' }}
+                        {{ (data.container.storage_amount or 0) * data.total_used }} {{ data.container.storage_unit or 'count' }}
                       </td>
                     </tr>
                     {% endfor %}
-                    {% endif %}
                   </tbody>
                 </table>
               </div>
