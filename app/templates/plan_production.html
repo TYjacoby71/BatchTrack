@@ -436,17 +436,23 @@ function planProduction() {
       }
 
       const totalContained = this.totalContained;
+      
+      // Check if containment is exactly 100% (within a small tolerance for floating point precision)
+      const containmentRatio = totalContained / projected;
+      const isExactMatch = Math.abs(containmentRatio - 1) < 0.001; // 0.1% tolerance
+      
       if (totalContained < projected) {
         this.containmentIssue = 'Warning: Need one more container for partial fill';
-      } else if (totalContained > projected) {
+      } else if (totalContained > projected && !isExactMatch) {
         const lastContainer = this.containersSelected[this.containersSelected.length - 1];
         if (lastContainer) {
           const partialAmount = projected - (totalContained - lastContainer.capacity);
-          if (partialAmount < lastContainer.capacity) {
+          if (partialAmount < lastContainer.capacity && partialAmount > 0) {
             this.containmentIssue = `Warning: Last container will be partially filled (${partialAmount.toFixed(2)} ${this.unit})`;
           }
         }
       }
+      // If containment is exactly 100%, no warning is needed
     },
 
     updateContainer(index) {
