@@ -27,10 +27,10 @@
               {% set total_bulk = 0 %}
               {% set total_packaged = 0 %}
               {% for group_key, group in size_groups.items() %}
-                {% if group.size_label and group.size_label != 'Bulk' %}
-                  {% set total_packaged = total_packaged + group.total_quantity %}
-                {% elif group.size_label == 'Bulk' or not group.size_label %}
+                {% if group.size_label == 'Bulk' or not group.size_label %}
                   {% set total_bulk = total_bulk + group.total_quantity %}
+                {% else %}
+                  {% set total_packaged = total_packaged + group.total_quantity %}
                 {% endif %}
               {% endfor %}
               <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.base_unit }}
@@ -44,23 +44,27 @@
             <div class="col-md-3">
               {% set variant_total_cost = 0 %}
               {% for group_key, group in size_groups.items() %}
+                {% set group_total_cost = 0 %}
                 {% for sku in group.skus %}
                   {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
                     {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                    {% set variant_total_cost = variant_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
+                    {% set group_total_cost = group_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
                   {% endif %}
                 {% endfor %}
+                {% set variant_total_cost = variant_total_cost + group_total_cost %}
               {% endfor %}
               <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
             </div>
             <div class="col-md-3">
               {% set variant_total_value = 0 %}
               {% for group_key, group in size_groups.items() %}
+                {% set group_total_value = 0 %}
                 {% for sku in group.skus %}
                   {% if sku.inventory_item and sku.inventory_item.quantity > 0 and sku.retail_price %}
-                    {% set variant_total_value = variant_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                    {% set group_total_value = group_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
                   {% endif %}
                 {% endfor %}
+                {% set variant_total_value = variant_total_value + group_total_value %}
               {% endfor %}
               <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
             </div>
@@ -100,14 +104,14 @@
                 <tbody>
                   {% for group_key, group in size_groups.items() %}
                   {% set size_display = group.size_label if group.size_label else 'Bulk' %}
-                  {% set total_cost = 0 %}
-                  {% set total_value = 0 %}
+                  {% set group_total_cost = 0 %}
+                  {% set group_total_value = 0 %}
                   {% for sku in group.skus %}
                     {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
                       {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                      {% set total_cost = total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
+                      {% set group_total_cost = group_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
                       {% if sku.retail_price %}
-                        {% set total_value = total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                        {% set group_total_value = group_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
                       {% endif %}
                     {% endif %}
                   {% endfor %}
@@ -132,12 +136,12 @@
                     </td>
                     <td>
                       <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
-                        ${{ "%.2f"|format(total_cost) }}
+                        ${{ "%.2f"|format(group_total_cost) }}
                       </span>
                     </td>
                     <td>
                       <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
-                        ${{ "%.2f"|format(total_value) }}
+                        ${{ "%.2f"|format(group_total_value) }}
                       </span>
                     </td>
                     <td>
